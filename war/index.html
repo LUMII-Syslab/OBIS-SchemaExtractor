@@ -1,0 +1,20 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Extract Schema from OWL ontology</title>
+</head>
+<body>
+	<h2>OBIS REST services</h2>
+	<h4>Extract Schema from SPARQL endpoint:</h4>
+	<p>http://server:port/obis-rest/services/schema?endpoint=sparqlEndpointUrl&graph=graphName</p>
+	<p>Example: <i>http://localhost:8080/obis-rest/services/schema?endpoint=http://localhost:8890/sparql&graph=MiniUniv</i></p>
+	<p>By default schema extraction includes datatype and cardinality calculation. It may impact performance.
+	Use parameter <b>"&mode=simple"</b> to exclude datatype and cardinality calculation. 
+	</p>
+	<p>Example: <i>http://localhost:8080/obis-rest/services/schema?endpoint=http://localhost:8890/sparql&graph=MiniUniv&mode=simple</i></p>
+	<h4>Extract Schema from OWL file:</h4>
+	<p>http://server:port/obis-rest/schemaFromOwl.html</p>
+	<p>Example: <i>http://localhost:8080/obis-rest/schemaFromOwl.html</i></p>
+</body>
+</html>
