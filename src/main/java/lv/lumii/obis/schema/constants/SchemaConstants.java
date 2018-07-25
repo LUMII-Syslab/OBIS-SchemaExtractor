@@ -6,7 +6,8 @@ import java.util.List;
 
 public class SchemaConstants {
 	
-	public static final String EXTRACT_MODE_SIMPLE = "SIMPLE";
+	public static final String EXTRACT_MODE_SIMPLE = "simple";
+	public static final String EXTRACT_MODE_DATA = "data";
 	
 	public static final String THING_NAME = "Thing";
 	public static final String THING_URI = "http://www.w3.org/2002/07/owl#Thing";

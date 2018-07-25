@@ -78,7 +78,9 @@ public class SchemaExtractor {
 			// find data types for attributes
 			processDataTypes(properties, sparqlEndpointProcessor);		
 			// find min/max cardinalities
-			processCardinalities(properties, sparqlEndpointProcessor);
+			if(!EXTRACT_MODE_DATA.equalsIgnoreCase(mode)){
+				processCardinalities(properties, sparqlEndpointProcessor);
+			}
 		}
 		
 		// fill schema object with attributes and associations
