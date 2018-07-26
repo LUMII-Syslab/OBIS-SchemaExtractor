@@ -32,7 +32,7 @@ public class SchemaExtractorService {
 			@QueryParam("mode") @DefaultValue("") String mode){
 
 
-		if(SchemaUtil.isEmpty(endpoint) || SchemaUtil.isEmpty(graphName)){
+		if(SchemaUtil.isEmpty(endpoint)){
 			return "Error = please provide SPARQL endpoint and graph name as URL query parameters \"endpoint\" and \"graph\"."
 					+ "\nExample - /schema?endpoint=http://localhost:8890/sparql&graph=MiniUniv";
 		}

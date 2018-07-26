@@ -1,10 +1,6 @@
 package lv.lumii.obis.schema.services;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
@@ -21,6 +17,10 @@ import lv.lumii.obis.schema.model.SchemaRole;
 import static lv.lumii.obis.schema.constants.SchemaConstants.*;
 
 public class SchemaExtractor {
+
+	public static final List<String> EXCLUDED_URI = Collections.unmodifiableList(Arrays.asList(
+			"http://www.w3.org",
+			"http://www.openlinksw.com/schemas/virtrdf"));
 	
 	public Schema extractSchema(String sparqlEndpointUrl, String graphName, String mode){
 		
@@ -101,13 +101,17 @@ public class SchemaExtractor {
 		List<SchemaClass> classes = new ArrayList<>();
 		for(QueryResult queryResult: queryResults){
 			String value = queryResult.get(SchemaExtractorQueries.BINDING_NAME_CLASS);
-			if(value != null){
+			if(value != null && !isExcludedResource(value)){
 				SchemaClass c = new SchemaClass();
 				setLocalNameAndNamespace(value, c);
 				classes.add(c);
 			}
 		}
 		return classes;
+	}
+
+	private boolean isExcludedResource(String resourceName) {
+		return EXCLUDED_URI.stream().anyMatch(uri -> resourceName.startsWith(uri));
 	}
 
 	private Map<String, SchemaClassNodeInfo> buildClassGraph(List<QueryResult> queryResults){
@@ -156,7 +160,11 @@ public class SchemaExtractor {
 			String propertyName = queryResult.get(SchemaExtractorQueries.BINDING_NAME_PROPERTY);
 			String className = queryResult.get(SchemaExtractorQueries.BINDING_NAME_CLASS);
 			String instances = queryResult.get(SchemaExtractorQueries.BINDING_NAME_INSTANCES_COUNT);
-			
+
+			if(isExcludedResource(propertyName)){
+				continue;
+			}
+
 			if(!properties.containsKey(propertyName)){
 				properties.put(propertyName, new SchemaPropertyNodeInfo());
 			}
