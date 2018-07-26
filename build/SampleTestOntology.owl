@@ -1,0 +1,678 @@
+<?xml version="1.0"?>
+
+
+<!DOCTYPE rdf:RDF [
+	<!ENTITY data "http://obis.lumii.lv/2013/01/ontology#" >
+	<!ENTITY obis "http://obis.lumii.lv/2013/01/obis#" >
+    <!ENTITY owl "http://www.w3.org/2002/07/owl#" >
+    <!ENTITY xsd "http://www.w3.org/2001/XMLSchema#" >    
+    <!ENTITY rdfs "http://www.w3.org/2000/01/rdf-schema#" >
+    <!ENTITY rdf "http://www.w3.org/1999/02/22-rdf-syntax-ns#" >
+]>
+
+
+<rdf:RDF xmlns="http://obis.lumii.lv/2013/01/ontology#"
+	 xmlns:data="http://obis.lumii.lv/2013/01/ontology#"     
+	 xmlns:obis="http://obis.lumii.lv/2013/01/obis#"
+     xmlns:owl="http://www.w3.org/2002/07/owl#"
+     xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
+	 xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+     xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+    
+	<owl:Ontology rdf:about="http://obis.lumii.lv/2013/01/ontology/data.owl#">
+		<obis:dataDefaultMaxCardinality>1</obis:dataDefaultMaxCardinality>
+		<obis:showSubClassAttributes>true</obis:showSubClassAttributes>
+	</owl:Ontology>
+    
+
+
+    <!-- 
+    ///////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Datatypes
+    //
+    ///////////////////////////////////////////////////////////////////////////////////////
+     -->
+
+    
+
+
+    <!-- http://www.w3.org/2001/XMLSchema#date -->
+
+    <rdfs:Datatype rdf:about="&xsd;date"/>
+	<rdfs:Datatype rdf:about="&xsd;time"/>
+	
+	
+	 <!-- 
+    ///////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Annotation properties
+    //
+    ///////////////////////////////////////////////////////////////////////////////////////
+     -->
+
+    <owl:AnnotationProperty rdf:about="http://obis.lumii.lv/2013/01/obis#isEnumerated"/>
+    <owl:AnnotationProperty rdf:about="http://obis.lumii.lv/2013/01/obis#defaultOrder"/>
+    <owl:AnnotationProperty rdf:about="http://obis.lumii.lv/2013/01/obis#textPattern"/>
+    <owl:AnnotationProperty rdf:about="http://obis.lumii.lv/2013/01/obis#isAbstract"/>
+	<owl:AnnotationProperty rdf:about="http://obis.lumii.lv/2013/01/obis#isMultiple"/>
+	<owl:AnnotationProperty rdf:about="http://obis.lumii.lv/2013/01/obis#view"/>
+	<owl:AnnotationProperty rdf:about="http://obis.lumii.lv/2013/01/obis#showIdentifier"/>
+	<owl:AnnotationProperty rdf:about="http://obis.lumii.lv/2013/01/obis#dataDefaultMaxCardinality"/>
+	<owl:AnnotationProperty rdf:about="http://obis.lumii.lv/2013/01/obis#showSubClassAttributes"/>
+	<owl:AnnotationProperty rdf:about="http://obis.lumii.lv/2013/01/obis#showInSuperClassShape"/>
+	<owl:AnnotationProperty rdf:about="http://obis.lumii.lv/2013/01/obis#dateFormat"/>
+	<owl:AnnotationProperty rdf:about="http://obis.lumii.lv/2013/01/obis#dateTimeFormat"/>
+	<owl:AnnotationProperty rdf:about="http://obis.lumii.lv/2013/01/obis#timeFormat"/>
+	<owl:AnnotationProperty rdf:about="http://obis.lumii.lv/2013/01/obis#gyearFormat"/>
+	<owl:AnnotationProperty rdf:about="http://obis.lumii.lv/2013/01/obis#gmonthFormat"/>
+	<owl:AnnotationProperty rdf:about="http://obis.lumii.lv/2013/01/obis#gyearMonthFormat"/>
+	<owl:AnnotationProperty rdf:about="http://obis.lumii.lv/2013/01/obis#hideEmptyByDefault"/>
+
+    <!-- 
+    ///////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Object Properties
+    //
+    ///////////////////////////////////////////////////////////////////////////////////////
+     -->  
+
+
+    <!-- http://lumii.lv/ontologies/data.owl#professor -->
+
+    <owl:ObjectProperty rdf:about="&data;professor">
+        <rdfs:domain rdf:resource="&data;Course"/>
+        <rdfs:range rdf:resource="&data;Professor"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://lumii.lv/ontologies/data.owl#students -->
+
+    <owl:ObjectProperty rdf:about="&data;students">
+        <rdfs:domain rdf:resource="&data;Course"/>
+        <rdfs:range rdf:resource="&data;Student"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://lumii.lv/ontologies/data.owl#study -->
+
+    <owl:ObjectProperty rdf:about="&data;study">
+        <rdfs:range rdf:resource="&data;Course"/>
+        <rdfs:domain rdf:resource="&data;Student"/>
+        <owl:inverseOf rdf:resource="&data;students"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://lumii.lv/ontologies/data.owl#teaches -->
+
+    <owl:ObjectProperty rdf:about="&data;teaches">
+        <rdfs:range rdf:resource="&data;Course"/>
+        <rdfs:domain rdf:resource="&data;Professor"/>
+        <owl:inverseOf rdf:resource="&data;professor"/>
+    </owl:ObjectProperty>
+	
+	 <!-- http://lumii.lv/ontologies/data.owl#address -->
+
+    <owl:ObjectProperty rdf:about="&data;address">
+        <rdfs:range rdf:resource="&data;Address"/>
+        <rdfs:domain rdf:resource="&data;Person"/>
+    </owl:ObjectProperty>
+    
+	<!-- http://lumii.lv/ontologies/data.owl#nationality -->
+
+    <owl:ObjectProperty rdf:about="&data;hasNationality">
+        <rdfs:range rdf:resource="&data;Nationality"/>
+        <rdfs:domain rdf:resource="&data;Person"/>
+    </owl:ObjectProperty>
+	
+	<owl:ObjectProperty rdf:about="&data;hasContactDetails">
+        <rdfs:range rdf:resource="&data;ContactDetails"/>
+        <rdfs:domain rdf:resource="&data;Person"/>
+    </owl:ObjectProperty>
+
+    <!-- 
+    ///////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Data properties
+    //
+    ///////////////////////////////////////////////////////////////////////////////////////
+     -->
+
+    
+
+
+    <!-- http://lumii.lv/ontologies/data.owl#birthDate -->
+
+    <owl:DatatypeProperty rdf:about="&data;birthDate">
+        <rdfs:domain rdf:resource="&data;Person"/>
+        <rdfs:range rdf:resource="&xsd;date"/>
+    </owl:DatatypeProperty>
+    
+
+
+    <!-- http://lumii.lv/ontologies/data.owl#city -->
+
+    <owl:DatatypeProperty rdf:about="&data;city">
+        <rdfs:domain rdf:resource="&data;Address"/>
+        <rdfs:range>
+            <owl:DataRange>
+                <owl:oneOf>
+                    <rdf:Description>
+                        <rdf:type rdf:resource="&rdf;List"/>
+                        <rdf:first rdf:datatype="&xsd;string">Liepaja</rdf:first>
+                        <rdf:rest>
+                            <rdf:Description>
+                                <rdf:type rdf:resource="&rdf;List"/>
+                                <rdf:first rdf:datatype="&xsd;string">Riga</rdf:first>
+                                <rdf:rest>
+                                    <rdf:Description>
+                                        <rdf:type rdf:resource="&rdf;List"/>
+                                        <rdf:first rdf:datatype="&xsd;string">Valmiera</rdf:first>
+                                        <rdf:rest>
+                                            <rdf:Description>
+                                                <rdf:type rdf:resource="&rdf;List"/>
+                                                <rdf:first rdf:datatype="&xsd;string">Ventspils</rdf:first>
+                                                <rdf:rest rdf:resource="&rdf;nil"/>
+                                            </rdf:Description>
+                                        </rdf:rest>
+                                    </rdf:Description>
+                                </rdf:rest>
+                            </rdf:Description>
+                        </rdf:rest>
+                    </rdf:Description>
+                </owl:oneOf>
+            </owl:DataRange>
+        </rdfs:range>
+    </owl:DatatypeProperty>
+    
+
+
+    <!-- http://lumii.lv/ontologies/data.owl#personId -->
+
+    <owl:DatatypeProperty rdf:about="&data;personId">
+        <rdfs:domain rdf:resource="&data;Person"/>
+        <rdfs:range rdf:resource="&xsd;string"/>
+    </owl:DatatypeProperty>
+    
+
+
+    <!-- http://lumii.lv/ontologies/data.owl#courseName -->
+
+    <owl:DatatypeProperty rdf:about="&data;courseName">
+        <rdfs:domain rdf:resource="&data;Course"/>
+        <rdfs:range rdf:resource="&xsd;string"/>
+    </owl:DatatypeProperty>
+    
+
+
+    <!-- http://lumii.lv/ontologies/data.owl#courseNumber -->
+
+    <owl:DatatypeProperty rdf:about="&data;courseNumber">
+        <rdfs:domain rdf:resource="&data;Course"/>
+        <rdfs:range rdf:resource="&xsd;string"/>
+    </owl:DatatypeProperty>
+    
+	<owl:FunctionalProperty rdf:about="&data;courseNumber" />
+
+    <!-- http://lumii.lv/ontologies/data.owl#currentStudent -->
+
+    <owl:DatatypeProperty rdf:about="&data;currentStudent">
+        <rdfs:domain rdf:resource="&data;Student"/>
+        <rdfs:range rdf:resource="&xsd;boolean"/>
+    </owl:DatatypeProperty>
+    
+
+
+    <!-- http://lumii.lv/ontologies/data.owl#degree -->
+
+    <owl:DatatypeProperty rdf:about="&data;degree">
+        <rdfs:domain rdf:resource="&data;Professor"/>
+        <rdfs:range>
+            <owl:DataRange>
+                <owl:oneOf>
+                    <rdf:Description>
+                        <rdf:type rdf:resource="&rdf;List"/>
+                        <rdf:first rdf:datatype="&xsd;string">Assistant</rdf:first>
+                        <rdf:rest>
+                            <rdf:Description>
+                                <rdf:type rdf:resource="&rdf;List"/>
+                                <rdf:first rdf:datatype="&xsd;string">Lecturer</rdf:first>
+                                <rdf:rest>
+                                    <rdf:Description>
+                                        <rdf:type rdf:resource="&rdf;List"/>
+                                        <rdf:first rdf:datatype="&xsd;string">Professor</rdf:first>
+                                        <rdf:rest rdf:resource="&rdf;nil"/>
+                                    </rdf:Description>
+                                </rdf:rest>
+                            </rdf:Description>
+                        </rdf:rest>
+                    </rdf:Description>
+                </owl:oneOf>
+            </owl:DataRange>
+        </rdfs:range>
+    </owl:DatatypeProperty>
+    
+
+
+    <!-- http://lumii.lv/ontologies/data.owl#description -->
+
+    <owl:DatatypeProperty rdf:about="&data;description">
+        <rdfs:domain rdf:resource="&data;Course"/>
+        <rdfs:range rdf:resource="&xsd;string"/>
+    </owl:DatatypeProperty>
+    
+
+
+    <!-- http://lumii.lv/ontologies/data.owl#employeeNumber -->
+
+    <owl:DatatypeProperty rdf:about="&data;employeeNumber">
+        <rdfs:domain rdf:resource="&data;Employee"/>
+        <rdfs:range rdf:resource="&xsd;integer"/>
+    </owl:DatatypeProperty>
+    
+
+
+    <!-- http://lumii.lv/ontologies/data.owl#firstName -->
+
+    <owl:DatatypeProperty rdf:about="&data;firstName">
+        <rdfs:domain rdf:resource="&data;Person"/>
+        <rdfs:range rdf:resource="&xsd;string"/>
+		<obis:isMultiple>true</obis:isMultiple>
+    </owl:DatatypeProperty>   
+
+
+    <!-- http://lumii.lv/ontologies/data.owl#lastName -->
+
+    <owl:DatatypeProperty rdf:about="&data;lastName">
+        <rdfs:domain rdf:resource="&data;Person"/>
+        <rdfs:range rdf:resource="&xsd;string"/>
+    </owl:DatatypeProperty>
+    
+
+
+    <!-- http://lumii.lv/ontologies/data.owl#phone -->
+
+    <owl:DatatypeProperty rdf:about="&data;phone">
+        <rdfs:domain rdf:resource="&data;Address"/>
+        <rdfs:range rdf:resource="&xsd;string"/>
+    </owl:DatatypeProperty>   
+
+
+    <!-- http://lumii.lv/ontologies/data.owl#street -->
+
+    <owl:DatatypeProperty rdf:about="&data;street">
+        <rdfs:domain rdf:resource="&data;Address"/>
+        <rdfs:range rdf:resource="&xsd;string"/>
+    </owl:DatatypeProperty>   
+
+
+    <!-- http://lumii.lv/ontologies/data.owl#studentNumber -->
+
+    <owl:DatatypeProperty rdf:about="&data;studentNumber">
+        <rdfs:domain rdf:resource="&data;Student"/>
+        <rdfs:range rdf:resource="&xsd;string"/>
+    </owl:DatatypeProperty>
+	
+	<!-- http://lumii.lv/ontologies/data.owl#code -->
+
+    <owl:DatatypeProperty rdf:about="&data;code">
+        <rdfs:domain rdf:resource="&data;Nationality"/>
+        <rdfs:range rdf:resource="&xsd;string"/>
+    </owl:DatatypeProperty>
+	
+	<owl:DatatypeProperty rdf:about="&data;timeExample">
+        <rdfs:domain rdf:resource="&data;SampleDateValues"/>
+        <rdfs:range rdf:resource="&xsd;time"/>
+    </owl:DatatypeProperty>
+	
+	<owl:DatatypeProperty rdf:about="&data;timeExample2">
+        <rdfs:domain rdf:resource="&data;SampleDateValues"/>
+        <rdfs:range rdf:resource="&xsd;time"/>
+		<obis:timeFormat>hh:mm aaa</obis:timeFormat>
+    </owl:DatatypeProperty>
+	
+	<owl:DatatypeProperty rdf:about="&data;dateExample1">
+        <rdfs:domain rdf:resource="&data;SampleDateValues"/>
+        <rdfs:range rdf:resource="&xsd;date"/>
+		<obis:dateFormat>MM.dd.yyyy</obis:dateFormat>
+    </owl:DatatypeProperty>
+	
+	<owl:DatatypeProperty rdf:about="&data;dateExample2">
+        <rdfs:domain rdf:resource="&data;SampleDateValues"/>
+        <rdfs:range rdf:resource="&xsd;date"/>
+		<obis:dateFormat>d MMM yyyy</obis:dateFormat>
+    </owl:DatatypeProperty>
+	
+	<owl:DatatypeProperty rdf:about="&data;dateTimeExample1">
+        <rdfs:domain rdf:resource="&data;SampleDateValues"/>
+        <rdfs:range rdf:resource="&xsd;dateTime"/>
+    </owl:DatatypeProperty>
+	
+	<owl:DatatypeProperty rdf:about="&data;dateTimeExample2">
+        <rdfs:domain rdf:resource="&data;SampleDateValues"/>
+        <rdfs:range rdf:resource="&xsd;dateTime"/>
+		<obis:dateTimeFormat>yyyy</obis:dateTimeFormat>
+    </owl:DatatypeProperty>
+	
+	<owl:DatatypeProperty rdf:about="&data;dateTimeExample3">
+        <rdfs:domain rdf:resource="&data;SampleDateValues"/>
+        <rdfs:range rdf:resource="&xsd;dateTime"/>
+		<obis:dateTimeFormat>MMM yyyy</obis:dateTimeFormat>
+    </owl:DatatypeProperty>
+	
+	<owl:DatatypeProperty rdf:about="&data;gyearExample1">
+        <rdfs:domain rdf:resource="&data;SampleDateValues"/>
+        <rdfs:range rdf:resource="&xsd;gYear"/>
+    </owl:DatatypeProperty>
+	
+	<owl:DatatypeProperty rdf:about="&data;gyearExample2">
+        <rdfs:domain rdf:resource="&data;SampleDateValues"/>
+        <rdfs:range rdf:resource="&xsd;gYear"/>
+		<obis:gyearFormat>^(19|20)\d{2}$</obis:gyearFormat>
+    </owl:DatatypeProperty>
+	
+	<owl:DatatypeProperty rdf:about="&data;gmonthExample1">
+        <rdfs:domain rdf:resource="&data;SampleDateValues"/>
+        <rdfs:range rdf:resource="&xsd;gMonth"/>
+    </owl:DatatypeProperty>
+	
+	<owl:DatatypeProperty rdf:about="&data;gmonthExample2">
+        <rdfs:domain rdf:resource="&data;SampleDateValues"/>
+        <rdfs:range rdf:resource="&xsd;gMonth"/>
+		<obis:gmonthFormat>MMMM</obis:gmonthFormat>
+    </owl:DatatypeProperty>
+	
+	<owl:DatatypeProperty rdf:about="&data;gyearMonthExample1">
+        <rdfs:domain rdf:resource="&data;SampleDateValues"/>
+        <rdfs:range rdf:resource="&xsd;gYearMonth"/>
+    </owl:DatatypeProperty>
+	
+	<owl:DatatypeProperty rdf:about="&data;multipleString">
+        <rdfs:domain rdf:resource="&data;SampleMultipleValues"/>
+        <rdfs:range rdf:resource="&xsd;string"/>
+		<obis:isMultiple>true</obis:isMultiple>
+    </owl:DatatypeProperty>
+	
+	<owl:DatatypeProperty rdf:about="&data;multipleInt">
+        <rdfs:domain rdf:resource="&data;SampleMultipleValues"/>
+        <rdfs:range rdf:resource="&xsd;integer"/>
+		<obis:isMultiple>true</obis:isMultiple>
+    </owl:DatatypeProperty>
+	
+	<owl:DatatypeProperty rdf:about="&data;multipleDate">
+        <rdfs:domain rdf:resource="&data;SampleMultipleValues"/>
+        <rdfs:range rdf:resource="&xsd;date"/>
+		<obis:isMultiple>true</obis:isMultiple>
+    </owl:DatatypeProperty>
+    
+
+	<!-- http://lumii.lv/ontologies/data.owl#value -->
+
+    <owl:DatatypeProperty rdf:about="&data;value">
+        <rdfs:domain rdf:resource="&data;Nationality"/>
+        <rdfs:range rdf:resource="&xsd;string"/>
+    </owl:DatatypeProperty>
+	
+	<owl:DatatypeProperty rdf:about="&data;email">
+        <rdfs:domain rdf:resource="&data;ContactDetails"/>
+        <rdfs:range rdf:resource="&xsd;string"/>
+    </owl:DatatypeProperty>
+	
+	<owl:DatatypeProperty rdf:about="&data;skype">
+        <rdfs:domain rdf:resource="&data;ContactDetails"/>
+        <rdfs:range rdf:resource="&xsd;string"/>
+    </owl:DatatypeProperty>
+	
+	<owl:DatatypeProperty rdf:about="&data;twitter">
+        <rdfs:domain rdf:resource="&data;ContactDetails"/>
+        <rdfs:range rdf:resource="&xsd;string"/>
+    </owl:DatatypeProperty>
+	
+	<owl:DatatypeProperty rdf:about="&data;webPage">
+        <rdfs:domain rdf:resource="&data;ContactDetails"/>
+        <rdfs:range rdf:resource="&xsd;string"/>
+    </owl:DatatypeProperty>
+
+    <!-- 
+    ///////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Classes
+    //
+    ///////////////////////////////////////////////////////////////////////////////////////
+     -->
+
+    
+
+
+    <!-- http://lumii.lv/ontologies/data.owl#Address -->
+
+    <owl:Class rdf:about="&data;Address">
+		<rdfs:subClassOf rdf:resource="&owl;Thing"/>
+		<obis:textPattern>{street}, {city}</obis:textPattern>
+		<rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="&data;street"/>
+                <owl:minQualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">1</owl:minQualifiedCardinality>
+                <owl:onDataRange rdf:resource="&xsd;string"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+		<rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="&data;city"/>
+                <owl:minQualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">1</owl:minQualifiedCardinality>
+                <owl:onDataRange rdf:resource="&xsd;string"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+		<rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="&data;phone"/>
+                <owl:maxQualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">3</owl:maxQualifiedCardinality>
+                <owl:onDataRange rdf:resource="&xsd;string"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+		<obis:showIdentifier>uri_label</obis:showIdentifier>
+		<obis:defaultOrder>city,street,phone</obis:defaultOrder>
+	</owl:Class> 
+
+
+    <!-- http://lumii.lv/ontologies/data.owl#Course -->
+
+    <owl:Class rdf:about="&data;Course">
+        <rdfs:subClassOf rdf:resource="&owl;Thing"/>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="&data;professor"/>
+                <owl:onClass rdf:resource="&data;Professor"/>
+                <owl:maxQualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">1</owl:maxQualifiedCardinality>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+		<rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="&data;courseName"/>
+                <owl:minQualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">1</owl:minQualifiedCardinality>
+                <owl:onDataRange rdf:resource="&xsd;string"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+		<obis:showIdentifier>label</obis:showIdentifier>
+    </owl:Class>
+    
+
+
+    <!-- http://lumii.lv/ontologies/data.owl#Employee -->
+
+    <owl:Class rdf:about="&data;Employee">
+        <rdfs:subClassOf rdf:resource="&data;Person"/>
+		<obis:showIdentifier>uri</obis:showIdentifier>
+		<obis:view>firstName,lastName,employeeNumber,birthDate,address</obis:view>
+    </owl:Class>
+    
+
+
+    <!-- http://lumii.lv/ontologies/data.owl#MandatoryCourse -->
+
+    <owl:Class rdf:about="&data;MandatoryCourse">
+        <rdfs:subClassOf rdf:resource="&data;Course"/>
+    </owl:Class>
+    
+
+
+    <!-- http://lumii.lv/ontologies/data.owl#OptionalCourse -->
+
+    <owl:Class rdf:about="&data;OptionalCourse">
+        <rdfs:subClassOf rdf:resource="&data;Course"/>
+    </owl:Class>
+    
+
+
+    <!-- http://lumii.lv/ontologies/data.owl#Person -->
+
+    <owl:Class rdf:about="&data;Person">
+        <rdfs:subClassOf rdf:resource="&owl;Thing"/>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="&data;address"/>
+                <owl:onClass rdf:resource="&data;Address"/>
+                <owl:maxQualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">1</owl:maxQualifiedCardinality>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+		<rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="&data;hasNationality"/>
+				<owl:onClass rdf:resource="&data;Nationality"/>
+				<owl:minQualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">1</owl:minQualifiedCardinality>
+                <owl:maxQualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">1</owl:maxQualifiedCardinality>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+		<rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="&data;hasContactDetails"/>
+				<owl:onClass rdf:resource="&data;ContactDetails"/>
+                <owl:maxQualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">1</owl:maxQualifiedCardinality>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+		<rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="&data;firstName"/>
+                <owl:minQualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">1</owl:minQualifiedCardinality>
+                <owl:onDataRange rdf:resource="&xsd;string"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+		<rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="&data;lastName"/>
+                <owl:minQualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">1</owl:minQualifiedCardinality>
+                <owl:onDataRange rdf:resource="&xsd;string"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+		<rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="&data;birthDate"/>
+                <owl:minQualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">1</owl:minQualifiedCardinality>
+                <owl:onDataRange rdf:resource="&xsd;string"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+		<obis:isAbstract>true</obis:isAbstract>
+		<obis:defaultOrder>firstName,lastName,birthDate,hasNationality,hasContactDetails,address</obis:defaultOrder>
+    </owl:Class>    
+
+
+    <!-- http://lumii.lv/ontologies/data.owl#Professor -->
+
+    <owl:Class rdf:about="&data;Professor">
+        <rdfs:subClassOf rdf:resource="&data;Employee"/>
+		<rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="&data;degree"/>
+                <owl:minQualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">1</owl:minQualifiedCardinality>
+                <owl:onDataRange rdf:resource="&xsd;string"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+		<rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="&data;teaches"/>
+                <owl:maxQualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">2</owl:maxQualifiedCardinality>
+                <owl:onClass rdf:resource="&data;Course"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+		<obis:hideEmptyByDefault>true</obis:hideEmptyByDefault>
+    </owl:Class>
+
+
+    <!-- http://lumii.lv/ontologies/data.owl#Student -->
+
+    <owl:Class rdf:about="&data;Student">
+        <rdfs:subClassOf rdf:resource="&data;Person"/>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="&data;study"/>
+                <owl:onClass rdf:resource="&data;Course"/>
+                <owl:minQualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">1</owl:minQualifiedCardinality>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+		<rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="&data;studentNumber"/>
+                <owl:minQualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">1</owl:minQualifiedCardinality>
+                <owl:onDataRange rdf:resource="&xsd;string"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+		<obis:defaultOrder>studentNumber,currentStudent</obis:defaultOrder>
+		<obis:showInSuperClassShape>Person</obis:showInSuperClassShape>
+    </owl:Class>
+	
+	<!-- http://lumii.lv/ontologies/data.owl#Nationality -->
+	
+
+    <owl:Class rdf:about="&data;Nationality">
+		<rdfs:subClassOf rdf:resource="&owl;Thing"/>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="&data;code"/>
+                <owl:minQualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">1</owl:minQualifiedCardinality>
+                <owl:onDataRange rdf:resource="&xsd;string"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="&data;value"/>
+                <owl:minQualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">1</owl:minQualifiedCardinality>
+                <owl:onDataRange rdf:resource="&xsd;string"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <obis:isEnumerated>true</obis:isEnumerated>
+        <obis:textPattern>{code}[ - {value}]</obis:textPattern>
+        <obis:defaultOrder>code,value</obis:defaultOrder>
+		<obis:showIdentifier>none</obis:showIdentifier>
+    </owl:Class>
+	
+	<owl:Class rdf:about="&data;SampleMultipleValues">
+        <rdfs:subClassOf rdf:resource="&owl;Thing"/>
+    </owl:Class>
+	
+	<owl:Class rdf:about="&data;SampleDateValues">
+        <rdfs:subClassOf rdf:resource="&owl;Thing"/>
+    </owl:Class>
+	
+	<owl:Class rdf:about="&data;ContactDetails">
+        <rdfs:subClassOf rdf:resource="&owl;Thing"/>
+		<obis:isEnumerated>true</obis:isEnumerated>
+		<obis:defaultOrder>email,skype,twitter,webPage</obis:defaultOrder>
+    </owl:Class>
+
+
+    <!-- http://www.w3.org/2002/07/owl#Thing -->
+
+    <owl:Class rdf:about="&owl;Thing">
+		<obis:isAbstract>true</obis:isAbstract>
+		<obis:view>@table=firstName,employeeNumber,studentNumber</obis:view>
+		<obis:view>@form=firstName,birthDate,employeeNumber</obis:view>
+	</owl:Class>
+</rdf:RDF>
+
+
+
+<!-- Generated by the OWL API (version 3.1.0.20069) http://owlapi.sourceforge.net -->
+

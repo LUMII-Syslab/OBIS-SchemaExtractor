@@ -10,15 +10,15 @@ OBIS Schema Extractor is Java based web application - REST controller to process
 - **endpoint** (mandatory) - SPARQL endpoint URL
 - **graph** (optional, recommended) - named graph used for schema extraction. If no graph name provided, the search will involve all graphs from the endpoints. Note - it may impact performance, thus it is recommended to provide required graph.
 - **mode** (optional) - extraction complexity. If no mode provided, it is processed as *full* by default. If the data source is large or complex, full mode may impact performance.
-  - *full* analyzed items: classes, class hierarchy (superclass/subclass), data type properties, object type properties with domain/range associations, property data types, property cardinalities
-  - *data* analyzed items: classes, class hierarchy (superclass/subclass), data type properties, object type properties with domain/range associations, property data types
-  - *simple* - analyzed items: classes, class hierarchy (superclass/subclass), data type properties, object type properties with domain/range associations
+  - **full** analyzed items: classes, class hierarchy (superclass/subclass), data type properties, object type properties with domain/range associations, property data types, property cardinalities
+  - **data** analyzed items: classes, class hierarchy (superclass/subclass), data type properties, object type properties with domain/range associations, property data types
+  - **simple** - analyzed items: classes, class hierarchy (superclass/subclass), data type properties, object type properties with domain/range associations
 
 **Example:**
 - http://localhost:8080/obis-rest/services/schema?endpoint=http://localhost:8890/sparql&graph=MiniUniv&mode=simple
 
 **Response:**
-- JSON file with schema information
+- JSON file with schema information, example [SampleSchema.json](build/SampleSchema.json)
 
 
 #### RDF/OWL file upload
@@ -28,6 +28,7 @@ OBIS Schema Extractor is Java based web application - REST controller to process
 Uploaded RDF/OWL schema information is converted to JSON format with schema information.
 
 Example RDF schema - [SampleTestOntology.owl](build/SampleTestOntology.owl)
+Example JSON response - [SampleSchema.json](build/SampleSchema.json)
 
 
 ### Installation
