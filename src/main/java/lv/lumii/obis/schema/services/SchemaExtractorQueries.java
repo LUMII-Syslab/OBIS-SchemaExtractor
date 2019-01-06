@@ -60,4 +60,7 @@ public class SchemaExtractorQueries {
 	public static final String FIND_MIN_CARDINALITY = 
 			  "SELECT (COUNT(?x) as ?instances) WHERE { ?x a <class>. FILTER NOT EXISTS { ?x <property> ?value. } } ";
 
+	public static final String CHECK_DOMAIN_RANGE_MAPPING =
+			"SELECT (COUNT(?x) as ?instances) WHERE { ?x a <classA>. ?x <property> ?value. ?value a <classB>. } ";
+
 }

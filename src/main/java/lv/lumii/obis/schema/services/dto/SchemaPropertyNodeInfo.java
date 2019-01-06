@@ -6,19 +6,25 @@ import java.util.List;
 public class SchemaPropertyNodeInfo {
 
 	private Boolean isObjectProperty = Boolean.FALSE;
-	private String domainClass;
-	private String rangeClass;
 	private String dataType;
 	private Integer minCardinality;
 	private Integer maxCardinality;
-	private List<SchemaClassNodeInfo> assignedClasses;
+	private List<SchemaDomainRangeInfo> domainRangePairs;
+	private List<SchemaClassNodeInfo> domainClasses;
 	private List<SchemaClassNodeInfo> rangeClasses;
 
-	public List<SchemaClassNodeInfo> getAssignedClasses() {
-		if(assignedClasses == null){
-			assignedClasses = new ArrayList<>();
+	public List<SchemaDomainRangeInfo> getDomainRangePairs() {
+		if(domainRangePairs == null){
+			domainRangePairs = new ArrayList<>();
 		}
-		return assignedClasses;
+		return domainRangePairs;
+	}
+
+	public List<SchemaClassNodeInfo> getDomainClasses() {
+		if(domainClasses == null){
+			domainClasses = new ArrayList<>();
+		}
+		return domainClasses;
 	}
 
 	public List<SchemaClassNodeInfo> getRangeClasses() {
@@ -34,22 +40,6 @@ public class SchemaPropertyNodeInfo {
 
 	public void setIsObjectProperty(Boolean objectProperty) {
 		isObjectProperty = objectProperty;
-	}
-
-	public String getDomainClass() {
-		return domainClass;
-	}
-
-	public void setDomainClass(String domainClass) {
-		this.domainClass = domainClass;
-	}
-
-	public String getRangeClass() {
-		return rangeClass;
-	}
-
-	public void setRangeClass(String rangeClass) {
-		this.rangeClass = rangeClass;
 	}
 
 	public String getDataType() {
@@ -76,11 +66,4 @@ public class SchemaPropertyNodeInfo {
 		this.maxCardinality = maxCardinality;
 	}
 
-	public void setAssignedClasses(List<SchemaClassNodeInfo> assignedClasses) {
-		this.assignedClasses = assignedClasses;
-	}
-
-	public void setRangeClasses(List<SchemaClassNodeInfo> rangeClasses) {
-		this.rangeClasses = rangeClasses;
-	}
 }
