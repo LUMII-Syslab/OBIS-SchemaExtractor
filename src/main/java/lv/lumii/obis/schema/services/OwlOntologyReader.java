@@ -55,6 +55,7 @@ public class OwlOntologyReader {
 		
 		processClasses(ontology, schema, classesMap, cardinalitiesMap, manager);
 		processDataTypeProperties(ontology, schema, classesMap, cardinalitiesMap);
+		processAnnotationProperties(ontology, schema, classesMap, cardinalitiesMap);
 		processObjectTypeProperties(ontology, schema, classesMap, cardinalitiesMap);
 		processInverseObjectTypeProperties(ontology, schema);
 
@@ -230,10 +231,60 @@ public class OwlOntologyReader {
 			schema.getAttributes().add(dataProperty);
 		}
 	}
+
+	private void processAnnotationProperties(OWLOntology ontology, Schema schema, Map<String, SchemaClass> classesMap,
+											 Map<String, List<SchemaCardinalityInfo>> cardinalitiesMap) {
+
+		List<OWLAnnotationPropertyDomainAxiom> domains = ontology.axioms(AxiomType.ANNOTATION_PROPERTY_DOMAIN).collect(Collectors.toList());
+		List<OWLAnnotationPropertyRangeAxiom> ranges = ontology.axioms(AxiomType.ANNOTATION_PROPERTY_RANGE).collect(Collectors.toList());
+		List<OWLAnnotationProperty> annotationProperties = ontology.annotationPropertiesInSignature().collect(Collectors.toList());
+
+		for(OWLAnnotationProperty property: annotationProperties) {
+			String propertyName = property.getIRI().toString();
+			SchemaAttribute annotationProperty = new SchemaAttribute();
+
+			setLocalNameAndNamespace(property.getIRI(), annotationProperty, schema);
+			setAnnotationDomain(annotationProperty, propertyName, domains, classesMap);
+			setAnnotationRangeType(annotationProperty, propertyName, ranges);
+			setCardinalities(annotationProperty, propertyName, cardinalitiesMap);
+			processAnnotations(EntitySearcher.getAnnotations(property, ontology), annotationProperty);
+
+			schema.getAttributes().add(annotationProperty);
+		}
+	}
+
+	private void setAnnotationDomain(SchemaAttribute dataProperty, String propertyName, List<OWLAnnotationPropertyDomainAxiom> domains, Map<String, SchemaClass> classesMap) {
+		OWLAnnotationPropertyDomainAxiom domainAxiom = domains.stream()
+				.filter(d -> propertyName.equals(d.getProperty().asOWLAnnotationProperty().getIRI().toString()))
+				.findFirst().orElse(null);
+		if(domainAxiom != null && domainAxiom.getDomain() != null) {
+			String domainUri = domainAxiom.getDomain().getIRIString();
+			if(classesMap.containsKey(domainUri)) {
+				dataProperty.getSourceClasses().add(domainUri);
+			}
+		}
+		if(dataProperty.getSourceClasses().isEmpty()) {
+			dataProperty.getSourceClasses().add(THING_URI);
+		}
+	}
+
+	private void setAnnotationRangeType(SchemaAttribute dataProperty, String propertyName, List<OWLAnnotationPropertyRangeAxiom> ranges) {
+		OWLAnnotationPropertyRangeAxiom rangeAxiom = ranges.stream()
+				.filter(d -> propertyName.equals(d.getProperty().asOWLDataProperty().getIRI().toString()))
+				.findFirst().orElse(null);
+		if(rangeAxiom != null && rangeAxiom.getRange() != null) {
+			String parsedDataType = parseDataType(rangeAxiom.getRange().getIRIString());
+			dataProperty.setType(parsedDataType);
+		}
+		if(dataProperty.getType() == null) {
+			dataProperty.setType(DEFAULT_XSD_DATA_TYPE);
+		}
+	}
 	
 	private void setDomain(SchemaAttribute dataProperty, String propertyName, List<OWLDataPropertyDomainAxiom> domains, Map<String, SchemaClass> classesMap) {
-		OWLDataPropertyDomainAxiom domainAxiom = domains.stream().filter(d -> propertyName.equals(
-				d.getProperty().asOWLDataProperty().getIRI().toString())).findFirst().orElse(null);
+		OWLDataPropertyDomainAxiom domainAxiom = domains.stream()
+				.filter(d -> propertyName.equals(d.getProperty().asOWLDataProperty().getIRI().toString()))
+				.findFirst().orElse(null);
 		if(isValidDomainClass(domainAxiom)) {
 			String domainUri = domainAxiom.getDomain().asOWLClass().getIRI().toString();
 			if(classesMap.containsKey(domainUri)) {
@@ -246,8 +297,9 @@ public class OwlOntologyReader {
 	}
 	
 	private void setRangeType(SchemaAttribute dataProperty, String propertyName, List<OWLDataPropertyRangeAxiom> ranges) {
-		OWLDataPropertyRangeAxiom rangeAxiom = ranges.stream().filter(d -> propertyName.equals(
-				d.getProperty().asOWLDataProperty().getIRI().toString())).findFirst().orElse(null);
+		OWLDataPropertyRangeAxiom rangeAxiom = ranges.stream()
+				.filter(d -> propertyName.equals(d.getProperty().asOWLDataProperty().getIRI().toString()))
+				.findFirst().orElse(null);
 		if(isValidSimpleRangeType(rangeAxiom)) {
 			String parsedDataType = parseDataType(rangeAxiom.getRange().asOWLDatatype().getIRI().toString());
 			dataProperty.setType(parsedDataType);
