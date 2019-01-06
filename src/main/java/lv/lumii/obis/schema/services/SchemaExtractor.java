@@ -447,30 +447,16 @@ public class SchemaExtractor {
 					SchemaExtractorQueries.BINDING_NAME_PROPERTY, p.getKey());
 			List<QueryResult> queryResults = sparqlEndpointProcessor.read(query);
 			if(queryResults == null || queryResults.isEmpty() || queryResults.size() > 1){
-				property.setDataType(DEFAULT_XSD_DATA_TYPE);
+				property.setDataType(DATA_TYPE_XSD_DEFAULT);
 				continue;
 			}
 			String resultDataType = queryResults.get(0).get(SchemaExtractorQueries.BINDING_NAME_DATA_TYPE);
 			if(SchemaUtil.isEmpty(resultDataType)){
-				property.setDataType(DEFAULT_XSD_DATA_TYPE);
+				property.setDataType(DATA_TYPE_XSD_DEFAULT);
 			} else {
-				String parsedDataType = parseDataType(resultDataType);
-				property.setDataType("xsd_" + parsedDataType);
+				property.setDataType(SchemaUtil.parseDataType(resultDataType));
 			}
 		}
-	}
-	
-	private String parseDataType(String dataType){
-		String resultDataType = dataType;
-		
-		int lastIndex = dataType.lastIndexOf("#");
-		if(lastIndex == -1){
-			lastIndex = dataType.lastIndexOf("/");
-		}
-		if(lastIndex != -1 && lastIndex < dataType.length()){
-			resultDataType = dataType.substring(lastIndex + 1);
-		}
-		return resultDataType;
 	}
 	
 	private void processCardinalities(Map<String, SchemaPropertyNodeInfo> properties, SparqlEndpointProcessor sparqlEndpointProcessor){
@@ -542,7 +528,7 @@ public class SchemaExtractor {
 				attribute.getSourceClasses().add(p.getValue().getDomainClass());
 				attribute.setType(p.getValue().getDataType());
 				if(attribute.getType() == null || attribute.getType().trim().equals("")){
-					attribute.setType(DEFAULT_XSD_DATA_TYPE);
+					attribute.setType(DATA_TYPE_XSD_DEFAULT);
 				}
 				schema.getAttributes().add(attribute);
 			}			

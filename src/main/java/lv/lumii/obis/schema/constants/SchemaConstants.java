@@ -13,8 +13,11 @@ public class SchemaConstants {
 	public static final String THING_URI = "http://www.w3.org/2002/07/owl#Thing";
 	
 	public static final String XSD_NAMESPACE = "http://www.w3.org/2001/XMLSchema#";
+	public static final String RDF_NAMESPACE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
+	public static final String RDFS_NAMESPACE = "http://www.w3.org/2000/01/rdf-schema#";
 	
-	public static final String DEFAULT_XSD_DATA_TYPE = "xsd_string";
+	public static final String DATA_TYPE_XSD_DEFAULT = "xsd:string";
+	public static final String DATA_TYPE_LITERAL = "Literal";
 
 	public static final Integer DEFAULT_MAX_CARDINALITY = -1;
 	public static final Integer DEFAULT_MIN_CARDINALITY = 0;

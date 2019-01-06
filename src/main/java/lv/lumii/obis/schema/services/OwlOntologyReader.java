@@ -273,11 +273,11 @@ public class OwlOntologyReader {
 				.filter(d -> propertyName.equals(d.getProperty().asOWLDataProperty().getIRI().toString()))
 				.findFirst().orElse(null);
 		if(rangeAxiom != null && rangeAxiom.getRange() != null) {
-			String parsedDataType = parseDataType(rangeAxiom.getRange().getIRIString());
+			String parsedDataType = SchemaUtil.parseDataType(rangeAxiom.getRange().getIRIString());
 			dataProperty.setType(parsedDataType);
 		}
 		if(dataProperty.getType() == null) {
-			dataProperty.setType(DEFAULT_XSD_DATA_TYPE);
+			dataProperty.setType(DATA_TYPE_XSD_DEFAULT);
 		}
 	}
 	
@@ -301,7 +301,7 @@ public class OwlOntologyReader {
 				.filter(d -> propertyName.equals(d.getProperty().asOWLDataProperty().getIRI().toString()))
 				.findFirst().orElse(null);
 		if(isValidSimpleRangeType(rangeAxiom)) {
-			String parsedDataType = parseDataType(rangeAxiom.getRange().asOWLDatatype().getIRI().toString());
+			String parsedDataType = SchemaUtil.parseDataType(rangeAxiom.getRange().asOWLDatatype().getIRI().toString());
 			dataProperty.setType(parsedDataType);
 		} else if(isValidLookupRangeType(rangeAxiom)){
 			List<String> lookups = ((OWLDataOneOf)rangeAxiom.getRange()).values().map(OWLLiteral::getLiteral).collect(Collectors.toList());
@@ -311,7 +311,7 @@ public class OwlOntologyReader {
 			}
 		}
 		if(dataProperty.getType() == null) {
-			dataProperty.setType(DEFAULT_XSD_DATA_TYPE);
+			dataProperty.setType(DATA_TYPE_XSD_DEFAULT);
 		}
 	}
 	
@@ -458,24 +458,6 @@ public class OwlOntologyReader {
 		resourceNames.put(entityIri.getShortForm(), ++count);
 	}
 	
-	private String parseDataType(String dataType){
-		String resultDataType = dataType;
-		
-		int lastIndex = dataType.lastIndexOf("#");
-		if(lastIndex == -1){
-			lastIndex = dataType.lastIndexOf("/");
-		}
-		if(lastIndex != -1 && lastIndex < dataType.length()){
-			resultDataType = dataType.substring(lastIndex + 1);
-		}
-		
-		if(!resultDataType.startsWith("xsd") && dataType.startsWith(XSD_NAMESPACE)) {
-			resultDataType = "xsd_" + resultDataType;
-		}
-		
-		return resultDataType;
-	}
-
 	private void processAnnotations(Stream<OWLAnnotation> annotations, AnnotationElement target){
 		annotations.forEach(a -> {
 			if (a != null && a.getProperty() != null && a.getValue() != null) {
