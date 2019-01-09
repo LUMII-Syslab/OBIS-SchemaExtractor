@@ -10,13 +10,7 @@ public class SchemaExtractorQueries {
 	public static final String BINDING_NAME_DATA_TYPE = "dataType";
 	
 	public static final String FIND_ALL_CLASSES = 
-			  "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>" + "\n"
-			+ "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>" + "\n"
-			+ "PREFIX owl: <http://www.w3.org/2002/07/owl#>" + "\n"
-			+ "SELECT DISTINCT ?class WHERE {" + "\n\t"
-			+ "?x a ?class." + "\n\t"
-			+ "FILTER (?class != owl:Thing && ?class != rdfs:Class && ?class != rdf:Property)" + "\n"
-			+ "}";
+			  "SELECT DISTINCT ?class WHERE { ?x a ?class. }";
 	
 	public static final String FIND_INTERSECTION_CLASSES = 
 			  "SELECT DISTINCT ?classA ?classB WHERE {" + "\n\t"

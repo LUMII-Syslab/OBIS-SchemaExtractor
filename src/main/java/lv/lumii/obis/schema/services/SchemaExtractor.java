@@ -186,11 +186,14 @@ public class SchemaExtractor {
 				.sorted((o1, o2) -> {
 					Integer o1Size = o1.getValue().getNeighbors().size();
 					Integer o2Size = o2.getValue().getNeighbors().size();
-					int compareTo = o1Size.compareTo(o2Size);
-					if(compareTo == 0) {
-						compareTo = o1.getValue().getInstanceCount().compareTo(o2.getValue().getInstanceCount());
+					int compareResult = o1Size.compareTo(o2Size);
+					if(compareResult == 0) {
+						compareResult = o1.getValue().getInstanceCount().compareTo(o2.getValue().getInstanceCount());
 					}
-					return compareTo;
+					if(compareResult == 0){
+						compareResult = compareClassNames(o1.getValue().getClassName(), o2.getValue().getClassName());
+					}
+					return compareResult;
 				})
 				.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (e1, e2) -> e1, LinkedHashMap::new));
 	}
@@ -201,7 +204,11 @@ public class SchemaExtractor {
 				.sorted((o1, o2) -> {
 					Integer neighborInstances1 = classesGraph.get(o1).getInstanceCount();
 					Integer neighborInstances2 = classesGraph.get(o2).getInstanceCount();
-					return neighborInstances1.compareTo(neighborInstances2);
+					int compareResult = neighborInstances1.compareTo(neighborInstances2);
+					if(compareResult == 0){
+						compareResult = compareClassNames(classesGraph.get(o1).getClassName(), classesGraph.get(o2).getClassName());
+					}
+					return compareResult;
 				})
 				.collect(Collectors.toList());
 	}
@@ -212,9 +219,23 @@ public class SchemaExtractor {
 				.sorted((o1, o2) -> {
 					Integer neighborInstances1 = classesGraph.get(o1.getFullName()).getInstanceCount();
 					Integer neighborInstances2 = classesGraph.get(o2.getFullName()).getInstanceCount();
-					return neighborInstances2.compareTo(neighborInstances1);
+					int compareResult = neighborInstances2.compareTo(neighborInstances1);
+					if(compareResult == 0){
+						compareResult = compareClassNames(o2.getFullName(), o1.getFullName());
+					}
+					return compareResult;
 				})
 				.collect(Collectors.toList());
+	}
+
+	private int compareClassNames(String className1, String className2){
+		if((className1 == null && className2 == null) || (className1 != null && className2 == null)){
+			return 1;
+		}
+		if(className1 == null){
+			return 0;
+		}
+		return className1.compareTo(className2);
 	}
 	
 	private void processSuperclasses(Map<String, SchemaClassNodeInfo> classesGraph, List<SchemaClass> classes, SparqlEndpointProcessor sparqlEndpointProcessor){
@@ -320,16 +341,25 @@ public class SchemaExtractor {
 				continue;
 			}
 			String instances = queryResults.get(0).get(SchemaExtractorQueries.BINDING_NAME_INSTANCES_COUNT);
-			if(Integer.valueOf(instances) == 0 && !currentClass.getSuperClasses().contains(neighbor)
-					&& !currentClass.getSubClasses().contains(neighbor)){
+			SchemaClass superClass = findClass(classes, neighbor);
+			if(Integer.valueOf(instances) == 0 && !hasCyclicDependency(currentClass, superClass, classes)){
 				currentClass.getSuperClasses().add(neighbor);
-				SchemaClass superClass = findClass(classes, neighbor);
 				if(superClass != null){
 					superClass.getSubClasses().add(currentClass.getFullName());
 				}
 				break;
 			}
 		}
+	}
+
+	private boolean hasCyclicDependency(SchemaClass currentClass, SchemaClass newClass, List<SchemaClass> classes){
+		if(newClass == null){
+			return false;
+		}
+		if(currentClass.getSuperClasses().contains(newClass.getFullName()) || currentClass.getSubClasses().contains(newClass.getFullName())){
+			return true;
+		}
+		return isClassAccessibleFromSuperclasses(newClass.getFullName(), currentClass.getFullName(), classes);
 	}
 	
 	private boolean isClassAccessibleFromSuperclasses(String currentClass, String neighbor, List<SchemaClass> classes){
