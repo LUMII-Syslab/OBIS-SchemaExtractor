@@ -317,7 +317,6 @@ public class SchemaExtractor {
 			}
 		}
 		if(!accessible){
-			System.out.println("CurrentClass [" + currentClass.getFullName() + "] cannot access - " + notAccessibleNeighbors);
 			List<String> sortedNeighbors = sortNeighborsByInstances(notAccessibleNeighbors, classesGraph);
 			updateClass(currentClass, currentClassInfo, sortedNeighbors, classesGraph, classes, sparqlEndpointProcessor);
 		}
