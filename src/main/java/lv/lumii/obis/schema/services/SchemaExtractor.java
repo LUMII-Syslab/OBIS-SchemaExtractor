@@ -4,6 +4,7 @@ import java.util.*;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
+import lombok.extern.slf4j.Slf4j;
 import lv.lumii.obis.schema.services.dto.SchemaClassNodeInfo;
 import lv.lumii.obis.schema.services.dto.SchemaDomainRangeInfo;
 import lv.lumii.obis.schema.services.dto.SchemaPropertyNodeInfo;
@@ -16,32 +17,32 @@ import lv.lumii.obis.schema.model.SchemaEntity;
 import lv.lumii.obis.schema.model.SchemaRole;
 
 import static lv.lumii.obis.schema.constants.SchemaConstants.*;
+import static lv.lumii.obis.schema.services.SchemaExtractorQueries.*;
 
+@Slf4j
 public class SchemaExtractor {
 
-	public Schema extractSchema(String sparqlEndpointUrl, String graphName, String mode){
+	public Schema extractSchema(String sparqlEndpointUrl, String graphName, String mode, boolean logEnabled){
 		
 		SparqlEndpointProcessor sparqlEndpointProcessor = new SparqlEndpointProcessor(sparqlEndpointUrl, graphName);
-		
-		logStartMessage(sparqlEndpointUrl, graphName);
 		
 		Schema schema = new Schema();
 		schema.setName((graphName != null) ? graphName + "_Schema" : "Schema");
 		
 		// find all classes
-		List<QueryResult> queryResults = sparqlEndpointProcessor.read(SchemaExtractorQueries.FIND_ALL_CLASSES);
+		List<QueryResult> queryResults = sparqlEndpointProcessor.read(FIND_ALL_CLASSES, "FIND_ALL_CLASSES", logEnabled);
 		List<SchemaClass> classes = processClasses(queryResults);
 		schema.setClasses(classes);
 		queryResults.clear();	
 		
 		// find intersection classes
-		queryResults = sparqlEndpointProcessor.read(SchemaExtractorQueries.FIND_INTERSECTION_CLASSES);
+		queryResults = sparqlEndpointProcessor.read(FIND_INTERSECTION_CLASSES, "FIND_INTERSECTION_CLASSES", logEnabled);
 		Map<String, SchemaClassNodeInfo> classesGraph = buildClassGraph(queryResults);
 		queryResults.clear();
 		addMissingClasses(classes, classesGraph);
 		
 		// find instances counts for all classes
-		queryResults = sparqlEndpointProcessor.read(SchemaExtractorQueries.FIND_INSTANCES_COUNT);
+		queryResults = sparqlEndpointProcessor.read(FIND_INSTANCES_COUNT, "FIND_INSTANCES_COUNT", logEnabled);
 		processInstanceCount(queryResults, classesGraph);
 		queryResults.clear();
 		
@@ -49,18 +50,18 @@ public class SchemaExtractor {
 		classesGraph = sortClassesByNeighbors(classesGraph);
 		
 		// find superclasses
-		processSuperclasses(classesGraph, classes, sparqlEndpointProcessor);
+		processSuperclasses(classesGraph, classes, sparqlEndpointProcessor, logEnabled);
 		
 		// validate and update classes
-		validateAndNormalizeSuperclasses(classesGraph, classes, sparqlEndpointProcessor);
+		validateAndNormalizeSuperclasses(classesGraph, classes, sparqlEndpointProcessor, logEnabled);
 		
 		// find all properties (attributes + associations) and domain class instances count
-		queryResults = sparqlEndpointProcessor.read(SchemaExtractorQueries.FIND_ALL_PROPERTIES);
+		queryResults = sparqlEndpointProcessor.read(FIND_ALL_PROPERTIES, "FIND_ALL_PROPERTIES", logEnabled);
 		Map<String, SchemaPropertyNodeInfo> properties = processAllProperties(queryResults);
 		queryResults.clear();
 		
 		// find associations and range class instances count
-		queryResults = sparqlEndpointProcessor.read(SchemaExtractorQueries.FIND_OBJECT_PROPERTIES_WITH_RANGE);
+		queryResults = sparqlEndpointProcessor.read(FIND_OBJECT_PROPERTIES_WITH_RANGE, "FIND_OBJECT_PROPERTIES_WITH_RANGE", logEnabled);
 		processAssociations(queryResults, properties);
 		queryResults.clear();
 		
@@ -68,15 +69,15 @@ public class SchemaExtractor {
 		mapPropertiesToDomainClasses(classes, properties);
 		
 		// map properties to range classes
-		mapPropertiesToRangeClasses(classes, properties, sparqlEndpointProcessor);
+		mapPropertiesToRangeClasses(classes, properties, sparqlEndpointProcessor, logEnabled);
 		
 		// data type and cardinality calculation may impact performance
 		if(!EXTRACT_MODE_SIMPLE.equalsIgnoreCase(mode)){
 			// find data types for attributes
-			processDataTypes(properties, sparqlEndpointProcessor);		
+			processDataTypes(properties, sparqlEndpointProcessor, logEnabled);
 			// find min/max cardinalities
 			if(!EXTRACT_MODE_DATA.equalsIgnoreCase(mode)){
-				processCardinalities(properties, sparqlEndpointProcessor);
+				processCardinalities(properties, sparqlEndpointProcessor, logEnabled);
 			}
 		}
 		
@@ -86,8 +87,6 @@ public class SchemaExtractor {
 		// find main namespace
 		schema.setDefaultNamespace(findMainNamespace(schema));
 		schema.setMultipleNamespaces(false);
-
-		logEndMessage();
 		
 		return schema;
 	}
@@ -238,7 +237,8 @@ public class SchemaExtractor {
 		return className1.compareTo(className2);
 	}
 	
-	private void processSuperclasses(Map<String, SchemaClassNodeInfo> classesGraph, List<SchemaClass> classes, SparqlEndpointProcessor sparqlEndpointProcessor){
+	private void processSuperclasses(Map<String, SchemaClassNodeInfo> classesGraph, List<SchemaClass> classes,
+									 SparqlEndpointProcessor sparqlEndpointProcessor, boolean logEnabled){
 		
 		for(Entry<String, SchemaClassNodeInfo> entry: classesGraph.entrySet()){
 			
@@ -252,7 +252,7 @@ public class SchemaExtractor {
 			
 			// find the class with the smallest number of instances but including all current instances
 			SchemaClassNodeInfo currentClassInfo = entry.getValue();
-			updateClass(currentClass, currentClassInfo, neighbors, classesGraph, classes, sparqlEndpointProcessor);
+			updateClass(currentClass, currentClassInfo, neighbors, classesGraph, classes, sparqlEndpointProcessor, logEnabled);
 			
 		}
 	}
@@ -268,7 +268,7 @@ public class SchemaExtractor {
 	//		c. is not accessible from X
 	// 6. repeat validation
 	private void validateAndNormalizeSuperclasses(Map<String, SchemaClassNodeInfo> classesGraph, List<SchemaClass> classes,
-			SparqlEndpointProcessor sparqlEndpointProcessor){
+			SparqlEndpointProcessor sparqlEndpointProcessor, boolean logEnabled){
 
 		List<SchemaClass> sortedClasses = sortClassesByInstances(classes, classesGraph);
 
@@ -292,16 +292,16 @@ public class SchemaExtractor {
 
 			// 3. validate whether all neighbors are accessible
 			int maxCounter = classInfo.getNeighbors().size() + 1;
-			boolean accessible = validateAllNeighbors(currentClass, classInfo, classes, classesGraph, sparqlEndpointProcessor);
+			boolean accessible = validateAllNeighbors(currentClass, classInfo, classes, classesGraph, sparqlEndpointProcessor, logEnabled);
 			while(!accessible && maxCounter != 0){
 				maxCounter--;
-				accessible = validateAllNeighbors(currentClass, classInfo, classes, classesGraph, sparqlEndpointProcessor);
+				accessible = validateAllNeighbors(currentClass, classInfo, classes, classesGraph, sparqlEndpointProcessor, logEnabled);
 			}
 		}
 	}
 	
 	private boolean validateAllNeighbors(SchemaClass currentClass, SchemaClassNodeInfo currentClassInfo, List<SchemaClass> classes,
-			Map<String, SchemaClassNodeInfo> classesGraph, SparqlEndpointProcessor sparqlEndpointProcessor){
+			Map<String, SchemaClassNodeInfo> classesGraph, SparqlEndpointProcessor sparqlEndpointProcessor, boolean logEnabled){
 		boolean accessible = true;
 		List<String> notAccessibleNeighbors = new ArrayList<>();
 		for(String neighbor: currentClassInfo.getNeighbors()){
@@ -318,14 +318,14 @@ public class SchemaExtractor {
 		}
 		if(!accessible){
 			List<String> sortedNeighbors = sortNeighborsByInstances(notAccessibleNeighbors, classesGraph);
-			updateClass(currentClass, currentClassInfo, sortedNeighbors, classesGraph, classes, sparqlEndpointProcessor);
+			updateClass(currentClass, currentClassInfo, sortedNeighbors, classesGraph, classes, sparqlEndpointProcessor, logEnabled);
 		}
 		
 		return accessible;
 	}
 	
 	private void updateClass(SchemaClass currentClass, SchemaClassNodeInfo currentClassInfo, List<String> neighbors, 
-			Map<String, SchemaClassNodeInfo> classesGraph, List<SchemaClass> classes, SparqlEndpointProcessor sparqlEndpointProcessor){
+			Map<String, SchemaClassNodeInfo> classesGraph, List<SchemaClass> classes, SparqlEndpointProcessor sparqlEndpointProcessor, boolean logEnabled){
 		
 		for(String neighbor: neighbors){
 			int neighborInstances = classesGraph.get(neighbor).getInstanceCount();
@@ -335,7 +335,7 @@ public class SchemaExtractor {
 			String query = SchemaExtractorQueries.CHECK_SUPERCLASS;
 			query = query.replace("?" + SchemaExtractorQueries.BINDING_NAME_CLASS_A, "<" + currentClass.getFullName() +">");
 			query = query.replace("?" + SchemaExtractorQueries.BINDING_NAME_CLASS_B, "<" + neighbor +">");
-			List<QueryResult> queryResults = sparqlEndpointProcessor.read(query);
+			List<QueryResult> queryResults = sparqlEndpointProcessor.read(query, "CHECK_SUPERCLASS", logEnabled);
 			if(queryResults == null || queryResults.isEmpty()){
 				continue;
 			}
@@ -434,7 +434,8 @@ public class SchemaExtractor {
 		}
 	}
 
-	private void mapPropertiesToRangeClasses(List<SchemaClass> classes, Map<String, SchemaPropertyNodeInfo> properties, SparqlEndpointProcessor sparqlEndpointProcessor){
+	private void mapPropertiesToRangeClasses(List<SchemaClass> classes, Map<String, SchemaPropertyNodeInfo> properties,
+											 SparqlEndpointProcessor sparqlEndpointProcessor, boolean logEnabled){
 		for(Entry<String, SchemaPropertyNodeInfo> p: properties.entrySet()){
 			if(!p.getValue().getIsObjectProperty()){
 				continue;
@@ -444,14 +445,14 @@ public class SchemaExtractor {
 			for(SchemaClassNodeInfo classInfo: p.getValue().getRangeClasses()){
 				SchemaClass rangeClass = findClass(classes, classInfo.getClassName());
 				if(rangeClass != null && rangeClass.getSubClasses().isEmpty() && rangeClass.getSuperClasses().isEmpty()){
-					addRangeClassToProperty(classInfo, p, classes, sparqlEndpointProcessor);
+					addRangeClassToProperty(classInfo, p, classes, sparqlEndpointProcessor, logEnabled);
 				} else if(classInfo.getInstanceCount() > maxCount){
 					maxCount = classInfo.getInstanceCount();
 					classWithMaxCount = classInfo;
 				}
 			}
 			if(classWithMaxCount != null){
-				addRangeClassToProperty(classWithMaxCount, p, classes, sparqlEndpointProcessor);
+				addRangeClassToProperty(classWithMaxCount, p, classes, sparqlEndpointProcessor, logEnabled);
 			}
 		}
 	}
@@ -464,7 +465,7 @@ public class SchemaExtractor {
 	}
 
 	private void addRangeClassToProperty(SchemaClassNodeInfo classInfo, Entry<String, SchemaPropertyNodeInfo> property, List<SchemaClass> classes,
-										 SparqlEndpointProcessor sparqlEndpointProcessor){
+										 SparqlEndpointProcessor sparqlEndpointProcessor, boolean logEnabled){
 		String propertyRange = findPropertyClass(classInfo, property.getKey(), property.getValue().getRangeClasses(), classes);
 		if(!SchemaUtil.isEmpty(propertyRange)){
 			List<SchemaDomainRangeInfo> domainRangePairs = property.getValue().getDomainRangePairs();
@@ -476,7 +477,7 @@ public class SchemaExtractor {
 			} else {
 				Set<String> uniqueDomains = domainRangePairs.stream().map(SchemaDomainRangeInfo::getDomainClass).collect(Collectors.toSet());
 				uniqueDomains.forEach(domain -> {
-					if(checkDomainRangeMapping(domain, propertyRange, property.getKey(), sparqlEndpointProcessor)){
+					if(checkDomainRangeMapping(domain, propertyRange, property.getKey(), sparqlEndpointProcessor, logEnabled)){
 						createNewOrUpdateDomainRangeEntry(domain, propertyRange, domainRangePairs);
 					}
 				});
@@ -495,12 +496,12 @@ public class SchemaExtractor {
 		domainRangeInfo.setRangeClass(rangeClass);
 	}
 
-	private boolean checkDomainRangeMapping(String domainClass, String rangeClass, String property, SparqlEndpointProcessor sparqlEndpointProcessor){
+	private boolean checkDomainRangeMapping(String domainClass, String rangeClass, String property, SparqlEndpointProcessor sparqlEndpointProcessor, boolean logEnabled){
 		String query = SchemaExtractorQueries.CHECK_DOMAIN_RANGE_MAPPING;
 		query = query.replace(SchemaExtractorQueries.BINDING_NAME_CLASS_A, domainClass);
 		query = query.replace(SchemaExtractorQueries.BINDING_NAME_CLASS_B, rangeClass);
 		query = query.replace(SchemaExtractorQueries.BINDING_NAME_PROPERTY, property);
-		List<QueryResult> queryResults = sparqlEndpointProcessor.read(query);
+		List<QueryResult> queryResults = sparqlEndpointProcessor.read(query, "CHECK_DOMAIN_RANGE_MAPPING", logEnabled);
 		if(queryResults == null || queryResults.isEmpty()){
 			return false;
 		}
@@ -511,7 +512,7 @@ public class SchemaExtractor {
 	private String findPropertyClass(SchemaClassNodeInfo classWithMaxCount, String propertyName, List<SchemaClassNodeInfo> assignedClasses, List<SchemaClass> classes){
 		SchemaClass rootClass = findClass(classes, classWithMaxCount.getClassName());
 		if(rootClass == null){
-			logErrorMessage("propertyDomainOrRange", propertyName, classWithMaxCount.getClassName());
+			log.error("Error - cannot find property domain or range class - propertyName [" + propertyName + "], targetClassName [" + classWithMaxCount.getClassName() + "]");
 			return null;
 		}
 		for(String subClassName: rootClass.getSubClasses()){
@@ -525,7 +526,7 @@ public class SchemaExtractor {
 		return rootClass.getFullName();
 	}
 	
-	private void processDataTypes(Map<String, SchemaPropertyNodeInfo> properties, SparqlEndpointProcessor sparqlEndpointProcessor){
+	private void processDataTypes(Map<String, SchemaPropertyNodeInfo> properties, SparqlEndpointProcessor sparqlEndpointProcessor, boolean logEnabled){
 		for(Entry<String, SchemaPropertyNodeInfo> p: properties.entrySet()){
 			if(p.getValue().getIsObjectProperty()){
 				continue;
@@ -534,7 +535,7 @@ public class SchemaExtractor {
 			
 			String query = SchemaExtractorQueries.FIND_DATA_TYPE.replace(
 					SchemaExtractorQueries.BINDING_NAME_PROPERTY, p.getKey());
-			List<QueryResult> queryResults = sparqlEndpointProcessor.read(query);
+			List<QueryResult> queryResults = sparqlEndpointProcessor.read(query, "FIND_DATA_TYPE", logEnabled);
 			if(queryResults == null || queryResults.isEmpty() || queryResults.size() > 1){
 				property.setDataType(DATA_TYPE_XSD_DEFAULT);
 				continue;
@@ -548,18 +549,18 @@ public class SchemaExtractor {
 		}
 	}
 	
-	private void processCardinalities(Map<String, SchemaPropertyNodeInfo> properties, SparqlEndpointProcessor sparqlEndpointProcessor){
+	private void processCardinalities(Map<String, SchemaPropertyNodeInfo> properties, SparqlEndpointProcessor sparqlEndpointProcessor, boolean logEnabled){
 		for(Entry<String, SchemaPropertyNodeInfo> p: properties.entrySet()){
 			SchemaPropertyNodeInfo property = p.getValue();			
-			setMaxCardinality(p.getKey(), property, sparqlEndpointProcessor);
-			setMinCardinality(p.getKey(), property, sparqlEndpointProcessor);
+			setMaxCardinality(p.getKey(), property, sparqlEndpointProcessor, logEnabled);
+			setMinCardinality(p.getKey(), property, sparqlEndpointProcessor, logEnabled);
 		}
 	}
 	
-	private void setMaxCardinality(String propertyName, SchemaPropertyNodeInfo property, SparqlEndpointProcessor sparqlEndpointProcessor){
+	private void setMaxCardinality(String propertyName, SchemaPropertyNodeInfo property, SparqlEndpointProcessor sparqlEndpointProcessor, boolean logEnabled){
 		String query = SchemaExtractorQueries.FIND_MAX_CARDINALITY.replace(
 				SchemaExtractorQueries.BINDING_NAME_PROPERTY, propertyName);
-		List<QueryResult> queryResults = sparqlEndpointProcessor.read(query);
+		List<QueryResult> queryResults = sparqlEndpointProcessor.read(query, "FIND_MAX_CARDINALITY", logEnabled);
 		if(queryResults == null || queryResults.isEmpty()){
 			property.setMaxCardinality(null);
 			return;
@@ -579,7 +580,7 @@ public class SchemaExtractor {
 		}
 	}
 	
-	private void setMinCardinality(String propertyName, SchemaPropertyNodeInfo property, SparqlEndpointProcessor sparqlEndpointProcessor){
+	private void setMinCardinality(String propertyName, SchemaPropertyNodeInfo property, SparqlEndpointProcessor sparqlEndpointProcessor, boolean logEnabled){
 		if(propertyName == null || property == null || property.getDomainClasses().isEmpty()){
 			return;
 		}
@@ -593,7 +594,7 @@ public class SchemaExtractor {
 			String query = SchemaExtractorQueries.FIND_MIN_CARDINALITY.
 					replace(SchemaExtractorQueries.BINDING_NAME_PROPERTY, propertyName).
 					replace(SchemaExtractorQueries.BINDING_NAME_CLASS, domain);
-			queryResults = sparqlEndpointProcessor.read(query);
+			queryResults = sparqlEndpointProcessor.read(query, "FIND_MIN_CARDINALITY", logEnabled);
 			if(queryResults == null || queryResults.isEmpty()){
 				continue;
 			}
@@ -649,16 +650,6 @@ public class SchemaExtractor {
 			return namespaces.keySet().iterator().next();
 		}
 		return null;
-	}
-
-	private void logStartMessage(String... args){
-		System.out.println("Starting to read schema from URL [" + args[0] + "], grapName [" + args[1]  + "]");
-	}
-	private void logEndMessage(){
-		System.out.println("Schema extraction completed");
-	}
-	private void logErrorMessage(String... args){
-		System.out.println("Error - null " + args[0] + " - sourceItem [" + args[1] + "], targetItem [" + args[2] + "]");
 	}
 
 }

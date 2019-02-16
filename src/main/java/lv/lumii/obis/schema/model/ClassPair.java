@@ -8,7 +8,6 @@ public class ClassPair {
 	private String sourceClass;
 
 	@JsonProperty("TargetClass")
-
 	private String targetClass;
 	
 	public ClassPair() {}

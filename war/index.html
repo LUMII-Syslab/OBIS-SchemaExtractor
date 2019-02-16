@@ -23,6 +23,11 @@
         <p>Example:
             <a href=".">http://localhost:8080/obis-rest/services/schema?endpoint=http://localhost:8890/sparql&graph=MiniUniv&mode=simple</a>
         </p>
+        <p>By default SPARQL queries are not logged. It may impact performance:
+            <ul>
+                <li>Use parameter <b>"&log=enabled"</b> to enable SPARQL query logging to the file <i>/logs/obis-extractor.log</i></li>
+            </ul>
+        </p>
         <br>
         <h3>Extract Schema from OWL file</h3>
         <p><b>URL example:</b><i>http://server:port/obis-rest/schemaFromOwl.html</i></p>

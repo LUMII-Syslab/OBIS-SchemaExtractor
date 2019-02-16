@@ -3,6 +3,7 @@ package lv.lumii.obis.schema.services;
 import java.util.ArrayList;
 import java.util.List;
 
+import lombok.extern.slf4j.Slf4j;
 import org.apache.jena.query.Query;
 import org.apache.jena.query.QueryExecution;
 import org.apache.jena.query.QueryExecutionFactory;
@@ -14,6 +15,7 @@ import org.apache.jena.sparql.engine.http.QueryEngineHTTP;
 
 import lv.lumii.obis.schema.services.dto.QueryResult;
 
+@Slf4j
 public class SparqlEndpointProcessor {
 
 	private String sparqlEndpointUrl;
@@ -25,8 +27,11 @@ public class SparqlEndpointProcessor {
 		this.graphName = graphName;
 	}
 
-	public List<QueryResult> read(String sparqlQuery){
+	public List<QueryResult> read(String sparqlQuery, String queryName, boolean logEnabled){
 		Query query = QueryFactory.create(sparqlQuery);
+		if(logEnabled){
+			log.info(queryName + "\n" + sparqlQuery);
+		}
 		QueryExecution qexec = getQueryExecutor(query);	
 		List<QueryResult> queryResults = new ArrayList<>();
 		try {
@@ -53,7 +58,7 @@ public class SparqlEndpointProcessor {
 			}
 			return queryResults;
 		} catch (Exception e){
-			System.out.println("Schema Extractor Exception - " + e.getMessage());
+			log.error("Schema Extractor Exception - " + e.getMessage());
 			e.printStackTrace();
 			return queryResults;
 		} finally {
