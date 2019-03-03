@@ -1,5 +1,9 @@
 package lv.lumii.obis.schema.services.dto;
 
+import lombok.Getter;
+import lombok.Setter;
+
+@Setter @Getter
 public class SchemaCardinalityInfo {
 	
 	public enum CardinalityType {
@@ -15,19 +19,4 @@ public class SchemaCardinalityInfo {
 		this.cardinality = cardinality;
 	}
 
-	public Integer getCardinality() {
-		return cardinality;
-	}
-
-	public void setCardinality(Integer cardinality) {
-		this.cardinality = cardinality;
-	}
-
-	public CardinalityType getCardinalityType() {
-		return cardinalityType;
-	}
-
-	public void setCardinalityType(CardinalityType cardinalityType) {
-		this.cardinalityType = cardinalityType;
-	}
 }

@@ -1,8 +1,12 @@
 package lv.lumii.obis.schema.services.dto;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import java.util.ArrayList;
 import java.util.List;
 
+@Setter @Getter
 public class SchemaClassNodeInfo {
 	
 	private String className;
@@ -16,23 +20,4 @@ public class SchemaClassNodeInfo {
 		return neighbors;
 	}
 
-	public String getClassName() {
-		return className;
-	}
-
-	public void setClassName(String className) {
-		this.className = className;
-	}
-
-	public Integer getInstanceCount() {
-		return instanceCount;
-	}
-
-	public void setInstanceCount(Integer instanceCount) {
-		this.instanceCount = instanceCount;
-	}
-
-	public void setNeighbors(List<String> neighbors) {
-		this.neighbors = neighbors;
-	}
 }

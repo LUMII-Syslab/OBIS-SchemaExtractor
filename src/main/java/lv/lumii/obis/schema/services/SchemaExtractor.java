@@ -5,16 +5,16 @@ import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
 import lombok.extern.slf4j.Slf4j;
-import lv.lumii.obis.schema.services.dto.SchemaClassNodeInfo;
-import lv.lumii.obis.schema.services.dto.SchemaDomainRangeInfo;
-import lv.lumii.obis.schema.services.dto.SchemaPropertyNodeInfo;
-import lv.lumii.obis.schema.services.dto.QueryResult;
+import lv.lumii.obis.schema.constants.SchemaConstants;
+import lv.lumii.obis.schema.services.dto.*;
 import lv.lumii.obis.schema.model.ClassPair;
 import lv.lumii.obis.schema.model.Schema;
 import lv.lumii.obis.schema.model.SchemaAttribute;
 import lv.lumii.obis.schema.model.SchemaClass;
 import lv.lumii.obis.schema.model.SchemaEntity;
 import lv.lumii.obis.schema.model.SchemaRole;
+import org.apache.commons.lang3.BooleanUtils;
+import org.apache.commons.lang3.StringUtils;
 
 import static lv.lumii.obis.schema.constants.SchemaConstants.*;
 import static lv.lumii.obis.schema.services.SchemaExtractorQueries.*;
@@ -22,27 +22,27 @@ import static lv.lumii.obis.schema.services.SchemaExtractorQueries.*;
 @Slf4j
 public class SchemaExtractor {
 
-	public Schema extractSchema(String sparqlEndpointUrl, String graphName, String mode, boolean logEnabled){
+	public Schema extractSchema(SchemaExtractorRequest request){
 		
-		SparqlEndpointProcessor sparqlEndpointProcessor = new SparqlEndpointProcessor(sparqlEndpointUrl, graphName);
+		SparqlEndpointProcessor sparqlEndpointProcessor = new SparqlEndpointProcessor(request.getEndpointUrl(), request.getGraphName());
 		
 		Schema schema = new Schema();
-		schema.setName((graphName != null) ? graphName + "_Schema" : "Schema");
+		schema.setName((StringUtils.isNotEmpty(request.getGraphName())) ? request.getGraphName() + "_Schema" : "Schema");
 		
 		// find all classes
-		List<QueryResult> queryResults = sparqlEndpointProcessor.read(FIND_ALL_CLASSES, "FIND_ALL_CLASSES", logEnabled);
-		List<SchemaClass> classes = processClasses(queryResults);
+		List<QueryResult> queryResults = sparqlEndpointProcessor.read(FIND_ALL_CLASSES, "FIND_ALL_CLASSES", request.getLogEnabled());
+		List<SchemaClass> classes = processClasses(queryResults, request);
 		schema.setClasses(classes);
 		queryResults.clear();	
 		
 		// find intersection classes
-		queryResults = sparqlEndpointProcessor.read(FIND_INTERSECTION_CLASSES, "FIND_INTERSECTION_CLASSES", logEnabled);
-		Map<String, SchemaClassNodeInfo> classesGraph = buildClassGraph(queryResults);
+		queryResults = sparqlEndpointProcessor.read(FIND_INTERSECTION_CLASSES, "FIND_INTERSECTION_CLASSES", request.getLogEnabled());
+		Map<String, SchemaClassNodeInfo> classesGraph = buildClassGraph(queryResults, request);
 		queryResults.clear();
 		addMissingClasses(classes, classesGraph);
 		
 		// find instances counts for all classes
-		queryResults = sparqlEndpointProcessor.read(FIND_INSTANCES_COUNT, "FIND_INSTANCES_COUNT", logEnabled);
+		queryResults = sparqlEndpointProcessor.read(FIND_INSTANCES_COUNT, "FIND_INSTANCES_COUNT", request.getLogEnabled());
 		processInstanceCount(queryResults, classesGraph);
 		queryResults.clear();
 		
@@ -50,18 +50,18 @@ public class SchemaExtractor {
 		classesGraph = sortClassesByNeighbors(classesGraph);
 		
 		// find superclasses
-		processSuperclasses(classesGraph, classes, sparqlEndpointProcessor, logEnabled);
+		processSuperclasses(classesGraph, classes, sparqlEndpointProcessor, request.getLogEnabled());
 		
 		// validate and update classes
-		validateAndNormalizeSuperclasses(classesGraph, classes, sparqlEndpointProcessor, logEnabled);
+		validateAndNormalizeSuperclasses(classesGraph, classes, sparqlEndpointProcessor, request.getLogEnabled());
 		
 		// find all properties (attributes + associations) and domain class instances count
-		queryResults = sparqlEndpointProcessor.read(FIND_ALL_PROPERTIES, "FIND_ALL_PROPERTIES", logEnabled);
-		Map<String, SchemaPropertyNodeInfo> properties = processAllProperties(queryResults);
+		queryResults = sparqlEndpointProcessor.read(FIND_ALL_PROPERTIES, "FIND_ALL_PROPERTIES", request.getLogEnabled());
+		Map<String, SchemaPropertyNodeInfo> properties = processAllProperties(queryResults, request);
 		queryResults.clear();
 		
 		// find associations and range class instances count
-		queryResults = sparqlEndpointProcessor.read(FIND_OBJECT_PROPERTIES_WITH_RANGE, "FIND_OBJECT_PROPERTIES_WITH_RANGE", logEnabled);
+		queryResults = sparqlEndpointProcessor.read(FIND_OBJECT_PROPERTIES_WITH_RANGE, "FIND_OBJECT_PROPERTIES_WITH_RANGE", request.getLogEnabled());
 		processAssociations(queryResults, properties);
 		queryResults.clear();
 		
@@ -69,15 +69,15 @@ public class SchemaExtractor {
 		mapPropertiesToDomainClasses(classes, properties);
 		
 		// map properties to range classes
-		mapPropertiesToRangeClasses(classes, properties, sparqlEndpointProcessor, logEnabled);
+		mapPropertiesToRangeClasses(classes, properties, sparqlEndpointProcessor, request.getLogEnabled());
 		
 		// data type and cardinality calculation may impact performance
-		if(!EXTRACT_MODE_SIMPLE.equalsIgnoreCase(mode)){
+		if(!SchemaExtractorRequest.ExtractionMode.simple.equals(request.getMode())){
 			// find data types for attributes
-			processDataTypes(properties, sparqlEndpointProcessor, logEnabled);
-			// find min/max cardinalities
-			if(!EXTRACT_MODE_DATA.equalsIgnoreCase(mode)){
-				processCardinalities(properties, sparqlEndpointProcessor, logEnabled);
+			processDataTypes(properties, sparqlEndpointProcessor, request.getLogEnabled());
+			// find min/max cardinality
+			if(!SchemaExtractorRequest.ExtractionMode.data.equals(request.getMode())){
+				processCardinalities(properties, sparqlEndpointProcessor, request.getLogEnabled());
 			}
 		}
 		
@@ -91,11 +91,11 @@ public class SchemaExtractor {
 		return schema;
 	}
 	
-	private List<SchemaClass> processClasses(List<QueryResult> queryResults){
+	private List<SchemaClass> processClasses(List<QueryResult> queryResults, SchemaExtractorRequest request){
 		List<SchemaClass> classes = new ArrayList<>();
 		for(QueryResult queryResult: queryResults){
 			String value = queryResult.get(SchemaExtractorQueries.BINDING_NAME_CLASS);
-			if(value != null){
+			if(value != null && !isExcludedResource(value, request.getSysClasses())){
 				SchemaClass c = new SchemaClass();
 				setLocalNameAndNamespace(value, c);
 				classes.add(c);
@@ -104,12 +104,19 @@ public class SchemaExtractor {
 		return classes;
 	}
 
-	private Map<String, SchemaClassNodeInfo> buildClassGraph(List<QueryResult> queryResults){
+	private boolean isExcludedResource(String resourceName, Boolean sysClassesEnabled) {
+		if(BooleanUtils.isFalse(sysClassesEnabled)){
+			return SchemaConstants.EXCLUDED_URI_FROM_ENDPOINT.stream().anyMatch(uri -> resourceName.startsWith(uri));
+		}
+		return false;
+	}
+
+	private Map<String, SchemaClassNodeInfo> buildClassGraph(List<QueryResult> queryResults, SchemaExtractorRequest request){
 		Map<String, SchemaClassNodeInfo> classes = new HashMap<>();
 		for(QueryResult queryResult: queryResults){
 			String classA = queryResult.get(SchemaExtractorQueries.BINDING_NAME_CLASS_A);
 			String classB = queryResult.get(SchemaExtractorQueries.BINDING_NAME_CLASS_B);
-			if(classA != null && classB != null){
+			if(classA != null && classB != null && !isExcludedResource(classA, request.getSysClasses())){
 				if(!classes.containsKey(classA)){
 					classes.put(classA, new SchemaClassNodeInfo());
 				}
@@ -144,12 +151,17 @@ public class SchemaExtractor {
 		}
 	}
 	
-	private Map<String, SchemaPropertyNodeInfo> processAllProperties(List<QueryResult> queryResults){
+	private Map<String, SchemaPropertyNodeInfo> processAllProperties(List<QueryResult> queryResults, SchemaExtractorRequest request){
 		Map<String, SchemaPropertyNodeInfo> properties = new HashMap<>();
 		for(QueryResult queryResult: queryResults){
 			String propertyName = queryResult.get(SchemaExtractorQueries.BINDING_NAME_PROPERTY);
 			String className = queryResult.get(SchemaExtractorQueries.BINDING_NAME_CLASS);
 			String instances = queryResult.get(SchemaExtractorQueries.BINDING_NAME_INSTANCES_COUNT);
+
+			if(isExcludedResource(propertyName, request.getSysClasses())
+					|| isExcludedResource(className, request.getSysClasses())){
+				continue;
+			}
 
 			if(!properties.containsKey(propertyName)){
 				properties.put(propertyName, new SchemaPropertyNodeInfo());
@@ -168,7 +180,7 @@ public class SchemaExtractor {
 			String propertyName = queryResult.get(SchemaExtractorQueries.BINDING_NAME_PROPERTY);
 			String className = queryResult.get(SchemaExtractorQueries.BINDING_NAME_CLASS);
 			String instances = queryResult.get(SchemaExtractorQueries.BINDING_NAME_INSTANCES_COUNT);
-			
+
 			if(properties.containsKey(propertyName)){
 				SchemaPropertyNodeInfo property = properties.get(propertyName);
 				property.setIsObjectProperty(Boolean.TRUE);

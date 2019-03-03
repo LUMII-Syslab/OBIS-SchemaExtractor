@@ -1,8 +1,12 @@
 package lv.lumii.obis.schema.services.dto;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import java.util.ArrayList;
 import java.util.List;
 
+@Setter @Getter
 public class SchemaPropertyNodeInfo {
 
 	private Boolean isObjectProperty = Boolean.FALSE;
@@ -32,38 +36,6 @@ public class SchemaPropertyNodeInfo {
 			rangeClasses = new ArrayList<>();
 		}
 		return rangeClasses;
-	}
-
-	public Boolean getIsObjectProperty() {
-		return isObjectProperty;
-	}
-
-	public void setIsObjectProperty(Boolean objectProperty) {
-		isObjectProperty = objectProperty;
-	}
-
-	public String getDataType() {
-		return dataType;
-	}
-
-	public void setDataType(String dataType) {
-		this.dataType = dataType;
-	}
-
-	public Integer getMinCardinality() {
-		return minCardinality;
-	}
-
-	public void setMinCardinality(Integer minCardinality) {
-		this.minCardinality = minCardinality;
-	}
-
-	public Integer getMaxCardinality() {
-		return maxCardinality;
-	}
-
-	public void setMaxCardinality(Integer maxCardinality) {
-		this.maxCardinality = maxCardinality;
 	}
 
 }

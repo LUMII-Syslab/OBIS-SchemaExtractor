@@ -25,7 +25,13 @@
         </p>
         <p>By default SPARQL queries are not logged. It may impact performance:
             <ul>
-                <li>Use parameter <b>"&log=enabled"</b> to enable SPARQL query logging to the file <i>/logs/obis-extractor.log</i></li>
+                <li>Use parameter <b>"&log=true"</b> to enable SPARQL query logging to the file <i>/logs/obis-extractor.log</i></li>
+            </ul>
+        </p>
+        <p>If the endpoint is Virtuoso SPARQL server, by default Virtuoso system classes (namespace <i>http://www.openlinksw.com/schemas/virtrdf</i>)
+            are not included in the response classes. If Virtuoso system classes are required, please:
+            <ul>
+                <li>Use parameter <b>"&sysclasses=true"</b> to add Virtuoso system classes to the JSON response</li>
             </ul>
         </p>
         <br>

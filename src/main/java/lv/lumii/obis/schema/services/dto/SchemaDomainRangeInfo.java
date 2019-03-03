@@ -1,5 +1,9 @@
 package lv.lumii.obis.schema.services.dto;
 
+import lombok.Getter;
+import lombok.Setter;
+
+@Setter @Getter
 public class SchemaDomainRangeInfo {
 
     private String domainClass;
@@ -11,22 +15,6 @@ public class SchemaDomainRangeInfo {
 
     public SchemaDomainRangeInfo(String domainClass, String rangeClass){
         this.domainClass = domainClass;
-        this.rangeClass = rangeClass;
-    }
-
-    public String getDomainClass() {
-        return domainClass;
-    }
-
-    public void setDomainClass(String domainClass) {
-        this.domainClass = domainClass;
-    }
-
-    public String getRangeClass() {
-        return rangeClass;
-    }
-
-    public void setRangeClass(String rangeClass) {
         this.rangeClass = rangeClass;
     }
 }

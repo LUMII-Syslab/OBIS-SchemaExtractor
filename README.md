@@ -13,12 +13,15 @@ OBIS Schema Extractor is Java based web application - REST controller to process
   - **full** analyzed items: classes, class hierarchy (superclass/subclass), data type properties, object type properties with domain/range associations, property data types, property cardinalities
   - **data** analyzed items: classes, class hierarchy (superclass/subclass), data type properties, object type properties with domain/range associations, property data types
   - **simple** - analyzed items: classes, class hierarchy (superclass/subclass), data type properties, object type properties with domain/range associations
-- **log** (optional) - SPARQL query logging to the file. If no log provided, it is processed as *disabled* by default.
-  - **disabled** executed queries are not logged
-  - **enabled** executed queries are logged to the file /logs/obis-extractor.log (in web application server root folder)
+- **log** (optional) - SPARQL query logging to the file
+  - **false** (default): executed queries are not logged
+  - **true**: executed queries are logged to the file /logs/obis-extractor.log (in web application server root folder)
+- **sysclasses** (optional) - indicator whether Virtuoso system classes (namespace http://www.openlinksw.com/schemas/virtrdf) should be added to the response
+  - **false** (default): Virtuoso system classes are skipped
+  - **true**: Virtuoso system classes are added to the final list of schema classes
 
 **Example:**
-- http://localhost:8080/obis-rest/services/schema?endpoint=http://localhost:8890/sparql&graph=MiniUniv&mode=simple&log=enabled
+- http://localhost:8080/obis-rest/services/schema?endpoint=http://localhost:8890/sparql&graph=MiniUniv&mode=simple&log=true&sysclasses=true
 
 **Response:**
 - JSON file with schema information, example [SampleSchema.json](build/SampleSchema.json)

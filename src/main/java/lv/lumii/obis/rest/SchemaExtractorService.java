@@ -11,8 +11,11 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 
+import com.google.common.base.Enums;
+import com.google.gson.Gson;
 import lombok.extern.slf4j.Slf4j;
 import lv.lumii.obis.schema.services.SchemaUtil;
+import lv.lumii.obis.schema.services.dto.SchemaExtractorRequest;
 import org.glassfish.jersey.media.multipart.FormDataContentDisposition;
 import org.glassfish.jersey.media.multipart.FormDataParam;
 
@@ -25,11 +28,11 @@ import lv.lumii.obis.schema.model.Schema;
 @Slf4j
 public class SchemaExtractorService {
 
-	private static final String LOG_MODE_ENABLED = "enabled";
+	private static final String LOG_MODE_ENABLED = "true";
 
-	private static final String SCHEMA_EXTRACT_MESSAGE_START = "Starting to read schema from the endpoint [%s] graph [%s] with mode [%s] and log [%s]";
-	private static final String SCHEMA_EXTRACT_MESSAGE_END = "Completed JSON schema extraction from the endpoint [%s] graph [%s] with mode [%s] and log [%s]";
-	private static final String SCHEMA_EXTRACT_MESSAGE_ERROR = "Cannot extract JSON schema from the endpoint [%s] graph [%s] with mode [%s] and log [%s]";
+	private static final String SCHEMA_EXTRACT_MESSAGE_START = "Starting to read schema from the endpoint with parameters %s";
+	private static final String SCHEMA_EXTRACT_MESSAGE_END = "Completed JSON schema extraction from the specified endpoint with parameters %s";
+	private static final String SCHEMA_EXTRACT_MESSAGE_ERROR = "Cannot extract JSON schema from the specified endpoint with parameters %s";
 	private static final String SCHEMA_EXTRACT_MESSAGE_INCOMPLETE = "Wrong/incomplete input parameters. Please provide at least SPARQL endpoint as URL query parameter";
 
 	private static final String SCHEMA_READ_FILE_MESSAGE_START = "Starting to read schema from the file [%s]";
@@ -43,7 +46,8 @@ public class SchemaExtractorService {
 			@QueryParam("endpoint") String endpoint,
 			@QueryParam("graph") @DefaultValue("") String graphName,
 			@QueryParam("mode") @DefaultValue("") String mode,
-			@QueryParam("log") @DefaultValue("disabled") String logMode){
+			@QueryParam("log") @DefaultValue("false") String logMode,
+			@QueryParam("sysclasses") @DefaultValue("false") String sysClasses){
 
 
 		if(SchemaUtil.isEmpty(endpoint)){
@@ -51,18 +55,26 @@ public class SchemaExtractorService {
 			return SCHEMA_EXTRACT_MESSAGE_INCOMPLETE;
 		}
 
-		log.info(String.format(SCHEMA_EXTRACT_MESSAGE_START, endpoint, graphName, mode, logMode));
+		SchemaExtractorRequest request = new SchemaExtractorRequest();
+		request.setEndpointUrl(endpoint);
+		request.setGraphName(graphName);
+		request.setMode(Enums.getIfPresent(SchemaExtractorRequest.ExtractionMode.class, mode).orNull());
+		request.setLogEnabled(LOG_MODE_ENABLED.equalsIgnoreCase(logMode));
+		request.setSysClasses(LOG_MODE_ENABLED.equalsIgnoreCase(sysClasses));
+
+		String requestJson = new Gson().toJson(request);
+
+		log.info(String.format(SCHEMA_EXTRACT_MESSAGE_START, requestJson));
 
 		SchemaExtractor extractor = new SchemaExtractor();
-		Schema schema = extractor.extractSchema(endpoint, graphName, mode, LOG_MODE_ENABLED.equalsIgnoreCase(logMode));
-
+		Schema schema = extractor.extractSchema(request);
 		String jsonString = JsonSchemaService.getJsonSchemaString(schema);
 
 		if(!SchemaUtil.isEmpty(jsonString)){
-			log.info(String.format(SCHEMA_EXTRACT_MESSAGE_END, endpoint, graphName, mode, logMode));
+			log.info(String.format(SCHEMA_EXTRACT_MESSAGE_END, requestJson));
 			return jsonString;
 		} else {
-			String error = String.format(SCHEMA_EXTRACT_MESSAGE_ERROR, endpoint, graphName, mode, logMode);
+			String error = String.format(SCHEMA_EXTRACT_MESSAGE_ERROR, requestJson);
 			log.error(error);
 			return error;
 		}

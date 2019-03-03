@@ -139,7 +139,7 @@ public class OwlOntologyReader {
 	}
 	
 	private boolean isExcludedClass(OWLClass clazz) {
-		return clazz.isAnonymous() || clazz.isOWLThing() || EXCLUDED_URI.contains(clazz.getIRI().toString());
+		return clazz.isAnonymous() || clazz.isOWLThing() || EXCLUDED_URI_FROM_OWL.contains(clazz.getIRI().toString());
 	}
 	
 	private boolean isValidSubClass(OWLSubClassOfAxiom axiom, String currentClassIri) {
