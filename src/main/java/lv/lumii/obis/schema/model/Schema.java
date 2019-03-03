@@ -7,8 +7,11 @@ import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Getter;
+import lombok.Setter;
 import lv.lumii.obis.schema.constants.SchemaConstants;
 
+@Setter @Getter
 public class Schema extends AnnotationElement {
 	
 	@JsonProperty("SchemaName")
@@ -99,75 +102,4 @@ public class Schema extends AnnotationElement {
 		}
 	}
 
-	public String getUniqueLocalName(SchemaEntity element) {
-		if(isMultipleNamespaces()){
-			if(getResourceNames().containsKey(element.getLocalName())){
-				Integer count = getResourceNames().get(element.getLocalName());
-				if(count > 1){
-					String namespacePrefix = getUsedNamespacePrefixMap().get(element.getNamespace());
-					if(namespacePrefix == null){
-						namespacePrefix = SchemaConstants.DEFAULT_NAMESPACE_PREFIX;
-					}
-					return namespacePrefix + element.getLocalName();
-				}
-			}
-		}
-		return element.getLocalName();
-	}
-
-	public String getName() {
-		return name;
-	}
-
-	public void setName(String name) {
-		this.name = name;
-	}
-
-	public String getOntologyMode() {
-		return ontologyMode;
-	}
-
-	public void setOntologyMode(String ontologyMode) {
-		this.ontologyMode = ontologyMode;
-	}
-
-	public void setClasses(List<SchemaClass> classes) {
-		this.classes = classes;
-	}
-
-	public void setAttributes(List<SchemaAttribute> attributes) {
-		this.attributes = attributes;
-	}
-
-	public void setAssociations(List<SchemaRole> associations) {
-		this.associations = associations;
-	}
-
-	public String getDefaultNamespace() {
-		return defaultNamespace;
-	}
-
-	public void setDefaultNamespace(String defaultNamespace) {
-		this.defaultNamespace = defaultNamespace;
-	}
-
-	public boolean isMultipleNamespaces() {
-		return multipleNamespaces;
-	}
-
-	public void setMultipleNamespaces(boolean multipleNamespaces) {
-		this.multipleNamespaces = multipleNamespaces;
-	}
-
-	public void setNamespaceMap(Map<String, String> namespaceMap) {
-		this.namespaceMap = namespaceMap;
-	}
-
-	public void setUsedNamespacePrefixMap(Map<String, String> usedNamespacePrefixMap) {
-		this.usedNamespacePrefixMap = usedNamespacePrefixMap;
-	}
-
-	public void setResourceNames(Map<String, Integer> resourceNames) {
-		this.resourceNames = resourceNames;
-	}
 }

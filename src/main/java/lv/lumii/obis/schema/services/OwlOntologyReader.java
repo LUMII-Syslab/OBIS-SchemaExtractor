@@ -1,7 +1,5 @@
 package lv.lumii.obis.schema.services;
 
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -15,20 +13,15 @@ import lv.lumii.obis.schema.services.dto.SchemaCardinalityInfo;
 import lv.lumii.obis.schema.services.dto.SchemaCardinalityInfo.CardinalityType;
 import org.semanticweb.owlapi.search.EntitySearcher;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
 import static lv.lumii.obis.schema.constants.SchemaConstants.*;
 
 public class OwlOntologyReader {
 
-	public Schema readOwlOntology(String filePath) {
-		try {
-			InputStream in = new FileInputStream(filePath);
-			return readOwlOntology(in);
-		} catch (FileNotFoundException e){
-			throw new IllegalArgumentException("File: " + filePath + " not found");
-		}
-	}
-	
-	public Schema readOwlOntology(InputStream inputStream) {
+	@Nullable
+	public Schema readOwlOntology(@Nonnull InputStream inputStream) {
 		OWLOntologyManager manager = OWLManager.createOWLOntologyManager();
 		OWLOntology ontology = null;
 		try {
@@ -41,8 +34,9 @@ public class OwlOntologyReader {
 		}
 		return processOwlOntology(ontology, manager);		
 	}
-	
-	private Schema processOwlOntology(OWLOntology ontology, OWLOntologyManager manager) {
+
+	@Nonnull
+	private Schema processOwlOntology(@Nonnull OWLOntology ontology, @Nonnull OWLOntologyManager manager) {
 		IRI ontologyIRI = ontology.getOntologyID().getOntologyIRI().orElse(null);
 		
 		Schema schema = new Schema();		
@@ -51,12 +45,12 @@ public class OwlOntologyReader {
 		processAnnotations(ontology.annotations(), schema);
 
 		Map<String, SchemaClass> classesMap = new HashMap<>();
-		Map<String, List<SchemaCardinalityInfo>> cardinalitiesMap = new HashMap<>();
+		Map<String, List<SchemaCardinalityInfo>> cardinalityMap = new HashMap<>();
 		
-		processClasses(ontology, schema, classesMap, cardinalitiesMap, manager);
-		processDataTypeProperties(ontology, schema, classesMap, cardinalitiesMap);
-		processAnnotationProperties(ontology, schema, classesMap, cardinalitiesMap);
-		processObjectTypeProperties(ontology, schema, classesMap, cardinalitiesMap);
+		processClasses(ontology, schema, classesMap, cardinalityMap, manager);
+		processDataTypeProperties(ontology, schema, classesMap, cardinalityMap);
+		processAnnotationProperties(ontology, schema, classesMap, cardinalityMap);
+		processObjectTypeProperties(ontology, schema, classesMap, cardinalityMap);
 		processInverseObjectTypeProperties(ontology, schema);
 
 		processMultipleNamespaces(schema);
@@ -64,14 +58,14 @@ public class OwlOntologyReader {
 		return schema;
 	}
 	
-	private void processPrefixes(OWLOntology ontology, Schema schema) {
+	private void processPrefixes(@Nonnull OWLOntology ontology, @Nonnull Schema schema) {
 		OWLDocumentFormat format = ontology.getOWLOntologyManager().getOntologyFormat(ontology);
 		if (format != null && Boolean.TRUE.equals(format.isPrefixOWLDocumentFormat())) {
 			schema.setNamespaceMap(format.asPrefixOWLDocumentFormat().getPrefixName2PrefixMap());
 		}
 	}
 
-	private void processMultipleNamespaces(Schema schema){
+	private void processMultipleNamespaces(@Nonnull Schema schema){
 		if(schema.getUsedNamespacePrefixMap().size() <= 1){
 			schema.setMultipleNamespaces(false);
 		} else {
@@ -79,8 +73,8 @@ public class OwlOntologyReader {
 		}
 	}
 	
-	private void processClasses(OWLOntology ontology, Schema schema, Map<String, SchemaClass> classesMap, 
-			Map<String, List<SchemaCardinalityInfo>> cardinalitiesMap, OWLOntologyManager manager) {
+	private void processClasses(@Nonnull OWLOntology ontology, @Nonnull Schema schema, @Nonnull Map<String, SchemaClass> classesMap,
+								@Nonnull Map<String, List<SchemaCardinalityInfo>> cardinalityMap, @Nonnull OWLOntologyManager manager) {
 		
 		SchemaClass thingClass = createThingClass(ontology, classesMap, manager, schema);
 		
@@ -116,7 +110,7 @@ public class OwlOntologyReader {
 			}
 			
 			// process cardinalities
-			getCardinalities(ontology, clazz, cardinalitiesMap);
+			getCardinalities(ontology, clazz, cardinalityMap);
 
 			processAnnotations(EntitySearcher.getAnnotations(clazz, ontology), currentClass);
 
@@ -125,8 +119,8 @@ public class OwlOntologyReader {
 		schema.setClasses(new ArrayList<>(classesMap.values()));
 	}
 	
-	private SchemaClass createThingClass(OWLOntology ontology, Map<String, SchemaClass> classesMap, 
-			OWLOntologyManager manager, Schema schema) {
+	private SchemaClass createThingClass(@Nonnull OWLOntology ontology, @Nonnull Map<String, SchemaClass> classesMap,
+										 @Nonnull OWLOntologyManager manager, @Nonnull Schema schema) {
 		OWLClass thing = ontology.classesInSignature().filter(OWLClassExpression::isOWLThing).findFirst().orElse(null);
 		if(thing == null) {
 			thing = manager.getOWLDataFactory().getOWLClass(IRI.create(THING_URI));
@@ -138,17 +132,17 @@ public class OwlOntologyReader {
 		return resultThing;
 	}
 	
-	private boolean isExcludedClass(OWLClass clazz) {
+	private boolean isExcludedClass(@Nonnull OWLClass clazz) {
 		return clazz.isAnonymous() || clazz.isOWLThing() || EXCLUDED_URI_FROM_OWL.contains(clazz.getIRI().toString());
 	}
 	
-	private boolean isValidSubClass(OWLSubClassOfAxiom axiom, String currentClassIri) {
+	private boolean isValidSubClass(@Nonnull OWLSubClassOfAxiom axiom, @Nonnull String currentClassIri) {
 		return (axiom.getSubClass() instanceof OWLClass)
 				&& (axiom.getSuperClass() instanceof OWLClass)
 				&& currentClassIri.equals(axiom.getSubClass().asOWLClass().getIRI().toString());
 	}
 	
-	private void addSuperClass(IRI superClassIri, SchemaClass subClass, Map<String, SchemaClass> classesMap, Schema schema) {
+	private void addSuperClass(@Nonnull IRI superClassIri, @Nonnull SchemaClass subClass, @Nonnull Map<String, SchemaClass> classesMap, @Nonnull Schema schema) {
 		SchemaClass superClass = classesMap.get(superClassIri.toString());
 		if(superClass == null) {
 			superClass = new SchemaClass();
@@ -159,7 +153,7 @@ public class OwlOntologyReader {
 		subClass.getSuperClasses().add(superClassIri.toString());
 	}
 	
-	private void getCardinalities(OWLOntology ontology, OWLClass clazz, Map<String, List<SchemaCardinalityInfo>> cardinalitiesMap) {
+	private void getCardinalities(@Nonnull OWLOntology ontology, @Nonnull OWLClass clazz, @Nonnull Map<String, List<SchemaCardinalityInfo>> cardinalityMap) {
 		for(OWLAxiom axiom : ontology.axioms(clazz).collect( Collectors.toSet())) {		
 			
 			axiom.accept(new OWLObjectVisitor() {
@@ -168,24 +162,24 @@ public class OwlOntologyReader {
 					subClassAxiom.getSuperClass().accept( new OWLObjectVisitor() {
 
 						public void visit(OWLObjectExactCardinality exactCardinalityAxiom) {
-							fillCardinality(exactCardinalityAxiom, CardinalityType.EXACT_CARDINALITY, cardinalitiesMap);
+							fillCardinality(exactCardinalityAxiom, CardinalityType.EXACT_CARDINALITY, cardinalityMap);
 						}
 						public void visit(OWLDataExactCardinality exactCardinalityAxiom) {
-							fillCardinality(exactCardinalityAxiom, CardinalityType.EXACT_CARDINALITY, cardinalitiesMap);
+							fillCardinality(exactCardinalityAxiom, CardinalityType.EXACT_CARDINALITY, cardinalityMap);
 						}
 
 						public void visit(OWLObjectMinCardinality minCardinalityAxiom) {
-							fillCardinality(minCardinalityAxiom, CardinalityType.MIN_CARDINALITY, cardinalitiesMap);
+							fillCardinality(minCardinalityAxiom, CardinalityType.MIN_CARDINALITY, cardinalityMap);
 						}
 						public void visit(OWLDataMinCardinality minCardinalityAxiom) {
-							fillCardinality(minCardinalityAxiom, CardinalityType.MIN_CARDINALITY, cardinalitiesMap);
+							fillCardinality(minCardinalityAxiom, CardinalityType.MIN_CARDINALITY, cardinalityMap);
 						}
 
 						public void visit(OWLObjectMaxCardinality maxCardinalityAxiom) {
-							fillCardinality(maxCardinalityAxiom, CardinalityType.MAX_CARDINALITY, cardinalitiesMap);
+							fillCardinality(maxCardinalityAxiom, CardinalityType.MAX_CARDINALITY, cardinalityMap);
 						}
 						public void visit(OWLDataMaxCardinality maxCardinalityAxiom) {
-							fillCardinality(maxCardinalityAxiom, CardinalityType.MAX_CARDINALITY, cardinalitiesMap);
+							fillCardinality(maxCardinalityAxiom, CardinalityType.MAX_CARDINALITY, cardinalityMap);
 						}
 					});
 				}
@@ -194,8 +188,8 @@ public class OwlOntologyReader {
 		}
 	}
 	
-	private void fillCardinality(OWLCardinalityRestriction<?> restriction, CardinalityType cardinalityType,
-			Map<String, List<SchemaCardinalityInfo>> cardinalitiesMap) {
+	private void fillCardinality(@Nonnull OWLCardinalityRestriction<?> restriction, @Nonnull CardinalityType cardinalityType,
+								 @Nonnull Map<String, List<SchemaCardinalityInfo>> cardinalityMap) {
 		if(!(restriction.getProperty() instanceof OWLProperty)) {
 			return;
 		}
@@ -203,16 +197,16 @@ public class OwlOntologyReader {
 		int cardinality = restriction.getCardinality();
 		
 		List<SchemaCardinalityInfo> cardinalities = new ArrayList<>();
-		if(cardinalitiesMap.containsKey(property)) {
-			cardinalities = cardinalitiesMap.get(property);
+		if(cardinalityMap.containsKey(property)) {
+			cardinalities = cardinalityMap.get(property);
 		} else {
-			cardinalitiesMap.put(property, cardinalities);
+			cardinalityMap.put(property, cardinalities);
 		}
 		cardinalities.add(new SchemaCardinalityInfo(cardinalityType, cardinality));
 	}
 	
-	private void processDataTypeProperties(OWLOntology ontology, Schema schema, Map<String, SchemaClass> classesMap,
-			Map<String, List<SchemaCardinalityInfo>> cardinalitiesMap) {
+	private void processDataTypeProperties(@Nonnull OWLOntology ontology, @Nonnull Schema schema, @Nonnull Map<String, SchemaClass> classesMap,
+										   @Nonnull Map<String, List<SchemaCardinalityInfo>> cardinalityMap) {
 		
 		List<OWLDataPropertyDomainAxiom> domains = ontology.axioms(AxiomType.DATA_PROPERTY_DOMAIN).collect(Collectors.toList());
 		List<OWLDataPropertyRangeAxiom> ranges = ontology.axioms(AxiomType.DATA_PROPERTY_RANGE).collect(Collectors.toList());
@@ -225,15 +219,15 @@ public class OwlOntologyReader {
 			setLocalNameAndNamespace(property.getIRI(), dataProperty, schema);
 			setDomain(dataProperty, propertyName, domains, classesMap);
 			setRangeType(dataProperty, propertyName, ranges);
-			setCardinalities(dataProperty, propertyName, cardinalitiesMap);
+			setCardinalities(dataProperty, propertyName, cardinalityMap);
 			processAnnotations(EntitySearcher.getAnnotations(property, ontology), dataProperty);
 
 			schema.getAttributes().add(dataProperty);
 		}
 	}
 
-	private void processAnnotationProperties(OWLOntology ontology, Schema schema, Map<String, SchemaClass> classesMap,
-											 Map<String, List<SchemaCardinalityInfo>> cardinalitiesMap) {
+	private void processAnnotationProperties(@Nonnull OWLOntology ontology, @Nonnull Schema schema, @Nonnull Map<String, SchemaClass> classesMap,
+											 @Nonnull Map<String, List<SchemaCardinalityInfo>> cardinalityMap) {
 
 		List<OWLAnnotationPropertyDomainAxiom> domains = ontology.axioms(AxiomType.ANNOTATION_PROPERTY_DOMAIN).collect(Collectors.toList());
 		List<OWLAnnotationPropertyRangeAxiom> ranges = ontology.axioms(AxiomType.ANNOTATION_PROPERTY_RANGE).collect(Collectors.toList());
@@ -246,14 +240,15 @@ public class OwlOntologyReader {
 			setLocalNameAndNamespace(property.getIRI(), annotationProperty, schema);
 			setAnnotationDomain(annotationProperty, propertyName, domains, classesMap);
 			setAnnotationRangeType(annotationProperty, propertyName, ranges);
-			setCardinalities(annotationProperty, propertyName, cardinalitiesMap);
+			setCardinalities(annotationProperty, propertyName, cardinalityMap);
 			processAnnotations(EntitySearcher.getAnnotations(property, ontology), annotationProperty);
 
 			schema.getAttributes().add(annotationProperty);
 		}
 	}
 
-	private void setAnnotationDomain(SchemaAttribute dataProperty, String propertyName, List<OWLAnnotationPropertyDomainAxiom> domains, Map<String, SchemaClass> classesMap) {
+	private void setAnnotationDomain(@Nonnull SchemaAttribute dataProperty, @Nonnull String propertyName,
+									 @Nonnull List<OWLAnnotationPropertyDomainAxiom> domains, @Nonnull Map<String, SchemaClass> classesMap) {
 		OWLAnnotationPropertyDomainAxiom domainAxiom = domains.stream()
 				.filter(d -> propertyName.equals(d.getProperty().asOWLAnnotationProperty().getIRI().toString()))
 				.findFirst().orElse(null);
@@ -268,7 +263,7 @@ public class OwlOntologyReader {
 		}
 	}
 
-	private void setAnnotationRangeType(SchemaAttribute dataProperty, String propertyName, List<OWLAnnotationPropertyRangeAxiom> ranges) {
+	private void setAnnotationRangeType(@Nonnull SchemaAttribute dataProperty, @Nonnull String propertyName, @Nonnull List<OWLAnnotationPropertyRangeAxiom> ranges) {
 		OWLAnnotationPropertyRangeAxiom rangeAxiom = ranges.stream()
 				.filter(d -> propertyName.equals(d.getProperty().asOWLDataProperty().getIRI().toString()))
 				.findFirst().orElse(null);
@@ -281,7 +276,8 @@ public class OwlOntologyReader {
 		}
 	}
 	
-	private void setDomain(SchemaAttribute dataProperty, String propertyName, List<OWLDataPropertyDomainAxiom> domains, Map<String, SchemaClass> classesMap) {
+	private void setDomain(@Nonnull SchemaAttribute dataProperty, @Nonnull String propertyName, @Nonnull List<OWLDataPropertyDomainAxiom> domains,
+						   @Nonnull Map<String, SchemaClass> classesMap) {
 		OWLDataPropertyDomainAxiom domainAxiom = domains.stream()
 				.filter(d -> propertyName.equals(d.getProperty().asOWLDataProperty().getIRI().toString()))
 				.findFirst().orElse(null);
@@ -296,7 +292,7 @@ public class OwlOntologyReader {
 		}
 	}
 	
-	private void setRangeType(SchemaAttribute dataProperty, String propertyName, List<OWLDataPropertyRangeAxiom> ranges) {
+	private void setRangeType(@Nonnull SchemaAttribute dataProperty, @Nonnull String propertyName, @Nonnull List<OWLDataPropertyRangeAxiom> ranges) {
 		OWLDataPropertyRangeAxiom rangeAxiom = ranges.stream()
 				.filter(d -> propertyName.equals(d.getProperty().asOWLDataProperty().getIRI().toString()))
 				.findFirst().orElse(null);
@@ -315,12 +311,12 @@ public class OwlOntologyReader {
 		}
 	}
 	
-	private void setCardinalities(SchemaProperty property, String propertyName, Map<String, List<SchemaCardinalityInfo>> cardinalitiesMap) {
-		if(!cardinalitiesMap.containsKey(propertyName)){
+	private void setCardinalities(@Nonnull SchemaProperty property, @Nonnull String propertyName, @Nonnull Map<String, List<SchemaCardinalityInfo>> cardinalityMap) {
+		if(!cardinalityMap.containsKey(propertyName)){
 			return;
 		}
 
-		Integer exactCardinality = cardinalitiesMap.get(propertyName).stream()
+		Integer exactCardinality = cardinalityMap.get(propertyName).stream()
 				.filter(c -> CardinalityType.EXACT_CARDINALITY.equals(c.getCardinalityType()))
 				.findFirst().orElse(new SchemaCardinalityInfo(CardinalityType.EXACT_CARDINALITY, null))
 				.getCardinality();
@@ -330,7 +326,7 @@ public class OwlOntologyReader {
 			return;
 		}
 
-		Integer minCardinality = cardinalitiesMap.get(propertyName).stream()
+		Integer minCardinality = cardinalityMap.get(propertyName).stream()
 				.filter(c -> CardinalityType.MIN_CARDINALITY.equals(c.getCardinalityType()))
 				.findFirst().orElse(new SchemaCardinalityInfo(CardinalityType.MIN_CARDINALITY, null))
 				.getCardinality();
@@ -338,7 +334,7 @@ public class OwlOntologyReader {
 			property.setMinCardinality(minCardinality);
 		}		
 
-		Integer maxCardinality = cardinalitiesMap.get(propertyName).stream()
+		Integer maxCardinality = cardinalityMap.get(propertyName).stream()
 				.filter(c -> CardinalityType.MAX_CARDINALITY.equals(c.getCardinalityType()))
 				.findFirst().orElse(new SchemaCardinalityInfo(CardinalityType.MAX_CARDINALITY, null))
 				.getCardinality();
@@ -348,8 +344,8 @@ public class OwlOntologyReader {
 
 	}
 
-	private void processObjectTypeProperties(OWLOntology ontology, Schema schema, Map<String, SchemaClass> classesMap,
-			Map<String, List<SchemaCardinalityInfo>> cardinalitiesMap) {
+	private void processObjectTypeProperties(@Nonnull OWLOntology ontology, @Nonnull Schema schema, @Nonnull Map<String, SchemaClass> classesMap,
+											 @Nonnull Map<String, List<SchemaCardinalityInfo>> cardinalityMap) {
 		
 		List<OWLObjectPropertyDomainAxiom> domains = ontology.axioms(AxiomType.OBJECT_PROPERTY_DOMAIN).collect(Collectors.toList());
 		List<OWLObjectPropertyRangeAxiom> ranges = ontology.axioms(AxiomType.OBJECT_PROPERTY_RANGE).collect(Collectors.toList());
@@ -365,7 +361,7 @@ public class OwlOntologyReader {
 			
 			setDomain(propertyName, domains, classesMap, classPair);
 			setRange(propertyName, ranges, classesMap, classPair);
-			setCardinalities(objectProperty, propertyName, cardinalitiesMap);
+			setCardinalities(objectProperty, propertyName, cardinalityMap);
 			processAnnotations(EntitySearcher.getAnnotations(property, ontology), objectProperty);
 			
 			objectProperty.getClassPairs().add(classPair);
@@ -373,7 +369,7 @@ public class OwlOntologyReader {
 		}
 	}
 
-	private void processInverseObjectTypeProperties(OWLOntology ontology, Schema schema) {
+	private void processInverseObjectTypeProperties(@Nonnull OWLOntology ontology, @Nonnull Schema schema) {
 		List<OWLInverseObjectPropertiesAxiom> inverseProperties = ontology.axioms(AxiomType.INVERSE_OBJECT_PROPERTIES).collect(Collectors.toList());
 		for(OWLInverseObjectPropertiesAxiom inverse: inverseProperties){
 			OWLObjectPropertyExpression first = inverse.getFirstProperty();
@@ -395,8 +391,8 @@ public class OwlOntologyReader {
 		}
 	}
 
-	private void setDomain(String propertyName, List<OWLObjectPropertyDomainAxiom> domains,
-			Map<String, SchemaClass> classesMap, ClassPair classPair) {
+	private void setDomain(@Nonnull String propertyName, @Nonnull List<OWLObjectPropertyDomainAxiom> domains,
+						   @Nonnull Map<String, SchemaClass> classesMap, ClassPair classPair) {
 		OWLObjectPropertyDomainAxiom domainAxiom = domains.stream().filter(d -> propertyName.equals(
 				d.getProperty().asOWLObjectProperty().getIRI().toString())).findFirst().orElse(null);
 		if(isValidDomainClass(domainAxiom)) {
@@ -410,8 +406,8 @@ public class OwlOntologyReader {
 		}
 	}
 	
-	private void setRange(String propertyName, List<OWLObjectPropertyRangeAxiom> ranges, 
-			Map<String, SchemaClass> classesMap, ClassPair classPair) {
+	private void setRange(@Nonnull String propertyName, @Nonnull List<OWLObjectPropertyRangeAxiom> ranges,
+						  @Nonnull Map<String, SchemaClass> classesMap, ClassPair classPair) {
 		OWLObjectPropertyRangeAxiom rangeAxiom = ranges.stream().filter(d -> propertyName.equals(
 				d.getProperty().asOWLObjectProperty().getIRI().toString())).findFirst().orElse(null);
 		if(isValidRangeClass(rangeAxiom)) {
@@ -425,20 +421,20 @@ public class OwlOntologyReader {
 		}
 	}
 	
-	private boolean isValidDomainClass(OWLPropertyDomainAxiom<?> axiom) {
+	private boolean isValidDomainClass(@Nullable OWLPropertyDomainAxiom<?> axiom) {
 		return axiom != null && axiom.getDomain() != null && axiom.getDomain().isOWLClass();
 	}
-	private boolean isValidSimpleRangeType(OWLDataPropertyRangeAxiom axiom) {
+	private boolean isValidSimpleRangeType(@Nullable OWLDataPropertyRangeAxiom axiom) {
 		return axiom != null && axiom.getRange() != null && axiom.getRange().isOWLDatatype();
 	}
-	private boolean isValidLookupRangeType(OWLDataPropertyRangeAxiom axiom) {
+	private boolean isValidLookupRangeType(@Nullable OWLDataPropertyRangeAxiom axiom) {
 		return axiom != null && axiom.getRange() != null && (axiom.getRange() instanceof OWLDataOneOf);
 	}
-	private boolean isValidRangeClass(OWLObjectPropertyRangeAxiom axiom) {
+	private boolean isValidRangeClass(@Nullable OWLObjectPropertyRangeAxiom axiom) {
 		return axiom != null && axiom.getRange() != null && axiom.getRange().isOWLClass();
 	}
 	
-	private void setLocalNameAndNamespace(IRI entityIri, SchemaEntity entity, Schema schema){
+	private void setLocalNameAndNamespace(@Nonnull IRI entityIri, @Nonnull SchemaEntity entity, @Nonnull Schema schema){
 		entity.setLocalName(entityIri.getShortForm());
 		entity.setFullName(entityIri.toString());
 		entity.setNamespace(entityIri.getNamespace());
@@ -446,7 +442,7 @@ public class OwlOntologyReader {
 		updateResourceNames(entityIri, schema);
 	}
 
-	private void updateResourceNames(IRI entityIri, Schema schema){
+	private void updateResourceNames(@Nonnull IRI entityIri, @Nonnull Schema schema){
 		// update used namespace prefixes
 		schema.addUsedNamespace(entityIri.getNamespace());
 		// update unique local name count
@@ -458,7 +454,7 @@ public class OwlOntologyReader {
 		resourceNames.put(entityIri.getShortForm(), ++count);
 	}
 	
-	private void processAnnotations(Stream<OWLAnnotation> annotations, AnnotationElement target){
+	private void processAnnotations(@Nonnull Stream<OWLAnnotation> annotations, @Nonnull AnnotationElement target){
 		annotations.forEach(a -> {
 			if (a != null && a.getProperty() != null && a.getValue() != null) {
 				String key = a.getProperty().toStringID();

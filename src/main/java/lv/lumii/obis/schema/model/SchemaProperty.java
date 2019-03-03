@@ -1,36 +1,18 @@
 package lv.lumii.obis.schema.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import lv.lumii.obis.schema.constants.SchemaConstants;
+import lombok.Getter;
+import lombok.Setter;
 
-public class SchemaProperty extends SchemaEntity {
+@Setter @Getter
+public abstract class SchemaProperty extends SchemaEntity {
 
 	private Integer minCardinality;
 	private Integer maxCardinality;
 
 	@JsonIgnore
-	public String getDomainClass(){
-		return SchemaConstants.THING_URI;
-	}
-
+	public abstract String getDomainClass();
 	@JsonIgnore
-	public String getRangeClass(){
-		return SchemaConstants.THING_URI;
-	}
+	public abstract String getRangeClass();
 
-	public Integer getMinCardinality() {
-		return minCardinality;
-	}
-
-	public void setMinCardinality(Integer minCardinality) {
-		this.minCardinality = minCardinality;
-	}
-
-	public Integer getMaxCardinality() {
-		return maxCardinality;
-	}
-
-	public void setMaxCardinality(Integer maxCardinality) {
-		this.maxCardinality = maxCardinality;
-	}
 }

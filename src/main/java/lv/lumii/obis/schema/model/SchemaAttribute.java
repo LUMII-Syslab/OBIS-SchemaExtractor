@@ -5,9 +5,12 @@ import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Getter;
+import lombok.Setter;
 import lv.lumii.obis.schema.constants.SchemaConstants;
 import lv.lumii.obis.schema.services.SchemaUtil;
 
+@Setter @Getter
 public class SchemaAttribute extends SchemaProperty {
 	
 	private String type;
@@ -43,23 +46,4 @@ public class SchemaAttribute extends SchemaProperty {
 		return type;
 	}
 
-	public String getType() {
-		return type;
-	}
-
-	public void setType(String type) {
-		this.type = type;
-	}
-
-	public void setSourceClasses(List<String> sourceClasses) {
-		this.sourceClasses = sourceClasses;
-	}
-
-	public String getRangeLookupValues() {
-		return rangeLookupValues;
-	}
-
-	public void setRangeLookupValues(String rangeLookupValues) {
-		this.rangeLookupValues = rangeLookupValues;
-	}
 }

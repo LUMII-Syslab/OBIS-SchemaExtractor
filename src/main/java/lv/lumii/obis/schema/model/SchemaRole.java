@@ -5,8 +5,11 @@ import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Getter;
+import lombok.Setter;
 import lv.lumii.obis.schema.constants.SchemaConstants;
 
+@Setter @Getter
 public class SchemaRole extends SchemaProperty {
 	
 	@JsonProperty("ClassPairs")
@@ -40,15 +43,4 @@ public class SchemaRole extends SchemaProperty {
 		return classPairs.get(0).getTargetClass();
 	}
 
-	public void setClassPairs(List<ClassPair> classPairs) {
-		this.classPairs = classPairs;
-	}
-
-	public SchemaRole getInverseProperty() {
-		return inverseProperty;
-	}
-
-	public void setInverseProperty(SchemaRole inverseProperty) {
-		this.inverseProperty = inverseProperty;
-	}
 }

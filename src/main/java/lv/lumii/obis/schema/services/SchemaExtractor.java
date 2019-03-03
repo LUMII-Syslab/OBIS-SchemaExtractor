@@ -16,13 +16,17 @@ import lv.lumii.obis.schema.model.SchemaRole;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
 import static lv.lumii.obis.schema.constants.SchemaConstants.*;
 import static lv.lumii.obis.schema.services.SchemaExtractorQueries.*;
 
 @Slf4j
 public class SchemaExtractor {
 
-	public Schema extractSchema(SchemaExtractorRequest request){
+	@Nonnull
+	public Schema extractSchema(@Nonnull SchemaExtractorRequest request){
 		
 		SparqlEndpointProcessor sparqlEndpointProcessor = new SparqlEndpointProcessor(request.getEndpointUrl(), request.getGraphName());
 		
@@ -91,11 +95,11 @@ public class SchemaExtractor {
 		return schema;
 	}
 	
-	private List<SchemaClass> processClasses(List<QueryResult> queryResults, SchemaExtractorRequest request){
+	private List<SchemaClass> processClasses(@Nonnull List<QueryResult> queryResults, @Nonnull SchemaExtractorRequest request){
 		List<SchemaClass> classes = new ArrayList<>();
 		for(QueryResult queryResult: queryResults){
 			String value = queryResult.get(SchemaExtractorQueries.BINDING_NAME_CLASS);
-			if(value != null && !isExcludedResource(value, request.getSysClasses())){
+			if(value != null && !isExcludedResource(value, request.getSysClassesEnabled())){
 				SchemaClass c = new SchemaClass();
 				setLocalNameAndNamespace(value, c);
 				classes.add(c);
@@ -104,19 +108,20 @@ public class SchemaExtractor {
 		return classes;
 	}
 
-	private boolean isExcludedResource(String resourceName, Boolean sysClassesEnabled) {
+	private boolean isExcludedResource(@Nonnull String resourceName, @Nonnull Boolean sysClassesEnabled) {
 		if(BooleanUtils.isFalse(sysClassesEnabled)){
 			return SchemaConstants.EXCLUDED_URI_FROM_ENDPOINT.stream().anyMatch(uri -> resourceName.startsWith(uri));
 		}
 		return false;
 	}
 
-	private Map<String, SchemaClassNodeInfo> buildClassGraph(List<QueryResult> queryResults, SchemaExtractorRequest request){
+	@Nonnull
+	private Map<String, SchemaClassNodeInfo> buildClassGraph(@Nonnull List<QueryResult> queryResults, @Nonnull SchemaExtractorRequest request){
 		Map<String, SchemaClassNodeInfo> classes = new HashMap<>();
 		for(QueryResult queryResult: queryResults){
 			String classA = queryResult.get(SchemaExtractorQueries.BINDING_NAME_CLASS_A);
 			String classB = queryResult.get(SchemaExtractorQueries.BINDING_NAME_CLASS_B);
-			if(classA != null && classB != null && !isExcludedResource(classA, request.getSysClasses())){
+			if(classA != null && classB != null && !isExcludedResource(classA, request.getSysClassesEnabled())){
 				if(!classes.containsKey(classA)){
 					classes.put(classA, new SchemaClassNodeInfo());
 				}
@@ -126,7 +131,7 @@ public class SchemaExtractor {
 		return classes;
 	}
 	
-	private void addMissingClasses(List<SchemaClass> classes, Map<String, SchemaClassNodeInfo> classesGraph) {
+	private void addMissingClasses(@Nonnull List<SchemaClass> classes, @Nonnull Map<String, SchemaClassNodeInfo> classesGraph) {
 		classes.forEach(c -> {
 			if(!classesGraph.containsKey(c.getFullName())) {
 				classesGraph.put(c.getFullName(), new SchemaClassNodeInfo());
@@ -134,7 +139,7 @@ public class SchemaExtractor {
 		});
 	}
 	
-	private void processInstanceCount(List<QueryResult> queryResults, Map<String, SchemaClassNodeInfo> classes){
+	private void processInstanceCount(@Nonnull List<QueryResult> queryResults, @Nonnull Map<String, SchemaClassNodeInfo> classes){
 		for(QueryResult queryResult: queryResults){
 			String className = queryResult.get(SchemaExtractorQueries.BINDING_NAME_CLASS);
 			String instancesCount = queryResult.get(SchemaExtractorQueries.BINDING_NAME_INSTANCES_COUNT);
@@ -150,16 +155,17 @@ public class SchemaExtractor {
 			}
 		}
 	}
-	
-	private Map<String, SchemaPropertyNodeInfo> processAllProperties(List<QueryResult> queryResults, SchemaExtractorRequest request){
+
+	@Nonnull
+	private Map<String, SchemaPropertyNodeInfo> processAllProperties(@Nonnull List<QueryResult> queryResults, @Nonnull SchemaExtractorRequest request){
 		Map<String, SchemaPropertyNodeInfo> properties = new HashMap<>();
 		for(QueryResult queryResult: queryResults){
 			String propertyName = queryResult.get(SchemaExtractorQueries.BINDING_NAME_PROPERTY);
 			String className = queryResult.get(SchemaExtractorQueries.BINDING_NAME_CLASS);
 			String instances = queryResult.get(SchemaExtractorQueries.BINDING_NAME_INSTANCES_COUNT);
 
-			if(isExcludedResource(propertyName, request.getSysClasses())
-					|| isExcludedResource(className, request.getSysClasses())){
+			if(isExcludedResource(propertyName, request.getSysClassesEnabled())
+					|| isExcludedResource(className, request.getSysClassesEnabled())){
 				continue;
 			}
 
@@ -175,7 +181,7 @@ public class SchemaExtractor {
 		return properties;
 	}
 	
-	private void processAssociations(List<QueryResult> queryResults, Map<String, SchemaPropertyNodeInfo> properties){
+	private void processAssociations(@Nonnull List<QueryResult> queryResults, @Nonnull Map<String, SchemaPropertyNodeInfo> properties){
 		for(QueryResult queryResult: queryResults){
 			String propertyName = queryResult.get(SchemaExtractorQueries.BINDING_NAME_PROPERTY);
 			String className = queryResult.get(SchemaExtractorQueries.BINDING_NAME_CLASS);
@@ -191,8 +197,9 @@ public class SchemaExtractor {
 			}			
 		}
 	}
-	
-	private Map<String, SchemaClassNodeInfo> sortClassesByNeighbors(Map<String, SchemaClassNodeInfo> classes){
+
+	@Nonnull
+	private Map<String, SchemaClassNodeInfo> sortClassesByNeighbors(@Nonnull Map<String, SchemaClassNodeInfo> classes){
 		return classes.entrySet().stream()
 				.sorted((o1, o2) -> {
 					Integer o1Size = o1.getValue().getNeighbors().size();
@@ -210,7 +217,8 @@ public class SchemaExtractor {
 	}
 
 	// sort class neighbors by instance count (ascending)
-	private List<String> sortNeighborsByInstances(List<String> neighbors, Map<String, SchemaClassNodeInfo> classesGraph){
+	@Nonnull
+	private List<String> sortNeighborsByInstances(@Nonnull List<String> neighbors, @Nonnull Map<String, SchemaClassNodeInfo> classesGraph){
 		return neighbors.stream()
 				.sorted((o1, o2) -> {
 					Integer neighborInstances1 = classesGraph.get(o1).getInstanceCount();
@@ -225,7 +233,8 @@ public class SchemaExtractor {
 	}
 	
 	// sort classes by instance count (descending)
-	private List<SchemaClass> sortClassesByInstances(List<SchemaClass> classes, Map<String, SchemaClassNodeInfo> classesGraph){
+	@Nonnull
+	private List<SchemaClass> sortClassesByInstances(@Nonnull List<SchemaClass> classes, @Nonnull Map<String, SchemaClassNodeInfo> classesGraph){
 		return classes.stream()
 				.sorted((o1, o2) -> {
 					Integer neighborInstances1 = classesGraph.get(o1.getFullName()).getInstanceCount();
@@ -239,7 +248,7 @@ public class SchemaExtractor {
 				.collect(Collectors.toList());
 	}
 
-	private int compareClassNames(String className1, String className2){
+	private int compareClassNames(@Nullable String className1, @Nullable String className2){
 		if((className1 == null && className2 == null) || (className1 != null && className2 == null)){
 			return 1;
 		}
@@ -249,8 +258,8 @@ public class SchemaExtractor {
 		return className1.compareTo(className2);
 	}
 	
-	private void processSuperclasses(Map<String, SchemaClassNodeInfo> classesGraph, List<SchemaClass> classes,
-									 SparqlEndpointProcessor sparqlEndpointProcessor, boolean logEnabled){
+	private void processSuperclasses(@Nonnull Map<String, SchemaClassNodeInfo> classesGraph, @Nonnull List<SchemaClass> classes,
+									 @Nonnull SparqlEndpointProcessor sparqlEndpointProcessor, boolean logEnabled){
 		
 		for(Entry<String, SchemaClassNodeInfo> entry: classesGraph.entrySet()){
 			
@@ -260,7 +269,7 @@ public class SchemaExtractor {
 			}
 			
 			// sort neighbor list by instance count (ascending)
-			List<String> neighbors = sortNeighborsByInstances(entry.getValue().getNeighbors(),classesGraph);
+			List<String> neighbors = sortNeighborsByInstances(entry.getValue().getNeighbors(), classesGraph);
 			
 			// find the class with the smallest number of instances but including all current instances
 			SchemaClassNodeInfo currentClassInfo = entry.getValue();
@@ -279,8 +288,8 @@ public class SchemaExtractor {
 	//		b. includes all instances from X
 	//		c. is not accessible from X
 	// 6. repeat validation
-	private void validateAndNormalizeSuperclasses(Map<String, SchemaClassNodeInfo> classesGraph, List<SchemaClass> classes,
-			SparqlEndpointProcessor sparqlEndpointProcessor, boolean logEnabled){
+	private void validateAndNormalizeSuperclasses(@Nonnull Map<String, SchemaClassNodeInfo> classesGraph, @Nonnull List<SchemaClass> classes,
+												  @Nonnull SparqlEndpointProcessor sparqlEndpointProcessor, boolean logEnabled){
 
 		List<SchemaClass> sortedClasses = sortClassesByInstances(classes, classesGraph);
 
@@ -312,8 +321,9 @@ public class SchemaExtractor {
 		}
 	}
 	
-	private boolean validateAllNeighbors(SchemaClass currentClass, SchemaClassNodeInfo currentClassInfo, List<SchemaClass> classes,
-			Map<String, SchemaClassNodeInfo> classesGraph, SparqlEndpointProcessor sparqlEndpointProcessor, boolean logEnabled){
+	private boolean validateAllNeighbors(@Nonnull SchemaClass currentClass, @Nonnull SchemaClassNodeInfo currentClassInfo, @Nonnull List<SchemaClass> classes,
+										 @Nonnull Map<String, SchemaClassNodeInfo> classesGraph, @Nonnull SparqlEndpointProcessor sparqlEndpointProcessor,
+										 boolean logEnabled){
 		boolean accessible = true;
 		List<String> notAccessibleNeighbors = new ArrayList<>();
 		for(String neighbor: currentClassInfo.getNeighbors()){
@@ -336,8 +346,9 @@ public class SchemaExtractor {
 		return accessible;
 	}
 	
-	private void updateClass(SchemaClass currentClass, SchemaClassNodeInfo currentClassInfo, List<String> neighbors, 
-			Map<String, SchemaClassNodeInfo> classesGraph, List<SchemaClass> classes, SparqlEndpointProcessor sparqlEndpointProcessor, boolean logEnabled){
+	private void updateClass(@Nonnull SchemaClass currentClass, @Nonnull SchemaClassNodeInfo currentClassInfo, @Nonnull List<String> neighbors,
+							 @Nonnull Map<String, SchemaClassNodeInfo> classesGraph, List<SchemaClass> classes, @Nonnull SparqlEndpointProcessor sparqlEndpointProcessor,
+							 boolean logEnabled){
 		
 		for(String neighbor: neighbors){
 			int neighborInstances = classesGraph.get(neighbor).getInstanceCount();
@@ -363,7 +374,7 @@ public class SchemaExtractor {
 		}
 	}
 
-	private boolean hasCyclicDependency(SchemaClass currentClass, SchemaClass newClass, List<SchemaClass> classes){
+	private boolean hasCyclicDependency(@Nonnull SchemaClass currentClass, @Nullable SchemaClass newClass, @Nonnull List<SchemaClass> classes){
 		if(newClass == null){
 			return false;
 		}
@@ -373,7 +384,7 @@ public class SchemaExtractor {
 		return isClassAccessibleFromSuperclasses(newClass.getFullName(), currentClass.getFullName(), classes);
 	}
 	
-	private boolean isClassAccessibleFromSuperclasses(String currentClass, String neighbor, List<SchemaClass> classes){
+	private boolean isClassAccessibleFromSuperclasses(@Nonnull String currentClass, @Nonnull String neighbor, @Nonnull List<SchemaClass> classes){
 		if(currentClass.equals(neighbor)){
 			return true;
 		}
@@ -388,7 +399,7 @@ public class SchemaExtractor {
 		return accessible;
 	}
 	
-	private boolean isClassAccessibleFromSubclasses(String currentClass, String neighbor, List<SchemaClass> classes){
+	private boolean isClassAccessibleFromSubclasses(@Nonnull String currentClass, @Nonnull String neighbor, @Nonnull List<SchemaClass> classes){
 		if(currentClass.equals(neighbor)){
 			return true;
 		}
@@ -403,13 +414,13 @@ public class SchemaExtractor {
 		return accessible;
 	}
 	
-	private SchemaClass findClass(List<SchemaClass> classes, String className){
+	private SchemaClass findClass(@Nonnull List<SchemaClass> classes, @Nonnull String className){
 		return classes.stream().filter(
 				schemaClass -> schemaClass.getFullName().equals(className) || schemaClass.getLocalName().equals(className))
 				.findFirst().orElse(null);
 	}
 	
-	private void setLocalNameAndNamespace(String fullName, SchemaEntity entity){
+	private void setLocalNameAndNamespace(@Nonnull String fullName, @Nonnull SchemaEntity entity){
 		String localName = fullName;
 		String namespace = "";
 		
@@ -427,7 +438,7 @@ public class SchemaExtractor {
 		entity.setNamespace(namespace);
 	}
 	
-	private void mapPropertiesToDomainClasses(List<SchemaClass> classes, Map<String, SchemaPropertyNodeInfo> properties){
+	private void mapPropertiesToDomainClasses(@Nonnull List<SchemaClass> classes, @Nonnull Map<String, SchemaPropertyNodeInfo> properties){
 		for(Entry<String, SchemaPropertyNodeInfo> p: properties.entrySet()){
 			SchemaClassNodeInfo classWithMaxCount = null;
 			int maxCount = 0;
@@ -446,8 +457,8 @@ public class SchemaExtractor {
 		}
 	}
 
-	private void mapPropertiesToRangeClasses(List<SchemaClass> classes, Map<String, SchemaPropertyNodeInfo> properties,
-											 SparqlEndpointProcessor sparqlEndpointProcessor, boolean logEnabled){
+	private void mapPropertiesToRangeClasses(@Nonnull List<SchemaClass> classes, @Nonnull Map<String, SchemaPropertyNodeInfo> properties,
+											 @Nonnull SparqlEndpointProcessor sparqlEndpointProcessor, boolean logEnabled){
 		for(Entry<String, SchemaPropertyNodeInfo> p: properties.entrySet()){
 			if(!p.getValue().getIsObjectProperty()){
 				continue;
@@ -469,15 +480,17 @@ public class SchemaExtractor {
 		}
 	}
 
-	private void addDomainClassToProperty(SchemaClassNodeInfo classInfo, Entry<String, SchemaPropertyNodeInfo> property, List<SchemaClass> classes){
+	private void addDomainClassToProperty(@Nonnull SchemaClassNodeInfo classInfo, @Nonnull Entry<String, SchemaPropertyNodeInfo> property,
+										  @Nonnull List<SchemaClass> classes){
 		String propertyDomain = findPropertyClass(classInfo, property.getKey(), property.getValue().getDomainClasses(), classes);
 		if(!SchemaUtil.isEmpty(propertyDomain)){
 			property.getValue().getDomainRangePairs().add(new SchemaDomainRangeInfo(propertyDomain));
 		}
 	}
 
-	private void addRangeClassToProperty(SchemaClassNodeInfo classInfo, Entry<String, SchemaPropertyNodeInfo> property, List<SchemaClass> classes,
-										 SparqlEndpointProcessor sparqlEndpointProcessor, boolean logEnabled){
+	private void addRangeClassToProperty(@Nonnull SchemaClassNodeInfo classInfo, @Nonnull Entry<String, SchemaPropertyNodeInfo> property,
+										 @Nonnull List<SchemaClass> classes, @Nonnull SparqlEndpointProcessor sparqlEndpointProcessor,
+										 boolean logEnabled){
 		String propertyRange = findPropertyClass(classInfo, property.getKey(), property.getValue().getRangeClasses(), classes);
 		if(!SchemaUtil.isEmpty(propertyRange)){
 			List<SchemaDomainRangeInfo> domainRangePairs = property.getValue().getDomainRangePairs();
@@ -497,7 +510,7 @@ public class SchemaExtractor {
 		}
 	}
 
-	private void createNewOrUpdateDomainRangeEntry(String domainClass, String rangeClass, List<SchemaDomainRangeInfo> domainRangePairs){
+	private void createNewOrUpdateDomainRangeEntry(@Nonnull String domainClass, @Nonnull String rangeClass, @Nonnull List<SchemaDomainRangeInfo> domainRangePairs){
 		SchemaDomainRangeInfo domainRangeInfo = domainRangePairs.stream()
 				.filter(pair -> domainClass.equals(pair.getDomainClass()) && pair.getRangeClass() == null)
 				.findFirst().orElse(null);
@@ -508,7 +521,8 @@ public class SchemaExtractor {
 		domainRangeInfo.setRangeClass(rangeClass);
 	}
 
-	private boolean checkDomainRangeMapping(String domainClass, String rangeClass, String property, SparqlEndpointProcessor sparqlEndpointProcessor, boolean logEnabled){
+	private boolean checkDomainRangeMapping(@Nonnull String domainClass, @Nonnull String rangeClass, @Nonnull String property,
+											@Nonnull SparqlEndpointProcessor sparqlEndpointProcessor, boolean logEnabled){
 		String query = SchemaExtractorQueries.CHECK_DOMAIN_RANGE_MAPPING;
 		query = query.replace(SchemaExtractorQueries.BINDING_NAME_CLASS_A, domainClass);
 		query = query.replace(SchemaExtractorQueries.BINDING_NAME_CLASS_B, rangeClass);
@@ -521,7 +535,8 @@ public class SchemaExtractor {
 		return Integer.valueOf(instances) != 0;
 	}
 	
-	private String findPropertyClass(SchemaClassNodeInfo classWithMaxCount, String propertyName, List<SchemaClassNodeInfo> assignedClasses, List<SchemaClass> classes){
+	private String findPropertyClass(@Nonnull SchemaClassNodeInfo classWithMaxCount, @Nonnull String propertyName,
+									 @Nonnull List<SchemaClassNodeInfo> assignedClasses, @Nonnull List<SchemaClass> classes){
 		SchemaClass rootClass = findClass(classes, classWithMaxCount.getClassName());
 		if(rootClass == null){
 			log.error("Error - cannot find property domain or range class - propertyName [" + propertyName + "], targetClassName [" + classWithMaxCount.getClassName() + "]");
@@ -538,7 +553,8 @@ public class SchemaExtractor {
 		return rootClass.getFullName();
 	}
 	
-	private void processDataTypes(Map<String, SchemaPropertyNodeInfo> properties, SparqlEndpointProcessor sparqlEndpointProcessor, boolean logEnabled){
+	private void processDataTypes(@Nonnull Map<String, SchemaPropertyNodeInfo> properties, @Nonnull SparqlEndpointProcessor sparqlEndpointProcessor,
+								  boolean logEnabled){
 		for(Entry<String, SchemaPropertyNodeInfo> p: properties.entrySet()){
 			if(p.getValue().getIsObjectProperty()){
 				continue;
@@ -561,7 +577,8 @@ public class SchemaExtractor {
 		}
 	}
 	
-	private void processCardinalities(Map<String, SchemaPropertyNodeInfo> properties, SparqlEndpointProcessor sparqlEndpointProcessor, boolean logEnabled){
+	private void processCardinalities(@Nonnull Map<String, SchemaPropertyNodeInfo> properties,
+									  @Nonnull SparqlEndpointProcessor sparqlEndpointProcessor, boolean logEnabled){
 		for(Entry<String, SchemaPropertyNodeInfo> p: properties.entrySet()){
 			SchemaPropertyNodeInfo property = p.getValue();			
 			setMaxCardinality(p.getKey(), property, sparqlEndpointProcessor, logEnabled);
@@ -569,7 +586,8 @@ public class SchemaExtractor {
 		}
 	}
 	
-	private void setMaxCardinality(String propertyName, SchemaPropertyNodeInfo property, SparqlEndpointProcessor sparqlEndpointProcessor, boolean logEnabled){
+	private void setMaxCardinality(@Nonnull String propertyName, @Nonnull SchemaPropertyNodeInfo property,
+								   @Nonnull SparqlEndpointProcessor sparqlEndpointProcessor, boolean logEnabled){
 		String query = SchemaExtractorQueries.FIND_MAX_CARDINALITY.replace(
 				SchemaExtractorQueries.BINDING_NAME_PROPERTY, propertyName);
 		List<QueryResult> queryResults = sparqlEndpointProcessor.read(query, "FIND_MAX_CARDINALITY", logEnabled);
@@ -592,7 +610,8 @@ public class SchemaExtractor {
 		}
 	}
 	
-	private void setMinCardinality(String propertyName, SchemaPropertyNodeInfo property, SparqlEndpointProcessor sparqlEndpointProcessor, boolean logEnabled){
+	private void setMinCardinality(@Nullable String propertyName, @Nullable SchemaPropertyNodeInfo property,
+								   @Nonnull SparqlEndpointProcessor sparqlEndpointProcessor, boolean logEnabled){
 		if(propertyName == null || property == null || property.getDomainClasses().isEmpty()){
 			return;
 		}
@@ -618,7 +637,7 @@ public class SchemaExtractor {
 		property.setMinCardinality(minCardinality);
 	}
 	
-	private void formatProperties(Map<String, SchemaPropertyNodeInfo> properties, Schema schema){
+	private void formatProperties(@Nonnull Map<String, SchemaPropertyNodeInfo> properties, @Nonnull Schema schema){
 		for(Entry<String, SchemaPropertyNodeInfo> p: properties.entrySet()){
 			SchemaPropertyNodeInfo propertyNodeInfo = p.getValue();
 			if(p.getValue().getIsObjectProperty()){
@@ -646,8 +665,9 @@ public class SchemaExtractor {
 			}			
 		}
 	}
-	
-	private String findMainNamespace(Schema schema){
+
+	@Nullable
+	private String findMainNamespace(@Nonnull Schema schema){
 		Map<String, String> namespaces = new HashMap<>();
 		for(SchemaClass item: schema.getClasses()){
 			namespaces.put(item.getNamespace(), item.getNamespace());

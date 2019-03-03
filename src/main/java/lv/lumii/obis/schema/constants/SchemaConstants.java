@@ -18,6 +18,8 @@ public class SchemaConstants {
 
 	public static final Integer DEFAULT_MAX_CARDINALITY = -1;
 	public static final Integer DEFAULT_MIN_CARDINALITY = 0;
+
+	public static final String DEFAULT_NAMESPACE_PREFIX = ":";
 	
 	public static final List<String> EXCLUDED_URI_FROM_OWL = Collections.unmodifiableList(Arrays.asList(
 			"http://www.w3.org/2000/01/rdf-schema#Resource", 
@@ -26,7 +28,5 @@ public class SchemaConstants {
 
 	public static final List<String> EXCLUDED_URI_FROM_ENDPOINT = Collections.unmodifiableList(Arrays.asList(
 			"http://www.openlinksw.com/schemas/virtrdf"));
-
-	public static final String DEFAULT_NAMESPACE_PREFIX = ":";
 
 }

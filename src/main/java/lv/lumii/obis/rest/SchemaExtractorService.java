@@ -60,7 +60,7 @@ public class SchemaExtractorService {
 		request.setGraphName(graphName);
 		request.setMode(Enums.getIfPresent(SchemaExtractorRequest.ExtractionMode.class, mode).orNull());
 		request.setLogEnabled(LOG_MODE_ENABLED.equalsIgnoreCase(logMode));
-		request.setSysClasses(LOG_MODE_ENABLED.equalsIgnoreCase(sysClasses));
+		request.setSysClassesEnabled(LOG_MODE_ENABLED.equalsIgnoreCase(sysClasses));
 
 		String requestJson = new Gson().toJson(request);
 

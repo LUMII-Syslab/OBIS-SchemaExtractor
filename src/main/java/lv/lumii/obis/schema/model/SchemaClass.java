@@ -3,14 +3,18 @@ package lv.lumii.obis.schema.model;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Getter;
+import lombok.Setter;
 
+@Setter @Getter
 public class SchemaClass extends SchemaEntity {
 	
 	@JsonProperty("SuperClasses")
 	private List<String> superClasses;
 
-	@JsonProperty("SubClasses")
+	@JsonIgnore
 	private List<String> subClasses;
 
 	public List<String> getSuperClasses() {
@@ -25,13 +29,5 @@ public class SchemaClass extends SchemaEntity {
 			subClasses = new ArrayList<>();
 		}
 		return subClasses;
-	}
-
-	public void setSuperClasses(List<String> superClasses) {
-		this.superClasses = superClasses;
-	}
-
-	public void setSubClasses(List<String> subClasses) {
-		this.subClasses = subClasses;
 	}
 }

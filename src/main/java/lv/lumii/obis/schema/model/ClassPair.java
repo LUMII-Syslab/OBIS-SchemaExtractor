@@ -1,7 +1,10 @@
 package lv.lumii.obis.schema.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Getter;
+import lombok.Setter;
 
+@Setter @Getter
 public class ClassPair {
 	
 	@JsonProperty("SourceClass")
@@ -15,22 +18,6 @@ public class ClassPair {
 	public ClassPair(String sourceClass, String targetClass) {
 		super();
 		this.sourceClass = sourceClass;
-		this.targetClass = targetClass;
-	}
-
-	public String getSourceClass() {
-		return sourceClass;
-	}
-
-	public void setSourceClass(String sourceClass) {
-		this.sourceClass = sourceClass;
-	}
-
-	public String getTargetClass() {
-		return targetClass;
-	}
-
-	public void setTargetClass(String targetClass) {
 		this.targetClass = targetClass;
 	}
 
