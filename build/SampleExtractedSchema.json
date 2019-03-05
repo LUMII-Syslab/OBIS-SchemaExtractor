@@ -5,86 +5,98 @@
     "localName" : "Registration",
     "namespace" : "http://lumii.lv/ontologies/UnivExample_hasMark.owl#",
     "fullName" : "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Registration",
-    "SuperClasses" : [ "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing" ],
-    "SubClasses" : [ "http://lumii.lv/ontologies/UnivExample_hasMark.owl#CompletedRegistration" ]
+    "instanceCount" : 14,
+    "SuperClasses" : [ "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing" ]
   }, {
     "localName" : "Thing",
     "namespace" : "http://lumii.lv/ontologies/UnivExample_hasMark.owl#",
     "fullName" : "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing",
-    "SuperClasses" : [ ],
-    "SubClasses" : [ "http://lumii.lv/ontologies/UnivExample_hasMark.owl#AcademicProgram", "http://lumii.lv/ontologies/UnivExample_hasMark.owl#FacultyLevel", "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Nationality", "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Registration", "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Course", "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Person" ]
+    "instanceCount" : 41,
+    "SuperClasses" : [ ]
+  }, {
+    "localName" : "Property",
+    "namespace" : "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+    "fullName" : "http://www.w3.org/1999/02/22-rdf-syntax-ns#Property",
+    "instanceCount" : 27,
+    "SuperClasses" : [ ]
   }, {
     "localName" : "FacultyLevel",
     "namespace" : "http://lumii.lv/ontologies/UnivExample_hasMark.owl#",
     "fullName" : "http://lumii.lv/ontologies/UnivExample_hasMark.owl#FacultyLevel",
-    "SuperClasses" : [ "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing" ],
-    "SubClasses" : [ ]
+    "instanceCount" : 3,
+    "SuperClasses" : [ "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing" ]
   }, {
     "localName" : "Nationality",
     "namespace" : "http://lumii.lv/ontologies/UnivExample_hasMark.owl#",
     "fullName" : "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Nationality",
-    "SuperClasses" : [ "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing" ],
-    "SubClasses" : [ ]
+    "instanceCount" : 7,
+    "SuperClasses" : [ "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing" ]
   }, {
     "localName" : "CompletedRegistration",
     "namespace" : "http://lumii.lv/ontologies/UnivExample_hasMark.owl#",
     "fullName" : "http://lumii.lv/ontologies/UnivExample_hasMark.owl#CompletedRegistration",
-    "SuperClasses" : [ "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Registration" ],
-    "SubClasses" : [ ]
+    "instanceCount" : 10,
+    "SuperClasses" : [ "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Registration" ]
   }, {
     "localName" : "Course",
     "namespace" : "http://lumii.lv/ontologies/UnivExample_hasMark.owl#",
     "fullName" : "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Course",
-    "SuperClasses" : [ "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing" ],
-    "SubClasses" : [ "http://lumii.lv/ontologies/UnivExample_hasMark.owl#MandatoryCourse", "http://lumii.lv/ontologies/UnivExample_hasMark.owl#OptionalCourse" ]
+    "instanceCount" : 5,
+    "SuperClasses" : [ "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing" ]
   }, {
     "localName" : "OptionalCourse",
     "namespace" : "http://lumii.lv/ontologies/UnivExample_hasMark.owl#",
     "fullName" : "http://lumii.lv/ontologies/UnivExample_hasMark.owl#OptionalCourse",
-    "SuperClasses" : [ "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Course" ],
-    "SubClasses" : [ ]
+    "instanceCount" : 3,
+    "SuperClasses" : [ "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Course" ]
   }, {
     "localName" : "MandatoryCourse",
     "namespace" : "http://lumii.lv/ontologies/UnivExample_hasMark.owl#",
     "fullName" : "http://lumii.lv/ontologies/UnivExample_hasMark.owl#MandatoryCourse",
-    "SuperClasses" : [ "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Course" ],
-    "SubClasses" : [ ]
+    "instanceCount" : 2,
+    "SuperClasses" : [ "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Course" ]
   }, {
     "localName" : "AcademicProgram",
     "namespace" : "http://lumii.lv/ontologies/UnivExample_hasMark.owl#",
     "fullName" : "http://lumii.lv/ontologies/UnivExample_hasMark.owl#AcademicProgram",
-    "SuperClasses" : [ "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing" ],
-    "SubClasses" : [ ]
+    "instanceCount" : 2,
+    "SuperClasses" : [ "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing" ]
   }, {
     "localName" : "Person",
     "namespace" : "http://lumii.lv/ontologies/UnivExample_hasMark.owl#",
     "fullName" : "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Person",
-    "SuperClasses" : [ "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing" ],
-    "SubClasses" : [ "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Student", "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Teacher" ]
+    "instanceCount" : 10,
+    "SuperClasses" : [ "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing" ]
   }, {
     "localName" : "Student",
     "namespace" : "http://lumii.lv/ontologies/UnivExample_hasMark.owl#",
     "fullName" : "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Student",
-    "SuperClasses" : [ "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Person" ],
-    "SubClasses" : [ ]
+    "instanceCount" : 7,
+    "SuperClasses" : [ "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Person" ]
   }, {
     "localName" : "Professor",
     "namespace" : "http://lumii.lv/ontologies/UnivExample_hasMark.owl#",
     "fullName" : "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Professor",
-    "SuperClasses" : [ "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Teacher" ],
-    "SubClasses" : [ ]
+    "instanceCount" : 2,
+    "SuperClasses" : [ "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Teacher" ]
   }, {
     "localName" : "Teacher",
     "namespace" : "http://lumii.lv/ontologies/UnivExample_hasMark.owl#",
     "fullName" : "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Teacher",
-    "SuperClasses" : [ "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Person" ],
-    "SubClasses" : [ "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Assistant", "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Professor" ]
+    "instanceCount" : 3,
+    "SuperClasses" : [ "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Person" ]
   }, {
     "localName" : "Assistant",
     "namespace" : "http://lumii.lv/ontologies/UnivExample_hasMark.owl#",
     "fullName" : "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Assistant",
-    "SuperClasses" : [ "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Teacher" ],
-    "SubClasses" : [ ]
+    "instanceCount" : 1,
+    "SuperClasses" : [ "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Teacher" ]
+  }, {
+    "localName" : "Class",
+    "namespace" : "http://www.w3.org/2000/01/rdf-schema#",
+    "fullName" : "http://www.w3.org/2000/01/rdf-schema#Class",
+    "instanceCount" : 14,
+    "SuperClasses" : [ ]
   } ],
   "Attributes" : [ {
     "localName" : "programName",
@@ -306,7 +318,7 @@
     "namespace" : "http://lumii.lv/ontologies/UnivExample_hasMark.owl#",
     "fullName" : "http://lumii.lv/ontologies/UnivExample_hasMark.owl#teaches",
     "minCardinality" : 1,
-    "maxCardinality" : 5,
+    "maxCardinality" : -1,
     "ClassPairs" : [ {
       "SourceClass" : "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Teacher",
       "TargetClass" : "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Course"
@@ -321,6 +333,5 @@
       "SourceClass" : "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Student",
       "TargetClass" : "http://lumii.lv/ontologies/UnivExample_hasMark.owl#AcademicProgram"
     } ]
-  } ],
-  "namespace" : "http://lumii.lv/ontologies/UnivExample_hasMark.owl#"
+  } ]
 }

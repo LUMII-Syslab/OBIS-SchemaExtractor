@@ -49,7 +49,7 @@ public class SchemaExtractorQueries {
 			  "SELECT DISTINCT  (datatype(?value) as ?dataType) WHERE { ?x <property> ?value. }";
 	
 	public static final String FIND_MAX_CARDINALITY = 
-			  "SELECT ?x (COUNT(?value) as ?instances) WHERE { ?x <property> ?value. } GROUP BY ?x ";
+			  "SELECT ?x WHERE { ?x <property> ?value. } GROUP BY ?x HAVING (COUNT(?value) > 1) LIMIT 1";
 	
 	public static final String FIND_MIN_CARDINALITY = 
 			  "SELECT (COUNT(?x) as ?instances) WHERE { ?x a <class>. FILTER NOT EXISTS { ?x <property> ?value. } } ";
