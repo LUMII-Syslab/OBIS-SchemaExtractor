@@ -16,12 +16,15 @@ OBIS Schema Extractor is Java based web application - REST controller to process
 - **log** (optional) - SPARQL query logging to the file
   - **false** (default): executed queries are not logged
   - **true**: executed queries are logged to the file /logs/obis-extractor.log (in web application server root folder)
-- **sysclasses** (optional) - indicator whether Virtuoso system classes (namespace http://www.openlinksw.com/schemas/virtrdf) should be added to the response
-  - **false** (default): Virtuoso system classes are skipped
-  - **true**: Virtuoso system classes are added to the final list of schema classes
+- **excludeSystemClasses** (optional) - indicator whether Virtuoso system classes (namespace http://www.openlinksw.com/schemas/virtrdf) should be added to the response
+  - **false**: Virtuoso system classes are added to the final list of schema classes
+  - **true** (default): Virtuoso system classes are skipped
+- **excludeMetaDomainClasses** (optional) - indicator whether meta domain classes (namespaces http://www.w3.org/2002/07/owl, http://www.w3.org/2000/01/rdf-schema, http://www.w3.org/1999/02/22-rdf-syntax-ns) should be added to the response
+  - **false** (default): OWL/RDF domain classes are considered as real data classes and are added to the final list of schema classes
+  - **true**: OWL/RDF domain classes are skipped, however, OWL/RDF properties are assigned to data domain/range pairs if real data classes have these properties
 
 **Example:**
-- http://localhost:8080/obis-rest/services/schema?endpoint=http://localhost:8890/sparql&graph=MiniUniv&mode=simple&log=true&sysclasses=true
+- http://localhost:8080/obis-rest/services/schema?endpoint=http://localhost:8890/sparql&graph=MiniUniv&mode=simple&log=true&excludeSystemClasses=true&excludeMetaDomainClasses=true
 
 **Response:**
 - JSON file with schema information, example [SampleSchema.json](build/SampleSchema.json)

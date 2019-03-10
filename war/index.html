@@ -31,7 +31,13 @@
         <p>If the endpoint is Virtuoso SPARQL server, by default Virtuoso system classes (namespace <i>http://www.openlinksw.com/schemas/virtrdf</i>)
             are not included in the response classes. If Virtuoso system classes are required, please:
             <ul>
-                <li>Use parameter <b>"&sysclasses=true"</b> to add Virtuoso system classes to the JSON response</li>
+                <li>Use parameter <b>"&excludeSystemClasses=false"</b> to add Virtuoso system classes to the JSON response</li>
+            </ul>
+        </p>
+        <p>Meta domain classes (namespaces <i>http://www.w3.org/2002/07/owl</i>, <i>http://www.w3.org/2000/01/rdf-schema</i>, <i>http://www.w3.org/1999/02/22-rdf-syntax-ns</i>)
+            are included by default. If OWL/RDF domain classes are not needed, please
+            <ul>
+                <li>Use parameter <b>"&excludeMetaDomainClasses=true"</b> to OWL/RDF domain classes to the JSON response</li>
             </ul>
         </p>
         <br>

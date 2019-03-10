@@ -26,7 +26,11 @@ public class SchemaConstants {
 			"http://www.w3.org/2000/01/rdf-schema#Class", 
 			THING_URI));
 
-	public static final List<String> EXCLUDED_URI_FROM_ENDPOINT = Collections.unmodifiableList(Arrays.asList(
+	public static final List<String> EXCLUDED_SYSTEM_URI_FROM_ENDPOINT = Collections.unmodifiableList(Arrays.asList(
 			"http://www.openlinksw.com/schemas/virtrdf"));
+	public static final List<String> EXCLUDED_META_DOMAIN_URI_FROM_ENDPOINT = Collections.unmodifiableList(Arrays.asList(
+			"http://www.w3.org/2002/07/owl",
+			"http://www.w3.org/2000/01/rdf-schema",
+			"http://www.w3.org/1999/02/22-rdf-syntax-ns"));
 
 }

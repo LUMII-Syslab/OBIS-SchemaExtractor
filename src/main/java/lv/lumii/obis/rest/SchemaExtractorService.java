@@ -28,7 +28,7 @@ import lv.lumii.obis.schema.model.Schema;
 @Slf4j
 public class SchemaExtractorService {
 
-	private static final String LOG_MODE_ENABLED = "true";
+	private static final String PARAM_TRUE = "true";
 
 	private static final String SCHEMA_EXTRACT_MESSAGE_START = "Starting to read schema from the endpoint with parameters %s";
 	private static final String SCHEMA_EXTRACT_MESSAGE_END = "Completed JSON schema extraction from the specified endpoint with parameters %s";
@@ -47,7 +47,8 @@ public class SchemaExtractorService {
 			@QueryParam("graph") @DefaultValue("") String graphName,
 			@QueryParam("mode") @DefaultValue("") String mode,
 			@QueryParam("log") @DefaultValue("false") String logMode,
-			@QueryParam("sysclasses") @DefaultValue("false") String sysClasses){
+			@QueryParam("excludeSystemClasses") @DefaultValue("true") String excludeSystemClasses,
+			@QueryParam("excludeMetaDomainClasses") @DefaultValue("false") String excludeMetaDomainClasses){
 
 
 		if(SchemaUtil.isEmpty(endpoint)){
@@ -59,8 +60,9 @@ public class SchemaExtractorService {
 		request.setEndpointUrl(endpoint);
 		request.setGraphName(graphName);
 		request.setMode(Enums.getIfPresent(SchemaExtractorRequest.ExtractionMode.class, mode).orNull());
-		request.setLogEnabled(LOG_MODE_ENABLED.equalsIgnoreCase(logMode));
-		request.setSysClassesEnabled(LOG_MODE_ENABLED.equalsIgnoreCase(sysClasses));
+		request.setLogEnabled(PARAM_TRUE.equalsIgnoreCase(logMode));
+		request.setExcludeSystemClasses(PARAM_TRUE.equalsIgnoreCase(excludeSystemClasses));
+		request.setExcludeMetaDomainClasses(PARAM_TRUE.equalsIgnoreCase(excludeMetaDomainClasses));
 
 		String requestJson = new Gson().toJson(request);
 
@@ -93,7 +95,10 @@ public class SchemaExtractorService {
 		OwlOntologyReader reader = new OwlOntologyReader();
 		Schema schema = reader.readOwlOntology(uploadedInputStream);
 
-		String jsonString = JsonSchemaService.getJsonSchemaString(schema);
+		String jsonString = null;
+		if(schema != null){
+			jsonString = JsonSchemaService.getJsonSchemaString(schema);
+		}
 
 		if(!SchemaUtil.isEmpty(jsonString)){
 			log.info(String.format(SCHEMA_READ_FILE_MESSAGE_END, fileDetail.getFileName()));

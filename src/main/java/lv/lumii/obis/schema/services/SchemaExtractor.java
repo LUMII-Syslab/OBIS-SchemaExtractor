@@ -13,7 +13,6 @@ import lv.lumii.obis.schema.model.SchemaAttribute;
 import lv.lumii.obis.schema.model.SchemaClass;
 import lv.lumii.obis.schema.model.SchemaEntity;
 import lv.lumii.obis.schema.model.SchemaRole;
-import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import javax.annotation.Nonnull;
@@ -21,6 +20,8 @@ import javax.annotation.Nullable;
 
 import static lv.lumii.obis.schema.constants.SchemaConstants.*;
 import static lv.lumii.obis.schema.services.SchemaExtractorQueries.*;
+import static org.apache.commons.lang3.BooleanUtils.isTrue;
+import static org.apache.commons.lang3.BooleanUtils.isFalse;
 
 @Slf4j
 public class SchemaExtractor {
@@ -113,7 +114,7 @@ public class SchemaExtractor {
 		List<SchemaClass> classes = new ArrayList<>();
 		for(QueryResult queryResult: queryResults){
 			String value = queryResult.get(SchemaExtractorQueries.BINDING_NAME_CLASS);
-			if(value != null && !isExcludedResource(value, request.getSysClassesEnabled())){
+			if(value != null && !isExcludedResource(value, request.getExcludeSystemClasses(), request.getExcludeMetaDomainClasses())){
 				SchemaClass c = new SchemaClass();
 				setLocalNameAndNamespace(value, c);
 				classes.add(c);
@@ -122,11 +123,15 @@ public class SchemaExtractor {
 		return classes;
 	}
 
-	private boolean isExcludedResource(@Nonnull String resourceName, @Nonnull Boolean sysClassesEnabled) {
-		if(BooleanUtils.isFalse(sysClassesEnabled)){
-			return SchemaConstants.EXCLUDED_URI_FROM_ENDPOINT.stream().anyMatch(uri -> resourceName.startsWith(uri));
+	private boolean isExcludedResource(@Nonnull String resourceName, @Nonnull Boolean excludeSystemClasses, @Nonnull Boolean excludeMetaDomainClasses) {
+		boolean excluded = false;
+		if(isTrue(excludeSystemClasses)){
+			excluded = SchemaConstants.EXCLUDED_SYSTEM_URI_FROM_ENDPOINT.stream().anyMatch(resourceName::startsWith);
 		}
-		return false;
+		if(isFalse(excluded) && isTrue(excludeMetaDomainClasses)){
+			excluded = SchemaConstants.EXCLUDED_META_DOMAIN_URI_FROM_ENDPOINT.stream().anyMatch(resourceName::startsWith);
+		}
+		return excluded;
 	}
 
 	@Nonnull
@@ -135,7 +140,9 @@ public class SchemaExtractor {
 		for(QueryResult queryResult: queryResults){
 			String classA = queryResult.get(SchemaExtractorQueries.BINDING_NAME_CLASS_A);
 			String classB = queryResult.get(SchemaExtractorQueries.BINDING_NAME_CLASS_B);
-			if(classA != null && classB != null && !isExcludedResource(classA, request.getSysClassesEnabled())){
+			if(classA != null && classB != null
+					&& !isExcludedResource(classA, request.getExcludeSystemClasses(), request.getExcludeMetaDomainClasses())
+					&& !isExcludedResource(classB, request.getExcludeSystemClasses(), request.getExcludeMetaDomainClasses())){
 				if(!classes.containsKey(classA)){
 					classes.put(classA, new SchemaClassNodeInfo());
 				}
@@ -184,8 +191,7 @@ public class SchemaExtractor {
 			String className = queryResult.get(SchemaExtractorQueries.BINDING_NAME_CLASS);
 			String instances = queryResult.get(SchemaExtractorQueries.BINDING_NAME_INSTANCES_COUNT);
 
-			if(isExcludedResource(propertyName, request.getSysClassesEnabled())
-					|| isExcludedResource(className, request.getSysClassesEnabled())){
+			if(isExcludedResource(className, request.getExcludeSystemClasses(), request.getExcludeMetaDomainClasses())){
 				continue;
 			}
 
@@ -455,42 +461,31 @@ public class SchemaExtractor {
 	
 	private void mapPropertiesToDomainClasses(@Nonnull List<SchemaClass> classes, @Nonnull Map<String, SchemaPropertyNodeInfo> properties){
 		for(Entry<String, SchemaPropertyNodeInfo> p: properties.entrySet()){
-			SchemaClassNodeInfo classWithMaxCount = null;
-			int maxCount = 0;
+
+			List<String> propertyDomainClasses = p.getValue().getDomainClasses()
+					.stream().map(SchemaClassNodeInfo::getClassName).collect(Collectors.toList());
+			Set<String> processedClasses = new HashSet<>();
+
 			for(SchemaClassNodeInfo classInfo: p.getValue().getDomainClasses()){
 				SchemaClass domainClass = findClass(classes, classInfo.getClassName());
-				if(domainClass != null && domainClass.getSubClasses().isEmpty() && domainClass.getSuperClasses().isEmpty()){
-					addDomainClassToProperty(classInfo, p, classes);
-				} else if(classInfo.getInstanceCount() > maxCount){
-					maxCount = classInfo.getInstanceCount();
-					classWithMaxCount = classInfo;
+				if(domainClass == null || processedClasses.contains(classInfo.getClassName())){
+					continue;
 				}
-			}
-			if(classWithMaxCount != null){
-				addDomainClassToProperty(classWithMaxCount, p, classes);
-			}
-		}
-	}
 
-	private void mapPropertiesToRangeClasses(@Nonnull List<SchemaClass> classes, @Nonnull Map<String, SchemaPropertyNodeInfo> properties,
-											 @Nonnull SparqlEndpointProcessor sparqlEndpointProcessor, boolean logEnabled){
-		for(Entry<String, SchemaPropertyNodeInfo> p: properties.entrySet()){
-			if(!p.getValue().getIsObjectProperty()){
-				continue;
-			}
-			SchemaClassNodeInfo classWithMaxCount = null;
-			int maxCount = 0;
-			for(SchemaClassNodeInfo classInfo: p.getValue().getRangeClasses()){
-				SchemaClass rangeClass = findClass(classes, classInfo.getClassName());
-				if(rangeClass != null && rangeClass.getSubClasses().isEmpty() && rangeClass.getSuperClasses().isEmpty()){
-					addRangeClassToProperty(classInfo, p, classes, sparqlEndpointProcessor, logEnabled);
-				} else if(classInfo.getInstanceCount() > maxCount){
-					maxCount = classInfo.getInstanceCount();
-					classWithMaxCount = classInfo;
+				boolean processNow = domainClass.getSuperClasses().isEmpty()
+						|| domainClass.getSuperClasses().stream().noneMatch(propertyDomainClasses::contains);
+
+				if(processNow){
+					addDomainClassToProperty(classInfo, p, classes);
+					processedClasses.add(classInfo.getClassName());
+					if(!domainClass.getSubClasses().isEmpty()){
+						for(String domainSubClass: domainClass.getSubClasses()){
+							if(propertyDomainClasses.contains(domainSubClass)){
+								processedClasses.add(domainSubClass);
+							}
+						}
+					}
 				}
-			}
-			if(classWithMaxCount != null){
-				addRangeClassToProperty(classWithMaxCount, p, classes, sparqlEndpointProcessor, logEnabled);
 			}
 		}
 	}
@@ -500,6 +495,41 @@ public class SchemaExtractor {
 		String propertyDomain = findPropertyClass(classInfo, property.getKey(), property.getValue().getDomainClasses(), classes);
 		if(!SchemaUtil.isEmpty(propertyDomain)){
 			property.getValue().getDomainRangePairs().add(new SchemaDomainRangeInfo(propertyDomain));
+		}
+	}
+
+	private void mapPropertiesToRangeClasses(@Nonnull List<SchemaClass> classes, @Nonnull Map<String, SchemaPropertyNodeInfo> properties,
+											 @Nonnull SparqlEndpointProcessor sparqlEndpointProcessor, boolean logEnabled){
+		for(Entry<String, SchemaPropertyNodeInfo> p: properties.entrySet()){
+			if(!p.getValue().getIsObjectProperty()){
+				continue;
+			}
+
+			List<String> propertyRangeClasses = p.getValue().getRangeClasses()
+					.stream().map(SchemaClassNodeInfo::getClassName).collect(Collectors.toList());
+			Set<String> processedClasses = new HashSet<>();
+
+			for(SchemaClassNodeInfo classInfo: p.getValue().getRangeClasses()){
+				SchemaClass rangeClass = findClass(classes, classInfo.getClassName());
+				if(rangeClass == null || processedClasses.contains(classInfo.getClassName())){
+					continue;
+				}
+
+				boolean processNow = rangeClass.getSuperClasses().isEmpty()
+						|| rangeClass.getSuperClasses().stream().noneMatch(propertyRangeClasses::contains);
+
+				if(processNow){
+					addRangeClassToProperty(classInfo, p, classes, sparqlEndpointProcessor, logEnabled);
+					processedClasses.add(classInfo.getClassName());
+					if(!rangeClass.getSubClasses().isEmpty()){
+						for(String rangeSubClass: rangeClass.getSubClasses()){
+							if(propertyRangeClasses.contains(rangeSubClass)){
+								processedClasses.add(rangeSubClass);
+							}
+						}
+					}
+				}
+			}
 		}
 	}
 

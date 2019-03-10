@@ -12,6 +12,7 @@ public class SchemaExtractorRequest {
     private String graphName;
     private ExtractionMode mode;
     private Boolean logEnabled = Boolean.FALSE;
-    private Boolean sysClassesEnabled = Boolean.FALSE;
+    private Boolean excludeSystemClasses = Boolean.TRUE;
+    private Boolean excludeMetaDomainClasses = Boolean.FALSE;
 
 }
