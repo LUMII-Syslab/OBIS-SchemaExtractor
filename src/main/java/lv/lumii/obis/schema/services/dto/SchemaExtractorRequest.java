@@ -6,7 +6,7 @@ import lombok.Setter;
 @Setter @Getter
 public class SchemaExtractorRequest {
 
-    public enum ExtractionMode {simple, data};
+    public enum ExtractionMode {simple, data, full};
 
     private String endpointUrl;
     private String graphName;

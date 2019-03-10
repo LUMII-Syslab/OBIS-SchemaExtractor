@@ -6,13 +6,8 @@ import java.util.stream.Collectors;
 
 import lombok.extern.slf4j.Slf4j;
 import lv.lumii.obis.schema.constants.SchemaConstants;
+import lv.lumii.obis.schema.model.*;
 import lv.lumii.obis.schema.services.dto.*;
-import lv.lumii.obis.schema.model.ClassPair;
-import lv.lumii.obis.schema.model.Schema;
-import lv.lumii.obis.schema.model.SchemaAttribute;
-import lv.lumii.obis.schema.model.SchemaClass;
-import lv.lumii.obis.schema.model.SchemaEntity;
-import lv.lumii.obis.schema.model.SchemaRole;
 import org.apache.commons.lang3.StringUtils;
 
 import javax.annotation.Nonnull;
@@ -106,6 +101,13 @@ public class SchemaExtractor {
 		// find main namespace
 		schema.setDefaultNamespace(findMainNamespace(schema));
 		schema.setMultipleNamespaces(false);
+
+		// set schema extraction properties
+		schema.getParameters().add(new SchemaParameter(SchemaParameter.PARAM_NAME_MODE, request.getMode().name()));
+		schema.getParameters().add(new SchemaParameter(SchemaParameter.PARAM_NAME_EXCLUDE_SYSTEM_CLASSES,
+				request.getExcludeSystemClasses().toString()));
+		schema.getParameters().add(new SchemaParameter(SchemaParameter.PARAM_NAME_EXCLUDE_META_DOMAIN_CLASSES,
+				request.getExcludeMetaDomainClasses().toString()));
 		
 		return schema;
 	}

@@ -59,7 +59,7 @@ public class SchemaExtractorService {
 		SchemaExtractorRequest request = new SchemaExtractorRequest();
 		request.setEndpointUrl(endpoint);
 		request.setGraphName(graphName);
-		request.setMode(Enums.getIfPresent(SchemaExtractorRequest.ExtractionMode.class, mode).orNull());
+		request.setMode(Enums.getIfPresent(SchemaExtractorRequest.ExtractionMode.class, mode).or(SchemaExtractorRequest.ExtractionMode.full));
 		request.setLogEnabled(PARAM_TRUE.equalsIgnoreCase(logMode));
 		request.setExcludeSystemClasses(PARAM_TRUE.equalsIgnoreCase(excludeSystemClasses));
 		request.setExcludeMetaDomainClasses(PARAM_TRUE.equalsIgnoreCase(excludeMetaDomainClasses));

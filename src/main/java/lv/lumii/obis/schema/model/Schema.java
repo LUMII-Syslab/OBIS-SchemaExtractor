@@ -18,7 +18,7 @@ public class Schema extends AnnotationElement {
 	private String name;
 
 	@JsonProperty("OntologyMode")
-	private String ontologyMode = "false";
+	private String ontologyMode = Boolean.FALSE.toString();
 	
 	@JsonProperty("Classes")
 	private List<SchemaClass> classes;
@@ -28,6 +28,9 @@ public class Schema extends AnnotationElement {
 	
 	@JsonProperty("Associations")
 	private List<SchemaRole> associations;
+
+	@JsonProperty("Parameters")
+	private List<SchemaParameter> parameters;
 
 	@JsonProperty("namespace")
 	private String defaultNamespace;
@@ -63,6 +66,13 @@ public class Schema extends AnnotationElement {
 			associations = new ArrayList<>();
 		}
 		return associations;
+	}
+
+	public List<SchemaParameter> getParameters() {
+		if(parameters == null){
+			parameters = new ArrayList<>();
+		}
+		return parameters;
 	}
 
 	public Map<String, String> getNamespaceMap() {
