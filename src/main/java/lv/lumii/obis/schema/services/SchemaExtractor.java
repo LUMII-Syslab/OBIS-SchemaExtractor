@@ -98,9 +98,13 @@ public class SchemaExtractor {
 		// fill schema object with attributes and associations
 		formatProperties(properties, schema);
 		
-		// find main namespace
-		schema.setDefaultNamespace(findMainNamespace(schema));
-		schema.setMultipleNamespaces(false);
+		// find main namespace and create prefix map
+		String mainNamespace = findMainNamespace(schema);
+		if(StringUtils.isNotEmpty(mainNamespace)){
+			schema.setDefaultNamespace(mainNamespace);
+			schema.setMultipleNamespaces(false);
+			schema.getPrefixes().add(new NamespacePrefixEntry(SchemaConstants.DEFAULT_NAMESPACE_PREFIX, mainNamespace));
+		}
 
 		// set schema extraction properties
 		schema.getParameters().add(new SchemaParameter(SchemaParameter.PARAM_NAME_MODE, request.getMode().name()));
@@ -702,20 +706,22 @@ public class SchemaExtractor {
 
 	@Nullable
 	private String findMainNamespace(@Nonnull Schema schema){
-		Map<String, String> namespaces = new HashMap<>();
+		List<String> namespaces = new ArrayList<>();
 		for(SchemaClass item: schema.getClasses()){
-			namespaces.put(item.getNamespace(), item.getNamespace());
+			namespaces.add(item.getNamespace());
 		}
 		for(SchemaAttribute item: schema.getAttributes()){
-			namespaces.put(item.getNamespace(), item.getNamespace());
+			namespaces.add(item.getNamespace());
 		}
 		for(SchemaRole item: schema.getAssociations()){
-			namespaces.put(item.getNamespace(), item.getNamespace());
+			namespaces.add(item.getNamespace());
 		}
-		if(namespaces.size() == 1){
-			return namespaces.keySet().iterator().next();
+		if(namespaces.isEmpty()){
+			return null;
 		}
-		return null;
+		Map<String, Long> namespacesWithCounts = namespaces.stream()
+				.collect(Collectors.groupingBy(e -> e, Collectors.counting()));
+		return namespacesWithCounts.entrySet().stream().max(Map.Entry.comparingByValue()).get().getKey();
 	}
 
 }

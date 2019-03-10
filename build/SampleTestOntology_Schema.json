@@ -1,0 +1,463 @@
+{
+  "SchemaName" : "http://obis.lumii.lv/2013/01/ontology/data.owl#",
+  "OntologyMode" : "false",
+  "Classes" : [ {
+    "localName" : "ContactDetails",
+    "namespace" : "http://obis.lumii.lv/2013/01/ontology#",
+    "fullName" : "http://obis.lumii.lv/2013/01/ontology#ContactDetails",
+    "SuperClasses" : [ "http://www.w3.org/2002/07/owl#Thing" ]
+  }, {
+    "localName" : "Course",
+    "namespace" : "http://obis.lumii.lv/2013/01/ontology#",
+    "fullName" : "http://obis.lumii.lv/2013/01/ontology#Course",
+    "SuperClasses" : [ "http://www.w3.org/2002/07/owl#Thing" ]
+  }, {
+    "localName" : "Professor",
+    "namespace" : "http://obis.lumii.lv/2013/01/ontology#",
+    "fullName" : "http://obis.lumii.lv/2013/01/ontology#Professor",
+    "SuperClasses" : [ "http://obis.lumii.lv/2013/01/ontology#Employee" ]
+  }, {
+    "localName" : "SampleMultipleValues",
+    "namespace" : "http://obis.lumii.lv/2013/01/ontology#",
+    "fullName" : "http://obis.lumii.lv/2013/01/ontology#SampleMultipleValues",
+    "SuperClasses" : [ "http://www.w3.org/2002/07/owl#Thing" ]
+  }, {
+    "localName" : "Address",
+    "namespace" : "http://obis.lumii.lv/2013/01/ontology#",
+    "fullName" : "http://obis.lumii.lv/2013/01/ontology#Address",
+    "SuperClasses" : [ "http://www.w3.org/2002/07/owl#Thing" ]
+  }, {
+    "localName" : "Thing",
+    "namespace" : "http://www.w3.org/2002/07/owl#",
+    "fullName" : "http://www.w3.org/2002/07/owl#Thing",
+    "SuperClasses" : [ ]
+  }, {
+    "localName" : "Nationality",
+    "namespace" : "http://obis.lumii.lv/2013/01/ontology#",
+    "fullName" : "http://obis.lumii.lv/2013/01/ontology#Nationality",
+    "SuperClasses" : [ "http://www.w3.org/2002/07/owl#Thing" ]
+  }, {
+    "localName" : "MandatoryCourse",
+    "namespace" : "http://obis.lumii.lv/2013/01/ontology#",
+    "fullName" : "http://obis.lumii.lv/2013/01/ontology#MandatoryCourse",
+    "SuperClasses" : [ "http://obis.lumii.lv/2013/01/ontology#Course" ]
+  }, {
+    "localName" : "SampleDateValues",
+    "namespace" : "http://obis.lumii.lv/2013/01/ontology#",
+    "fullName" : "http://obis.lumii.lv/2013/01/ontology#SampleDateValues",
+    "SuperClasses" : [ "http://www.w3.org/2002/07/owl#Thing" ]
+  }, {
+    "localName" : "OptionalCourse",
+    "namespace" : "http://obis.lumii.lv/2013/01/ontology#",
+    "fullName" : "http://obis.lumii.lv/2013/01/ontology#OptionalCourse",
+    "SuperClasses" : [ "http://obis.lumii.lv/2013/01/ontology#Course" ]
+  }, {
+    "localName" : "Student",
+    "namespace" : "http://obis.lumii.lv/2013/01/ontology#",
+    "fullName" : "http://obis.lumii.lv/2013/01/ontology#Student",
+    "SuperClasses" : [ "http://obis.lumii.lv/2013/01/ontology#Person" ]
+  }, {
+    "localName" : "Person",
+    "namespace" : "http://obis.lumii.lv/2013/01/ontology#",
+    "fullName" : "http://obis.lumii.lv/2013/01/ontology#Person",
+    "SuperClasses" : [ "http://www.w3.org/2002/07/owl#Thing" ]
+  }, {
+    "localName" : "Employee",
+    "namespace" : "http://obis.lumii.lv/2013/01/ontology#",
+    "fullName" : "http://obis.lumii.lv/2013/01/ontology#Employee",
+    "SuperClasses" : [ "http://obis.lumii.lv/2013/01/ontology#Person" ]
+  } ],
+  "Attributes" : [ {
+    "localName" : "courseNumber",
+    "namespace" : "http://obis.lumii.lv/2013/01/ontology#",
+    "fullName" : "http://obis.lumii.lv/2013/01/ontology#courseNumber",
+    "type" : "xsd:string",
+    "SourceClasses" : [ "http://obis.lumii.lv/2013/01/ontology#Course" ]
+  }, {
+    "localName" : "firstName",
+    "namespace" : "http://obis.lumii.lv/2013/01/ontology#",
+    "fullName" : "http://obis.lumii.lv/2013/01/ontology#firstName",
+    "minCardinality" : 1,
+    "type" : "xsd:string",
+    "SourceClasses" : [ "http://obis.lumii.lv/2013/01/ontology#Person" ]
+  }, {
+    "localName" : "lastName",
+    "namespace" : "http://obis.lumii.lv/2013/01/ontology#",
+    "fullName" : "http://obis.lumii.lv/2013/01/ontology#lastName",
+    "minCardinality" : 1,
+    "type" : "xsd:string",
+    "SourceClasses" : [ "http://obis.lumii.lv/2013/01/ontology#Person" ]
+  }, {
+    "localName" : "gyearMonthExample1",
+    "namespace" : "http://obis.lumii.lv/2013/01/ontology#",
+    "fullName" : "http://obis.lumii.lv/2013/01/ontology#gyearMonthExample1",
+    "type" : "xsd:gYearMonth",
+    "SourceClasses" : [ "http://obis.lumii.lv/2013/01/ontology#SampleDateValues" ]
+  }, {
+    "localName" : "multipleInt",
+    "namespace" : "http://obis.lumii.lv/2013/01/ontology#",
+    "fullName" : "http://obis.lumii.lv/2013/01/ontology#multipleInt",
+    "type" : "xsd:integer",
+    "SourceClasses" : [ "http://obis.lumii.lv/2013/01/ontology#SampleMultipleValues" ]
+  }, {
+    "localName" : "email",
+    "namespace" : "http://obis.lumii.lv/2013/01/ontology#",
+    "fullName" : "http://obis.lumii.lv/2013/01/ontology#email",
+    "type" : "xsd:string",
+    "SourceClasses" : [ "http://obis.lumii.lv/2013/01/ontology#ContactDetails" ]
+  }, {
+    "localName" : "description",
+    "namespace" : "http://obis.lumii.lv/2013/01/ontology#",
+    "fullName" : "http://obis.lumii.lv/2013/01/ontology#description",
+    "type" : "xsd:string",
+    "SourceClasses" : [ "http://obis.lumii.lv/2013/01/ontology#Course" ]
+  }, {
+    "localName" : "dateTimeExample3",
+    "namespace" : "http://obis.lumii.lv/2013/01/ontology#",
+    "fullName" : "http://obis.lumii.lv/2013/01/ontology#dateTimeExample3",
+    "type" : "xsd:dateTime",
+    "SourceClasses" : [ "http://obis.lumii.lv/2013/01/ontology#SampleDateValues" ]
+  }, {
+    "localName" : "dateTimeExample2",
+    "namespace" : "http://obis.lumii.lv/2013/01/ontology#",
+    "fullName" : "http://obis.lumii.lv/2013/01/ontology#dateTimeExample2",
+    "type" : "xsd:dateTime",
+    "SourceClasses" : [ "http://obis.lumii.lv/2013/01/ontology#SampleDateValues" ]
+  }, {
+    "localName" : "dateTimeExample1",
+    "namespace" : "http://obis.lumii.lv/2013/01/ontology#",
+    "fullName" : "http://obis.lumii.lv/2013/01/ontology#dateTimeExample1",
+    "type" : "xsd:dateTime",
+    "SourceClasses" : [ "http://obis.lumii.lv/2013/01/ontology#SampleDateValues" ]
+  }, {
+    "localName" : "birthDate",
+    "namespace" : "http://obis.lumii.lv/2013/01/ontology#",
+    "fullName" : "http://obis.lumii.lv/2013/01/ontology#birthDate",
+    "minCardinality" : 1,
+    "type" : "xsd:date",
+    "SourceClasses" : [ "http://obis.lumii.lv/2013/01/ontology#Person" ]
+  }, {
+    "localName" : "multipleDate",
+    "namespace" : "http://obis.lumii.lv/2013/01/ontology#",
+    "fullName" : "http://obis.lumii.lv/2013/01/ontology#multipleDate",
+    "type" : "xsd:date",
+    "SourceClasses" : [ "http://obis.lumii.lv/2013/01/ontology#SampleMultipleValues" ]
+  }, {
+    "localName" : "employeeNumber",
+    "namespace" : "http://obis.lumii.lv/2013/01/ontology#",
+    "fullName" : "http://obis.lumii.lv/2013/01/ontology#employeeNumber",
+    "type" : "xsd:integer",
+    "SourceClasses" : [ "http://obis.lumii.lv/2013/01/ontology#Employee" ]
+  }, {
+    "localName" : "value",
+    "namespace" : "http://obis.lumii.lv/2013/01/ontology#",
+    "fullName" : "http://obis.lumii.lv/2013/01/ontology#value",
+    "minCardinality" : 1,
+    "type" : "xsd:string",
+    "SourceClasses" : [ "http://obis.lumii.lv/2013/01/ontology#Nationality" ]
+  }, {
+    "localName" : "multipleString",
+    "namespace" : "http://obis.lumii.lv/2013/01/ontology#",
+    "fullName" : "http://obis.lumii.lv/2013/01/ontology#multipleString",
+    "type" : "xsd:string",
+    "SourceClasses" : [ "http://obis.lumii.lv/2013/01/ontology#SampleMultipleValues" ]
+  }, {
+    "localName" : "phone",
+    "namespace" : "http://obis.lumii.lv/2013/01/ontology#",
+    "fullName" : "http://obis.lumii.lv/2013/01/ontology#phone",
+    "maxCardinality" : 3,
+    "type" : "xsd:string",
+    "SourceClasses" : [ "http://obis.lumii.lv/2013/01/ontology#Address" ]
+  }, {
+    "localName" : "skype",
+    "namespace" : "http://obis.lumii.lv/2013/01/ontology#",
+    "fullName" : "http://obis.lumii.lv/2013/01/ontology#skype",
+    "type" : "xsd:string",
+    "SourceClasses" : [ "http://obis.lumii.lv/2013/01/ontology#ContactDetails" ]
+  }, {
+    "localName" : "studentNumber",
+    "namespace" : "http://obis.lumii.lv/2013/01/ontology#",
+    "fullName" : "http://obis.lumii.lv/2013/01/ontology#studentNumber",
+    "minCardinality" : 1,
+    "type" : "xsd:string",
+    "SourceClasses" : [ "http://obis.lumii.lv/2013/01/ontology#Student" ]
+  }, {
+    "localName" : "currentStudent",
+    "namespace" : "http://obis.lumii.lv/2013/01/ontology#",
+    "fullName" : "http://obis.lumii.lv/2013/01/ontology#currentStudent",
+    "type" : "xsd:boolean",
+    "SourceClasses" : [ "http://obis.lumii.lv/2013/01/ontology#Student" ]
+  }, {
+    "localName" : "courseName",
+    "namespace" : "http://obis.lumii.lv/2013/01/ontology#",
+    "fullName" : "http://obis.lumii.lv/2013/01/ontology#courseName",
+    "minCardinality" : 1,
+    "type" : "xsd:string",
+    "SourceClasses" : [ "http://obis.lumii.lv/2013/01/ontology#Course" ]
+  }, {
+    "localName" : "timeExample",
+    "namespace" : "http://obis.lumii.lv/2013/01/ontology#",
+    "fullName" : "http://obis.lumii.lv/2013/01/ontology#timeExample",
+    "type" : "xsd:time",
+    "SourceClasses" : [ "http://obis.lumii.lv/2013/01/ontology#SampleDateValues" ]
+  }, {
+    "localName" : "webPage",
+    "namespace" : "http://obis.lumii.lv/2013/01/ontology#",
+    "fullName" : "http://obis.lumii.lv/2013/01/ontology#webPage",
+    "type" : "xsd:string",
+    "SourceClasses" : [ "http://obis.lumii.lv/2013/01/ontology#ContactDetails" ]
+  }, {
+    "localName" : "code",
+    "namespace" : "http://obis.lumii.lv/2013/01/ontology#",
+    "fullName" : "http://obis.lumii.lv/2013/01/ontology#code",
+    "minCardinality" : 1,
+    "type" : "xsd:string",
+    "SourceClasses" : [ "http://obis.lumii.lv/2013/01/ontology#Nationality" ]
+  }, {
+    "localName" : "timeExample2",
+    "namespace" : "http://obis.lumii.lv/2013/01/ontology#",
+    "fullName" : "http://obis.lumii.lv/2013/01/ontology#timeExample2",
+    "type" : "xsd:time",
+    "SourceClasses" : [ "http://obis.lumii.lv/2013/01/ontology#SampleDateValues" ]
+  }, {
+    "localName" : "degree",
+    "namespace" : "http://obis.lumii.lv/2013/01/ontology#",
+    "fullName" : "http://obis.lumii.lv/2013/01/ontology#degree",
+    "minCardinality" : 1,
+    "type" : "xsd:string",
+    "SourceClasses" : [ "http://obis.lumii.lv/2013/01/ontology#Professor" ]
+  }, {
+    "localName" : "dateExample1",
+    "namespace" : "http://obis.lumii.lv/2013/01/ontology#",
+    "fullName" : "http://obis.lumii.lv/2013/01/ontology#dateExample1",
+    "type" : "xsd:date",
+    "SourceClasses" : [ "http://obis.lumii.lv/2013/01/ontology#SampleDateValues" ]
+  }, {
+    "localName" : "twitter",
+    "namespace" : "http://obis.lumii.lv/2013/01/ontology#",
+    "fullName" : "http://obis.lumii.lv/2013/01/ontology#twitter",
+    "type" : "xsd:string",
+    "SourceClasses" : [ "http://obis.lumii.lv/2013/01/ontology#ContactDetails" ]
+  }, {
+    "localName" : "dateExample2",
+    "namespace" : "http://obis.lumii.lv/2013/01/ontology#",
+    "fullName" : "http://obis.lumii.lv/2013/01/ontology#dateExample2",
+    "type" : "xsd:date",
+    "SourceClasses" : [ "http://obis.lumii.lv/2013/01/ontology#SampleDateValues" ]
+  }, {
+    "localName" : "street",
+    "namespace" : "http://obis.lumii.lv/2013/01/ontology#",
+    "fullName" : "http://obis.lumii.lv/2013/01/ontology#street",
+    "minCardinality" : 1,
+    "type" : "xsd:string",
+    "SourceClasses" : [ "http://obis.lumii.lv/2013/01/ontology#Address" ]
+  }, {
+    "localName" : "gyearExample2",
+    "namespace" : "http://obis.lumii.lv/2013/01/ontology#",
+    "fullName" : "http://obis.lumii.lv/2013/01/ontology#gyearExample2",
+    "type" : "xsd:gYear",
+    "SourceClasses" : [ "http://obis.lumii.lv/2013/01/ontology#SampleDateValues" ]
+  }, {
+    "localName" : "gyearExample1",
+    "namespace" : "http://obis.lumii.lv/2013/01/ontology#",
+    "fullName" : "http://obis.lumii.lv/2013/01/ontology#gyearExample1",
+    "type" : "xsd:gYear",
+    "SourceClasses" : [ "http://obis.lumii.lv/2013/01/ontology#SampleDateValues" ]
+  }, {
+    "localName" : "personId",
+    "namespace" : "http://obis.lumii.lv/2013/01/ontology#",
+    "fullName" : "http://obis.lumii.lv/2013/01/ontology#personId",
+    "type" : "xsd:string",
+    "SourceClasses" : [ "http://obis.lumii.lv/2013/01/ontology#Person" ]
+  }, {
+    "localName" : "city",
+    "namespace" : "http://obis.lumii.lv/2013/01/ontology#",
+    "fullName" : "http://obis.lumii.lv/2013/01/ontology#city",
+    "minCardinality" : 1,
+    "type" : "xsd:string",
+    "SourceClasses" : [ "http://obis.lumii.lv/2013/01/ontology#Address" ]
+  }, {
+    "localName" : "gmonthExample2",
+    "namespace" : "http://obis.lumii.lv/2013/01/ontology#",
+    "fullName" : "http://obis.lumii.lv/2013/01/ontology#gmonthExample2",
+    "type" : "xsd:gMonth",
+    "SourceClasses" : [ "http://obis.lumii.lv/2013/01/ontology#SampleDateValues" ]
+  }, {
+    "localName" : "gmonthExample1",
+    "namespace" : "http://obis.lumii.lv/2013/01/ontology#",
+    "fullName" : "http://obis.lumii.lv/2013/01/ontology#gmonthExample1",
+    "type" : "xsd:gMonth",
+    "SourceClasses" : [ "http://obis.lumii.lv/2013/01/ontology#SampleDateValues" ]
+  }, {
+    "localName" : "dataDefaultMaxCardinality",
+    "namespace" : "http://obis.lumii.lv/2013/01/obis#",
+    "fullName" : "http://obis.lumii.lv/2013/01/obis#dataDefaultMaxCardinality",
+    "type" : "xsd:string",
+    "SourceClasses" : [ "http://www.w3.org/2002/07/owl#Thing" ]
+  }, {
+    "localName" : "dateFormat",
+    "namespace" : "http://obis.lumii.lv/2013/01/obis#",
+    "fullName" : "http://obis.lumii.lv/2013/01/obis#dateFormat",
+    "type" : "xsd:string",
+    "SourceClasses" : [ "http://www.w3.org/2002/07/owl#Thing" ]
+  }, {
+    "localName" : "dateTimeFormat",
+    "namespace" : "http://obis.lumii.lv/2013/01/obis#",
+    "fullName" : "http://obis.lumii.lv/2013/01/obis#dateTimeFormat",
+    "type" : "xsd:string",
+    "SourceClasses" : [ "http://www.w3.org/2002/07/owl#Thing" ]
+  }, {
+    "localName" : "defaultOrder",
+    "namespace" : "http://obis.lumii.lv/2013/01/obis#",
+    "fullName" : "http://obis.lumii.lv/2013/01/obis#defaultOrder",
+    "type" : "xsd:string",
+    "SourceClasses" : [ "http://www.w3.org/2002/07/owl#Thing" ]
+  }, {
+    "localName" : "gmonthFormat",
+    "namespace" : "http://obis.lumii.lv/2013/01/obis#",
+    "fullName" : "http://obis.lumii.lv/2013/01/obis#gmonthFormat",
+    "type" : "xsd:string",
+    "SourceClasses" : [ "http://www.w3.org/2002/07/owl#Thing" ]
+  }, {
+    "localName" : "gyearFormat",
+    "namespace" : "http://obis.lumii.lv/2013/01/obis#",
+    "fullName" : "http://obis.lumii.lv/2013/01/obis#gyearFormat",
+    "type" : "xsd:string",
+    "SourceClasses" : [ "http://www.w3.org/2002/07/owl#Thing" ]
+  }, {
+    "localName" : "gyearMonthFormat",
+    "namespace" : "http://obis.lumii.lv/2013/01/obis#",
+    "fullName" : "http://obis.lumii.lv/2013/01/obis#gyearMonthFormat",
+    "type" : "xsd:string",
+    "SourceClasses" : [ "http://www.w3.org/2002/07/owl#Thing" ]
+  }, {
+    "localName" : "hideEmptyByDefault",
+    "namespace" : "http://obis.lumii.lv/2013/01/obis#",
+    "fullName" : "http://obis.lumii.lv/2013/01/obis#hideEmptyByDefault",
+    "type" : "xsd:string",
+    "SourceClasses" : [ "http://www.w3.org/2002/07/owl#Thing" ]
+  }, {
+    "localName" : "isAbstract",
+    "namespace" : "http://obis.lumii.lv/2013/01/obis#",
+    "fullName" : "http://obis.lumii.lv/2013/01/obis#isAbstract",
+    "type" : "xsd:string",
+    "SourceClasses" : [ "http://www.w3.org/2002/07/owl#Thing" ]
+  }, {
+    "localName" : "isEnumerated",
+    "namespace" : "http://obis.lumii.lv/2013/01/obis#",
+    "fullName" : "http://obis.lumii.lv/2013/01/obis#isEnumerated",
+    "type" : "xsd:string",
+    "SourceClasses" : [ "http://www.w3.org/2002/07/owl#Thing" ]
+  }, {
+    "localName" : "isMultiple",
+    "namespace" : "http://obis.lumii.lv/2013/01/obis#",
+    "fullName" : "http://obis.lumii.lv/2013/01/obis#isMultiple",
+    "type" : "xsd:string",
+    "SourceClasses" : [ "http://www.w3.org/2002/07/owl#Thing" ]
+  }, {
+    "localName" : "showIdentifier",
+    "namespace" : "http://obis.lumii.lv/2013/01/obis#",
+    "fullName" : "http://obis.lumii.lv/2013/01/obis#showIdentifier",
+    "type" : "xsd:string",
+    "SourceClasses" : [ "http://www.w3.org/2002/07/owl#Thing" ]
+  }, {
+    "localName" : "showInSuperClassShape",
+    "namespace" : "http://obis.lumii.lv/2013/01/obis#",
+    "fullName" : "http://obis.lumii.lv/2013/01/obis#showInSuperClassShape",
+    "type" : "xsd:string",
+    "SourceClasses" : [ "http://www.w3.org/2002/07/owl#Thing" ]
+  }, {
+    "localName" : "showSubClassAttributes",
+    "namespace" : "http://obis.lumii.lv/2013/01/obis#",
+    "fullName" : "http://obis.lumii.lv/2013/01/obis#showSubClassAttributes",
+    "type" : "xsd:string",
+    "SourceClasses" : [ "http://www.w3.org/2002/07/owl#Thing" ]
+  }, {
+    "localName" : "textPattern",
+    "namespace" : "http://obis.lumii.lv/2013/01/obis#",
+    "fullName" : "http://obis.lumii.lv/2013/01/obis#textPattern",
+    "type" : "xsd:string",
+    "SourceClasses" : [ "http://www.w3.org/2002/07/owl#Thing" ]
+  }, {
+    "localName" : "timeFormat",
+    "namespace" : "http://obis.lumii.lv/2013/01/obis#",
+    "fullName" : "http://obis.lumii.lv/2013/01/obis#timeFormat",
+    "type" : "xsd:string",
+    "SourceClasses" : [ "http://www.w3.org/2002/07/owl#Thing" ]
+  }, {
+    "localName" : "view",
+    "namespace" : "http://obis.lumii.lv/2013/01/obis#",
+    "fullName" : "http://obis.lumii.lv/2013/01/obis#view",
+    "type" : "xsd:string",
+    "SourceClasses" : [ "http://www.w3.org/2002/07/owl#Thing" ]
+  }, {
+    "localName" : "maxQualifiedCardinality",
+    "namespace" : "http://www.w3.org/2002/07/owl#",
+    "fullName" : "http://www.w3.org/2002/07/owl#maxQualifiedCardinality",
+    "type" : "xsd:string",
+    "SourceClasses" : [ "http://www.w3.org/2002/07/owl#Thing" ]
+  } ],
+  "Associations" : [ {
+    "localName" : "hasNationality",
+    "namespace" : "http://obis.lumii.lv/2013/01/ontology#",
+    "fullName" : "http://obis.lumii.lv/2013/01/ontology#hasNationality",
+    "minCardinality" : 1,
+    "ClassPairs" : [ {
+      "SourceClass" : "http://obis.lumii.lv/2013/01/ontology#Person",
+      "TargetClass" : "http://obis.lumii.lv/2013/01/ontology#Nationality"
+    } ]
+  }, {
+    "localName" : "students",
+    "namespace" : "http://obis.lumii.lv/2013/01/ontology#",
+    "fullName" : "http://obis.lumii.lv/2013/01/ontology#students",
+    "ClassPairs" : [ {
+      "SourceClass" : "http://obis.lumii.lv/2013/01/ontology#Course",
+      "TargetClass" : "http://obis.lumii.lv/2013/01/ontology#Student"
+    } ]
+  }, {
+    "localName" : "address",
+    "namespace" : "http://obis.lumii.lv/2013/01/ontology#",
+    "fullName" : "http://obis.lumii.lv/2013/01/ontology#address",
+    "maxCardinality" : 1,
+    "ClassPairs" : [ {
+      "SourceClass" : "http://obis.lumii.lv/2013/01/ontology#Person",
+      "TargetClass" : "http://obis.lumii.lv/2013/01/ontology#Address"
+    } ]
+  }, {
+    "localName" : "professor",
+    "namespace" : "http://obis.lumii.lv/2013/01/ontology#",
+    "fullName" : "http://obis.lumii.lv/2013/01/ontology#professor",
+    "maxCardinality" : 1,
+    "ClassPairs" : [ {
+      "SourceClass" : "http://obis.lumii.lv/2013/01/ontology#Course",
+      "TargetClass" : "http://obis.lumii.lv/2013/01/ontology#Professor"
+    } ]
+  }, {
+    "localName" : "hasContactDetails",
+    "namespace" : "http://obis.lumii.lv/2013/01/ontology#",
+    "fullName" : "http://obis.lumii.lv/2013/01/ontology#hasContactDetails",
+    "maxCardinality" : 1,
+    "ClassPairs" : [ {
+      "SourceClass" : "http://obis.lumii.lv/2013/01/ontology#Person",
+      "TargetClass" : "http://obis.lumii.lv/2013/01/ontology#ContactDetails"
+    } ]
+  }, {
+    "localName" : "study",
+    "namespace" : "http://obis.lumii.lv/2013/01/ontology#",
+    "fullName" : "http://obis.lumii.lv/2013/01/ontology#study",
+    "minCardinality" : 1,
+    "ClassPairs" : [ {
+      "SourceClass" : "http://obis.lumii.lv/2013/01/ontology#Student",
+      "TargetClass" : "http://obis.lumii.lv/2013/01/ontology#Course"
+    } ]
+  }, {
+    "localName" : "teaches",
+    "namespace" : "http://obis.lumii.lv/2013/01/ontology#",
+    "fullName" : "http://obis.lumii.lv/2013/01/ontology#teaches",
+    "maxCardinality" : 2,
+    "ClassPairs" : [ {
+      "SourceClass" : "http://obis.lumii.lv/2013/01/ontology#Professor",
+      "TargetClass" : "http://obis.lumii.lv/2013/01/ontology#Course"
+    } ]
+  } ]
+}

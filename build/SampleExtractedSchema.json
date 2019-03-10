@@ -333,5 +333,20 @@
       "SourceClass" : "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Student",
       "TargetClass" : "http://lumii.lv/ontologies/UnivExample_hasMark.owl#AcademicProgram"
     } ]
+  } ],
+  "Parameters" : [ {
+    "name" : "mode",
+    "value" : "full"
+  }, {
+    "name" : "excludeSystemClasses",
+    "value" : "true"
+  }, {
+    "name" : "excludeMetaDomainClasses",
+    "value" : "false"
+  } ],
+  "namespace" : "http://lumii.lv/ontologies/UnivExample_hasMark.owl#",
+  "Prefixes" : [ {
+    "prefix" : ":",
+    "namespace" : "http://lumii.lv/ontologies/UnivExample_hasMark.owl#"
   } ]
 }

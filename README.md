@@ -27,7 +27,7 @@ OBIS Schema Extractor is Java based web application - REST controller to process
 - http://localhost:8080/obis-rest/services/schema?endpoint=http://localhost:8890/sparql&graph=MiniUniv&mode=simple&log=true&excludeSystemClasses=true&excludeMetaDomainClasses=true
 
 **Response:**
-- JSON file with schema information, example [SampleSchema.json](build/SampleSchema.json)
+- JSON file with extracted schema information, example [SampleExtractedSchema.json](build/SampleExtractedSchema.json)
 
 
 #### RDF/OWL file upload
@@ -37,7 +37,7 @@ OBIS Schema Extractor is Java based web application - REST controller to process
 Uploaded RDF/OWL schema information is converted to JSON format with schema information.
 
 Example RDF schema - [SampleTestOntology.owl](build/SampleTestOntology.owl)
-Example JSON response - [SampleSchema.json](build/SampleSchema.json)
+Example JSON response - [SampleTestOntology_Schema.json](build/SampleTestOntology_Schema.json)
 
 
 ### Installation

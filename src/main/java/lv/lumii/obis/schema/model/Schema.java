@@ -35,6 +35,9 @@ public class Schema extends AnnotationElement {
 	@JsonProperty("namespace")
 	private String defaultNamespace;
 
+	@JsonProperty("Prefixes")
+	private List<NamespacePrefixEntry> prefixes;
+
 	@JsonIgnore
 	private boolean multipleNamespaces;
 	
@@ -73,6 +76,13 @@ public class Schema extends AnnotationElement {
 			parameters = new ArrayList<>();
 		}
 		return parameters;
+	}
+
+	public List<NamespacePrefixEntry> getPrefixes() {
+		if(prefixes == null){
+			prefixes = new ArrayList<>();
+		}
+		return prefixes;
 	}
 
 	public Map<String, String> getNamespaceMap() {
