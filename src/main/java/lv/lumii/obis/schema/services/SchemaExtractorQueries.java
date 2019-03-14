@@ -25,7 +25,7 @@ public class SchemaExtractorQueries {
 	public static final String CHECK_SUPERCLASS = 
 			"SELECT (COUNT(?x) as ?instances) WHERE {" + "\n\t"
 			+ "?x a ?classA." + "\n\t"
-			+ "MINUS { ?x a ?classB. }" + "\n\t"
+			+ "FILTER (NOT EXISTS {?x a ?classB.})" + "\n\t"
 			+ "}";
 	
 	public static final String FIND_ALL_PROPERTIES = 

@@ -82,6 +82,10 @@ public class SchemaExtractor {
 		// map properties to range classes
 		log.info("mapPropertiesToRangeClasses");
 		mapPropertiesToRangeClasses(classes, properties, sparqlEndpointProcessor, request.getLogEnabled());
+
+		// remove duplicate domain-range pairs
+		log.info("normalizePropertyDomainRangeMapping");
+		normalizePropertyDomainRangeMapping(classes, properties);
 		
 		// data type and cardinality calculation may impact performance
 		if(!SchemaExtractorRequest.ExtractionMode.simple.equals(request.getMode())){
@@ -553,7 +557,8 @@ public class SchemaExtractor {
 			} else {
 				Set<String> uniqueDomains = domainRangePairs.stream().map(SchemaDomainRangeInfo::getDomainClass).collect(Collectors.toSet());
 				uniqueDomains.forEach(domain -> {
-					if(checkDomainRangeMapping(domain, propertyRange, property.getKey(), sparqlEndpointProcessor, logEnabled)){
+					if(isFalse(existDomainRangeEntry(domain, propertyRange, domainRangePairs)) &&
+							checkDomainRangeMapping(domain, propertyRange, property.getKey(), sparqlEndpointProcessor, logEnabled)){
 						createNewOrUpdateDomainRangeEntry(domain, propertyRange, domainRangePairs);
 					}
 				});
@@ -561,7 +566,13 @@ public class SchemaExtractor {
 		}
 	}
 
+	private boolean existDomainRangeEntry(@Nonnull String domainClass, @Nonnull String rangeClass, @Nonnull List<SchemaDomainRangeInfo> domainRangePairs){
+		return domainRangePairs.stream()
+				.anyMatch(pair -> domainClass.equals(pair.getDomainClass()) && rangeClass.equals(pair.getRangeClass()));
+	}
+
 	private void createNewOrUpdateDomainRangeEntry(@Nonnull String domainClass, @Nonnull String rangeClass, @Nonnull List<SchemaDomainRangeInfo> domainRangePairs){
+
 		SchemaDomainRangeInfo domainRangeInfo = domainRangePairs.stream()
 				.filter(pair -> domainClass.equals(pair.getDomainClass()) && pair.getRangeClass() == null)
 				.findFirst().orElse(null);
@@ -584,6 +595,50 @@ public class SchemaExtractor {
 		}
 		String instances = queryResults.get(0).get(SchemaExtractorQueries.BINDING_NAME_INSTANCES_COUNT);
 		return Integer.valueOf(instances) != 0;
+	}
+
+	private void normalizePropertyDomainRangeMapping(@Nonnull List<SchemaClass> classes, @Nonnull Map<String, SchemaPropertyNodeInfo> properties){
+		for(Entry<String, SchemaPropertyNodeInfo> p: properties.entrySet()){
+			if(!p.getValue().getIsObjectProperty()) {
+				continue;
+			}
+			List<SchemaDomainRangeInfo> domainRangePairs = p.getValue().getDomainRangePairs();
+			domainRangePairs.removeIf(entry -> shouldRemoveDomainRangePair(entry, domainRangePairs, classes));
+		}
+	}
+
+	private boolean shouldRemoveDomainRangePair(@Nonnull SchemaDomainRangeInfo domainRangeEntry, @Nonnull List<SchemaDomainRangeInfo> domainRangePairs,
+												@Nonnull List<SchemaClass> classes){
+
+		SchemaClass domainClass = findClass(classes, domainRangeEntry.getDomainClass());
+		SchemaClass rangeClass = findClass(classes, domainRangeEntry.getRangeClass());
+		if(domainClass == null || rangeClass == null){
+			return true;
+		}
+
+		// check removal cases for classPairs (A,B) and (C,D)
+		for(SchemaDomainRangeInfo item: domainRangePairs){
+
+			// case: A=C and subClassOf(B,D)
+			if(domainClass.getFullName().equalsIgnoreCase(item.getDomainClass())
+					&& rangeClass.getSuperClasses().contains(item.getRangeClass())){
+				return true;
+			}
+
+			// case: subClassOf(A,C)  and B=D
+			if(domainClass.getSuperClasses().contains(item.getDomainClass())
+					&& rangeClass.getFullName().equalsIgnoreCase(item.getRangeClass())){
+				return true;
+			}
+
+			// case: subClassOf(A,C) and subClassOf(B,D)
+			if(domainClass.getSuperClasses().contains(item.getDomainClass())
+					&& rangeClass.getSuperClasses().contains(item.getRangeClass())){
+				return true;
+			}
+
+		}
+		return false;
 	}
 	
 	private String findPropertyClass(@Nonnull SchemaClassNodeInfo classWithMaxCount, @Nonnull String propertyName,
