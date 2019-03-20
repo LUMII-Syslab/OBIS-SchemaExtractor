@@ -75,7 +75,7 @@ public class SparqlEndpointProcessor {
 		}
 		qexec.setTimeout(1000000, 1000000);
 		qexec.addDefaultGraph(graphName);
-		qexec.addParam("timeout", "1000000");
+		qexec.addParam("timeout", "0");
 		return qexec;
 	}
 

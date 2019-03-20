@@ -17,7 +17,7 @@ public class SchemaClass extends SchemaEntity {
 	@JsonIgnore
 	private List<String> subClasses;
 
-	private Integer instanceCount;
+	private Long instanceCount;
 
 	public List<String> getSuperClasses() {
 		if(superClasses == null){

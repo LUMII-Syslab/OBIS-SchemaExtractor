@@ -10,7 +10,7 @@ import java.util.List;
 public class SchemaClassNodeInfo {
 	
 	private String className;
-	private Integer instanceCount;
+	private Long instanceCount;
 	private List<String> neighbors;
 	
 	public List<String> getNeighbors() {

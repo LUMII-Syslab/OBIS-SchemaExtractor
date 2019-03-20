@@ -175,9 +175,9 @@ public class SchemaExtractor {
 			String className = queryResult.get(SchemaExtractorQueries.BINDING_NAME_CLASS);
 			String instancesCountStr = queryResult.get(SchemaExtractorQueries.BINDING_NAME_INSTANCES_COUNT);
 			if(className != null && instancesCountStr != null){
-				Integer instanceCount = 0;
+				Long instanceCount = 0L;
 				try {
-					instanceCount = Integer.valueOf(instancesCountStr);
+					instanceCount = Long.valueOf(instancesCountStr);
 				} catch (NumberFormatException e){
 					// do nothing
 				}
@@ -211,7 +211,7 @@ public class SchemaExtractor {
 			SchemaPropertyNodeInfo property = properties.get(propertyName);
 			SchemaClassNodeInfo classInfo = new SchemaClassNodeInfo();
 			classInfo.setClassName(className);
-			classInfo.setInstanceCount(Integer.valueOf(instances));
+			classInfo.setInstanceCount(Long.valueOf(instances));
 			property.getDomainClasses().add(classInfo);
 		}
 		return properties;
@@ -228,7 +228,7 @@ public class SchemaExtractor {
 				property.setIsObjectProperty(Boolean.TRUE);
 				SchemaClassNodeInfo classInfo = new SchemaClassNodeInfo();
 				classInfo.setClassName(className);
-				classInfo.setInstanceCount(Integer.valueOf(instances));
+				classInfo.setInstanceCount(Long.valueOf(instances));
 				property.getRangeClasses().add(classInfo);
 			}			
 		}
@@ -260,8 +260,8 @@ public class SchemaExtractor {
 	private List<String> sortNeighborsByInstances(@Nonnull List<String> neighbors, @Nonnull Map<String, SchemaClassNodeInfo> classesGraph){
 		return neighbors.stream()
 				.sorted((o1, o2) -> {
-					Integer neighborInstances1 = classesGraph.get(o1).getInstanceCount();
-					Integer neighborInstances2 = classesGraph.get(o2).getInstanceCount();
+					Long neighborInstances1 = classesGraph.get(o1).getInstanceCount();
+					Long neighborInstances2 = classesGraph.get(o2).getInstanceCount();
 					int compareResult = neighborInstances1.compareTo(neighborInstances2);
 					if(compareResult == 0){
 						return nullSafeStringComparator.compare(classesGraph.get(o1).getClassName(), classesGraph.get(o2).getClassName());
@@ -277,8 +277,8 @@ public class SchemaExtractor {
 	private List<SchemaClass> sortClassesByInstances(@Nonnull List<SchemaClass> classes, @Nonnull Map<String, SchemaClassNodeInfo> classesGraph){
 		return classes.stream()
 				.sorted((o1, o2) -> {
-					Integer neighborInstances1 = classesGraph.get(o1.getFullName()).getInstanceCount();
-					Integer neighborInstances2 = classesGraph.get(o2.getFullName()).getInstanceCount();
+					Long neighborInstances1 = classesGraph.get(o1.getFullName()).getInstanceCount();
+					Long neighborInstances2 = classesGraph.get(o2.getFullName()).getInstanceCount();
 					int compareResult = neighborInstances2.compareTo(neighborInstances1);
 					if(compareResult == 0){
 						return nullSafeStringComparator.compare(o2.getFullName(), o1.getFullName());
@@ -382,7 +382,7 @@ public class SchemaExtractor {
 							 boolean logEnabled){
 		
 		for(String neighbor: neighbors){
-			int neighborInstances = classesGraph.get(neighbor).getInstanceCount();
+			Long neighborInstances = classesGraph.get(neighbor).getInstanceCount();
 			if(neighborInstances < currentClassInfo.getInstanceCount()){
 				continue;
 			}
