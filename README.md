@@ -1,6 +1,7 @@
 # OBIS-SchemaExtractor
 
-OBIS Schema Extractor is Java based web application - REST controller to process RDF schema extraction from SPARQL endpoints.
+OBIS Schema Extractor is Java based web application - REST controller to process data schema extraction from SPARQL endpoints.
+The structure of the response JSON data schema format is described at http://viziquer.lumii.lv/schema-extractor .
 
 #### SPARQL endpoint usage
 
@@ -34,7 +35,7 @@ OBIS Schema Extractor is Java based web application - REST controller to process
 
 **URL:** *http://server:port/obis-rest/schemaFromOwl.html*
 
-Uploaded RDF/OWL schema information is converted to JSON format with schema information.
+Uploaded RDF/OWL schema information is converted to JSON format with data schema information.
 
 Example RDF schema - [SampleTestOntology.owl](build/SampleTestOntology.owl)
 Example JSON response - [SampleTestOntology_Schema.json](build/SampleTestOntology_Schema.json)
