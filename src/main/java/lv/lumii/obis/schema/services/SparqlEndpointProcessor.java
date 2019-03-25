@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.jena.query.Query;
 import org.apache.jena.query.QueryExecution;
 import org.apache.jena.query.QueryExecutionFactory;
@@ -67,15 +68,13 @@ public class SparqlEndpointProcessor {
 	}
 	
 	public QueryExecution getQueryExecutor(Query query){
-		QueryEngineHTTP qexec = null;
-		if(graphName == null || "".equals(graphName.trim())){
+		QueryEngineHTTP qexec;
+		if(graphName == null || StringUtils.isEmpty(graphName)){
 			qexec = (QueryEngineHTTP) QueryExecutionFactory.sparqlService(sparqlEndpointUrl, query);
 		} else {
 			qexec = (QueryEngineHTTP) QueryExecutionFactory.sparqlService(sparqlEndpointUrl, query, graphName);
 		}
-		qexec.setTimeout(1000000, 1000000);
 		qexec.addDefaultGraph(graphName);
-		qexec.addParam("timeout", "1000000");
 		return qexec;
 	}
 

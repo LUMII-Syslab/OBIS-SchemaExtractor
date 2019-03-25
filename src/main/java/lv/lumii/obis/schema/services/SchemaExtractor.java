@@ -32,69 +32,69 @@ public class SchemaExtractor {
 		schema.setName((StringUtils.isNotEmpty(request.getGraphName())) ? request.getGraphName() + "_Schema" : "Schema");
 		
 		// find all classes
-		log.info("findAllClasses");
+		log.info(request.getCorrelationId() + " - findAllClasses");
 		List<QueryResult> queryResults = sparqlEndpointProcessor.read(FIND_ALL_CLASSES, "FIND_ALL_CLASSES", request.getLogEnabled());
 		List<SchemaClass> classes = processClasses(queryResults, request);
 		schema.setClasses(classes);
 		queryResults.clear();	
 		
 		// find intersection classes
-		log.info("findIntersectionClassesAndBuildGraph");
+		log.info(request.getCorrelationId() + " - findIntersectionClassesAndBuildGraph");
 		queryResults = sparqlEndpointProcessor.read(FIND_INTERSECTION_CLASSES, "FIND_INTERSECTION_CLASSES", request.getLogEnabled());
 		Map<String, SchemaClassNodeInfo> classesGraph = buildClassGraph(queryResults, request);
 		queryResults.clear();
 		addMissingClasses(classes, classesGraph);
 		
 		// find instances counts for all classes
-		log.info("findInstanceCountForAllClasses");
+		log.info(request.getCorrelationId() + " - findInstanceCountForAllClasses");
 		queryResults = sparqlEndpointProcessor.read(FIND_INSTANCES_COUNT, "FIND_INSTANCES_COUNT", request.getLogEnabled());
 		processInstanceCount(queryResults, classesGraph, classes);
 		queryResults.clear();
 		
 		// sort classes by neighbors and instances count (ascending)
-		log.info("sortClassesByNeighbors");
+		log.info(request.getCorrelationId() + " - sortClassesByNeighbors");
 		classesGraph = sortClassesByNeighbors(classesGraph);
 		
 		// find superclasses
-		log.info("processSuperclasses");
+		log.info(request.getCorrelationId() + " - processSuperclasses");
 		processSuperclasses(classesGraph, classes, sparqlEndpointProcessor, request.getLogEnabled());
 		
 		// validate and update classes
-		log.info("validateAndNormalizeSuperclasses");
+		log.info(request.getCorrelationId() + " - validateAndNormalizeSuperclasses");
 		validateAndNormalizeSuperclasses(classesGraph, classes, sparqlEndpointProcessor, request.getLogEnabled());
 		
 		// find all properties (attributes + associations) and domain class instances count
-		log.info("findAllProperties");
+		log.info(request.getCorrelationId() + " - findAllProperties");
 		queryResults = sparqlEndpointProcessor.read(FIND_ALL_PROPERTIES, "FIND_ALL_PROPERTIES", request.getLogEnabled());
 		Map<String, SchemaPropertyNodeInfo> properties = processAllProperties(queryResults, request);
 		queryResults.clear();
 		
 		// find associations and range class instances count
-		log.info("findAssociations");
+		log.info(request.getCorrelationId() + " - findAssociations");
 		queryResults = sparqlEndpointProcessor.read(FIND_OBJECT_PROPERTIES_WITH_RANGE, "FIND_OBJECT_PROPERTIES_WITH_RANGE", request.getLogEnabled());
 		processAssociations(queryResults, properties);
 		queryResults.clear();
 		
 		// map properties to domain classes
-		log.info("mapPropertiesToDomainClasses");
+		log.info(request.getCorrelationId() + " - mapPropertiesToDomainClasses");
 		mapPropertiesToDomainClasses(classes, properties);
 		
 		// map properties to range classes
-		log.info("mapPropertiesToRangeClasses");
+		log.info(request.getCorrelationId() + " - mapPropertiesToRangeClasses");
 		mapPropertiesToRangeClasses(classes, properties, sparqlEndpointProcessor, request.getLogEnabled());
 
 		// remove duplicate domain-range pairs
-		log.info("normalizePropertyDomainRangeMapping");
+		log.info(request.getCorrelationId() + " - normalizePropertyDomainRangeMapping");
 		normalizePropertyDomainRangeMapping(classes, properties);
 		
 		// data type and cardinality calculation may impact performance
 		if(!SchemaExtractorRequest.ExtractionMode.simple.equals(request.getMode())){
 			// find data types for attributes
-			log.info("findDataTypesForAttributes");
+			log.info(request.getCorrelationId() + " - findDataTypesForAttributes");
 			processDataTypes(properties, sparqlEndpointProcessor, request.getLogEnabled());
 			// find min/max cardinality
 			if(!SchemaExtractorRequest.ExtractionMode.data.equals(request.getMode())){
-				log.info("calculateCardinalities");
+				log.info(request.getCorrelationId() + " - calculateCardinalities");
 				processCardinalities(properties, sparqlEndpointProcessor, request.getLogEnabled());
 			}
 		}

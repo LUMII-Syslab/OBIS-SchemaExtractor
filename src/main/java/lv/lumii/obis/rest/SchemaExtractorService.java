@@ -1,6 +1,8 @@
 package lv.lumii.obis.rest;
 
 import java.io.InputStream;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DefaultValue;
@@ -29,6 +31,7 @@ import lv.lumii.obis.schema.model.Schema;
 public class SchemaExtractorService {
 
 	private static final String PARAM_TRUE = "true";
+	private static final String RNG_ALGORITHM = "SHA1PRNG";
 
 	private static final String SCHEMA_EXTRACT_MESSAGE_START = "Starting to read schema from the endpoint with parameters %s";
 	private static final String SCHEMA_EXTRACT_MESSAGE_END = "Completed JSON schema extraction from the specified endpoint with parameters %s";
@@ -38,6 +41,8 @@ public class SchemaExtractorService {
 	private static final String SCHEMA_READ_FILE_MESSAGE_START = "Starting to read schema from the file [%s]";
 	private static final String SCHEMA_READ_FILE_MESSAGE_END = "Completed to read schema from the file [%s]";
 	private static final String SCHEMA_READ_FILE_MESSAGE_ERROR = "Cannot read Schema JSON from the specified OWL file [%s]";
+
+	private static volatile SecureRandom secureRandom;
 
 	@GET
 	@Path("/schema")
@@ -57,6 +62,7 @@ public class SchemaExtractorService {
 		}
 
 		SchemaExtractorRequest request = new SchemaExtractorRequest();
+		request.setCorrelationId(generateCorrelationId());
 		request.setEndpointUrl(endpoint);
 		request.setGraphName(graphName);
 		request.setMode(Enums.getIfPresent(SchemaExtractorRequest.ExtractionMode.class, mode).or(SchemaExtractorRequest.ExtractionMode.full));
@@ -107,6 +113,17 @@ public class SchemaExtractorService {
 			String error = String.format(SCHEMA_READ_FILE_MESSAGE_ERROR, fileDetail.getFileName());
 			log.error(error);
 			return error;
+		}
+	}
+
+	private static String generateCorrelationId() {
+		try {
+			if(secureRandom == null) {
+				secureRandom = SecureRandom.getInstance(RNG_ALGORITHM);
+			}
+			return Long.toString(Math.abs(secureRandom.nextLong()));
+		} catch (NoSuchAlgorithmException e) {
+			throw new RuntimeException("Error generating unique correlation id for SchemaExtractor request: ", e);
 		}
 	}
 

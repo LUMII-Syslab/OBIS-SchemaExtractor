@@ -15,4 +15,6 @@ public class SchemaExtractorRequest {
     private Boolean excludeSystemClasses = Boolean.TRUE;
     private Boolean excludeMetaDomainClasses = Boolean.FALSE;
 
+    private String correlationId;
+
 }
