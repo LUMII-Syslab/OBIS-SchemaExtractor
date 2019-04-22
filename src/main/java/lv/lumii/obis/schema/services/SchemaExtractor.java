@@ -106,7 +106,6 @@ public class SchemaExtractor {
 		String mainNamespace = findMainNamespace(schema);
 		if(StringUtils.isNotEmpty(mainNamespace)){
 			schema.setDefaultNamespace(mainNamespace);
-			schema.setMultipleNamespaces(false);
 			schema.getPrefixes().add(new NamespacePrefixEntry(SchemaConstants.DEFAULT_NAMESPACE_PREFIX, mainNamespace));
 		}
 

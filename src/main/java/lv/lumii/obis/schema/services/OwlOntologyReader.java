@@ -7,6 +7,7 @@ import java.util.stream.Stream;
 
 import lv.lumii.obis.schema.constants.SchemaConstants;
 import lv.lumii.obis.schema.model.*;
+import org.apache.commons.lang3.StringUtils;
 import org.semanticweb.owlapi.apibinding.OWLManager;
 import org.semanticweb.owlapi.model.*;
 
@@ -42,38 +43,37 @@ public class OwlOntologyReader {
 		
 		Schema schema = new Schema();		
 		schema.setName((ontologyIRI != null) ? ontologyIRI.getIRIString() : null);
-		processPrefixes(ontology, schema);
 		processAnnotations(ontology.annotations(), schema);
 
 		Map<String, SchemaClass> classesMap = new HashMap<>();
 		Map<String, List<SchemaCardinalityInfo>> cardinalityMap = new HashMap<>();
-		
+
 		processClasses(ontology, schema, classesMap, cardinalityMap, manager);
 		processDataTypeProperties(ontology, schema, classesMap, cardinalityMap);
 		processAnnotationProperties(ontology, schema, classesMap, cardinalityMap);
 		processObjectTypeProperties(ontology, schema, classesMap, cardinalityMap);
 		processInverseObjectTypeProperties(ontology, schema);
 
-		processMultipleNamespaces(schema);
-		
+		processPrefixes(ontology, schema);
+
 		return schema;
 	}
 	
 	private void processPrefixes(@Nonnull OWLOntology ontology, @Nonnull Schema schema) {
+		// find main namespace
+		String mainNamespace = findMainNamespace(schema);
+		if(StringUtils.isNotEmpty(mainNamespace)){
+			schema.setDefaultNamespace(mainNamespace);
+		}
+		// create prefix map
 		OWLDocumentFormat format = ontology.getOWLOntologyManager().getOntologyFormat(ontology);
 		if (format != null && Boolean.TRUE.equals(format.isPrefixOWLDocumentFormat())) {
-			schema.setNamespaceMap(format.asPrefixOWLDocumentFormat().getPrefixName2PrefixMap());
+			format.asPrefixOWLDocumentFormat().getPrefixName2PrefixMap().entrySet().forEach(entry -> {
+				schema.getPrefixes().add(new NamespacePrefixEntry(entry.getKey(), entry.getValue()));
+			});
 		}
 	}
 
-	private void processMultipleNamespaces(@Nonnull Schema schema){
-		if(schema.getUsedNamespacePrefixMap().size() <= 1){
-			schema.setMultipleNamespaces(false);
-		} else {
-			schema.setMultipleNamespaces(true);
-		}
-	}
-	
 	private void processClasses(@Nonnull OWLOntology ontology, @Nonnull Schema schema, @Nonnull Map<String, SchemaClass> classesMap,
 								@Nonnull Map<String, List<SchemaCardinalityInfo>> cardinalityMap, @Nonnull OWLOntologyManager manager) {
 		
@@ -397,22 +397,8 @@ public class OwlOntologyReader {
 		entity.setLocalName(entityIri.getShortForm());
 		entity.setFullName(entityIri.toString());
 		entity.setNamespace(entityIri.getNamespace());
-
-		updateResourceNames(entityIri, schema);
 	}
 
-	private void updateResourceNames(@Nonnull IRI entityIri, @Nonnull Schema schema){
-		// update used namespace prefixes
-		schema.addUsedNamespace(entityIri.getNamespace());
-		// update unique local name count
-		Integer count = 0;
-		Map<String, Integer> resourceNames = schema.getResourceNames();
-		if(resourceNames.containsKey(entityIri.getShortForm())){
-			count = resourceNames.get(entityIri.getShortForm());
-		}
-		resourceNames.put(entityIri.getShortForm(), ++count);
-	}
-	
 	private void processAnnotations(@Nonnull Stream<OWLAnnotation> annotations, @Nonnull AnnotationElement target){
 		annotations.forEach(a -> {
 			if (a != null && a.getProperty() != null && a.getValue() != null) {
@@ -458,6 +444,26 @@ public class OwlOntologyReader {
 				schemaClass.setOrderIndex(orderIndex);
 			}
 		}
+	}
+
+	@Nullable
+	private String findMainNamespace(@Nonnull Schema schema){
+		List<String> namespaces = new ArrayList<>();
+		for(SchemaClass item: schema.getClasses()){
+			namespaces.add(item.getNamespace());
+		}
+		for(SchemaAttribute item: schema.getAttributes()){
+			namespaces.add(item.getNamespace());
+		}
+		for(SchemaRole item: schema.getAssociations()){
+			namespaces.add(item.getNamespace());
+		}
+		if(namespaces.isEmpty()){
+			return null;
+		}
+		Map<String, Long> namespacesWithCounts = namespaces.stream()
+				.collect(Collectors.groupingBy(e -> e, Collectors.counting()));
+		return namespacesWithCounts.entrySet().stream().max(Map.Entry.comparingByValue()).get().getKey();
 	}
 
 }
