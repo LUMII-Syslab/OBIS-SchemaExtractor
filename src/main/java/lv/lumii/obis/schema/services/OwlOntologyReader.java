@@ -76,10 +76,7 @@ public class OwlOntologyReader {
 	private void processClasses(@Nonnull OWLOntology ontology, @Nonnull Schema schema, @Nonnull Map<String, SchemaClass> classesMap,
 								@Nonnull Map<String, List<SchemaCardinalityInfo>> cardinalityMap, @Nonnull OWLOntologyManager manager) {
 		
-		SchemaClass thingClass = createThingClass(ontology, classesMap, manager, schema);
-		
-		List<OWLClass> owlClasses = ontology.classesInSignature().filter(
-				c -> !isExcludedClass(c)).collect(Collectors.toList());
+		List<OWLClass> owlClasses = ontology.classesInSignature().collect(Collectors.toList());
 		if(owlClasses == null || owlClasses.isEmpty()) {
 			return;
 		}
@@ -95,18 +92,12 @@ public class OwlOntologyReader {
 			}
 			
 			// process superclasses
-			boolean hasRealSuperClass = false;
 			List<IRI> superClasses = ontology.axioms(AxiomType.SUBCLASS_OF)
 					.filter(axiom -> isValidSubClass(axiom, currentClassFullName))
 					.map(axiom -> axiom.getSuperClass().asOWLClass().getIRI())
 					.collect(Collectors.toList());
 			for(IRI superClassIri: superClasses) {
 				addSuperClass(superClassIri, currentClass, classesMap, schema);
-				hasRealSuperClass = true;
-			}		
-			if(!hasRealSuperClass){
-				thingClass.getSubClasses().add(currentClassFullName);
-				currentClass.getSuperClasses().add(THING_URI);
 			}
 			
 			// process cardinalities
@@ -117,23 +108,6 @@ public class OwlOntologyReader {
 		}
 		
 		schema.setClasses(new ArrayList<>(classesMap.values()));
-	}
-	
-	private SchemaClass createThingClass(@Nonnull OWLOntology ontology, @Nonnull Map<String, SchemaClass> classesMap,
-										 @Nonnull OWLOntologyManager manager, @Nonnull Schema schema) {
-		OWLClass thing = ontology.classesInSignature().filter(OWLClassExpression::isOWLThing).findFirst().orElse(null);
-		if(thing == null) {
-			thing = manager.getOWLDataFactory().getOWLClass(IRI.create(THING_URI));
-		}
-		SchemaClass resultThing = new SchemaClass();
-		setLocalNameAndNamespace(thing.getIRI(), resultThing, schema);
-		processAnnotations(EntitySearcher.getAnnotations(thing, ontology), resultThing);
-		classesMap.put(THING_URI, resultThing);
-		return resultThing;
-	}
-	
-	private boolean isExcludedClass(@Nonnull OWLClass clazz) {
-		return clazz.isAnonymous() || clazz.isOWLThing() || EXCLUDED_URI_FROM_OWL.contains(clazz.getIRI().toString());
 	}
 	
 	private boolean isValidSubClass(@Nonnull OWLSubClassOfAxiom axiom, @Nonnull String currentClassIri) {
@@ -258,9 +232,6 @@ public class OwlOntologyReader {
 				dataProperty.getSourceClasses().add(domainUri);
 			}
 		}
-		if(dataProperty.getSourceClasses().isEmpty()) {
-			dataProperty.getSourceClasses().add(THING_URI);
-		}
 	}
 
 	private void setAnnotationRangeType(@Nonnull SchemaAttribute dataProperty, @Nonnull String propertyName, @Nonnull List<OWLAnnotationPropertyRangeAxiom> ranges) {
@@ -287,9 +258,6 @@ public class OwlOntologyReader {
 				dataProperty.getSourceClasses().add(domainUri);
 			}
 		}
-		if(dataProperty.getSourceClasses().isEmpty()) {
-			dataProperty.getSourceClasses().add(THING_URI);
-		}
 	}
 	
 	private void setRangeType(@Nonnull SchemaAttribute dataProperty, @Nonnull String propertyName, @Nonnull List<OWLDataPropertyRangeAxiom> ranges) {
@@ -305,9 +273,6 @@ public class OwlOntologyReader {
 				String lookupString = String.join(";", lookups);
 				dataProperty.setRangeLookupValues(lookupString);
 			}
-		}
-		if(dataProperty.getType() == null) {
-			dataProperty.setType(DATA_TYPE_XSD_DEFAULT);
 		}
 	}
 	
@@ -401,9 +366,6 @@ public class OwlOntologyReader {
 				classPair.setSourceClass(domainUri);
 			}
 		}
-		if(classPair.getSourceClass() == null) {
-			classPair.setSourceClass(THING_URI);
-		}
 	}
 	
 	private void setRange(@Nonnull String propertyName, @Nonnull List<OWLObjectPropertyRangeAxiom> ranges,
@@ -415,9 +377,6 @@ public class OwlOntologyReader {
 			if(classesMap.containsKey(rangeUri)) {
 				classPair.setTargetClass(rangeUri);
 			}
-		}
-		if(classPair.getTargetClass() == null) {
-			classPair.setTargetClass(THING_URI);
 		}
 	}
 	

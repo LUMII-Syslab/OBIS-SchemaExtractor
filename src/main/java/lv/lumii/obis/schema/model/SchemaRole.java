@@ -25,22 +25,4 @@ public class SchemaRole extends SchemaProperty {
 		return classPairs;
 	}
 
-	@JsonIgnore
-	@Override
-	public String getDomainClass(){
-		if(classPairs.isEmpty()){
-			return SchemaConstants.THING_URI;
-		}
-		return classPairs.get(0).getSourceClass();
-	}
-
-	@JsonIgnore
-	@Override
-	public String getRangeClass(){
-		if(classPairs.isEmpty()){
-			return SchemaConstants.THING_URI;
-		}
-		return classPairs.get(0).getTargetClass();
-	}
-
 }

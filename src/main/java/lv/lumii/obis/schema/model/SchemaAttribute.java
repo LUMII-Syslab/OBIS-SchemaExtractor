@@ -28,22 +28,4 @@ public class SchemaAttribute extends SchemaProperty {
 		return sourceClasses;
 	}
 
-	@JsonIgnore
-	@Override
-	public String getDomainClass(){
-		if(sourceClasses.isEmpty()){
-			return SchemaConstants.THING_URI;
-		}
-		return sourceClasses.get(0);
-	}
-
-	@JsonIgnore
-	@Override
-	public String getRangeClass(){
-		if(SchemaUtil.isEmpty(type)){
-			return SchemaConstants.THING_URI;
-		}
-		return type;
-	}
-
 }
