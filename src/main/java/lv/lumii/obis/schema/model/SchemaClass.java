@@ -18,6 +18,7 @@ public class SchemaClass extends SchemaEntity {
 	private List<String> subClasses;
 
 	private Long instanceCount;
+	private Long orderIndex;
 
 	public List<String> getSuperClasses() {
 		if(superClasses == null){

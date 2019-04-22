@@ -5,6 +5,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import lv.lumii.obis.schema.constants.SchemaConstants;
 import lv.lumii.obis.schema.model.*;
 import org.semanticweb.owlapi.apibinding.OWLManager;
 import org.semanticweb.owlapi.model.*;
@@ -100,11 +101,10 @@ public class OwlOntologyReader {
 				addSuperClass(superClassIri, currentClass, classesMap, schema);
 			}
 			
-			// process cardinalities
 			getCardinalities(ontology, clazz, cardinalityMap);
-
 			processAnnotations(EntitySearcher.getAnnotations(clazz, ontology), currentClass);
-
+			processInstanceCount(currentClass);
+			processOrderIndex(currentClass);
 		}
 		
 		schema.setClasses(new ArrayList<>(classesMap.values()));
@@ -424,6 +424,40 @@ public class OwlOntologyReader {
 				target.addAnnotation(key, value);
 			}
 		});
+	}
+
+	private void processInstanceCount(@Nonnull SchemaClass schemaClass) {
+		Map.Entry<String, String> instanceCountEntry = schemaClass.getAnnotations().entrySet().stream()
+				.filter(entry -> SchemaConstants.ANNOTATION_INSTANCE_COUNT.equalsIgnoreCase(entry.getKey()))
+				.findFirst().orElse(null);
+		if (instanceCountEntry != null && instanceCountEntry.getValue() != null) {
+			Long instanceCount = null;
+			try {
+				instanceCount = Long.valueOf(instanceCountEntry.getValue());
+			} catch (NumberFormatException e) {
+				// do nothing
+			}
+			if (instanceCount != null) {
+				schemaClass.setInstanceCount(instanceCount);
+			}
+		}
+	}
+
+	private void processOrderIndex(@Nonnull SchemaClass schemaClass) {
+		Map.Entry<String, String> orderIndexEntry = schemaClass.getAnnotations().entrySet().stream()
+				.filter(entry -> SchemaConstants.ANNOTATION_ORDER_INDEX.equalsIgnoreCase(entry.getKey()))
+				.findFirst().orElse(null);
+		if (orderIndexEntry != null && orderIndexEntry.getValue() != null) {
+			Long orderIndex = null;
+			try {
+				orderIndex = Long.valueOf(orderIndexEntry.getValue());
+			} catch (NumberFormatException e) {
+				// do nothing
+			}
+			if (orderIndex != null) {
+				schemaClass.setOrderIndex(orderIndex);
+			}
+		}
 	}
 
 }

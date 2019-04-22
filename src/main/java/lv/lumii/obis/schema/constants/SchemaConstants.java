@@ -33,4 +33,7 @@ public class SchemaConstants {
 			"http://www.w3.org/2000/01/rdf-schema",
 			"http://www.w3.org/1999/02/22-rdf-syntax-ns"));
 
+	public static final String ANNOTATION_INSTANCE_COUNT = "http://lumii.lv/2018/1.0/owlc#instanceCount";
+	public static final String ANNOTATION_ORDER_INDEX = "http://lumii.lv/2018/1.0/owlc#orderIndex";
+
 }
