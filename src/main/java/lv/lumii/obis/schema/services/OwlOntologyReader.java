@@ -223,15 +223,17 @@ public class OwlOntologyReader {
 
 	private void setAnnotationDomain(@Nonnull SchemaAttribute dataProperty, @Nonnull String propertyName,
 									 @Nonnull List<OWLAnnotationPropertyDomainAxiom> domains, @Nonnull Map<String, SchemaClass> classesMap) {
-		OWLAnnotationPropertyDomainAxiom domainAxiom = domains.stream()
-				.filter(d -> propertyName.equals(d.getProperty().asOWLAnnotationProperty().getIRI().toString()))
-				.findFirst().orElse(null);
-		if(domainAxiom != null && domainAxiom.getDomain() != null) {
-			String domainUri = domainAxiom.getDomain().getIRIString();
-			if(classesMap.containsKey(domainUri)) {
-				dataProperty.getSourceClasses().add(domainUri);
-			}
-		}
+
+		domains.stream()
+				.filter(d -> d!= null && propertyName.equals(d.getProperty().asOWLAnnotationProperty().getIRI().toString()))
+				.forEach(domainAxiom -> {
+					if(domainAxiom.getDomain() != null) {
+						String domainUri = domainAxiom.getDomain().getIRIString();
+						if(classesMap.containsKey(domainUri)) {
+							dataProperty.getSourceClasses().add(domainUri);
+						}
+					}
+				});
 	}
 
 	private void setAnnotationRangeType(@Nonnull SchemaAttribute dataProperty, @Nonnull String propertyName, @Nonnull List<OWLAnnotationPropertyRangeAxiom> ranges) {
@@ -246,18 +248,20 @@ public class OwlOntologyReader {
 			dataProperty.setType(DATA_TYPE_XSD_DEFAULT);
 		}
 	}
-	
+
 	private void setDomain(@Nonnull SchemaAttribute dataProperty, @Nonnull String propertyName, @Nonnull List<OWLDataPropertyDomainAxiom> domains,
 						   @Nonnull Map<String, SchemaClass> classesMap) {
-		OWLDataPropertyDomainAxiom domainAxiom = domains.stream()
+		domains.stream()
 				.filter(d -> propertyName.equals(d.getProperty().asOWLDataProperty().getIRI().toString()))
-				.findFirst().orElse(null);
-		if(isValidDomainClass(domainAxiom)) {
-			String domainUri = domainAxiom.getDomain().asOWLClass().getIRI().toString();
-			if(classesMap.containsKey(domainUri)) {
-				dataProperty.getSourceClasses().add(domainUri);
-			}
-		}
+				.forEach(domainAxiom -> {
+					if (isValidDomainClass(domainAxiom)) {
+						String domainUri = domainAxiom.getDomain().asOWLClass().getIRI().toString();
+						if (classesMap.containsKey(domainUri)) {
+							dataProperty.getSourceClasses().add(domainUri);
+						}
+					}
+				});
+
 	}
 	
 	private void setRangeType(@Nonnull SchemaAttribute dataProperty, @Nonnull String propertyName, @Nonnull List<OWLDataPropertyRangeAxiom> ranges) {
