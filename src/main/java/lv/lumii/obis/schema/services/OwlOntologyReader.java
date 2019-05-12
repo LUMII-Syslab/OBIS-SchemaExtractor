@@ -411,13 +411,13 @@ public class OwlOntologyReader {
 				if(a.getValue() != null && a.getValue().asLiteral().isPresent()){
 					value = a.getValue().asLiteral().get().getLiteral();
 				}
-				target.addAnnotation(key, value);
+				target.getAnnotations().add(new AnnotationEntry(key, value));
 			}
 		});
 	}
 
 	private void processInstanceCount(@Nonnull SchemaClass schemaClass) {
-		Map.Entry<String, String> instanceCountEntry = schemaClass.getAnnotations().entrySet().stream()
+		AnnotationEntry instanceCountEntry = schemaClass.getAnnotations().stream()
 				.filter(entry -> SchemaConstants.ANNOTATION_INSTANCE_COUNT.equalsIgnoreCase(entry.getKey()))
 				.findFirst().orElse(null);
 		if (instanceCountEntry != null && instanceCountEntry.getValue() != null) {
@@ -434,7 +434,7 @@ public class OwlOntologyReader {
 	}
 
 	private void processOrderIndex(@Nonnull SchemaClass schemaClass) {
-		Map.Entry<String, String> orderIndexEntry = schemaClass.getAnnotations().entrySet().stream()
+		AnnotationEntry orderIndexEntry = schemaClass.getAnnotations().stream()
 				.filter(entry -> SchemaConstants.ANNOTATION_ORDER_INDEX.equalsIgnoreCase(entry.getKey()))
 				.findFirst().orElse(null);
 		if (orderIndexEntry != null && orderIndexEntry.getValue() != null) {

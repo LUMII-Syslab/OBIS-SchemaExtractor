@@ -2,21 +2,17 @@ package lv.lumii.obis.schema.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 
 public abstract class AnnotationElement {
 
     @JsonIgnore
-    private Map<String, String> annotations;
+    private List<AnnotationEntry> annotations;
 
-    public void addAnnotation(String name, String value){
-        getAnnotations().put(name, value);
-    }
-
-    public Map<String, String> getAnnotations() {
+    public List<AnnotationEntry> getAnnotations() {
         if(annotations == null){
-            annotations = new HashMap<>();
+            annotations = new ArrayList<>();
         }
         return annotations;
     }
