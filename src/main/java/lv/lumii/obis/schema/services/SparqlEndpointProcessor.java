@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import lombok.extern.slf4j.Slf4j;
+import lv.lumii.obis.schema.services.dto.SchemaExtractorRequest;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.jena.query.Query;
 import org.apache.jena.query.QueryExecution;
@@ -15,31 +16,32 @@ import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.sparql.engine.http.QueryEngineHTTP;
 
 import lv.lumii.obis.schema.services.dto.QueryResult;
+import org.springframework.stereotype.Service;
+
+import javax.annotation.Nonnull;
 
 @Slf4j
+@Service
 public class SparqlEndpointProcessor {
 
-	private String sparqlEndpointUrl;
-	private String graphName;
-	
-	public SparqlEndpointProcessor(String sparqlEndpointUrl, String graphName) {
-		super();
-		this.sparqlEndpointUrl = sparqlEndpointUrl;
-		this.graphName = graphName;
+	@Nonnull
+	public List<QueryResult> read(@Nonnull SchemaExtractorRequest request, @Nonnull SchemaExtractorQueries queryItem){
+		return read(request, queryItem.name(), queryItem.getSparqlQuery());
 	}
 
-	public List<QueryResult> read(String sparqlQuery, String queryName, boolean logEnabled){
+	@Nonnull
+	public List<QueryResult> read(@Nonnull SchemaExtractorRequest request, @Nonnull String queryName, @Nonnull String sparqlQuery){
 		Query query = QueryFactory.create(sparqlQuery);
-		if(logEnabled){
+		if(request.getEnableLogging()){
 			log.info(queryName + "\n" + sparqlQuery);
 		}
-		QueryExecution qexec = getQueryExecutor(query);	
+		QueryExecution qexec = getQueryExecutor(request, query);
 		List<QueryResult> queryResults = new ArrayList<>();
 		try {
 			ResultSet results = qexec.execSelect();
 			
 			if(results == null){
-				return null;
+				return queryResults;
 			}
 			
 			while (results.hasNext()){
@@ -67,14 +69,14 @@ public class SparqlEndpointProcessor {
 		}		
 	}
 	
-	public QueryExecution getQueryExecutor(Query query){
+	private QueryExecution getQueryExecutor(@Nonnull SchemaExtractorRequest request, @Nonnull Query query){
 		QueryEngineHTTP qexec;
-		if(graphName == null || StringUtils.isEmpty(graphName)){
-			qexec = (QueryEngineHTTP) QueryExecutionFactory.sparqlService(sparqlEndpointUrl, query);
+		if(StringUtils.isEmpty(request.getEndpointUrl())){
+			qexec = (QueryEngineHTTP) QueryExecutionFactory.sparqlService(request.getEndpointUrl(), query);
 		} else {
-			qexec = (QueryEngineHTTP) QueryExecutionFactory.sparqlService(sparqlEndpointUrl, query, graphName);
+			qexec = (QueryEngineHTTP) QueryExecutionFactory.sparqlService(request.getEndpointUrl(), query, request.getGraphName());
 		}
-		qexec.addDefaultGraph(graphName);
+		qexec.addDefaultGraph(request.getGraphName());
 		return qexec;
 	}
 

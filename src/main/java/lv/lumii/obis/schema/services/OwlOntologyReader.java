@@ -14,15 +14,17 @@ import org.semanticweb.owlapi.model.*;
 import lv.lumii.obis.schema.services.dto.SchemaCardinalityInfo;
 import lv.lumii.obis.schema.services.dto.SchemaCardinalityInfo.CardinalityType;
 import org.semanticweb.owlapi.search.EntitySearcher;
+import org.springframework.stereotype.Service;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import static lv.lumii.obis.schema.constants.SchemaConstants.*;
 
+@Service
 public class OwlOntologyReader {
 
-	@Nullable
+	@Nonnull
 	public Schema readOwlOntology(@Nonnull InputStream inputStream) {
 		OWLOntologyManager manager = OWLManager.createOWLOntologyManager();
 		OWLOntology ontology = null;
@@ -32,7 +34,7 @@ public class OwlOntologyReader {
 			e.printStackTrace();
 		}
 		if(ontology == null || ontology.isEmpty() || ontology.classesInSignature().count() <= 0) {
-			return null;
+			return new Schema();
 		}
 		return processOwlOntology(ontology, manager);		
 	}
