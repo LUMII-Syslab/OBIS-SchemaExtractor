@@ -3,9 +3,9 @@
 OBIS Schema Extractor is Java based web application - REST controller to process data schema extraction from SPARQL endpoints.
 The structure of the response JSON data schema format is described at http://viziquer.lumii.lv/schema-extractor .
 
-**REST API DESCRIPTION URL:** *http://server:port/swagger-ui.html*
+**REST API DESCRIPTION URL:** http://server:port/swagger-ui.html
 
-#### SPARQL Endpoint Usage
+### SPARQL Endpoint Usage
 
 **Available Services:**
 - GET http://server:port/schema-extractor-rest/endpoint/buildClasses
@@ -35,9 +35,10 @@ The structure of the response JSON data schema format is described at http://viz
 - JSON file with extracted schema information, example [SampleExtractedSchema.json](build/SampleExtractedSchema.json)
 
 
-#### RDF/OWL file upload
+### RDF/OWL file upload
 
-**URL:** *POST http://server:port/schema-extractor-rest/owlFile/buildFullSchema*
+**URL:** http://server:port/schema-extractor-rest/owlFile/buildFullSchema
+
 **curl:**
 ```sh
 curl -X POST "http://localhost:8080/schema-extractor-rest/owlFile/buildFullSchema" -H "accept: application/json" -H "Content-Type: multipart/form-data" -F "file=@SampleTestOntology.owl;type="
@@ -46,14 +47,13 @@ curl -X POST "http://localhost:8080/schema-extractor-rest/owlFile/buildFullSchem
 Uploaded RDF/OWL schema information is converted to JSON format with data schema information.
 
 Example RDF schema - [SampleTestOntology.owl](build/SampleTestOntology.owl)
+
 Example JSON response - [SampleTestOntology_Schema.json](build/SampleTestOntology_Schema.json)
 
 
-### Installation
+## Installation
 
- OBIS Schema Extractor artifact is packaged executable JAR file and needs [Java 1.8](https://www.java.com/en/) to run.
-
-If you want to use local SPARQL endpoint then install and configure it according to the software official instructions. For example, [Virtuoso](http://virtuoso.openlinksw.com/)
+OBIS Schema Extractor artifact is packaged executable JAR file and needs [Java 1.8](https://www.java.com/en/) to run.
 
 1. install Java
 2. copy [build/schema-extractor-exec.jar](build/schema-extractor-exec.jar) to any folder
@@ -62,8 +62,11 @@ If you want to use local SPARQL endpoint then install and configure it according
 
 If you need different port, run executable JAR file `java -jar schema-extractor-exec.jar --server.port=1234`
 
+If you want to use local SPARQL endpoint then install and configure it accordingly to the software official instructions. For example, [Virtuoso](http://virtuoso.openlinksw.com/)
 
-### Development
+
+
+## Development
 
 Checkout the project from the GIT
 
