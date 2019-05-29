@@ -50,7 +50,7 @@ public enum SchemaExtractorQueries {
 	),
 
 	FIND_PROPERTY_MAX_CARDINALITY(
-			"SELECT ?x WHERE { ?x <property> ?value. } GROUP BY ?x HAVING (COUNT(?value) > 1) LIMIT 1"
+			"SELECT ?x WHERE { ?x <property> ?value1. ?x <property> ?value2. FILTER (?value1 != ?value2) } LIMIT 1"
 	),
 
 	FIND_PROPERTY_MIN_CARDINALITY(
