@@ -5,7 +5,8 @@ The structure of the response JSON data schema format is described at http://viz
 
 **REST API DESCRIPTION URL:** http://server:port/swagger-ui.html
 
-### SPARQL Endpoint Usage
+
+## SPARQL Endpoint Usage
 
 **Available Services:**
 - GET http://server:port/schema-extractor-rest/endpoint/buildClasses
@@ -35,7 +36,7 @@ The structure of the response JSON data schema format is described at http://viz
 - JSON file with extracted schema information, example [SampleExtractedSchema.json](build/SampleExtractedSchema.json)
 
 
-### RDF/OWL file upload
+## RDF/OWL File Usage
 
 **URL:** http://server:port/schema-extractor-rest/owlFile/buildFullSchema
 
