@@ -54,7 +54,7 @@ public enum SchemaExtractorQueries {
 	),
 
 	FIND_PROPERTY_MIN_CARDINALITY(
-			"SELECT (COUNT(?x) as ?instances) WHERE { ?x a <class>. FILTER NOT EXISTS { ?x <property> ?value. } } "
+			"SELECT (COUNT(?x) as ?instances) WHERE { ?x a <class>. OPTIONAL { ?x ?prop ?value. FILTER (?prop = <property>) } FILTER (!BOUND(?prop)) } "
 	),
 
 	CHECK_PROPERTY_DOMAIN_RANGE_MAPPING(
