@@ -411,8 +411,8 @@ public class SchemaExtractor {
 				continue;
 			}
 			String query = SchemaExtractorQueries.CHECK_SUPERCLASS.getSparqlQuery();
-			query = query.replace("?" + SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_A, "<" + currentClass.getFullName() +">");
-			query = query.replace("?" + SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_B, "<" + neighbor +">");
+			query = query.replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_A, currentClass.getFullName());
+			query = query.replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_B, neighbor);
 			List<QueryResult> queryResults = sparqlEndpointProcessor.read(request, SchemaExtractorQueries.CHECK_SUPERCLASS.name(), query);
 			if(queryResults.isEmpty()){
 				continue;
@@ -754,11 +754,7 @@ public class SchemaExtractor {
 					replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY, propertyName).
 					replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS, domain);
 			queryResults = sparqlEndpointProcessor.read(request, SchemaExtractorQueries.FIND_PROPERTY_MIN_CARDINALITY.name(), query);
-			if(queryResults.isEmpty()){
-				continue;
-			}
-			String instances = queryResults.get(0).get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT);
-			if(Integer.valueOf(instances) != 0){
+			if(!queryResults.isEmpty()){
 				minCardinality = DEFAULT_MIN_CARDINALITY;
 			}
 		}

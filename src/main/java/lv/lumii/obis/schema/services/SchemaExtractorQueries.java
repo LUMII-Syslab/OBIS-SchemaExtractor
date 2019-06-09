@@ -20,7 +20,7 @@ public enum SchemaExtractorQueries {
 	),
 
 	CHECK_SUPERCLASS(
-			"SELECT (COUNT(?x) as ?instances) WHERE { ?x a ?classA. OPTIONAL { ?x ?a ?value. FILTER (?value = ?classB) } FILTER (!BOUND(?value)) }"
+			"SELECT (COUNT(?x) as ?instances) WHERE { ?x a <classA>. OPTIONAL { ?x ?a ?value. FILTER (?value = <classB>) } FILTER (!BOUND(?value)) }"
 	),
 
 	FIND_ALL_PROPERTIES(
@@ -51,7 +51,7 @@ public enum SchemaExtractorQueries {
 	),
 
 	FIND_PROPERTY_MIN_CARDINALITY(
-			"SELECT (COUNT(?x) as ?instances) WHERE { ?x a <class>. OPTIONAL { ?x ?prop ?value. FILTER (?prop = <property>) } FILTER (!BOUND(?prop)) } "
+            "SELECT ?x WHERE { ?x a <class>. OPTIONAL { ?x ?prop ?value. FILTER (?prop = <property>) } FILTER (!BOUND(?prop)) } LIMIT 1 "
 	),
 
 	CHECK_PROPERTY_DOMAIN_RANGE_MAPPING(
