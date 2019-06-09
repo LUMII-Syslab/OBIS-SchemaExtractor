@@ -20,10 +20,7 @@ public enum SchemaExtractorQueries {
 	),
 
 	CHECK_SUPERCLASS(
-			"SELECT (COUNT(?x) as ?instances) WHERE {" + "\n\t"
-			+ "?x a ?classA." + "\n\t"
-			+ "FILTER (NOT EXISTS {?x a ?classB.})" + "\n\t"
-			+ "}"
+			"SELECT (COUNT(?x) as ?instances) WHERE { ?x a ?classA. OPTIONAL { ?x ?a ?value. FILTER (?value = ?classB) } FILTER (!BOUND(?value)) }"
 	),
 
 	FIND_ALL_PROPERTIES(
