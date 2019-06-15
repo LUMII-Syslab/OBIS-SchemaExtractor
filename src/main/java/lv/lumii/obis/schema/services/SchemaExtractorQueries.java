@@ -20,7 +20,7 @@ public enum SchemaExtractorQueries {
 	),
 
 	CHECK_SUPERCLASS(
-			"SELECT (COUNT(?x) as ?instances) WHERE { ?x a <classA>. OPTIONAL { ?x ?a ?value. FILTER (?value = <classB>) } FILTER (!BOUND(?value)) }"
+			"SELECT ?x WHERE { ?x a <classA>. OPTIONAL { ?x ?a ?value. FILTER (?value = <classB>) } FILTER (!BOUND(?value)) } LIMIT 1 "
 	),
 
 	FIND_ALL_PROPERTIES(
@@ -55,7 +55,7 @@ public enum SchemaExtractorQueries {
 	),
 
 	CHECK_PROPERTY_DOMAIN_RANGE_MAPPING(
-			"SELECT (COUNT(?x) as ?instances) WHERE { ?x a <classA>. ?x <property> ?value. ?value a <classB>. } "
+			"SELECT ?x WHERE { ?x a <classA>. ?x <property> ?value. ?value a <classB>. } LIMIT 1 "
 	);
 	
 	@Setter @Getter

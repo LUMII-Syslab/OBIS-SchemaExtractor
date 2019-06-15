@@ -86,9 +86,9 @@ public class SchemaExtractor {
 		log.info(request.getCorrelationId() + " - calculateSuperclassRelations");
 		processSuperclasses(graphOfClasses, classes, request);
 
-		// validate and update classes
-		log.info(request.getCorrelationId() + " - validateAndNormalizeSuperclasses");
-		validateAndNormalizeSuperclasses(graphOfClasses, classes, request);
+		// validate and update classes for multiple inheritance cases
+		log.info(request.getCorrelationId() + " - updateMultipleInheritanceSuperclasses");
+		updateMultipleInheritanceSuperclasses(graphOfClasses, classes, request);
 	}
 
 	private void buildProperties(@Nonnull SchemaExtractorRequest request, @Nonnull Schema schema){
@@ -344,8 +344,8 @@ public class SchemaExtractor {
 	//		b. includes all instances from X
 	//		c. is not accessible from X
 	// 6. repeat validation
-	private void validateAndNormalizeSuperclasses(@Nonnull Map<String, SchemaClassNodeInfo> classesGraph, @Nonnull List<SchemaClass> classes,
-												  @Nonnull SchemaExtractorRequest request){
+	private void updateMultipleInheritanceSuperclasses(@Nonnull Map<String, SchemaClassNodeInfo> classesGraph, @Nonnull List<SchemaClass> classes,
+													   @Nonnull SchemaExtractorRequest request){
 
 		List<SchemaClass> sortedClasses = sortClassesByInstances(classes, classesGraph);
 
@@ -414,12 +414,11 @@ public class SchemaExtractor {
 			query = query.replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_A, currentClass.getFullName());
 			query = query.replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_B, neighbor);
 			List<QueryResult> queryResults = sparqlEndpointProcessor.read(request, SchemaExtractorQueries.CHECK_SUPERCLASS.name(), query);
-			if(queryResults.isEmpty()){
+			if(!queryResults.isEmpty()){
 				continue;
 			}
-			String instances = queryResults.get(0).get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT);
 			SchemaClass superClass = findClass(classes, neighbor);
-			if(Integer.valueOf(instances) == 0 && !hasCyclicDependency(currentClass, superClass, classes)){
+			if(!hasCyclicDependency(currentClass, superClass, classes)){
 				currentClass.getSuperClasses().add(neighbor);
 				if(superClass != null){
 					superClass.getSubClasses().add(currentClass.getFullName());
@@ -630,11 +629,7 @@ public class SchemaExtractor {
 		query = query.replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_B, rangeClass);
 		query = query.replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY, property);
 		List<QueryResult> queryResults = sparqlEndpointProcessor.read(request, SchemaExtractorQueries.CHECK_PROPERTY_DOMAIN_RANGE_MAPPING.name(), query);
-		if(queryResults.isEmpty()){
-			return false;
-		}
-		String instances = queryResults.get(0).get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT);
-		return Integer.valueOf(instances) != 0;
+		return isFalse(queryResults.isEmpty());
 	}
 
 	private void normalizePropertyDomainRangeMapping(@Nonnull List<SchemaClass> classes, @Nonnull Map<String, SchemaPropertyNodeInfo> properties){
