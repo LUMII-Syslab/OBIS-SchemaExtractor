@@ -5,6 +5,19 @@ The structure of the response JSON data schema format is described at http://viz
 
 **REST API DESCRIPTION URL:** http://server:port/swagger-ui.html
 
+## Installation
+
+OBIS Schema Extractor artifact is packaged executable JAR file and needs [Java 1.8](https://www.java.com/en/) to run.
+
+1. install Java
+2. copy [build/schema-extractor-exec.jar](build/schema-extractor-exec.jar) to any folder
+3. run executable JAR file `java -jar schema-extractor-exec.jar`
+4. navigate to *http://server:port/swagger-ui.html* (default URL - http://localhost:8080/swagger-ui.html)
+5. configure the parameters, as described on the browser page
+
+If you need different port, run executable JAR file `java -jar schema-extractor-exec.jar --server.port=1234`
+
+If you want to use local SPARQL endpoint then install and configure it accordingly to the software official instructions. For example, [Virtuoso](http://virtuoso.openlinksw.com/)
 
 ## SPARQL Endpoint Usage
 
@@ -50,20 +63,6 @@ Uploaded RDF/OWL schema information is converted to JSON format with data schema
 Example RDF schema - [SampleTestOntology.owl](build/SampleTestOntology.owl)
 
 Example JSON response - [SampleTestOntology_Schema.json](build/SampleTestOntology_Schema.json)
-
-
-## Installation
-
-OBIS Schema Extractor artifact is packaged executable JAR file and needs [Java 1.8](https://www.java.com/en/) to run.
-
-1. install Java
-2. copy [build/schema-extractor-exec.jar](build/schema-extractor-exec.jar) to any folder
-3. run executable JAR file `java -jar schema-extractor-exec.jar`
-4. navigate to *http://server:port/swagger-ui.html* (default URL - http://localhost:8080/swagger-ui.html)
-
-If you need different port, run executable JAR file `java -jar schema-extractor-exec.jar --server.port=1234`
-
-If you want to use local SPARQL endpoint then install and configure it accordingly to the software official instructions. For example, [Virtuoso](http://virtuoso.openlinksw.com/)
 
 
 
