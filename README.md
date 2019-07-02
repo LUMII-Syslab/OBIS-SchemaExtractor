@@ -3,8 +3,6 @@
 OBIS Schema Extractor is Java based web application - REST controller to process data schema extraction from SPARQL endpoints.
 The structure of the response JSON data schema format is described at http://viziquer.lumii.lv/schema-extractor .
 
-**REST API DESCRIPTION URL:** http://server:port/swagger-ui.html
-
 ## Installation
 
 OBIS Schema Extractor artifact is packaged executable JAR file and needs [Java 1.8](https://www.java.com/en/) to run.
@@ -12,12 +10,10 @@ OBIS Schema Extractor artifact is packaged executable JAR file and needs [Java 1
 1. install Java
 2. copy [build/schema-extractor-exec.jar](build/schema-extractor-exec.jar) to any folder
 3. run executable JAR file `java -jar schema-extractor-exec.jar`
-4. navigate to *http://server:port/swagger-ui.html* (default URL - http://localhost:8080/swagger-ui.html)
+4. navigate to http://server:port/swagger-ui.html (default URL - http://localhost:8080/swagger-ui.html)
 5. configure the parameters, as described on the browser page
 
 If you need different port, run executable JAR file `java -jar schema-extractor-exec.jar --server.port=1234`
-
-If you want to use local SPARQL endpoint then install and configure it accordingly to the software official instructions. For example, [Virtuoso](http://virtuoso.openlinksw.com/)
 
 ## SPARQL Endpoint Usage
 
