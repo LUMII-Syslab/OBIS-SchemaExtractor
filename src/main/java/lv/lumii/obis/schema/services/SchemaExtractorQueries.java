@@ -23,23 +23,25 @@ public enum SchemaExtractorQueries {
 			"SELECT ?x WHERE { ?x a <classA>. OPTIONAL { ?x ?a ?value. FILTER (?value = <classB>) } FILTER (!BOUND(?value)) } LIMIT 1 "
 	),
 
-	FIND_ALL_PROPERTIES(
+	FIND_ALL_DATATYPE_PROPERTIES(
 			"PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>" + "\n"
 			+ "SELECT DISTINCT ?property ?class (COUNT(?x) as ?instances) WHERE {" + "\n\t"
-			+ "?x a ?class." + "\n\t"
 			+ "?x ?property ?value." + "\n\t"
+			+ "OPTIONAL { ?x a ?class. }" + "\n\t"
 			+ "FILTER (?property != rdf:type)" + "\n"
+			+ "FILTER (!isURI(?value))" + "\n"
 			+ "} GROUP BY ?property ?class"
 	),
 
-	FIND_OBJECT_PROPERTIES_WITH_RANGE(
+	FIND_OBJECT_PROPERTIES_WITH_DOMAIN_RANGE(
 			"PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>" + "\n"
-			+ "SELECT DISTINCT ?property ?class (COUNT(?x) as ?instances) WHERE {" + "\n\t"
-			+ "?x a ?type." + "\n\t"
+			+ "SELECT DISTINCT ?property ?domainClass ?rangeClass (COUNT(?x) as ?instances) WHERE {" + "\n\t"
 			+ "?x ?property ?value." + "\n\t"
-			+ "?value a ?class." + "\n\t"
-			+ "FILTER (?property != rdf:type)" + "\n"
-			+ "} GROUP BY ?property ?class"
+			+ "OPTIONAL { ?x a ?domainClass. }" + "\n\t"
+			+ "FILTER (?property != rdf:type)" + "\n\t"
+			+ "FILTER (isURI(?value))" + "\n"
+			+ "OPTIONAL { ?value a ?rangeClass. }" + "\n"
+			+ "} GROUP BY ?property ?domainClass ?rangeClass"
 	),
 
 	FIND_PROPERTY_DATA_TYPE(
@@ -52,12 +54,9 @@ public enum SchemaExtractorQueries {
 
 	FIND_PROPERTY_MIN_CARDINALITY(
             "SELECT ?x WHERE { ?x a <class>. OPTIONAL { ?x ?prop ?value. FILTER (?prop = <property>) } FILTER (!BOUND(?prop)) } LIMIT 1 "
-	),
-
-	CHECK_PROPERTY_DOMAIN_RANGE_MAPPING(
-			"SELECT ?x WHERE { ?x a <classA>. ?x <property> ?value. ?value a <classB>. } LIMIT 1 "
 	);
-	
+
+
 	@Setter @Getter
 	private String sparqlQuery;
 

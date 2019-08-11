@@ -39,7 +39,8 @@ public class SchemaExtractor {
 	public Schema extractSchema(@Nonnull SchemaExtractorRequest request){
 		Schema schema = initializeSchema(request);
 		buildClasses(request, schema);
-		buildProperties(request, schema);
+		buildDataTypeProperties(request, schema);
+		buildObjectTypeProperties(request, schema);
 		buildNamespaceMap(request, schema);
 		return schema;
 	}
@@ -91,47 +92,56 @@ public class SchemaExtractor {
 		updateMultipleInheritanceSuperclasses(graphOfClasses, classes, request);
 	}
 
-	private void buildProperties(@Nonnull SchemaExtractorRequest request, @Nonnull Schema schema){
+	private void buildDataTypeProperties(@Nonnull SchemaExtractorRequest request, @Nonnull Schema schema){
 		List<SchemaClass> classes = schema.getClasses();
 
-		// find all properties (attributes + associations) and domain class instances count
-		log.info(request.getCorrelationId() + " - findAllProperties");
-		List<QueryResult> queryResults = sparqlEndpointProcessor.read(request, FIND_ALL_PROPERTIES);
-		Map<String, SchemaPropertyNodeInfo> properties = processAllProperties(queryResults, request);
+		// find all data type properties and domain class instances count
+		log.info(request.getCorrelationId() + " - findAllDataTypeProperties");
+		List<QueryResult> queryResults = sparqlEndpointProcessor.read(request, FIND_ALL_DATATYPE_PROPERTIES);
+		Map<String, SchemaPropertyNodeInfo> properties = processAllDataTypeProperties(queryResults, request);
 		queryResults.clear();
 
-		// find associations and range class instances count
-		log.info(request.getCorrelationId() + " - findAssociations");
-		queryResults = sparqlEndpointProcessor.read(request, FIND_OBJECT_PROPERTIES_WITH_RANGE);
-		processAssociations(queryResults, properties);
-		queryResults.clear();
-
-		// map properties to domain classes
-		log.info(request.getCorrelationId() + " - mapPropertiesToDomainClasses");
+		// map data type properties to domain classes
+		log.info(request.getCorrelationId() + " - mapDataTypePropertiesToDomainClasses");
 		mapPropertiesToDomainClasses(classes, properties);
-
-		// map properties to range classes
-		log.info(request.getCorrelationId() + " - mapPropertiesToRangeClasses");
-		mapPropertiesToRangeClasses(classes, properties, request);
-
-		// remove duplicate domain-range pairs
-		log.info(request.getCorrelationId() + " - normalizePropertyDomainRangeMapping");
-		normalizePropertyDomainRangeMapping(classes, properties);
 
 		// data type and cardinality calculation may impact performance
 		if(!SchemaExtractorRequest.ExtractionMode.simple.equals(request.getMode())){
 			// find data types for attributes
-			log.info(request.getCorrelationId() + " - findDataTypesForAttributes");
+			log.info(request.getCorrelationId() + " - findDataTypesForDataTypeProperties");
 			processDataTypes(properties, request);
 			// find min/max cardinality
 			if(!SchemaExtractorRequest.ExtractionMode.data.equals(request.getMode())){
-				log.info(request.getCorrelationId() + " - calculateCardinalities");
+				log.info(request.getCorrelationId() + " - calculateCardinalitiesForDataTypeProperties");
 				processCardinalities(properties, request);
 			}
 		}
 
-		// fill schema object with attributes and associations
-		formatProperties(properties, schema);
+		// fill schema object with attributes
+		formatDataTypeProperties(properties, schema);
+	}
+
+	private void buildObjectTypeProperties(@Nonnull SchemaExtractorRequest request, @Nonnull Schema schema){
+		List<SchemaClass> classes = schema.getClasses();
+
+		// find all object type properties with domain-range pairs and instances count
+		log.info(request.getCorrelationId() + " - findAllObjectTypeProperties");
+		List<QueryResult> queryResults = sparqlEndpointProcessor.read(request, FIND_OBJECT_PROPERTIES_WITH_DOMAIN_RANGE);
+		Map<String, SchemaPropertyNodeInfo> properties = processAllObjectTypeProperties(queryResults, request);
+		queryResults.clear();
+
+		log.info(request.getCorrelationId() + " - validatePropertyDomainRangeMapping");
+		validatePropertyDomainRangeMapping(classes, properties);
+
+		// cardinality calculation may impact performance
+		if(SchemaExtractorRequest.ExtractionMode.full.equals(request.getMode())){
+			// find min/max cardinality
+			log.info(request.getCorrelationId() + " - calculateCardinalitiesForObjectTypeProperties");
+			processCardinalities(properties, request);
+		}
+
+		// fill schema object with attributes
+		formatObjectTypeProperties(properties, schema);
 	}
 
 	private void buildNamespaceMap(@Nonnull SchemaExtractorRequest request, @Nonnull Schema schema){
@@ -290,7 +300,7 @@ public class SchemaExtractor {
 				})
 				.collect(Collectors.toList());
 	}
-	
+
 	// sort classes by instance count (descending)
 	@Nonnull
 	private List<SchemaClass> sortClassesByInstances(@Nonnull List<SchemaClass> classes, @Nonnull Map<String, SchemaClassNodeInfo> classesGraph){
@@ -308,7 +318,7 @@ public class SchemaExtractor {
 				.collect(Collectors.toList());
 	}
 
-	private SchemaClass findClass(@Nonnull List<SchemaClass> classes, @Nonnull String className){
+	private SchemaClass findClass(@Nonnull List<SchemaClass> classes, @Nullable String className){
 		return classes.stream().filter(
 				schemaClass -> schemaClass.getFullName().equals(className) || schemaClass.getLocalName().equals(className))
 				.findFirst().orElse(null);
@@ -469,14 +479,156 @@ public class SchemaExtractor {
 	}
 
 	@Nonnull
-	private Map<String, SchemaPropertyNodeInfo> processAllProperties(@Nonnull List<QueryResult> queryResults, @Nonnull SchemaExtractorRequest request){
+	private Map<String, SchemaPropertyNodeInfo> processAllObjectTypeProperties(@Nonnull List<QueryResult> queryResults, @Nonnull SchemaExtractorRequest request){
+		Map<String, SchemaPropertyNodeInfo> properties = new HashMap<>();
+		for(QueryResult queryResult: queryResults){
+			String propertyName = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY);
+			String domainClass = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_DOMAIN);
+			String rangeClass = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_RANGE);
+			String instances = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT);
+
+			if(domainClass != null && isExcludedResource(domainClass, request.getExcludeSystemClasses(), request.getExcludeMetaDomainClasses())){
+				continue;
+			}
+			if(rangeClass != null && isExcludedResource(rangeClass, request.getExcludeSystemClasses(), request.getExcludeMetaDomainClasses())){
+				continue;
+			}
+
+			SchemaPropertyNodeInfo property = properties.get(propertyName);
+			if(property == null){
+				property = new SchemaPropertyNodeInfo();
+				property.setIsObjectProperty(Boolean.TRUE);
+				properties.put(propertyName, property);
+			}
+			SchemaDomainRangeInfo domainRange = new SchemaDomainRangeInfo();
+			domainRange.setValidDomain(false);
+			domainRange.setValidRange(false);
+			domainRange.setInstanceCount(Long.valueOf(instances));
+			property.getDomainRangePairs().add(domainRange);
+
+			// if property without domain and range class
+			if(StringUtils.isEmpty(domainClass) && StringUtils.isEmpty(rangeClass)){
+				domainRange.setValidDomain(true);
+				domainRange.setValidRange(true);
+				domainRange.setDomainClass(StringUtils.EMPTY);
+				domainRange.setRangeClass(StringUtils.EMPTY);
+				continue;
+			}
+
+			// if property without domain but with range class
+			if(StringUtils.isEmpty(domainClass) && isFalse(StringUtils.isEmpty(rangeClass))){
+				domainRange.setValidDomain(true);
+				domainRange.setRangeClass(rangeClass);
+				domainRange.setDomainClass(StringUtils.EMPTY);
+				continue;
+			}
+
+			// if property with domain but without range class
+			if(isFalse(StringUtils.isEmpty(domainClass)) && StringUtils.isEmpty(rangeClass)){
+				domainRange.setValidRange(true);
+				domainRange.setDomainClass(domainClass);
+				domainRange.setRangeClass(StringUtils.EMPTY);
+				continue;
+			}
+
+			domainRange.setDomainClass(domainClass);
+			domainRange.setRangeClass(rangeClass);
+		}
+		return properties;
+	}
+
+	private void validatePropertyDomainRangeMapping(@Nonnull List<SchemaClass> classes, @Nonnull Map<String, SchemaPropertyNodeInfo> properties){
+		for(Entry<String, SchemaPropertyNodeInfo> p: properties.entrySet()){
+			if(!p.getValue().getIsObjectProperty()) {
+				continue;
+			}
+			List<SchemaDomainRangeInfo> domainRangePairs = p.getValue().getDomainRangePairs();
+
+			for(SchemaDomainRangeInfo domainRangeEntry: domainRangePairs){
+				if(isTrue(domainRangeEntry.getValidDomain()) && isTrue(domainRangeEntry.getValidRange())){
+					continue;
+				}
+
+				SchemaClass domainClass = findClass(classes, domainRangeEntry.getDomainClass());
+				SchemaClass rangeClass = findClass(classes, domainRangeEntry.getRangeClass());
+
+				if(domainClass == null && rangeClass == null){
+					domainRangeEntry.setValidDomain(true);
+					domainRangeEntry.setValidRange(true);
+					continue;
+				}
+
+				boolean isRootDomain = domainClass == null || domainClass.getSuperClasses().isEmpty()
+						|| domainClass.getSuperClasses().stream().noneMatch(e -> existDomainRangePairWithThisDomain(e, domainRangePairs));
+				boolean isRootRange = rangeClass == null || rangeClass.getSuperClasses().isEmpty()
+						|| rangeClass.getSuperClasses().stream().noneMatch(e -> existDomainRangePairWithThisRange(e, domainRangePairs));
+
+				if(isRootDomain && isRootRange){
+				    SchemaDomainRangeInfo validDomainPair = getPropertyDomainRangePairWithDomain(domainRangeEntry, domainRangePairs, classes);
+					SchemaDomainRangeInfo validRangePair = getPropertyDomainRangePairWithRange(validDomainPair, domainRangePairs, classes);
+					validRangePair.setValidDomain(true);
+					validRangePair.setValidRange(true);
+				}
+			}
+		}
+	}
+
+	private boolean existDomainRangePairWithThisDomain(@Nonnull String thisDomain, @Nonnull List<SchemaDomainRangeInfo> domainRangePairs){
+		return domainRangePairs.stream().anyMatch(pair -> pair != null && thisDomain.equals(pair.getDomainClass()));
+	}
+	private boolean existDomainRangePairWithThisRange(@Nonnull String thisRange, @Nonnull List<SchemaDomainRangeInfo> domainRangePairs){
+		return domainRangePairs.stream().anyMatch(pair -> pair != null && thisRange.equals(pair.getRangeClass()));
+	}
+
+	private SchemaDomainRangeInfo getDomainRangePair(@Nonnull String domain, @Nonnull String range, @Nonnull List<SchemaDomainRangeInfo> domainRangePairs){
+		return domainRangePairs.stream()
+				.filter(pair -> pair != null && domain.equals(pair.getDomainClass()) && range.equals(pair.getRangeClass()))
+				.findAny().orElse(null);
+	}
+
+	private SchemaDomainRangeInfo getPropertyDomainRangePairWithDomain(@Nonnull SchemaDomainRangeInfo domainRangeEntry,
+                                                                       @Nonnull List<SchemaDomainRangeInfo> domainRangePairs,
+                                                                       @Nonnull List<SchemaClass> classes){
+
+		SchemaClass domainClass = findClass(classes, domainRangeEntry.getDomainClass());
+		if(domainClass == null){
+			return domainRangeEntry;
+		}
+
+		for(String subClassName: domainClass.getSubClasses()){
+			SchemaDomainRangeInfo subDomainRangeEntry = getDomainRangePair(subClassName, domainRangeEntry.getRangeClass(), domainRangePairs);
+			if(subDomainRangeEntry != null && subDomainRangeEntry.getInstanceCount().equals(domainRangeEntry.getInstanceCount())){
+				return getPropertyDomainRangePairWithDomain(subDomainRangeEntry, domainRangePairs, classes);
+			}
+		}
+		return domainRangeEntry;
+	}
+
+	private SchemaDomainRangeInfo getPropertyDomainRangePairWithRange(@Nonnull SchemaDomainRangeInfo domainRangeEntry,
+                                                                      @Nonnull List<SchemaDomainRangeInfo> domainRangePairs,
+                                                                      @Nonnull List<SchemaClass> classes){
+		SchemaClass rangeClass = findClass(classes, domainRangeEntry.getRangeClass());
+		if(rangeClass == null){
+			return domainRangeEntry;
+		}
+		for(String subClassName: rangeClass.getSubClasses()){
+			SchemaDomainRangeInfo subDomainRangeEntry = getDomainRangePair(domainRangeEntry.getDomainClass(), subClassName, domainRangePairs);
+			if(subDomainRangeEntry != null && subDomainRangeEntry.getInstanceCount().equals(domainRangeEntry.getInstanceCount())){
+				return getPropertyDomainRangePairWithRange(subDomainRangeEntry, domainRangePairs, classes);
+			}
+		}
+		return domainRangeEntry;
+	}
+
+	@Nonnull
+	private Map<String, SchemaPropertyNodeInfo> processAllDataTypeProperties(@Nonnull List<QueryResult> queryResults, @Nonnull SchemaExtractorRequest request){
 		Map<String, SchemaPropertyNodeInfo> properties = new HashMap<>();
 		for(QueryResult queryResult: queryResults){
 			String propertyName = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY);
 			String className = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS);
 			String instances = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT);
 
-			if(isExcludedResource(className, request.getExcludeSystemClasses(), request.getExcludeMetaDomainClasses())){
+			if(className != null && isExcludedResource(className, request.getExcludeSystemClasses(), request.getExcludeMetaDomainClasses())){
 				continue;
 			}
 
@@ -492,23 +644,6 @@ public class SchemaExtractor {
 		return properties;
 	}
 
-	private void processAssociations(@Nonnull List<QueryResult> queryResults, @Nonnull Map<String, SchemaPropertyNodeInfo> properties){
-		for(QueryResult queryResult: queryResults){
-			String propertyName = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY);
-			String className = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS);
-			String instances = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT);
-
-			if(properties.containsKey(propertyName)){
-				SchemaPropertyNodeInfo property = properties.get(propertyName);
-				property.setIsObjectProperty(Boolean.TRUE);
-				SchemaClassNodeInfo classInfo = new SchemaClassNodeInfo();
-				classInfo.setClassName(className);
-				classInfo.setInstanceCount(Long.valueOf(instances));
-				property.getRangeClasses().add(classInfo);
-			}
-		}
-	}
-	
 	private void mapPropertiesToDomainClasses(@Nonnull List<SchemaClass> classes, @Nonnull Map<String, SchemaPropertyNodeInfo> properties){
 		for(Entry<String, SchemaPropertyNodeInfo> p: properties.entrySet()){
 
@@ -517,8 +652,11 @@ public class SchemaExtractor {
 			Set<String> processedClasses = new HashSet<>();
 
 			for(SchemaClassNodeInfo classInfo: p.getValue().getDomainClasses()){
+				if(processedClasses.contains(classInfo.getClassName())){
+					continue;
+				}
 				SchemaClass domainClass = findClass(classes, classInfo.getClassName());
-				if(domainClass == null || processedClasses.contains(classInfo.getClassName())){
+				if(domainClass == null){
 					continue;
 				}
 
@@ -548,134 +686,6 @@ public class SchemaExtractor {
 		}
 	}
 
-	private void mapPropertiesToRangeClasses(@Nonnull List<SchemaClass> classes, @Nonnull Map<String, SchemaPropertyNodeInfo> properties,
-											 @Nonnull SchemaExtractorRequest request){
-		for(Entry<String, SchemaPropertyNodeInfo> p: properties.entrySet()){
-			if(!p.getValue().getIsObjectProperty()){
-				continue;
-			}
-
-			List<String> propertyRangeClasses = p.getValue().getRangeClasses()
-					.stream().map(SchemaClassNodeInfo::getClassName).collect(Collectors.toList());
-			Set<String> processedClasses = new HashSet<>();
-
-			for(SchemaClassNodeInfo classInfo: p.getValue().getRangeClasses()){
-				SchemaClass rangeClass = findClass(classes, classInfo.getClassName());
-				if(rangeClass == null || processedClasses.contains(classInfo.getClassName())){
-					continue;
-				}
-
-				boolean processNow = rangeClass.getSuperClasses().isEmpty()
-						|| rangeClass.getSuperClasses().stream().noneMatch(propertyRangeClasses::contains);
-
-				if(processNow){
-					addRangeClassToProperty(classInfo, p, classes, request);
-					processedClasses.add(classInfo.getClassName());
-					if(!rangeClass.getSubClasses().isEmpty()){
-						for(String rangeSubClass: rangeClass.getSubClasses()){
-							if(propertyRangeClasses.contains(rangeSubClass)){
-								processedClasses.add(rangeSubClass);
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-
-	private void addRangeClassToProperty(@Nonnull SchemaClassNodeInfo classInfo, @Nonnull Entry<String, SchemaPropertyNodeInfo> property,
-										 @Nonnull List<SchemaClass> classes, @Nonnull SchemaExtractorRequest request){
-		String propertyRange = findPropertyClass(classInfo, property.getKey(), property.getValue().getRangeClasses(), classes);
-		if(!SchemaUtil.isEmpty(propertyRange)){
-			List<SchemaDomainRangeInfo> domainRangePairs = property.getValue().getDomainRangePairs();
-			if(domainRangePairs.isEmpty()){
-				property.getValue().getDomainRangePairs().add(new SchemaDomainRangeInfo(null, propertyRange));
-			} else if(domainRangePairs.size() == 1){
-				SchemaDomainRangeInfo domainRangeInfo = domainRangePairs.get(0);
-				domainRangeInfo.setRangeClass(propertyRange);
-			} else {
-				Set<String> uniqueDomains = domainRangePairs.stream().map(SchemaDomainRangeInfo::getDomainClass).collect(Collectors.toSet());
-				uniqueDomains.forEach(domain -> {
-					if(isFalse(existDomainRangeEntry(domain, propertyRange, domainRangePairs)) &&
-							checkDomainRangeMapping(domain, propertyRange, property.getKey(), request)){
-						createNewOrUpdateDomainRangeEntry(domain, propertyRange, domainRangePairs);
-					}
-				});
-			}
-		}
-	}
-
-	private boolean existDomainRangeEntry(@Nonnull String domainClass, @Nonnull String rangeClass, @Nonnull List<SchemaDomainRangeInfo> domainRangePairs){
-		return domainRangePairs.stream()
-				.anyMatch(pair -> domainClass.equals(pair.getDomainClass()) && rangeClass.equals(pair.getRangeClass()));
-	}
-
-	private void createNewOrUpdateDomainRangeEntry(@Nonnull String domainClass, @Nonnull String rangeClass, @Nonnull List<SchemaDomainRangeInfo> domainRangePairs){
-
-		SchemaDomainRangeInfo domainRangeInfo = domainRangePairs.stream()
-				.filter(pair -> domainClass.equals(pair.getDomainClass()) && pair.getRangeClass() == null)
-				.findFirst().orElse(null);
-		if(domainRangeInfo == null){
-			domainRangeInfo = new SchemaDomainRangeInfo(domainClass);
-			domainRangePairs.add(domainRangeInfo);
-		}
-		domainRangeInfo.setRangeClass(rangeClass);
-	}
-
-	private boolean checkDomainRangeMapping(@Nonnull String domainClass, @Nonnull String rangeClass, @Nonnull String property,
-											@Nonnull SchemaExtractorRequest request){
-		String query = SchemaExtractorQueries.CHECK_PROPERTY_DOMAIN_RANGE_MAPPING.getSparqlQuery();
-		query = query.replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_A, domainClass);
-		query = query.replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_B, rangeClass);
-		query = query.replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY, property);
-		List<QueryResult> queryResults = sparqlEndpointProcessor.read(request, SchemaExtractorQueries.CHECK_PROPERTY_DOMAIN_RANGE_MAPPING.name(), query);
-		return isFalse(queryResults.isEmpty());
-	}
-
-	private void normalizePropertyDomainRangeMapping(@Nonnull List<SchemaClass> classes, @Nonnull Map<String, SchemaPropertyNodeInfo> properties){
-		for(Entry<String, SchemaPropertyNodeInfo> p: properties.entrySet()){
-			if(!p.getValue().getIsObjectProperty()) {
-				continue;
-			}
-			List<SchemaDomainRangeInfo> domainRangePairs = p.getValue().getDomainRangePairs();
-			domainRangePairs.removeIf(entry -> shouldRemoveDomainRangePair(entry, domainRangePairs, classes));
-		}
-	}
-
-	private boolean shouldRemoveDomainRangePair(@Nonnull SchemaDomainRangeInfo domainRangeEntry, @Nonnull List<SchemaDomainRangeInfo> domainRangePairs,
-												@Nonnull List<SchemaClass> classes){
-
-		SchemaClass domainClass = findClass(classes, domainRangeEntry.getDomainClass());
-		SchemaClass rangeClass = findClass(classes, domainRangeEntry.getRangeClass());
-		if(domainClass == null || rangeClass == null){
-			return true;
-		}
-
-		// check removal cases for classPairs (A,B) and (C,D)
-		for(SchemaDomainRangeInfo item: domainRangePairs){
-
-			// case: A=C and subClassOf(B,D)
-			if(domainClass.getFullName().equalsIgnoreCase(item.getDomainClass())
-					&& rangeClass.getSuperClasses().contains(item.getRangeClass())){
-				return true;
-			}
-
-			// case: subClassOf(A,C)  and B=D
-			if(domainClass.getSuperClasses().contains(item.getDomainClass())
-					&& rangeClass.getFullName().equalsIgnoreCase(item.getRangeClass())){
-				return true;
-			}
-
-			// case: subClassOf(A,C) and subClassOf(B,D)
-			if(domainClass.getSuperClasses().contains(item.getDomainClass())
-					&& rangeClass.getSuperClasses().contains(item.getRangeClass())){
-				return true;
-			}
-
-		}
-		return false;
-	}
-	
 	private String findPropertyClass(@Nonnull SchemaClassNodeInfo classWithMaxCount, @Nonnull String propertyName,
 									 @Nonnull List<SchemaClassNodeInfo> assignedClasses, @Nonnull List<SchemaClass> classes){
 		SchemaClass rootClass = findClass(classes, classWithMaxCount.getClassName());
@@ -725,6 +735,10 @@ public class SchemaExtractor {
 	}
 	
 	private void setMaxCardinality(@Nonnull String propertyName, @Nonnull SchemaPropertyNodeInfo property, @Nonnull SchemaExtractorRequest request){
+		if(property.getDomainClasses().isEmpty() || (property.getDomainClasses().size() ==  1 && property.getDomainClasses().get(0).getClassName() == null)){
+			property.setMaxCardinality(DEFAULT_MAX_CARDINALITY);
+			return;
+		}
 		String query = SchemaExtractorQueries.FIND_PROPERTY_MAX_CARDINALITY.getSparqlQuery().replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY, propertyName);
 		List<QueryResult> queryResults = sparqlEndpointProcessor.read(request, SchemaExtractorQueries.FIND_PROPERTY_MAX_CARDINALITY.name(), query);
 		if(queryResults.isEmpty()){
@@ -735,7 +749,11 @@ public class SchemaExtractor {
 	}
 	
 	private void setMinCardinality(@Nullable String propertyName, @Nullable SchemaPropertyNodeInfo property, @Nonnull SchemaExtractorRequest request){
-		if(propertyName == null || property == null || property.getDomainClasses().isEmpty()){
+		if(propertyName == null || property == null){
+			return;
+		}
+		if(property.getDomainClasses().isEmpty() || (property.getDomainClasses().size() ==  1 && property.getDomainClasses().get(0).getClassName() == null)){
+			property.setMinCardinality(DEFAULT_MIN_CARDINALITY);
 			return;
 		}
 		Integer minCardinality = 1;
@@ -755,20 +773,11 @@ public class SchemaExtractor {
 		}
 		property.setMinCardinality(minCardinality);
 	}
-	
-	private void formatProperties(@Nonnull Map<String, SchemaPropertyNodeInfo> properties, @Nonnull Schema schema){
+
+	private void formatDataTypeProperties(@Nonnull Map<String, SchemaPropertyNodeInfo> properties, @Nonnull Schema schema){
 		for(Entry<String, SchemaPropertyNodeInfo> p: properties.entrySet()){
 			SchemaPropertyNodeInfo propertyNodeInfo = p.getValue();
-			if(p.getValue().getIsObjectProperty()){
-				SchemaRole role = new SchemaRole();
-				setLocalNameAndNamespace(p.getKey(), role);
-				role.setMinCardinality(propertyNodeInfo.getMinCardinality());
-				role.setMaxCardinality(propertyNodeInfo.getMaxCardinality());
-				propertyNodeInfo.getDomainRangePairs().forEach(pair -> {
-					role.getClassPairs().add(new ClassPair(pair.getDomainClass(), pair.getRangeClass()));
-				});
-				schema.getAssociations().add(role);
-			} else {
+			if(isFalse(p.getValue().getIsObjectProperty())){
 				SchemaAttribute attribute = new SchemaAttribute();
 				setLocalNameAndNamespace(p.getKey(), attribute);
 				attribute.setMinCardinality(propertyNodeInfo.getMinCardinality());
@@ -781,7 +790,25 @@ public class SchemaExtractor {
 					attribute.setType(DATA_TYPE_XSD_DEFAULT);
 				}
 				schema.getAttributes().add(attribute);
-			}			
+			}
+		}
+	}
+	
+	private void formatObjectTypeProperties(@Nonnull Map<String, SchemaPropertyNodeInfo> properties, @Nonnull Schema schema){
+		for(Entry<String, SchemaPropertyNodeInfo> p: properties.entrySet()){
+			SchemaPropertyNodeInfo propertyNodeInfo = p.getValue();
+			if(p.getValue().getIsObjectProperty()){
+				SchemaRole role = new SchemaRole();
+				setLocalNameAndNamespace(p.getKey(), role);
+				role.setMinCardinality(propertyNodeInfo.getMinCardinality());
+				role.setMaxCardinality(propertyNodeInfo.getMaxCardinality());
+				propertyNodeInfo.getDomainRangePairs().forEach(pair -> {
+					if(isTrue(pair.getValidDomain()) && isTrue(pair.getValidRange())){
+						role.getClassPairs().add(new ClassPair(pair.getDomainClass(), pair.getRangeClass()));
+					}
+				});
+				schema.getAssociations().add(role);
+			}
 		}
 	}
 

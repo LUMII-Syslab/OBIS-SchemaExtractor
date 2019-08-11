@@ -9,12 +9,14 @@ public class SchemaDomainRangeInfo {
     private String domainClass;
     private String rangeClass;
 
+    private Long instanceCount;
+
+    private Boolean validDomain;
+    private Boolean validRange;
+
+    public SchemaDomainRangeInfo(){}
+
     public SchemaDomainRangeInfo(String domainClass){
         this.domainClass = domainClass;
-    }
-
-    public SchemaDomainRangeInfo(String domainClass, String rangeClass){
-        this.domainClass = domainClass;
-        this.rangeClass = rangeClass;
     }
 }

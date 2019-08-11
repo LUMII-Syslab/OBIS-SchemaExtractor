@@ -58,6 +58,8 @@ public class SchemaConstants {
 	public static final String SPARQL_QUERY_BINDING_NAME_CLASS = "class";
 	public static final String SPARQL_QUERY_BINDING_NAME_CLASS_A = "classA";
 	public static final String SPARQL_QUERY_BINDING_NAME_CLASS_B = "classB";
+	public static final String SPARQL_QUERY_BINDING_NAME_CLASS_DOMAIN = "domainClass";
+	public static final String SPARQL_QUERY_BINDING_NAME_CLASS_RANGE = "rangeClass";
 	public static final String SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT = "instances";
 	public static final String SPARQL_QUERY_BINDING_NAME_PROPERTY = "property";
 	public static final String SPARQL_QUERY_BINDING_NAME_DATA_TYPE = "dataType";
