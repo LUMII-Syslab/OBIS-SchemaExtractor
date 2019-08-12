@@ -15,7 +15,6 @@ public class SchemaPropertyNodeInfo {
 	private Integer maxCardinality;
 	private List<SchemaDomainRangeInfo> domainRangePairs;
 	private List<SchemaClassNodeInfo> domainClasses;
-	private List<SchemaClassNodeInfo> rangeClasses;
 
 	public List<SchemaDomainRangeInfo> getDomainRangePairs() {
 		if(domainRangePairs == null){
@@ -29,13 +28,6 @@ public class SchemaPropertyNodeInfo {
 			domainClasses = new ArrayList<>();
 		}
 		return domainClasses;
-	}
-
-	public List<SchemaClassNodeInfo> getRangeClasses() {
-		if(rangeClasses == null){
-			rangeClasses = new ArrayList<>();
-		}
-		return rangeClasses;
 	}
 
 }

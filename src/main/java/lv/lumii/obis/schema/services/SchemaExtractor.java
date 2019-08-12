@@ -695,7 +695,8 @@ public class SchemaExtractor {
 		}
 		for(String subClassName: rootClass.getSubClasses()){
 			for(SchemaClassNodeInfo info: assignedClasses){
-				if(info.getClassName().equals(subClassName) 
+				if(info != null && info.getClassName() != null && info.getClassName().equals(subClassName)
+						&& info.getInstanceCount() != null
 						&& info.getInstanceCount().equals(classWithMaxCount.getInstanceCount())){
 					return findPropertyClass(info, propertyName, assignedClasses, classes);
 				}
@@ -735,7 +736,7 @@ public class SchemaExtractor {
 	}
 	
 	private void setMaxCardinality(@Nonnull String propertyName, @Nonnull SchemaPropertyNodeInfo property, @Nonnull SchemaExtractorRequest request){
-		if(property.getDomainClasses().isEmpty() || (property.getDomainClasses().size() ==  1 && property.getDomainClasses().get(0).getClassName() == null)){
+		if(property.getDomainRangePairs().isEmpty() || (property.getDomainRangePairs().size() ==  1 && property.getDomainRangePairs().get(0).getDomainClass() == null)){
 			property.setMaxCardinality(DEFAULT_MAX_CARDINALITY);
 			return;
 		}
@@ -752,13 +753,19 @@ public class SchemaExtractor {
 		if(propertyName == null || property == null){
 			return;
 		}
-		if(property.getDomainClasses().isEmpty() || (property.getDomainClasses().size() ==  1 && property.getDomainClasses().get(0).getClassName() == null)){
+		if(property.getDomainRangePairs().isEmpty() || (property.getDomainRangePairs().size() ==  1 && property.getDomainRangePairs().get(0).getDomainClass() == null)){
 			property.setMinCardinality(DEFAULT_MIN_CARDINALITY);
 			return;
 		}
 		Integer minCardinality = 1;
 		List<QueryResult> queryResults;
-		Set<String> uniqueDomains = property.getDomainRangePairs().stream().map(SchemaDomainRangeInfo::getDomainClass).collect(Collectors.toSet());
+		Set<String> uniqueDomains;
+		if(isTrue(property.getIsObjectProperty())){
+			uniqueDomains = property.getDomainRangePairs().stream().filter(p -> isTrue(p.getValidDomain()) && isTrue(p.getValidRange()))
+					.map(SchemaDomainRangeInfo::getDomainClass).collect(Collectors.toSet());
+		} else {
+			uniqueDomains = property.getDomainRangePairs().stream().map(SchemaDomainRangeInfo::getDomainClass).collect(Collectors.toSet());
+		}
 		for(String domain: uniqueDomains){
 			if(DEFAULT_MIN_CARDINALITY.equals(minCardinality)){
 				break;
@@ -782,9 +789,8 @@ public class SchemaExtractor {
 				setLocalNameAndNamespace(p.getKey(), attribute);
 				attribute.setMinCardinality(propertyNodeInfo.getMinCardinality());
 				attribute.setMaxCardinality(propertyNodeInfo.getMaxCardinality());
-				propertyNodeInfo.getDomainRangePairs().forEach(pair -> {
-					attribute.getSourceClasses().add(pair.getDomainClass());
-				});
+				Set<String> uniqueDomains = propertyNodeInfo.getDomainRangePairs().stream().map(SchemaDomainRangeInfo::getDomainClass).collect(Collectors.toSet());
+				attribute.getSourceClasses().addAll(uniqueDomains);
 				attribute.setType(p.getValue().getDataType());
 				if(attribute.getType() == null || attribute.getType().trim().equals("")){
 					attribute.setType(DATA_TYPE_XSD_DEFAULT);
