@@ -7,7 +7,8 @@ import lombok.Setter;
 @Setter @Getter
 public class SchemaExtractorRequest {
 
-    public enum ExtractionMode {simple, data, full};
+    public enum ExtractionMode {excludeDataTypesAndCardinalities, excludeCardinalities, full};
+    public enum ExtractionVersion {manySmallQueries, fewComplexQueries};
 
     @ApiParam(access = "1", value = "SPARQL Endpoint URL, for example, http://localhost:8890/sparql", required = true)
     private String endpointUrl;
@@ -15,21 +16,33 @@ public class SchemaExtractorRequest {
     @ApiParam(access = "2", value = "Named Graph (optional). If no graph name provided, the search will involve all graphs from the endpoint", allowEmptyValue = true)
     private String graphName;
 
-    @ApiParam(access = "3", value = "Extraction Complexity: [simple] - exclude datatype and cardinality calculations, [data] - exclude cardinality calculations, [full] - no exclusions", defaultValue = "full", required = true)
+    @ApiParam(access = "3", value = "Extraction Version: a lot of small SPARQL queries or just a few but complex queries", defaultValue = "manySmallQueries", required = true)
+    private ExtractionVersion version;
+
+    @ApiParam(access = "4", value = "Extraction Complexity: excludeDataTypesAndCardinalities, excludeCardinalities, full", defaultValue = "full", required = true)
     private ExtractionMode mode;
 
-    @ApiParam(access = "4", value = "Enable SPARQL Query Logging to the file", defaultValue = "false", required = true)
+    @ApiParam(access = "5", value = "Enable SPARQL Query Logging to the file", defaultValue = "false", required = true)
     private Boolean enableLogging;
 
-    @ApiParam(access = "5", value = "Exclude Virtuoso System Classes", defaultValue = "true", required = true)
+    @ApiParam(access = "6", value = "Exclude Virtuoso System Classes", defaultValue = "true", required = true)
     private Boolean excludeSystemClasses;
 
-    @ApiParam(access = "6", value = "Exclude Meta Domain Classes (w3 namespaces for owl/rdf-schema/22-rdf-syntax-ns)", defaultValue = "false", required = true)
+    @ApiParam(access = "7", value = "Exclude Meta Domain Classes (w3 namespaces for owl/rdf-schema/22-rdf-syntax-ns)", defaultValue = "false", required = true)
     private Boolean excludeMetaDomainClasses;
+
+    @ApiParam(access = "8", value = "Exclude Properties without defined domain and/or range classes (not applicable for [fewComplexQueries] extraction version)", defaultValue = "true", required = true)
+    private Boolean excludePropertiesWithoutClasses;
 
     @ApiParam(hidden = true)
     private String correlationId;
 
+    public ExtractionVersion getVersion() {
+        if(version == null){
+            version = ExtractionVersion.manySmallQueries;
+        }
+        return version;
+    }
 
     public ExtractionMode getMode() {
         if(mode == null){
@@ -57,5 +70,12 @@ public class SchemaExtractorRequest {
             excludeMetaDomainClasses = Boolean.FALSE;
         }
         return excludeMetaDomainClasses;
+    }
+
+    public Boolean getExcludePropertiesWithoutClasses() {
+        if(excludePropertiesWithoutClasses == null){
+            excludePropertiesWithoutClasses = Boolean.TRUE;
+        }
+        return excludePropertiesWithoutClasses;
     }
 }

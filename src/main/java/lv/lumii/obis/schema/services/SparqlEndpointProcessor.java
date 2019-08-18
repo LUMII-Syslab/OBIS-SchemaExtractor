@@ -19,6 +19,7 @@ import lv.lumii.obis.schema.services.dto.QueryResult;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 @Slf4j
 @Service
@@ -35,10 +36,10 @@ public class SparqlEndpointProcessor {
 		if(request.getEnableLogging()){
 			log.info(queryName + "\n" + sparqlQuery);
 		}
-		QueryExecution qexec = getQueryExecutor(request, query);
+		QueryEngineHTTP qexec = getQueryExecutor(request, query);
 		List<QueryResult> queryResults = new ArrayList<>();
 		try {
-			ResultSet results = qexec.execSelect();
+			ResultSet results = requestData(qexec);
 			
 			if(results == null){
 				return queryResults;
@@ -60,16 +61,36 @@ public class SparqlEndpointProcessor {
 				}
 			}
 			return queryResults;
-		} catch (Exception e){
-			log.error("Schema Extractor Exception - " + e.getMessage());
-			e.printStackTrace();
-			return queryResults;
 		} finally {
 			qexec.close();
 		}		
 	}
-	
-	private QueryExecution getQueryExecutor(@Nonnull SchemaExtractorRequest request, @Nonnull Query query){
+
+	@Nullable
+	private ResultSet requestData(@Nonnull QueryEngineHTTP qexec){
+		return requestData(qexec, 0);
+	}
+
+	@Nullable
+	private ResultSet requestData(@Nonnull QueryEngineHTTP qexec, int attempt){
+		ResultSet resultSet = null;
+		try {
+			resultSet = qexec.execSelect();
+			if(attempt > 0){
+				log.error(String.format("SPARQL Endpoint returned a valid response after an attempt number %d", attempt + 1));
+			}
+		} catch (Exception e){
+			log.error(String.format("SPARQL Endpoint Exception status '%s'. This was attempt number %d", e.getMessage(), attempt + 1));
+			if(attempt < 1){
+				qexec.addParam("timeout", "1200000");
+				return requestData(qexec, ++attempt);
+			}
+			e.printStackTrace();
+		}
+		return resultSet;
+	}
+
+	private QueryEngineHTTP getQueryExecutor(@Nonnull SchemaExtractorRequest request, @Nonnull Query query){
 		QueryEngineHTTP qexec;
 		if(StringUtils.isEmpty(request.getEndpointUrl())){
 			qexec = (QueryEngineHTTP) QueryExecutionFactory.sparqlService(request.getEndpointUrl(), query);

@@ -6,9 +6,7 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import lv.lumii.obis.schema.model.Schema;
-import lv.lumii.obis.schema.services.JsonSchemaService;
-import lv.lumii.obis.schema.services.OwlOntologyReader;
-import lv.lumii.obis.schema.services.SchemaExtractor;
+import lv.lumii.obis.schema.services.*;
 import lv.lumii.obis.schema.services.dto.SchemaExtractorRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
@@ -21,6 +19,8 @@ import javax.ws.rs.core.MediaType;
 import java.io.*;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+
+import static org.apache.commons.lang3.BooleanUtils.isTrue;
 
 /**
  * REST Controller to process Schema Extractor web requests.
@@ -43,7 +43,9 @@ public class SchemaExtractorController {
     private static volatile SecureRandom secureRandom;
 
     @Autowired @Setter @Getter
-    private SchemaExtractor schemaExtractor;
+    private SchemaExtractorFewQueries schemaExtractorFewQueries;
+    @Autowired @Setter @Getter
+    private SchemaExtractorManyQueries schemaExtractorManyQueries;
     @Autowired @Setter @Getter
     private OwlOntologyReader owlOntologyReader;
     @Autowired @Setter @Getter
@@ -62,7 +64,12 @@ public class SchemaExtractorController {
 
         log.info(String.format(SCHEMA_EXTRACT_MESSAGE_START, requestJson));
 
-        Schema schema = schemaExtractor.extractClasses(request);
+        Schema schema;
+        if(isTrue(SchemaExtractorRequest.ExtractionVersion.fewComplexQueries.equals(request.getVersion()))){
+            schema = schemaExtractorFewQueries.extractClasses(request);
+        } else {
+            schema = schemaExtractorManyQueries.extractClasses(request);
+        }
 
         log.info(String.format(SCHEMA_EXTRACT_MESSAGE_END, requestJson));
 
@@ -82,7 +89,12 @@ public class SchemaExtractorController {
 
         log.info(String.format(SCHEMA_EXTRACT_MESSAGE_START, requestJson));
 
-        Schema schema = schemaExtractor.extractSchema(request);
+        Schema schema;
+        if(isTrue(SchemaExtractorRequest.ExtractionVersion.fewComplexQueries.equals(request.getVersion()))){
+            schema = schemaExtractorFewQueries.extractSchema(request);
+        } else {
+            schema = schemaExtractorManyQueries.extractSchema(request);
+        }
 
         log.info(String.format(SCHEMA_EXTRACT_MESSAGE_END, requestJson));
 
