@@ -13,12 +13,15 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.annotation.Nonnull;
 import javax.validation.constraints.NotNull;
 
 import javax.ws.rs.core.MediaType;
 import java.io.*;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.util.Date;
+import java.util.concurrent.TimeUnit;
 
 import static org.apache.commons.lang3.BooleanUtils.isTrue;
 
@@ -34,7 +37,7 @@ public class SchemaExtractorController {
     private static final String RNG_ALGORITHM = "SHA1PRNG";
 
     private static final String SCHEMA_EXTRACT_MESSAGE_START = "Starting to read schema from the endpoint with parameters %s";
-    private static final String SCHEMA_EXTRACT_MESSAGE_END = "Completed JSON schema extraction from the specified endpoint with parameters %s";
+    private static final String SCHEMA_EXTRACT_MESSAGE_END = "Completed JSON schema extraction in %s from the specified endpoint with parameters %s";
 
     private static final String SCHEMA_READ_FILE_MESSAGE_START = "Starting to read schema from the file [%s]";
     private static final String SCHEMA_READ_FILE_MESSAGE_END = "Completed to read schema from the file [%s]";
@@ -64,14 +67,16 @@ public class SchemaExtractorController {
 
         log.info(String.format(SCHEMA_EXTRACT_MESSAGE_START, requestJson));
 
+        Date startDate = new Date();
         Schema schema;
         if(isTrue(SchemaExtractorRequest.ExtractionVersion.fewComplexQueries.equals(request.getVersion()))){
             schema = schemaExtractorFewQueries.extractClasses(request);
         } else {
             schema = schemaExtractorManyQueries.extractClasses(request);
         }
+        Date endDate = new Date();
 
-        log.info(String.format(SCHEMA_EXTRACT_MESSAGE_END, requestJson));
+        log.info(String.format(SCHEMA_EXTRACT_MESSAGE_END, calculateExecutionTime(startDate, endDate), requestJson));
 
         return jsonSchemaService.getJsonSchemaString(schema);
     }
@@ -89,14 +94,16 @@ public class SchemaExtractorController {
 
         log.info(String.format(SCHEMA_EXTRACT_MESSAGE_START, requestJson));
 
+        Date startDate = new Date();
         Schema schema;
         if(isTrue(SchemaExtractorRequest.ExtractionVersion.fewComplexQueries.equals(request.getVersion()))){
             schema = schemaExtractorFewQueries.extractSchema(request);
         } else {
             schema = schemaExtractorManyQueries.extractSchema(request);
         }
+        Date endDate = new Date();
 
-        log.info(String.format(SCHEMA_EXTRACT_MESSAGE_END, requestJson));
+        log.info(String.format(SCHEMA_EXTRACT_MESSAGE_END, calculateExecutionTime(startDate, endDate), requestJson));
 
         return jsonSchemaService.getJsonSchemaString(schema);
     }
@@ -137,6 +144,20 @@ public class SchemaExtractorController {
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException("Error generating unique correlation id for SchemaExtractor request: ", e);
         }
+    }
+
+    private String calculateExecutionTime(@Nonnull Date startDate, @Nonnull Date endDate){
+        String timeUnit;
+        long timeDiff;
+        long diffInMilliseconds = Math.abs(startDate.getTime() - endDate.getTime());
+        if(diffInMilliseconds > 60000){
+            timeUnit = " min";
+            timeDiff = TimeUnit.MINUTES.convert(diffInMilliseconds, TimeUnit.MILLISECONDS);
+        } else {
+            timeUnit = " s";
+            timeDiff = TimeUnit.SECONDS.convert(diffInMilliseconds, TimeUnit.MILLISECONDS);
+        }
+        return timeDiff + timeUnit;
     }
 
 }

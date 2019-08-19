@@ -69,6 +69,7 @@ public abstract class SchemaExtractor {
 		log.info(request.getCorrelationId() + " - findAllClassesWithInstanceCount");
 		List<QueryResult> queryResults = sparqlEndpointProcessor.read(request, FIND_CLASSES_WITH_INSTANCE_COUNT);
 		List<SchemaClass> classes = processClasses(queryResults, request);
+		log.info(request.getCorrelationId() + String.format(" - found total %d classes", classes.size()));
 		schema.setClasses(classes);
 		Map<String, SchemaClassNodeInfo> graphOfClasses = buildGraphOfClasses(classes);
 		queryResults.clear();
@@ -100,6 +101,7 @@ public abstract class SchemaExtractor {
 		// find all data type properties and domain class instances count
 		log.info(request.getCorrelationId() + " - findAllDataTypeProperties");
 		Map<String, SchemaPropertyNodeInfo> properties = findAllDataTypeProperties(classes, request);
+        log.info(request.getCorrelationId() + String.format(" - found %d data type properties", properties.size()));
 
 		// map data type properties to domain classes
 		log.info(request.getCorrelationId() + " - mapDataTypePropertiesToDomainClasses");
@@ -122,7 +124,7 @@ public abstract class SchemaExtractor {
 	}
 
 	protected abstract Map<String, SchemaPropertyNodeInfo> findAllDataTypeProperties(@Nonnull List<SchemaClass> classes,
-																					 @Nonnull SchemaExtractorRequest request);
+                                                                                     @Nonnull SchemaExtractorRequest request);
 
 	protected void buildObjectTypeProperties(@Nonnull SchemaExtractorRequest request, @Nonnull Schema schema){
 		List<SchemaClass> classes = schema.getClasses();
@@ -130,6 +132,7 @@ public abstract class SchemaExtractor {
 		// find all object type properties with domain-range pairs and instances count
 		log.info(request.getCorrelationId() + " - findAllObjectTypeProperties");
 		Map<String, SchemaPropertyNodeInfo> properties = findAllObjectTypeProperties(classes, request);
+        log.info(request.getCorrelationId() + String.format(" - found %d object type properties", properties.size()));
 
 		log.info(request.getCorrelationId() + " - validatePropertyDomainRangeMapping");
 		validatePropertyDomainRangeMapping(classes, properties);
