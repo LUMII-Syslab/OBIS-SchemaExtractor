@@ -7,7 +7,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import lombok.Setter;
-import lv.lumii.obis.schema.constants.SchemaConstants;
 
 @Setter @Getter
 public class SchemaRole extends SchemaProperty {
@@ -15,8 +14,7 @@ public class SchemaRole extends SchemaProperty {
 	@JsonProperty("ClassPairs")
 	private List<ClassPair> classPairs;
 
-	@JsonIgnore
-	private SchemaRole inverseProperty;
+	private String inverseProperty;
 
 	public List<ClassPair> getClassPairs() {
 		if(classPairs == null){

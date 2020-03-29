@@ -70,8 +70,8 @@ public class OwlOntologyReader {
 		// create prefix map
 		OWLDocumentFormat format = ontology.getOWLOntologyManager().getOntologyFormat(ontology);
 		if (format != null && Boolean.TRUE.equals(format.isPrefixOWLDocumentFormat())) {
-			format.asPrefixOWLDocumentFormat().getPrefixName2PrefixMap().entrySet().forEach(entry -> {
-				schema.getPrefixes().add(new NamespacePrefixEntry(entry.getKey(), entry.getValue()));
+			format.asPrefixOWLDocumentFormat().getPrefixName2PrefixMap().forEach((key, value) -> {
+				schema.getPrefixes().add(new NamespacePrefixEntry(key, value));
 			});
 		}
 	}
@@ -357,8 +357,8 @@ public class OwlOntologyReader {
 			if(firstRole == null || secondRole == null){
 				continue;
 			}
-			firstRole.setInverseProperty(secondRole);
-			secondRole.setInverseProperty(firstRole);
+			firstRole.setInverseProperty(secondRole.getFullName());
+			secondRole.setInverseProperty(firstRole.getFullName());
 		}
 	}
 
