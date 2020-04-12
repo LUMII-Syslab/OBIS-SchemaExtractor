@@ -5,9 +5,12 @@ import io.swagger.annotations.*;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import lv.lumii.obis.schema.services.extractor.SchemaExtractorFewQueries;
+import lv.lumii.obis.schema.services.extractor.SchemaExtractorManyQueries;
 import lv.lumii.obis.schema.model.Schema;
 import lv.lumii.obis.schema.services.*;
-import lv.lumii.obis.schema.services.dto.SchemaExtractorRequest;
+import lv.lumii.obis.schema.services.extractor.dto.SchemaExtractorRequest;
+import lv.lumii.obis.schema.services.reader.OWLOntologyReader;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -50,7 +53,7 @@ public class SchemaExtractorController {
     @Autowired @Setter @Getter
     private SchemaExtractorManyQueries schemaExtractorManyQueries;
     @Autowired @Setter @Getter
-    private OwlOntologyReader owlOntologyReader;
+    private OWLOntologyReader owlOntologyReader;
     @Autowired @Setter @Getter
     private JsonSchemaService jsonSchemaService;
 
@@ -128,7 +131,7 @@ public class SchemaExtractorController {
             throw new RuntimeException(error, e);
         }
 
-        Schema schema = owlOntologyReader.readOwlOntology(inputStream);
+        Schema schema = owlOntologyReader.readOWLOntology(inputStream);
 
         log.info(String.format(SCHEMA_READ_FILE_MESSAGE_END, file.getOriginalFilename()));
 
