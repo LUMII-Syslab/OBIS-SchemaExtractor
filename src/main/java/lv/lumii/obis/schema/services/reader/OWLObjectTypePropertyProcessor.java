@@ -28,7 +28,7 @@ public class OWLObjectTypePropertyProcessor extends OWLPropertyProcessor {
             String propertyName = property.getIRI().toString();
 
             SchemaRole objectProperty = new SchemaRole();
-            setSchemaEntityNameAndNamespace(property.getIRI(), objectProperty, resultSchema);
+            setSchemaElementNameAndNamespace(property.getIRI(), objectProperty);
 
             ClassPair classPair = new ClassPair();
 

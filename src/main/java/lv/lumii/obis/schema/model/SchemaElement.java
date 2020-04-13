@@ -4,7 +4,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 @Setter @Getter
-public class SchemaEntity extends AnnotationElement {
+public class SchemaElement extends AnnotationElement {
 
 	private String localName;
 	private String namespace;

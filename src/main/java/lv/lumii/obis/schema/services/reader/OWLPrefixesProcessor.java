@@ -12,6 +12,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -36,21 +37,15 @@ public class OWLPrefixesProcessor implements OWLElementProcessor {
     @Nullable
     private String findMainNamespace(@Nonnull Schema schema) {
         List<String> namespaces = new ArrayList<>();
-        for (SchemaClass item : schema.getClasses()) {
-            namespaces.add(item.getNamespace());
-        }
-        for (SchemaAttribute item : schema.getAttributes()) {
-            namespaces.add(item.getNamespace());
-        }
-        for (SchemaRole item : schema.getAssociations()) {
-            namespaces.add(item.getNamespace());
-        }
-        if (namespaces.isEmpty()) {
-            return null;
-        }
+
+        schema.getClasses().forEach(item -> namespaces.add(item.getNamespace()));
+        schema.getAttributes().forEach(item -> namespaces.add(item.getNamespace()));
+        schema.getAssociations().forEach(item -> namespaces.add(item.getNamespace()));
+
         Map<String, Long> namespacesWithCounts = namespaces.stream()
                 .collect(Collectors.groupingBy(e -> e, Collectors.counting()));
-        return namespacesWithCounts.entrySet().stream().max(Map.Entry.comparingByValue()).get().getKey();
+        Optional<Map.Entry<String, Long>> entryWithMaxCount = namespacesWithCounts.entrySet().stream().max(Map.Entry.comparingByValue());
+        return entryWithMaxCount.map(Map.Entry::getKey).orElse(null);
     }
 
 }

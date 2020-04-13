@@ -230,7 +230,7 @@ public abstract class SchemaExtractor {
 		return excluded;
 	}
 
-	protected void setLocalNameAndNamespace(@Nonnull String fullName, @Nonnull SchemaEntity entity){
+	protected void setLocalNameAndNamespace(@Nonnull String fullName, @Nonnull SchemaElement entity){
 		String localName = fullName;
 		String namespace = "";
 

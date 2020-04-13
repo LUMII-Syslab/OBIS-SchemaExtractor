@@ -29,7 +29,7 @@ public class OWLAnnotationPropertyProcessor extends OWLPropertyProcessor {
             String propertyName = property.getIRI().toString();
             SchemaAttribute annotationProperty = new SchemaAttribute();
 
-            setSchemaEntityNameAndNamespace(property.getIRI(), annotationProperty, resultSchema);
+            setSchemaElementNameAndNamespace(property.getIRI(), annotationProperty);
             setAnnotationDomain(annotationProperty, propertyName, domains, processingData.getClassesMap());
             setAnnotationRangeType(annotationProperty, propertyName, ranges);
             setCardinalities(annotationProperty, propertyName, processingData.getCardinalityMap());

@@ -28,7 +28,7 @@ public class OWLDataTypePropertyProcessor extends OWLPropertyProcessor {
             String propertyName = property.getIRI().toString();
             SchemaAttribute dataProperty = new SchemaAttribute();
 
-            setSchemaEntityNameAndNamespace(property.getIRI(), dataProperty, resultSchema);
+            setSchemaElementNameAndNamespace(property.getIRI(), dataProperty);
             setDomain(dataProperty, propertyName, domains, processingData.getClassesMap());
             setRangeType(dataProperty, propertyName, ranges);
             setCardinalities(dataProperty, propertyName, processingData.getCardinalityMap());

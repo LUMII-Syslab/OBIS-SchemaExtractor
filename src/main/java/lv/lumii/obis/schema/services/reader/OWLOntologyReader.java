@@ -44,6 +44,7 @@ public class OWLOntologyReader {
             log.error("Cannot read OWLOntology from the file", e);
         }
         if (ontology == null || ontology.isEmpty() || ontology.classesInSignature().count() <= 0) {
+            log.error("Empty ontology object or no defined classes");
             return new Schema();
         }
         return processOWLOntology(ontology, manager);

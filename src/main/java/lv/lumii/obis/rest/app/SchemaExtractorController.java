@@ -2,7 +2,6 @@ package lv.lumii.obis.rest.app;
 
 import com.google.gson.Gson;
 import io.swagger.annotations.*;
-import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import lv.lumii.obis.schema.services.extractor.SchemaExtractorFewQueries;
@@ -23,8 +22,8 @@ import javax.ws.rs.core.MediaType;
 import java.io.*;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
-import java.util.Date;
-import java.util.concurrent.TimeUnit;
+import java.time.Duration;
+import java.time.LocalDateTime;
 
 import static org.apache.commons.lang3.BooleanUtils.isTrue;
 
@@ -42,19 +41,19 @@ public class SchemaExtractorController {
     private static final String SCHEMA_EXTRACT_MESSAGE_START = "Starting to read schema from the endpoint with parameters %s";
     private static final String SCHEMA_EXTRACT_MESSAGE_END = "Completed JSON schema extraction in %s from the specified endpoint with parameters %s";
 
-    private static final String SCHEMA_READ_FILE_MESSAGE_START = "Starting to read schema from the file [%s]";
-    private static final String SCHEMA_READ_FILE_MESSAGE_END = "Completed to read schema from the file [%s]";
-    private static final String SCHEMA_READ_FILE_MESSAGE_ERROR = "Cannot read Schema JSON from the specified OWL file [%s]";
+    private static final String SCHEMA_READ_FILE_MESSAGE_START = "Request %s - Starting to read Schema JSON from the OWL file [%s]";
+    private static final String SCHEMA_READ_FILE_MESSAGE_END = "Request %s - Completed to read Schema JSON from the OWL file [%s] in %s";
+    private static final String SCHEMA_READ_FILE_MESSAGE_ERROR = "Request %s - Cannot read Schema JSON from the specified OWL file [%s]";
 
     private static volatile SecureRandom secureRandom;
 
-    @Autowired @Setter @Getter
+    @Autowired @Setter
     private SchemaExtractorFewQueries schemaExtractorFewQueries;
-    @Autowired @Setter @Getter
+    @Autowired @Setter
     private SchemaExtractorManyQueries schemaExtractorManyQueries;
-    @Autowired @Setter @Getter
+    @Autowired @Setter
     private OWLOntologyReader owlOntologyReader;
-    @Autowired @Setter @Getter
+    @Autowired @Setter
     private JsonSchemaService jsonSchemaService;
 
     @RequestMapping(value = "/endpoint/buildClasses", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON)
@@ -64,22 +63,23 @@ public class SchemaExtractorController {
             produces = MediaType.APPLICATION_JSON,
             response = Schema.class
     )
+    @SuppressWarnings("unused")
     public String buildClassesFromEndpoint(@Validated @ModelAttribute @NotNull SchemaExtractorRequest request) {
         request.setCorrelationId(generateCorrelationId());
         String requestJson = new Gson().toJson(request);
 
         log.info(String.format(SCHEMA_EXTRACT_MESSAGE_START, requestJson));
 
-        Date startDate = new Date();
+        LocalDateTime startTime = LocalDateTime.now();
         Schema schema;
-        if(isTrue(SchemaExtractorRequest.ExtractionVersion.fewComplexQueries.equals(request.getVersion()))){
+        if (isTrue(SchemaExtractorRequest.ExtractionVersion.fewComplexQueries.equals(request.getVersion()))) {
             schema = schemaExtractorFewQueries.extractClasses(request);
         } else {
             schema = schemaExtractorManyQueries.extractClasses(request);
         }
-        Date endDate = new Date();
+        LocalDateTime endTime = LocalDateTime.now();
 
-        log.info(String.format(SCHEMA_EXTRACT_MESSAGE_END, calculateExecutionTime(startDate, endDate), requestJson));
+        log.info(String.format(SCHEMA_EXTRACT_MESSAGE_END, calculateExecutionTime(startTime, endTime), requestJson));
 
         return jsonSchemaService.getJsonSchemaString(schema);
     }
@@ -91,22 +91,23 @@ public class SchemaExtractorController {
             produces = MediaType.APPLICATION_JSON,
             response = Schema.class
     )
+    @SuppressWarnings("unused")
     public String buildFullSchemaFromEndpoint(@Validated @ModelAttribute @NotNull SchemaExtractorRequest request) {
         request.setCorrelationId(generateCorrelationId());
         String requestJson = new Gson().toJson(request);
 
         log.info(String.format(SCHEMA_EXTRACT_MESSAGE_START, requestJson));
 
-        Date startDate = new Date();
+        LocalDateTime startTime = LocalDateTime.now();
         Schema schema;
-        if(isTrue(SchemaExtractorRequest.ExtractionVersion.fewComplexQueries.equals(request.getVersion()))){
+        if (isTrue(SchemaExtractorRequest.ExtractionVersion.fewComplexQueries.equals(request.getVersion()))) {
             schema = schemaExtractorFewQueries.extractSchema(request);
         } else {
             schema = schemaExtractorManyQueries.extractSchema(request);
         }
-        Date endDate = new Date();
+        LocalDateTime endTime = LocalDateTime.now();
 
-        log.info(String.format(SCHEMA_EXTRACT_MESSAGE_END, calculateExecutionTime(startDate, endDate), requestJson));
+        log.info(String.format(SCHEMA_EXTRACT_MESSAGE_END, calculateExecutionTime(startTime, endTime), requestJson));
 
         return jsonSchemaService.getJsonSchemaString(schema);
     }
@@ -118,29 +119,32 @@ public class SchemaExtractorController {
             produces = MediaType.APPLICATION_JSON,
             response = Schema.class
     )
-    public String buildFullSchemaFromOwl(@RequestPart("file") @ApiParam(value="Upload OWL file", required=true) MultipartFile file) {
-
-        log.info(String.format(SCHEMA_READ_FILE_MESSAGE_START, file.getOriginalFilename()));
+    @SuppressWarnings("unused")
+    public String buildFullSchemaFromOwl(@RequestPart("file") @ApiParam(value = "Upload OWL file", required = true) MultipartFile file) {
+        String correlationId = generateCorrelationId();
+        log.info(String.format(SCHEMA_READ_FILE_MESSAGE_START, correlationId, file.getOriginalFilename()));
 
         InputStream inputStream;
-        try{
+        try {
             inputStream = file.getInputStream();
-        } catch (IOException e){
-            String error = String.format(SCHEMA_READ_FILE_MESSAGE_ERROR, file.getOriginalFilename());
+        } catch (IOException e) {
+            String error = String.format(SCHEMA_READ_FILE_MESSAGE_ERROR, correlationId, file.getOriginalFilename());
             log.error(error);
             throw new RuntimeException(error, e);
         }
 
+        LocalDateTime startTime = LocalDateTime.now();
         Schema schema = owlOntologyReader.readOWLOntology(inputStream);
+        LocalDateTime endTime = LocalDateTime.now();
 
-        log.info(String.format(SCHEMA_READ_FILE_MESSAGE_END, file.getOriginalFilename()));
+        log.info(String.format(SCHEMA_READ_FILE_MESSAGE_END, correlationId, file.getOriginalFilename(), calculateExecutionTime(startTime, endTime)));
 
         return jsonSchemaService.getJsonSchemaString(schema);
     }
 
     private static String generateCorrelationId() {
         try {
-            if(secureRandom == null) {
+            if (secureRandom == null) {
                 secureRandom = SecureRandom.getInstance(RNG_ALGORITHM);
             }
             return Long.toString(Math.abs(secureRandom.nextLong()));
@@ -149,18 +153,10 @@ public class SchemaExtractorController {
         }
     }
 
-    private String calculateExecutionTime(@Nonnull Date startDate, @Nonnull Date endDate){
-        String timeUnit;
-        long timeDiff;
-        long diffInMilliseconds = Math.abs(startDate.getTime() - endDate.getTime());
-        if(diffInMilliseconds > 60000){
-            timeUnit = " min";
-            timeDiff = TimeUnit.MINUTES.convert(diffInMilliseconds, TimeUnit.MILLISECONDS);
-        } else {
-            timeUnit = " s";
-            timeDiff = TimeUnit.SECONDS.convert(diffInMilliseconds, TimeUnit.MILLISECONDS);
-        }
-        return timeDiff + timeUnit;
+    private String calculateExecutionTime(@Nonnull LocalDateTime startLocalDateTime, @Nonnull LocalDateTime endLocalDateTime) {
+        return Duration.between(startLocalDateTime, endLocalDateTime).toString().substring(2)
+                .replaceAll("(\\d[HMS])", "$1 ")
+                .toLowerCase();
     }
 
 }

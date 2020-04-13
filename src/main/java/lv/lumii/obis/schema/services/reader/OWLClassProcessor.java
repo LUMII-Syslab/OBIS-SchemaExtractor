@@ -33,33 +33,37 @@ public class OWLClassProcessor implements OWLElementProcessor {
         owlClasses.stream().filter(Objects::nonNull).forEach(clazz -> {
 
             // initialize current class instance
-            String currentClassFullName = clazz.getIRI().toString();
-            final SchemaClass currentClass;
-            if (classesMap.containsKey(currentClassFullName)) {
-                currentClass = classesMap.get(currentClassFullName);
-            } else {
-                currentClass = new SchemaClass();
-                setSchemaEntityNameAndNamespace(clazz.getIRI(), currentClass, resultSchema);
-                classesMap.put(currentClassFullName, currentClass);
-            }
+            final SchemaClass currentClass = getOrCreateSchemaClass(clazz.getIRI(), classesMap);
 
             // process superclasses
             EntitySearcher.getSuperClasses(clazz, inputOntology)
                     .map(this::extractSuperClasses)
                     .flatMap(Collection::stream)
                     .collect(Collectors.toList())
-                    .forEach(superClassIri -> addSuperClass(superClassIri, currentClass, classesMap, resultSchema));
+                    .forEach(superClassIRI -> addSuperClass(superClassIRI, currentClass, classesMap));
 
             // update cardinality restriction map
             extractCardinalityAxioms(inputOntology, clazz, cardinalityMap);
 
             // process annotations
             setAnnotations(EntitySearcher.getAnnotations(clazz, inputOntology), currentClass);
-            extractInstanceCount(currentClass);
-            extractOrderIndex(currentClass);
+            setInstanceCount(currentClass);
+            setOrderIndex(currentClass);
         });
 
+        log.info("Processed {} OWL classes", classesMap.size());
         resultSchema.setClasses(new ArrayList<>(classesMap.values()));
+    }
+
+    @Nonnull
+    private SchemaClass getOrCreateSchemaClass(@Nonnull IRI classIRI, @Nonnull Map<String, SchemaClass> classesMap) {
+        SchemaClass clazz = classesMap.get(classIRI.toString());
+        if (clazz == null) {
+            clazz = new SchemaClass();
+            setSchemaElementNameAndNamespace(classIRI, clazz);
+            classesMap.put(classIRI.toString(), clazz);
+        }
+        return clazz;
     }
 
     @Nonnull
@@ -69,49 +73,24 @@ public class OWLClassProcessor implements OWLElementProcessor {
         return superClasses;
     }
 
-    private void addSuperClass(@Nonnull IRI superClassIri, @Nonnull SchemaClass subClass, @Nonnull Map<String, SchemaClass> classesMap, @Nonnull Schema schema) {
-        SchemaClass superClass = classesMap.get(superClassIri.toString());
-        if (superClass == null) {
-            superClass = new SchemaClass();
-            setSchemaEntityNameAndNamespace(superClassIri, superClass, schema);
-            classesMap.put(superClassIri.toString(), superClass);
-        }
+    private void addSuperClass(@Nonnull IRI superClassIRI, @Nonnull SchemaClass subClass, @Nonnull Map<String, SchemaClass> classesMap) {
+        SchemaClass superClass = getOrCreateSchemaClass(superClassIRI, classesMap);
         superClass.getSubClasses().add(subClass.getFullName());
-        subClass.getSuperClasses().add(superClassIri.toString());
+        subClass.getSuperClasses().add(superClass.getFullName());
     }
 
-    private void extractInstanceCount(@Nonnull SchemaClass schemaClass) {
-        AnnotationEntry instanceCountEntry = schemaClass.getAnnotations().stream()
-                .filter(entry -> SchemaConstants.ANNOTATION_INSTANCE_COUNT.equalsIgnoreCase(entry.getKey()))
-                .findFirst().orElse(null);
-        if (instanceCountEntry != null && instanceCountEntry.getValue() != null) {
-            Long instanceCount = null;
-            try {
-                instanceCount = Long.valueOf(instanceCountEntry.getValue());
-            } catch (NumberFormatException e) {
-                // do nothing
-            }
-            if (instanceCount != null) {
-                schemaClass.setInstanceCount(instanceCount);
-            }
-        }
+    private void setInstanceCount(@Nonnull SchemaClass schemaClass) {
+        schemaClass.setInstanceCount(
+                extractAnnotationLongValue(
+                        findAnnotation(schemaClass.getAnnotations(), SchemaConstants.ANNOTATION_INSTANCE_COUNT))
+        );
     }
 
-    private void extractOrderIndex(@Nonnull SchemaClass schemaClass) {
-        AnnotationEntry orderIndexEntry = schemaClass.getAnnotations().stream()
-                .filter(entry -> SchemaConstants.ANNOTATION_ORDER_INDEX.equalsIgnoreCase(entry.getKey()))
-                .findFirst().orElse(null);
-        if (orderIndexEntry != null && orderIndexEntry.getValue() != null) {
-            Long orderIndex = null;
-            try {
-                orderIndex = Long.valueOf(orderIndexEntry.getValue());
-            } catch (NumberFormatException e) {
-                // do nothing
-            }
-            if (orderIndex != null) {
-                schemaClass.setOrderIndex(orderIndex);
-            }
-        }
+    private void setOrderIndex(@Nonnull SchemaClass schemaClass) {
+        schemaClass.setOrderIndex(
+                extractAnnotationLongValue(
+                        findAnnotation(schemaClass.getAnnotations(), SchemaConstants.ANNOTATION_ORDER_INDEX))
+        );
     }
 
     private void extractCardinalityAxioms(@Nonnull OWLOntology ontology, @Nonnull OWLClass clazz, @Nonnull Map<String, List<SchemaCardinalityInfo>> cardinalityMap) {

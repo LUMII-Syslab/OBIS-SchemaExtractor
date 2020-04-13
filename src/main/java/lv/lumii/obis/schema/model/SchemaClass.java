@@ -9,7 +9,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 @Setter @Getter
-public class SchemaClass extends SchemaEntity {
+public class SchemaClass extends SchemaElement {
 	
 	@JsonProperty("SuperClasses")
 	private List<String> superClasses;
