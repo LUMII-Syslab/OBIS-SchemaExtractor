@@ -14,6 +14,7 @@ public class SchemaElement {
     private String localName;
     private String namespace;
     private String fullName;
+    private Boolean isAbstract;
     private Map<String, String> comment;
     private Map<String, String> label;
 

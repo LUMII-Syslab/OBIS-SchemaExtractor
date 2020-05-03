@@ -10,6 +10,8 @@ import lombok.extern.slf4j.Slf4j;
 import lv.lumii.obis.schema.constants.SchemaConstants;
 import lv.lumii.obis.schema.model.*;
 import lv.lumii.obis.schema.services.SchemaUtil;
+import lv.lumii.obis.schema.services.common.QueryResult;
+import lv.lumii.obis.schema.services.common.SparqlEndpointProcessor;
 import lv.lumii.obis.schema.services.extractor.dto.*;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;

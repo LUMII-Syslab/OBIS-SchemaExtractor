@@ -27,7 +27,7 @@
         </encoder>
     </appender>
 
-    <logger name="lv.lumii.obis.schema.services.extractor.SparqlEndpointProcessor" level="INFO" additivity="false">
+    <logger name="lv.lumii.obis.schema.services.common.SparqlEndpointProcessor" level="INFO" additivity="false">
         <appender-ref ref="LOGFILE"/>
     </logger>
 
