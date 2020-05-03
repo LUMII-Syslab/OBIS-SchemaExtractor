@@ -1,35 +1,35 @@
 package lv.lumii.obis.schema.model;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.HashSet;
+import java.util.Set;
+
 @Setter @Getter
 public class SchemaClass extends SchemaElement {
 	
 	@JsonProperty("SuperClasses")
-	private List<String> superClasses;
+	private Set<String> superClasses;
 
 	@JsonIgnore
-	private List<String> subClasses;
+	private Set<String> subClasses;
 
 	private Long instanceCount;
 	private Long orderIndex;
 
-	public List<String> getSuperClasses() {
+	public Set<String> getSuperClasses() {
 		if(superClasses == null){
-			superClasses = new ArrayList<>();
+			superClasses = new HashSet<>();
 		}
 		return superClasses;
 	}
 
-	public List<String> getSubClasses() {
+	public Set<String> getSubClasses() {
 		if(subClasses == null){
-			subClasses = new ArrayList<>();
+			subClasses = new HashSet<>();
 		}
 		return subClasses;
 	}

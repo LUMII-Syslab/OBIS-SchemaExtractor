@@ -12,7 +12,7 @@ public class OWLOntologyProcessor implements OWLElementProcessor {
 
     @Override
     public void process(@Nonnull OWLOntology inputOntology, @Nonnull Schema resultSchema, @Nonnull SchemaProcessingData processingData) {
-        setAnnotations(inputOntology.annotations(), resultSchema);
+        // do nothing by default
     }
 
 }

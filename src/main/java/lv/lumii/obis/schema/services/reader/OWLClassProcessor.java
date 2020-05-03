@@ -1,8 +1,6 @@
 package lv.lumii.obis.schema.services.reader;
 
 import lombok.extern.slf4j.Slf4j;
-import lv.lumii.obis.schema.constants.SchemaConstants;
-import lv.lumii.obis.schema.model.AnnotationEntry;
 import lv.lumii.obis.schema.model.Schema;
 import lv.lumii.obis.schema.model.SchemaClass;
 import lv.lumii.obis.schema.services.reader.dto.SchemaCardinalityInfo;
@@ -12,6 +10,7 @@ import org.semanticweb.owlapi.search.EntitySearcher;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -42,13 +41,18 @@ public class OWLClassProcessor implements OWLElementProcessor {
                     .collect(Collectors.toList())
                     .forEach(superClassIRI -> addSuperClass(superClassIRI, currentClass, classesMap));
 
+            // process equivalent classes
+            EntitySearcher.getEquivalentClasses(clazz, inputOntology)
+                    .map(this::extractEquivalentClass)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList())
+                    .forEach(equivalentClassIRI -> addEquivalentClass(equivalentClassIRI, currentClass, classesMap));
+
             // update cardinality restriction map
             extractCardinalityAxioms(inputOntology, clazz, cardinalityMap);
 
             // process annotations
             setAnnotations(EntitySearcher.getAnnotations(clazz, inputOntology), currentClass);
-            setInstanceCount(currentClass);
-            setOrderIndex(currentClass);
         });
 
         log.info("Processed {} OWL classes", classesMap.size());
@@ -73,24 +77,23 @@ public class OWLClassProcessor implements OWLElementProcessor {
         return superClasses;
     }
 
+    @Nullable
+    private IRI extractEquivalentClass(@Nonnull OWLClassExpression classExpression) {
+        return classExpression.isOWLClass() ? classExpression.asOWLClass().getIRI() : null;
+    }
+
     private void addSuperClass(@Nonnull IRI superClassIRI, @Nonnull SchemaClass subClass, @Nonnull Map<String, SchemaClass> classesMap) {
         SchemaClass superClass = getOrCreateSchemaClass(superClassIRI, classesMap);
         superClass.getSubClasses().add(subClass.getFullName());
         subClass.getSuperClasses().add(superClass.getFullName());
     }
 
-    private void setInstanceCount(@Nonnull SchemaClass schemaClass) {
-        schemaClass.setInstanceCount(
-                extractAnnotationLongValue(
-                        findAnnotation(schemaClass.getAnnotations(), SchemaConstants.ANNOTATION_INSTANCE_COUNT))
-        );
-    }
-
-    private void setOrderIndex(@Nonnull SchemaClass schemaClass) {
-        schemaClass.setOrderIndex(
-                extractAnnotationLongValue(
-                        findAnnotation(schemaClass.getAnnotations(), SchemaConstants.ANNOTATION_ORDER_INDEX))
-        );
+    private void addEquivalentClass(@Nonnull IRI equivalentClassIRI, @Nonnull SchemaClass currentClass, @Nonnull Map<String, SchemaClass> classesMap) {
+        SchemaClass equivalentClass = getOrCreateSchemaClass(equivalentClassIRI, classesMap);
+        equivalentClass.getSuperClasses().add(currentClass.getFullName());
+        equivalentClass.getSubClasses().add(currentClass.getFullName());
+        currentClass.getSuperClasses().add(equivalentClass.getFullName());
+        currentClass.getSubClasses().add(equivalentClass.getFullName());
     }
 
     private void extractCardinalityAxioms(@Nonnull OWLOntology ontology, @Nonnull OWLClass clazz, @Nonnull Map<String, List<SchemaCardinalityInfo>> cardinalityMap) {

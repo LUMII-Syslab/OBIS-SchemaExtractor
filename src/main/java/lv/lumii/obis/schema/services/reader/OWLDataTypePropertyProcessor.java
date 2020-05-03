@@ -62,7 +62,7 @@ public class OWLDataTypePropertyProcessor extends OWLPropertyProcessor {
             dataProperty.setType(parsedDataType);
         } else if (isValidLookupRangeType(rangeAxiom)) {
             List<String> lookups = ((OWLDataOneOf) rangeAxiom.getRange()).values().map(OWLLiteral::getLiteral).collect(Collectors.toList());
-            if (lookups != null && !lookups.isEmpty()) {
+            if (!lookups.isEmpty()) {
                 String lookupString = String.join(";", lookups);
                 dataProperty.setRangeLookupValues(lookupString);
             }

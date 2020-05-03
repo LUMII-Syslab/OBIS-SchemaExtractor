@@ -1,14 +1,13 @@
 package lv.lumii.obis.schema.services.reader;
 
-import lv.lumii.obis.schema.model.AnnotationElement;
-import lv.lumii.obis.schema.model.AnnotationEntry;
+import lv.lumii.obis.schema.constants.SchemaConstants;
 import lv.lumii.obis.schema.model.Schema;
+import lv.lumii.obis.schema.model.SchemaClass;
 import lv.lumii.obis.schema.model.SchemaElement;
+import lv.lumii.obis.schema.services.reader.dto.AnnotationInfo;
 import lv.lumii.obis.schema.services.reader.dto.SchemaProcessingData;
-import org.semanticweb.owlapi.model.IRI;
-import org.semanticweb.owlapi.model.OWLAnnotation;
-import org.semanticweb.owlapi.model.OWLClassExpression;
-import org.semanticweb.owlapi.model.OWLOntology;
+import org.apache.commons.lang3.StringUtils;
+import org.semanticweb.owlapi.model.*;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -33,7 +32,7 @@ public interface OWLElementProcessor {
                 classExpression.asDisjunctSet().forEach(unionExpression -> extractOWLClassFromExpression(unionExpression, listOfClassIRIs));
                 break;
             default:
-                // do nothing if the expression type is unknown or not supported
+                // do nothing if the OWL class expression type is unknown or not supported
                 break;
         }
     }
@@ -44,38 +43,60 @@ public interface OWLElementProcessor {
         schemaElement.setNamespace(owlElementIRI.getNamespace());
     }
 
-    default void setAnnotations(@Nonnull Stream<OWLAnnotation> annotations, @Nonnull AnnotationElement target) {
+    default void setAnnotations(@Nonnull Stream<OWLAnnotation> annotations, @Nonnull SchemaElement target) {
         annotations
                 .filter(Objects::nonNull)
                 .filter(annotation -> annotation.getProperty() != null && annotation.getValue() != null)
                 .forEach(annotation -> {
-                    String key = annotation.getProperty().toStringID();
-                    String value = annotation.getValue().toString();
-                    if (annotation.getValue().asLiteral().isPresent()) {
-                        value = annotation.getValue().asLiteral().get().getLiteral();
+                    // process rdfs:label
+                    if (annotation.getProperty().isLabel()) {
+                        AnnotationInfo annotationInfo = createAnnotationLiteralDTO(annotation);
+                        if (annotationInfo != null) {
+                            target.addLabel(annotationInfo.getKey(), annotationInfo.getValue());
+                        }
                     }
-                    target.getAnnotations().add(new AnnotationEntry(key, value));
+                    // process rdfs:comment
+                    if (annotation.getProperty().isComment()) {
+                        AnnotationInfo annotationInfo = createAnnotationLiteralDTO(annotation);
+                        if (annotationInfo != null) {
+                            target.addComment(annotationInfo.getKey(), annotationInfo.getValue());
+                        }
+                    }
+                    // process orderIndex and instanceCount for SchemaClass
+                    if (target instanceof SchemaClass) {
+                        if (SchemaConstants.ANNOTATION_ORDER_INDEX.equalsIgnoreCase(annotation.getProperty().getIRI().getIRIString())) {
+                            ((SchemaClass) target).setOrderIndex(extractAnnotationLongValue(annotation));
+                        } else if (SchemaConstants.ANNOTATION_INSTANCE_COUNT.equalsIgnoreCase(annotation.getProperty().getIRI().getIRIString())) {
+                            ((SchemaClass) target).setInstanceCount(extractAnnotationLongValue(annotation));
+                        }
+                    }
                 });
     }
 
     @Nullable
-    default AnnotationEntry findAnnotation(@Nonnull List<AnnotationEntry> annotations, @Nonnull String annotationKey) {
-        return annotations.stream()
-                .filter(entry -> annotationKey.equalsIgnoreCase(entry.getKey()))
-                .findFirst().orElse(null);
+    default AnnotationInfo createAnnotationLiteralDTO(@Nonnull OWLAnnotation annotation) {
+        if (annotation.getValue() instanceof OWLLiteral) {
+            OWLLiteral literal = (OWLLiteral) annotation.getValue();
+            String lang = StringUtils.isNotEmpty(literal.getLang()) ? literal.getLang() : "";
+            if (StringUtils.isNotEmpty(literal.getLiteral())) {
+                return new AnnotationInfo(lang, literal.getLiteral());
+            }
+        }
+        return null;
     }
 
     @Nullable
-    default Long extractAnnotationLongValue(@Nullable AnnotationEntry annotationEntry) {
-        if (annotationEntry == null || annotationEntry.getValue() == null) {
+    default Long extractAnnotationLongValue(@Nonnull OWLAnnotation annotation) {
+        if (annotation.getValue() == null || !(annotation.getValue() instanceof OWLLiteral)) {
             return null;
         }
         Long longValue = null;
         try {
-            longValue = Long.valueOf(annotationEntry.getValue());
+            longValue = Long.valueOf(((OWLLiteral) annotation.getValue()).getLiteral());
         } catch (NumberFormatException e) {
-           // do nothing
+            // do nothing
         }
         return longValue;
     }
+
 }

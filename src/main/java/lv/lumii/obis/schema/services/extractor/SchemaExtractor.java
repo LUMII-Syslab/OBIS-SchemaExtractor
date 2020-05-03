@@ -377,9 +377,11 @@ public abstract class SchemaExtractor {
 			if(THING_NAME.equals(currentClass.getLocalName()) || currentClass.getSuperClasses().isEmpty()){
 				continue;
 			}
-			SchemaClass superClass = findClass(classes, currentClass.getSuperClasses().get(0));
-			if(THING_NAME.equals(superClass.getLocalName())){
-				continue;
+			if(currentClass.getSuperClasses().size() == 1) {
+				SchemaClass superClass = findClass(classes, currentClass.getSuperClasses().stream().findFirst().orElse(null));
+				if(THING_NAME.equals(superClass.getLocalName())){
+					continue;
+				}
 			}
 
 			// 2. one of the neighbors is THING, so no need to perform additional validation

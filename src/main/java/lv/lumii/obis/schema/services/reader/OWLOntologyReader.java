@@ -26,8 +26,6 @@ public class OWLOntologyReader {
     @Autowired @Setter
     private OWLDataTypePropertyProcessor dataTypePropertyProcessor;
     @Autowired @Setter
-    private OWLAnnotationPropertyProcessor annotationPropertyProcessor;
-    @Autowired @Setter
     private OWLObjectTypePropertyProcessor objectTypePropertyProcessor;
     @Autowired @Setter
     private OWLInversePropertyProcessor inversePropertyProcessor;
@@ -65,7 +63,6 @@ public class OWLOntologyReader {
         ontologyProcessor.process(inputOntology, schema, processingData);
         classProcessor.process(inputOntology, schema, processingData);
         dataTypePropertyProcessor.process(inputOntology, schema, processingData);
-        annotationPropertyProcessor.process(inputOntology, schema, processingData);
         objectTypePropertyProcessor.process(inputOntology, schema, processingData);
         inversePropertyProcessor.process(inputOntology, schema, processingData);
         prefixesProcessor.process(inputOntology, schema, processingData);

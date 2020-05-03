@@ -8,7 +8,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 @Setter @Getter
-public class Schema extends AnnotationElement {
+public class Schema {
 	
 	@JsonProperty("SchemaName")
 	private String name;
