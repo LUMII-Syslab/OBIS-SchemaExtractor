@@ -6,6 +6,7 @@ public class SchemaEnhancerQuery {
     public static final String FIND_DATA_TYPE_PROPERTY_DOMAINS = "SELECT ?domainClass WHERE { ?x <property> ?value. ?x a ?domainClass. }";
     public static final String FIND_OBJECT_TYPE_PROPERTY_DOMAINS = "SELECT ?domainClass WHERE { ?x <property> ?value. ?x a ?domainClass. ?value a <rangeClass>. }";
     public static final String FIND_OBJECT_TYPE_PROPERTY_RANGES = "SELECT ?rangeClass WHERE { ?x <property> ?value. ?x a <domainClass>. ?value a ?rangeClass. }";
+    public static final String FIND_OBJECT_TYPE_PROPERTY_DOMAINS_RANGES = "SELECT ?domainClass ?rangeClass WHERE { ?x <property> ?value. ?x a ?domainClass. ?value a ?rangeClass. }";
 
     public static final String QUERY_BINDING_NAME_DOMAIN_CLASS = "domainClass";
     public static final String QUERY_BINDING_NAME_RANGE_CLASS = "rangeClass";

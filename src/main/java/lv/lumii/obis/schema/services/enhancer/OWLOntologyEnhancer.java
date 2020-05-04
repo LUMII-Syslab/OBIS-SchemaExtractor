@@ -124,7 +124,33 @@ public class OWLOntologyEnhancer {
     }
 
     private void updateObjectTypePropertyDomainRangePairs(@Nonnull Schema inputSchema, @Nonnull final SparqlEndpointConfig endpointConfig) {
-
+        inputSchema.getAssociations().stream()
+                .filter(schemaRole -> noActualDomainRangePair(schemaRole.getClassPairs()))
+                .forEach(schemaRole -> {
+                    String query = SchemaEnhancerQuery.FIND_OBJECT_TYPE_PROPERTY_DOMAINS_RANGES;
+                    query = query.replace(SchemaEnhancerQuery.QUERY_BINDING_NAME_PROPERTY, schemaRole.getFullName());
+                    List<QueryResult> queryResults = sparqlEndpointProcessor.read(endpointConfig, "FIND_OBJECT_TYPE_PROPERTY_DOMAINS_RANGES", query);
+                    if (!queryResults.isEmpty()) {
+                        Set<String> newDomains = getDomainsFromQueryResults(queryResults);
+                        newDomains = getQualifiedDomains(newDomains, inputSchema);
+                        newDomains = getCleanedDomains(newDomains, inputSchema);
+                        Set<String> newRanges = getRangesFromQueryResults(queryResults);
+                        newRanges = getQualifiedDomains(newRanges, inputSchema);
+                        newRanges = getCleanedDomains(newRanges, inputSchema);
+                        if (!newDomains.isEmpty() && !newRanges.isEmpty()) {
+                            schemaRole.getClassPairs().clear();
+                            for (String newDomain : newDomains) {
+                                for (String newRange : newRanges) {
+                                    if (hasQueryResultsDomainAndRange(queryResults, newDomain, newRange)) {
+                                        schemaRole.getClassPairs().add(new ClassPair(newDomain, newRange));
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        schemaRole.setIsAbstract(true);
+                    }
+                });
     }
 
     private Set<String> getDomainsFromQueryResults(@Nonnull List<QueryResult> queryResults) {
@@ -139,6 +165,13 @@ public class OWLOntologyEnhancer {
                 .map(queryResult -> queryResult.get(SchemaEnhancerQuery.QUERY_BINDING_NAME_RANGE_CLASS))
                 .filter(className -> StringUtils.isNotEmpty(className) && !SchemaConstants.THING_URI.equalsIgnoreCase(className))
                 .collect(Collectors.toSet());
+    }
+
+    private boolean hasQueryResultsDomainAndRange(@Nonnull List<QueryResult> queryResults, @Nonnull String domain, @Nonnull String range) {
+        return queryResults.stream()
+                .anyMatch(queryResult ->
+                        domain.equalsIgnoreCase(queryResult.get(SchemaEnhancerQuery.QUERY_BINDING_NAME_DOMAIN_CLASS))
+                                && range.equalsIgnoreCase(queryResult.get(SchemaEnhancerQuery.QUERY_BINDING_NAME_RANGE_CLASS)));
     }
 
     private Set<String> getQualifiedDomains(@Nonnull Set<String> newDomains, @Nonnull Schema inputSchema) {
