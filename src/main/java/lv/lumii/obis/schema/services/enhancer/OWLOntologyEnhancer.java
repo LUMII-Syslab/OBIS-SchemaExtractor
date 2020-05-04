@@ -2,6 +2,7 @@ package lv.lumii.obis.schema.services.enhancer;
 
 import lombok.Setter;
 import lv.lumii.obis.schema.constants.SchemaConstants;
+import lv.lumii.obis.schema.model.ClassPair;
 import lv.lumii.obis.schema.model.Schema;
 import lv.lumii.obis.schema.model.SchemaClass;
 import lv.lumii.obis.schema.services.SchemaUtil;
@@ -75,13 +76,27 @@ public class OWLOntologyEnhancer {
     }
 
     private void updateObjectTypePropertyDomainRangePairs(@Nonnull Schema inputSchema, @Nonnull final SparqlEndpointConfig endpointConfig) {
-        inputSchema.getAssociations().forEach(schemaRole -> {
-
-        });
-    }
-
-    private boolean noActualClassAssignment(@Nonnull Set<String> classes) {
-        return classes.isEmpty() || (classes.size() == 1 && classes.contains(SchemaConstants.THING_URI));
+        // process associations with missing domains
+        inputSchema.getAssociations().stream()
+                .filter(schemaRole -> noActualDomainInClassPair(schemaRole.getClassPairs()))
+                .forEach(schemaRole -> {
+                    String targetClass = schemaRole.getClassPairs().get(0).getTargetClass();
+                    String query = SchemaEnhancerQuery.FIND_OBJECT_TYPE_PROPERTY_DOMAINS;
+                    query = query.replace(SchemaEnhancerQuery.QUERY_BINDING_NAME_PROPERTY, schemaRole.getFullName());
+                    query = query.replace(SchemaEnhancerQuery.QUERY_BINDING_NAME_RANGE_CLASS, targetClass);
+                    List<QueryResult> queryResults = sparqlEndpointProcessor.read(endpointConfig, "FIND_OBJECT_TYPE_PROPERTY_DOMAINS", query);
+                    if (!queryResults.isEmpty()) {
+                        Set<String> newDomains = getDomainsFromQueryResults(queryResults);
+                        newDomains = getQualifiedDomains(newDomains, inputSchema);
+                        newDomains = getCleanedDomains(newDomains, inputSchema);
+                        if (!newDomains.isEmpty()) {
+                            schemaRole.getClassPairs().clear();
+                            newDomains.forEach(newDomain -> schemaRole.getClassPairs().add(new ClassPair(newDomain, targetClass)));
+                        }
+                    } else {
+                        schemaRole.setIsAbstract(true);
+                    }
+                });
     }
 
     private Set<String> getDomainsFromQueryResults(@Nonnull List<QueryResult> queryResults) {
@@ -131,6 +146,16 @@ public class OWLOntologyEnhancer {
         }
         // if at least one potential domain equivalent class is represented in potential domain list, mark it as qualified
         return equivalentClasses.stream().anyMatch(allPotentialDomains::contains);
+    }
+
+    private boolean noActualClassAssignment(@Nonnull Set<String> classes) {
+        return classes.isEmpty() || (classes.size() == 1 && classes.contains(SchemaConstants.THING_URI));
+    }
+
+    private boolean noActualDomainInClassPair(@Nonnull List<ClassPair> classPairs) {
+        return classPairs.size() == 1
+                && (StringUtils.isEmpty(classPairs.get(0).getSourceClass()) || SchemaConstants.THING_URI.equalsIgnoreCase(classPairs.get(0).getSourceClass()))
+                && (StringUtils.isNotEmpty(classPairs.get(0).getTargetClass()) && !SchemaConstants.THING_URI.equalsIgnoreCase(classPairs.get(0).getTargetClass()));
     }
 
 }
