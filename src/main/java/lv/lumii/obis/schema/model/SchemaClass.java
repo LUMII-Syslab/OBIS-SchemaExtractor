@@ -13,9 +13,10 @@ public class SchemaClass extends SchemaElement {
 	
 	@JsonProperty("SuperClasses")
 	private Set<String> superClasses;
-
 	@JsonIgnore
 	private Set<String> subClasses;
+	@JsonProperty("EquivalentClasses")
+	private Set<String> equivalentClasses;
 
 	private Long instanceCount;
 	private Long orderIndex;
@@ -32,5 +33,12 @@ public class SchemaClass extends SchemaElement {
 			subClasses = new HashSet<>();
 		}
 		return subClasses;
+	}
+
+	public Set<String> getEquivalentClasses() {
+		if(equivalentClasses == null){
+			equivalentClasses = new HashSet<>();
+		}
+		return equivalentClasses;
 	}
 }

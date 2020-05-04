@@ -90,10 +90,8 @@ public class OWLClassProcessor implements OWLElementProcessor {
 
     private void addEquivalentClass(@Nonnull IRI equivalentClassIRI, @Nonnull SchemaClass currentClass, @Nonnull Map<String, SchemaClass> classesMap) {
         SchemaClass equivalentClass = getOrCreateSchemaClass(equivalentClassIRI, classesMap);
-        equivalentClass.getSuperClasses().add(currentClass.getFullName());
-        equivalentClass.getSubClasses().add(currentClass.getFullName());
-        currentClass.getSuperClasses().add(equivalentClass.getFullName());
-        currentClass.getSubClasses().add(equivalentClass.getFullName());
+        equivalentClass.getEquivalentClasses().add(currentClass.getFullName());
+        currentClass.getEquivalentClasses().add(equivalentClass.getFullName());
     }
 
     private void extractCardinalityAxioms(@Nonnull OWLOntology ontology, @Nonnull OWLClass clazz, @Nonnull Map<String, List<SchemaCardinalityInfo>> cardinalityMap) {
