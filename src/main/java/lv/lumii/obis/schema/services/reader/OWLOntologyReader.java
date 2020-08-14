@@ -4,7 +4,6 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import lv.lumii.obis.schema.model.Schema;
 import lv.lumii.obis.schema.model.SchemaParameter;
-import lv.lumii.obis.schema.services.extractor.dto.SchemaExtractorRequest;
 import lv.lumii.obis.schema.services.reader.dto.OWLOntologyReaderRequest;
 import lv.lumii.obis.schema.services.reader.dto.SchemaProcessingData;
 import org.semanticweb.owlapi.apibinding.OWLManager;
@@ -54,11 +53,11 @@ public class OWLOntologyReader {
             log.error("Empty ontology object or no defined classes");
             return new Schema();
         }
-        return processOWLOntology(ontology, manager, readerRequest);
+        return processOWLOntology(ontology, readerRequest);
     }
 
     @Nonnull
-    private Schema processOWLOntology(@Nonnull OWLOntology inputOntology, @Nonnull OWLOntologyManager manager, @Nonnull OWLOntologyReaderRequest readerRequest) {
+    private Schema processOWLOntology(@Nonnull OWLOntology inputOntology, @Nonnull OWLOntologyReaderRequest readerRequest) {
 
         // initialize result schema
         IRI ontologyIRI = inputOntology.getOntologyID().getOntologyIRI().orElse(null);

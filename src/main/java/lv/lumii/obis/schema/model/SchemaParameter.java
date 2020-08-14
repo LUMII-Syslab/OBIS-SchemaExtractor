@@ -17,8 +17,6 @@ public class SchemaParameter {
     private String name;
     private String value;
 
-    public SchemaParameter() {}
-
     public SchemaParameter(String name, String value) {
         this.name = name;
         this.value = value;

@@ -11,7 +11,6 @@ import lv.lumii.obis.schema.services.common.QueryResult;
 import lv.lumii.obis.schema.services.common.SparqlEndpointConfig;
 import lv.lumii.obis.schema.services.common.SparqlEndpointProcessor;
 import lv.lumii.obis.schema.services.enhancer.dto.OWLOntologyEnhancerRequest;
-import lv.lumii.obis.schema.services.reader.dto.OWLOntologyReaderRequest;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
