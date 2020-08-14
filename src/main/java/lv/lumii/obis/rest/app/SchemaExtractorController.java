@@ -155,6 +155,7 @@ public class SchemaExtractorController {
             log.info(String.format(SCHEMA_ENHANCE_MESSAGE_START, correlationId, enhancerRequest.getEndpointUrl()));
             startTime = LocalDateTime.now();
             enhancerRequest.setCorrelationId(correlationId);
+            enhancerRequest.setExcludedNamespaces(readerRequest.getExcludedNamespaces());
             schema = owlOntologyEnhancer.enhanceSchema(schema, enhancerRequest);
             endTime = LocalDateTime.now();
             log.info(String.format(SCHEMA_ENHANCE_MESSAGE_END, correlationId, enhancerRequest.getEndpointUrl(), calculateExecutionTime(startTime, endTime)));

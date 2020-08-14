@@ -37,7 +37,6 @@ public class OWLOntologyEnhancer {
         updateObjectTypePropertyDomains(inputSchema, endpointConfig);
         updateObjectTypePropertyRanges(inputSchema, endpointConfig);
         updateObjectTypePropertyDomainRangePairs(inputSchema, endpointConfig);
-        addNewPropertiesFromEndpoint(inputSchema, allProperties, endpointConfig);
 
         buildEnhancerProperties(enhancerRequest, inputSchema);
 
@@ -47,9 +46,9 @@ public class OWLOntologyEnhancer {
     @Nonnull
     private Map<String, Long> getAllProperties(@Nonnull final SparqlEndpointConfig endpointConfig, @Nonnull OWLOntologyEnhancerRequest enhancerRequest) {
         String query = SchemaEnhancerQueries.FIND_ALL_PROPERTIES_WITH_INSTANCE_COUNT;
-        if (enhancerRequest.getLimitToDefineAbstractProperty() != null) {
+        if (enhancerRequest.getAbstractPropertyThreshold() != null) {
             query = SchemaEnhancerQueries.FIND_ALL_PROPERTIES_WITH_INSTANCE_COUNT_WITH_LIMIT;
-            query = query.replace(SchemaEnhancerQueries.QUERY_BINDING_NAME_INSTANCES_COUNT_MIN, enhancerRequest.getLimitToDefineAbstractProperty().toString());
+            query = query.replace(SchemaEnhancerQueries.QUERY_BINDING_NAME_INSTANCES_COUNT_MIN, enhancerRequest.getAbstractPropertyThreshold().toString());
         }
         List<QueryResult> queryResults = sparqlEndpointProcessor.read(endpointConfig, "FIND_ALL_PROPERTIES_WITH_INSTANCE_COUNT", query);
         Map<String, Long> allProperties = new HashMap<>();
@@ -184,17 +183,6 @@ public class OWLOntologyEnhancer {
                         schemaRole.setIsAbstract(true);
                     }
                 });
-    }
-
-    private void addNewPropertiesFromEndpoint(@Nonnull Schema inputSchema, @Nonnull final Map<String, Long> allProperties, @Nonnull final SparqlEndpointConfig endpointConfig) {
-        List<String> allOntologyProperties = inputSchema.getAttributes().stream().map(SchemaAttribute::getFullName).collect(Collectors.toList());
-        allOntologyProperties.addAll(inputSchema.getAssociations().stream().map(SchemaRole::getFullName).collect(Collectors.toList()));
-
-        allProperties.keySet().forEach(endpointProperty -> {
-            if (!allOntologyProperties.contains(endpointProperty)) {
-                
-            }
-        });
     }
 
     private Set<String> getDomainsFromQueryResults(@Nonnull List<QueryResult> queryResults) {

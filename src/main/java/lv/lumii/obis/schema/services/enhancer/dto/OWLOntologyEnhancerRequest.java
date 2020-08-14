@@ -4,6 +4,8 @@ import io.swagger.annotations.ApiParam;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.List;
+
 @Setter @Getter
 public class OWLOntologyEnhancerRequest {
 
@@ -13,10 +15,13 @@ public class OWLOntologyEnhancerRequest {
     @ApiParam(access = "4", value = "Named Graph (optional). If no graph name provided, the search will involve all graphs from the endpoint", allowEmptyValue = true)
     private String graphName;
 
-    @ApiParam(access = "5", value = "Maximal count of instances to define abstract property ", defaultValue = "10", allowEmptyValue = true)
-    private Integer limitToDefineAbstractProperty;
+    @ApiParam(access = "5", value = "Threshold to define abstract property (any property with instance count < threshold will be considered as abstract)", defaultValue = "10", allowEmptyValue = true)
+    private Integer abstractPropertyThreshold;
 
     @ApiParam(hidden = true)
     private String correlationId;
+
+    @ApiParam(hidden = true)
+    private List<String> excludedNamespaces;
 
 }
