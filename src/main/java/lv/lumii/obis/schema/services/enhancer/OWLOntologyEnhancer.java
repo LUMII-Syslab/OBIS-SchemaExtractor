@@ -17,6 +17,9 @@ import javax.annotation.Nonnull;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static lv.lumii.obis.schema.constants.SchemaConstants.DEFAULT_MAX_CARDINALITY;
+import static lv.lumii.obis.schema.constants.SchemaConstants.DEFAULT_MIN_CARDINALITY;
+
 @Service
 public class OWLOntologyEnhancer {
 
@@ -37,6 +40,11 @@ public class OWLOntologyEnhancer {
         updateObjectTypePropertyDomains(inputSchema, endpointConfig);
         updateObjectTypePropertyRanges(inputSchema, endpointConfig);
         updateObjectTypePropertyDomainRangePairs(inputSchema, endpointConfig);
+
+        if (BooleanUtils.isTrue(enhancerRequest.getCalculateCardinalities())) {
+            processCardinalities(inputSchema.getAttributes(), endpointConfig);
+            processCardinalities(inputSchema.getAssociations(), endpointConfig);
+        }
 
         buildEnhancerProperties(enhancerRequest, inputSchema);
 
@@ -64,7 +72,6 @@ public class OWLOntologyEnhancer {
         properties.forEach(property -> {
             if (!allProperties.containsKey(property.getFullName())) {
                 property.setIsAbstract(Boolean.TRUE);
-                property.setInstanceCount(0L);
             } else {
                 property.setIsAbstract(Boolean.FALSE);
                 property.setInstanceCount(allProperties.get(property.getFullName()));
@@ -270,10 +277,63 @@ public class OWLOntologyEnhancer {
                 && (StringUtils.isEmpty(classPairs.get(0).getSourceClass()) || SchemaConstants.THING_URI.equalsIgnoreCase(classPairs.get(0).getSourceClass()));
     }
 
+    private void processCardinalities(@Nonnull List<? extends SchemaProperty> properties, @Nonnull final SparqlEndpointConfig endpointConfig) {
+        properties.forEach(property -> {
+            setMaxCardinality(property, endpointConfig);
+            setMinCardinality(property, endpointConfig);
+        });
+    }
+
+    private void setMaxCardinality(@Nonnull SchemaProperty property, @Nonnull final SparqlEndpointConfig endpointConfig) {
+        if (property.getMaxCardinality() != null || BooleanUtils.isTrue(property.getIsAbstract())) {
+            return;
+        }
+        String query = SchemaEnhancerQueries.FIND_PROPERTY_MAX_CARDINALITY.replace(SchemaEnhancerQueries.QUERY_BINDING_NAME_PROPERTY, property.getFullName());
+        List<QueryResult> queryResults = sparqlEndpointProcessor.read(endpointConfig, "FIND_PROPERTY_MAX_CARDINALITY", query);
+        if (queryResults.isEmpty()) {
+            property.setMaxCardinality(1);
+            return;
+        }
+        property.setMaxCardinality(DEFAULT_MAX_CARDINALITY);
+    }
+
+    private void setMinCardinality(@Nonnull SchemaProperty property, @Nonnull final SparqlEndpointConfig endpointConfig) {
+        if (property.getMinCardinality() != null || BooleanUtils.isTrue(property.getIsAbstract())) {
+            return;
+        }
+        Integer minCardinality = 1;
+        List<QueryResult> queryResults;
+        Set<String> uniqueDomains;
+        if (property instanceof SchemaRole) {
+            uniqueDomains = ((SchemaRole) property).getClassPairs().stream().map(ClassPair::getSourceClass).filter(Objects::nonNull).collect(Collectors.toSet());
+        } else {
+            uniqueDomains = ((SchemaAttribute) property).getSourceClasses().stream().filter(Objects::nonNull).collect(Collectors.toSet());
+        }
+        for (String domain : uniqueDomains) {
+            if (DEFAULT_MIN_CARDINALITY.equals(minCardinality)) {
+                break;
+            }
+            String query = SchemaEnhancerQueries.FIND_PROPERTY_MIN_CARDINALITY.
+                    replace(SchemaEnhancerQueries.QUERY_BINDING_NAME_PROPERTY, property.getFullName()).
+                    replace(SchemaEnhancerQueries.QUERY_BINDING_NAME_DOMAIN_CLASS, domain);
+            queryResults = sparqlEndpointProcessor.read(endpointConfig, "FIND_PROPERTY_MIN_CARDINALITY", query);
+            if (!queryResults.isEmpty()) {
+                minCardinality = DEFAULT_MIN_CARDINALITY;
+            }
+        }
+        property.setMinCardinality(minCardinality);
+    }
+
     private void buildEnhancerProperties(@Nonnull OWLOntologyEnhancerRequest request, @Nonnull Schema schema) {
         schema.getParameters().add(
                 new SchemaParameter(SchemaParameter.PARAM_NAME_ENDPOINT, request.getEndpointUrl()));
         schema.getParameters().add(
                 new SchemaParameter(SchemaParameter.PARAM_NAME_GRAPH_NAME, request.getGraphName()));
+        if (request.getAbstractPropertyThreshold() != null) {
+            schema.getParameters().add(
+                    new SchemaParameter(SchemaParameter.PARAM_NAME_ABSTRACT_PROPERTY_THRESHOLD, request.getAbstractPropertyThreshold().toString()));
+        }
+        schema.getParameters().add(
+                new SchemaParameter(SchemaParameter.PARAM_NAME_CALCULATE_CARDINALITIES, request.getCalculateCardinalities() != null ? request.getCalculateCardinalities().toString() : "false"));
     }
 }

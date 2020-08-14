@@ -9,6 +9,8 @@ public class SchemaEnhancerQueries {
     public static final String FIND_OBJECT_TYPE_PROPERTY_DOMAINS_RANGES = "SELECT ?domainClass ?rangeClass WHERE { ?x <property> ?value. ?x a ?domainClass. ?value a ?rangeClass. }";
     public static final String FIND_ALL_PROPERTIES_WITH_INSTANCE_COUNT = "SELECT DISTINCT ?property (COUNT(?x) as ?instances) WHERE {?x ?property []} GROUP BY ?property";
     public static final String FIND_ALL_PROPERTIES_WITH_INSTANCE_COUNT_WITH_LIMIT = "SELECT ?property ?instances WHERE { {SELECT DISTINCT ?property (COUNT(?x) as ?instances) WHERE {?x ?property []} GROUP BY ?property } FILTER (?instances >= minInstances) }";
+    public static final String FIND_PROPERTY_MAX_CARDINALITY = "SELECT ?x WHERE { ?x <property> ?value1. ?x <property> ?value2. FILTER (?value1 != ?value2) } LIMIT 1";
+    public static final String FIND_PROPERTY_MIN_CARDINALITY = "SELECT ?x WHERE { ?x a <domainClass>. OPTIONAL { ?x ?prop ?value. FILTER (?prop = <property>) } FILTER (!BOUND(?prop)) } LIMIT 1";
 
     public static final String QUERY_BINDING_NAME_DOMAIN_CLASS = "domainClass";
     public static final String QUERY_BINDING_NAME_RANGE_CLASS = "rangeClass";

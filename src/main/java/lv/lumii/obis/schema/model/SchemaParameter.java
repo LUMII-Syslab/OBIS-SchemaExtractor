@@ -13,6 +13,8 @@ public class SchemaParameter {
     public static final String PARAM_NAME_EXCLUDE_META_DOMAIN_CLASSES = "excludeMetaDomainClasses";
     public static final String PARAM_NAME_EXCLUDE_PROPERTIES_WITHOUT_CLASSES = "excludePropertiesWithoutClasses";
     public static final String PARAM_NAME_EXCLUDED_NAMESPACES = "excludedNamespaces";
+    public static final String PARAM_NAME_ABSTRACT_PROPERTY_THRESHOLD = "abstractPropertyThreshold";
+    public static final String PARAM_NAME_CALCULATE_CARDINALITIES = "calculateCardinalities";
 
     private String name;
     private String value;
