@@ -5,11 +5,13 @@ import lv.lumii.obis.schema.constants.SchemaConstants;
 import lv.lumii.obis.schema.model.ClassPair;
 import lv.lumii.obis.schema.model.Schema;
 import lv.lumii.obis.schema.model.SchemaClass;
+import lv.lumii.obis.schema.model.SchemaParameter;
 import lv.lumii.obis.schema.services.SchemaUtil;
 import lv.lumii.obis.schema.services.common.QueryResult;
 import lv.lumii.obis.schema.services.common.SparqlEndpointConfig;
 import lv.lumii.obis.schema.services.common.SparqlEndpointProcessor;
 import lv.lumii.obis.schema.services.enhancer.dto.OWLOntologyEnhancerRequest;
+import lv.lumii.obis.schema.services.reader.dto.OWLOntologyReaderRequest;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -36,6 +38,8 @@ public class OWLOntologyEnhancer {
         updateObjectTypePropertyDomains(inputSchema, endpointConfig);
         updateObjectTypePropertyRanges(inputSchema, endpointConfig);
         updateObjectTypePropertyDomainRangePairs(inputSchema, endpointConfig);
+
+        buildEnhancerProperties(enhancerRequest, inputSchema);
 
         return inputSchema;
     }
@@ -238,4 +242,10 @@ public class OWLOntologyEnhancer {
                 && (StringUtils.isEmpty(classPairs.get(0).getSourceClass()) || SchemaConstants.THING_URI.equalsIgnoreCase(classPairs.get(0).getSourceClass()));
     }
 
+    protected void buildEnhancerProperties(@Nonnull OWLOntologyEnhancerRequest request, @Nonnull Schema schema){
+        schema.getParameters().add(
+                new SchemaParameter(SchemaParameter.PARAM_NAME_ENDPOINT, request.getEndpointUrl()));
+        schema.getParameters().add(
+                new SchemaParameter(SchemaParameter.PARAM_NAME_GRAPH_NAME, request.getGraphName()));
+    }
 }

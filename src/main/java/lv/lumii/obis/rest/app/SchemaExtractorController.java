@@ -6,6 +6,7 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import lv.lumii.obis.schema.services.enhancer.OWLOntologyEnhancer;
 import lv.lumii.obis.schema.services.enhancer.dto.OWLOntologyEnhancerRequest;
+import lv.lumii.obis.schema.services.reader.dto.OWLOntologyReaderRequest;
 import lv.lumii.obis.schema.services.extractor.SchemaExtractorFewQueries;
 import lv.lumii.obis.schema.services.extractor.SchemaExtractorManyQueries;
 import lv.lumii.obis.schema.model.Schema;
@@ -129,7 +130,8 @@ public class SchemaExtractorController {
     )
     @SuppressWarnings("unused")
     public String buildFullSchemaFromOwl(@RequestParam("file") @ApiParam(access = "1", value = "Upload OWL file", required = true) MultipartFile file,
-                                         @Validated @ModelAttribute @NotNull OWLOntologyEnhancerRequest request) {
+                                         @Validated @ModelAttribute @NotNull OWLOntologyReaderRequest readerRequest,
+                                         @Validated @ModelAttribute @NotNull OWLOntologyEnhancerRequest enhancerRequest) {
         String correlationId = generateCorrelationId();
 
         // READ OWL ontology file and convert to Schema JSON format
@@ -144,18 +146,18 @@ public class SchemaExtractorController {
             throw new RuntimeException(error, e);
         }
 
-        Schema schema = owlOntologyReader.readOWLOntology(inputStream);
+        Schema schema = owlOntologyReader.readOWLOntology(inputStream, readerRequest);
         LocalDateTime endTime = LocalDateTime.now();
         log.info(String.format(SCHEMA_READ_FILE_MESSAGE_END, correlationId, file.getOriginalFilename(), calculateExecutionTime(startTime, endTime)));
 
         // Enhance Schema JSON with data from SPARQL endpoint
-        if (StringUtils.isNotEmpty(request.getEndpointUrl())) {
-            log.info(String.format(SCHEMA_ENHANCE_MESSAGE_START, correlationId, request.getEndpointUrl()));
+        if (StringUtils.isNotEmpty(enhancerRequest.getEndpointUrl())) {
+            log.info(String.format(SCHEMA_ENHANCE_MESSAGE_START, correlationId, enhancerRequest.getEndpointUrl()));
             startTime = LocalDateTime.now();
-            request.setCorrelationId(correlationId);
-            schema = owlOntologyEnhancer.enhanceSchema(schema, request);
+            enhancerRequest.setCorrelationId(correlationId);
+            schema = owlOntologyEnhancer.enhanceSchema(schema, enhancerRequest);
             endTime = LocalDateTime.now();
-            log.info(String.format(SCHEMA_ENHANCE_MESSAGE_END, correlationId, request.getEndpointUrl(), calculateExecutionTime(startTime, endTime)));
+            log.info(String.format(SCHEMA_ENHANCE_MESSAGE_END, correlationId, enhancerRequest.getEndpointUrl(), calculateExecutionTime(startTime, endTime)));
         }
 
         return jsonSchemaService.getJsonSchemaString(schema);

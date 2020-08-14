@@ -4,6 +4,7 @@ import lv.lumii.obis.schema.constants.SchemaConstants;
 import lv.lumii.obis.schema.model.Schema;
 import lv.lumii.obis.schema.model.SchemaClass;
 import lv.lumii.obis.schema.model.SchemaElement;
+import lv.lumii.obis.schema.services.reader.dto.OWLOntologyReaderRequest;
 import lv.lumii.obis.schema.services.reader.dto.AnnotationInfo;
 import lv.lumii.obis.schema.services.reader.dto.SchemaProcessingData;
 import org.apache.commons.lang3.StringUtils;
@@ -17,7 +18,8 @@ import java.util.stream.Stream;
 
 public interface OWLElementProcessor {
 
-    void process(@Nonnull OWLOntology inputOntology, @Nonnull Schema resultSchema, @Nonnull SchemaProcessingData processingData);
+    void process(@Nonnull OWLOntology inputOntology, @Nonnull Schema resultSchema, @Nonnull SchemaProcessingData processingData,
+                 @Nonnull OWLOntologyReaderRequest readerRequest);
 
 
     default void extractOWLClassFromExpression(@Nonnull OWLClassExpression classExpression, @Nonnull List<IRI> listOfClassIRIs) {
@@ -99,4 +101,7 @@ public interface OWLElementProcessor {
         return longValue;
     }
 
+    default boolean isExcludedResource(@Nullable IRI iri, @Nullable List<String> excludedResources) {
+        return excludedResources != null && iri != null && excludedResources.contains(iri.getNamespace());
+    }
 }

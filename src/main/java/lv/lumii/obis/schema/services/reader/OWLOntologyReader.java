@@ -3,6 +3,9 @@ package lv.lumii.obis.schema.services.reader;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import lv.lumii.obis.schema.model.Schema;
+import lv.lumii.obis.schema.model.SchemaParameter;
+import lv.lumii.obis.schema.services.extractor.dto.SchemaExtractorRequest;
+import lv.lumii.obis.schema.services.reader.dto.OWLOntologyReaderRequest;
 import lv.lumii.obis.schema.services.reader.dto.SchemaProcessingData;
 import org.semanticweb.owlapi.apibinding.OWLManager;
 import org.semanticweb.owlapi.model.IRI;
@@ -19,21 +22,27 @@ import java.io.InputStream;
 @Slf4j
 public class OWLOntologyReader {
 
-    @Autowired @Setter
+    @Autowired
+    @Setter
     private OWLOntologyProcessor ontologyProcessor;
-    @Autowired @Setter
+    @Autowired
+    @Setter
     private OWLClassProcessor classProcessor;
-    @Autowired @Setter
+    @Autowired
+    @Setter
     private OWLDataTypePropertyProcessor dataTypePropertyProcessor;
-    @Autowired @Setter
+    @Autowired
+    @Setter
     private OWLObjectTypePropertyProcessor objectTypePropertyProcessor;
-    @Autowired @Setter
+    @Autowired
+    @Setter
     private OWLInversePropertyProcessor inversePropertyProcessor;
-    @Autowired @Setter
+    @Autowired
+    @Setter
     private OWLPrefixesProcessor prefixesProcessor;
 
     @Nonnull
-    public Schema readOWLOntology(@Nonnull InputStream inputStream) {
+    public Schema readOWLOntology(@Nonnull InputStream inputStream, @Nonnull OWLOntologyReaderRequest readerRequest) {
         OWLOntologyManager manager = OWLManager.createOWLOntologyManager();
         OWLOntology ontology = null;
         try {
@@ -45,29 +54,37 @@ public class OWLOntologyReader {
             log.error("Empty ontology object or no defined classes");
             return new Schema();
         }
-        return processOWLOntology(ontology, manager);
+        return processOWLOntology(ontology, manager, readerRequest);
     }
 
     @Nonnull
-    private Schema processOWLOntology(@Nonnull OWLOntology inputOntology, @Nonnull OWLOntologyManager manager) {
+    private Schema processOWLOntology(@Nonnull OWLOntology inputOntology, @Nonnull OWLOntologyManager manager, @Nonnull OWLOntologyReaderRequest readerRequest) {
 
         // initialize result schema
         IRI ontologyIRI = inputOntology.getOntologyID().getOntologyIRI().orElse(null);
         Schema schema = new Schema();
         schema.setName((ontologyIRI != null) ? ontologyIRI.getIRIString() : null);
+        buildReaderProperties(readerRequest, schema);
 
         // initialize intermediate processing data
         SchemaProcessingData processingData = new SchemaProcessingData();
 
         // invoke all OWL processors
-        ontologyProcessor.process(inputOntology, schema, processingData);
-        classProcessor.process(inputOntology, schema, processingData);
-        dataTypePropertyProcessor.process(inputOntology, schema, processingData);
-        objectTypePropertyProcessor.process(inputOntology, schema, processingData);
-        inversePropertyProcessor.process(inputOntology, schema, processingData);
-        prefixesProcessor.process(inputOntology, schema, processingData);
+        ontologyProcessor.process(inputOntology, schema, processingData, readerRequest);
+        classProcessor.process(inputOntology, schema, processingData, readerRequest);
+        dataTypePropertyProcessor.process(inputOntology, schema, processingData, readerRequest);
+        objectTypePropertyProcessor.process(inputOntology, schema, processingData, readerRequest);
+        inversePropertyProcessor.process(inputOntology, schema, processingData, readerRequest);
+        prefixesProcessor.process(inputOntology, schema, processingData, readerRequest);
 
         return schema;
+    }
+
+    protected void buildReaderProperties(@Nonnull OWLOntologyReaderRequest request, @Nonnull Schema schema) {
+        if (request.getExcludedNamespaces() != null && !request.getExcludedNamespaces().isEmpty()) {
+            schema.getParameters().add(
+                    new SchemaParameter(SchemaParameter.PARAM_NAME_EXCLUDED_NAMESPACES, request.getExcludedNamespaces().toString()));
+        }
     }
 
 }

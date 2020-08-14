@@ -2,6 +2,7 @@ package lv.lumii.obis.schema.services.reader;
 
 import lv.lumii.obis.schema.model.Schema;
 import lv.lumii.obis.schema.model.SchemaRole;
+import lv.lumii.obis.schema.services.reader.dto.OWLOntologyReaderRequest;
 import lv.lumii.obis.schema.services.reader.dto.SchemaProcessingData;
 import org.semanticweb.owlapi.model.AxiomType;
 import org.semanticweb.owlapi.model.OWLInverseObjectPropertiesAxiom;
@@ -17,12 +18,14 @@ import java.util.stream.Collectors;
 public class OWLInversePropertyProcessor implements OWLElementProcessor {
 
     @Override
-    public void process(@Nonnull OWLOntology inputOntology, @Nonnull Schema resultSchema, @Nonnull SchemaProcessingData processingData) {
+    public void process(@Nonnull OWLOntology inputOntology, @Nonnull Schema resultSchema, @Nonnull SchemaProcessingData processingData,
+                        @Nonnull OWLOntologyReaderRequest readerRequest) {
         List<OWLInverseObjectPropertiesAxiom> inverseProperties = inputOntology.axioms(AxiomType.INVERSE_OBJECT_PROPERTIES).collect(Collectors.toList());
         for (OWLInverseObjectPropertiesAxiom inverse : inverseProperties) {
             OWLObjectPropertyExpression first = inverse.getFirstProperty();
             OWLObjectPropertyExpression second = inverse.getSecondProperty();
-            if (first == null || first.getNamedProperty() == null || second == null || second.getNamedProperty() == null) {
+            if (first == null || first.getNamedProperty() == null || isExcludedResource(first.getNamedProperty().getIRI(), readerRequest.getExcludedNamespaces())
+                    || second == null || second.getNamedProperty() == null || isExcludedResource(second.getNamedProperty().getIRI(), readerRequest.getExcludedNamespaces())) {
                 continue;
             }
             SchemaRole firstRole = resultSchema.getAssociations().stream()

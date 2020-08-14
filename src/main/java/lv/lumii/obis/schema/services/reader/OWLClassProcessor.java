@@ -3,6 +3,7 @@ package lv.lumii.obis.schema.services.reader;
 import lombok.extern.slf4j.Slf4j;
 import lv.lumii.obis.schema.model.Schema;
 import lv.lumii.obis.schema.model.SchemaClass;
+import lv.lumii.obis.schema.services.reader.dto.OWLOntologyReaderRequest;
 import lv.lumii.obis.schema.services.reader.dto.SchemaCardinalityInfo;
 import lv.lumii.obis.schema.services.reader.dto.SchemaProcessingData;
 import org.semanticweb.owlapi.model.*;
@@ -19,7 +20,8 @@ import java.util.stream.Collectors;
 public class OWLClassProcessor implements OWLElementProcessor {
 
     @Override
-    public void process(@Nonnull OWLOntology inputOntology, @Nonnull Schema resultSchema, @Nonnull SchemaProcessingData processingData) {
+    public void process(@Nonnull OWLOntology inputOntology, @Nonnull Schema resultSchema, @Nonnull SchemaProcessingData processingData,
+                        @Nonnull OWLOntologyReaderRequest readerRequest) {
         List<OWLClass> owlClasses = inputOntology.classesInSignature().collect(Collectors.toList());
         if (owlClasses.isEmpty()) {
             log.info("No OWLCLasses defined in the ontology");
@@ -29,7 +31,7 @@ public class OWLClassProcessor implements OWLElementProcessor {
         Map<String, SchemaClass> classesMap = processingData.getClassesMap();
         Map<String, List<SchemaCardinalityInfo>> cardinalityMap = processingData.getCardinalityMap();
 
-        owlClasses.stream().filter(Objects::nonNull).forEach(clazz -> {
+        owlClasses.stream().filter(c -> c != null && !isExcludedResource(c.getIRI(), readerRequest.getExcludedNamespaces())).forEach(clazz -> {
 
             // initialize current class instance
             final SchemaClass currentClass = getOrCreateSchemaClass(clazz.getIRI(), classesMap);
@@ -38,13 +40,14 @@ public class OWLClassProcessor implements OWLElementProcessor {
             EntitySearcher.getSuperClasses(clazz, inputOntology)
                     .map(this::extractSuperClasses)
                     .flatMap(Collection::stream)
+                    .filter(iri -> iri != null && !isExcludedResource(iri, readerRequest.getExcludedNamespaces()))
                     .collect(Collectors.toList())
                     .forEach(superClassIRI -> addSuperClass(superClassIRI, currentClass, classesMap));
 
             // process equivalent classes
             EntitySearcher.getEquivalentClasses(clazz, inputOntology)
                     .map(this::extractEquivalentClass)
-                    .filter(Objects::nonNull)
+                    .filter(iri -> iri != null && !isExcludedResource(iri, readerRequest.getExcludedNamespaces()))
                     .collect(Collectors.toList())
                     .forEach(equivalentClassIRI -> addEquivalentClass(equivalentClassIRI, currentClass, classesMap));
 

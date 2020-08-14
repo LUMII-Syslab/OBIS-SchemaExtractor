@@ -4,6 +4,7 @@ import lv.lumii.obis.schema.model.ClassPair;
 import lv.lumii.obis.schema.model.Schema;
 import lv.lumii.obis.schema.model.SchemaClass;
 import lv.lumii.obis.schema.model.SchemaRole;
+import lv.lumii.obis.schema.services.reader.dto.OWLOntologyReaderRequest;
 import lv.lumii.obis.schema.services.reader.dto.SchemaProcessingData;
 import org.semanticweb.owlapi.model.*;
 import org.semanticweb.owlapi.search.EntitySearcher;
@@ -19,10 +20,13 @@ import java.util.stream.Collectors;
 public class OWLObjectTypePropertyProcessor extends OWLPropertyProcessor {
 
     @Override
-    public void process(@Nonnull OWLOntology inputOntology, @Nonnull Schema resultSchema, @Nonnull SchemaProcessingData processingData) {
+    public void process(@Nonnull OWLOntology inputOntology, @Nonnull Schema resultSchema, @Nonnull SchemaProcessingData processingData,
+                        @Nonnull OWLOntologyReaderRequest readerRequest) {
         List<OWLObjectPropertyDomainAxiom> domains = inputOntology.axioms(AxiomType.OBJECT_PROPERTY_DOMAIN).collect(Collectors.toList());
         List<OWLObjectPropertyRangeAxiom> ranges = inputOntology.axioms(AxiomType.OBJECT_PROPERTY_RANGE).collect(Collectors.toList());
-        List<OWLObjectProperty> objectProperties = inputOntology.objectPropertiesInSignature().collect(Collectors.toList());
+        List<OWLObjectProperty> objectProperties = inputOntology.objectPropertiesInSignature()
+                .filter(p -> p != null && !isExcludedResource(p.getIRI(), readerRequest.getExcludedNamespaces()))
+                .collect(Collectors.toList());
 
         for (OWLObjectProperty property : objectProperties) {
             String propertyName = property.getIRI().toString();
