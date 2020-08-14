@@ -5,7 +5,7 @@ import lv.lumii.obis.schema.model.SchemaAttribute;
 import lv.lumii.obis.schema.model.SchemaClass;
 import lv.lumii.obis.schema.services.SchemaUtil;
 import lv.lumii.obis.schema.services.reader.dto.OWLOntologyReaderRequest;
-import lv.lumii.obis.schema.services.reader.dto.SchemaProcessingData;
+import lv.lumii.obis.schema.services.reader.dto.OWLOntologyReaderProcessingData;
 import org.semanticweb.owlapi.model.*;
 import org.semanticweb.owlapi.search.EntitySearcher;
 import org.springframework.stereotype.Service;
@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
 public class OWLDataTypePropertyProcessor extends OWLPropertyProcessor {
 
     @Override
-    public void process(@Nonnull OWLOntology inputOntology, @Nonnull Schema resultSchema, @Nonnull SchemaProcessingData processingData,
+    public void process(@Nonnull OWLOntology inputOntology, @Nonnull Schema resultSchema, @Nonnull OWLOntologyReaderProcessingData processingData,
                         @Nonnull OWLOntologyReaderRequest readerRequest) {
         List<OWLDataPropertyDomainAxiom> domains = inputOntology.axioms(AxiomType.DATA_PROPERTY_DOMAIN).collect(Collectors.toList());
         List<OWLDataPropertyRangeAxiom> ranges = inputOntology.axioms(AxiomType.DATA_PROPERTY_RANGE).collect(Collectors.toList());

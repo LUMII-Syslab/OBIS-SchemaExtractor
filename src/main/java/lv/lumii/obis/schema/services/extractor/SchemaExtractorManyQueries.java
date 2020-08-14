@@ -3,7 +3,7 @@ package lv.lumii.obis.schema.services.extractor;
 import lombok.extern.slf4j.Slf4j;
 import lv.lumii.obis.schema.constants.SchemaConstants;
 import lv.lumii.obis.schema.model.*;
-import lv.lumii.obis.schema.services.common.QueryResult;
+import lv.lumii.obis.schema.services.common.dto.QueryResult;
 import lv.lumii.obis.schema.services.extractor.dto.*;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
@@ -24,7 +24,7 @@ import static org.apache.commons.lang3.BooleanUtils.isFalse;
 public class SchemaExtractorManyQueries extends SchemaExtractor {
 
 	@Override
-	protected void findIntersectionClassesAndUpdateClassNeighbors(@Nonnull List<SchemaClass> classes, @Nonnull Map<String, SchemaClassNodeInfo> graphOfClasses, @Nonnull SchemaExtractorRequest request) {
+	protected void findIntersectionClassesAndUpdateClassNeighbors(@Nonnull List<SchemaClass> classes, @Nonnull Map<String, SchemaExtractorClassNodeInfo> graphOfClasses, @Nonnull SchemaExtractorRequest request) {
 		List<QueryResult> queryResults;
 		for(SchemaClass classA: classes){
             String query = SchemaExtractorQueries.FIND_INTERSECTION_CLASSES_FOR_KNOWN_CLASS.getSparqlQuery();
@@ -36,8 +36,8 @@ public class SchemaExtractorManyQueries extends SchemaExtractor {
 	}
 
 	@Override
-	protected Map<String, SchemaPropertyNodeInfo> findAllDataTypeProperties(@Nonnull List<SchemaClass> classes, @Nonnull SchemaExtractorRequest request) {
-		Map<String, SchemaPropertyNodeInfo> properties = new HashMap<>();
+	protected Map<String, SchemaExtractorPropertyNodeInfo> findAllDataTypeProperties(@Nonnull List<SchemaClass> classes, @Nonnull SchemaExtractorRequest request) {
+		Map<String, SchemaExtractorPropertyNodeInfo> properties = new HashMap<>();
 		List<QueryResult> queryResults;
 		for(SchemaClass domainClass: classes){
 			String query = SchemaExtractorQueries.FIND_ALL_DATATYPE_PROPERTIES_FOR_KNOWN_CLASS.getSparqlQuery();
@@ -56,8 +56,8 @@ public class SchemaExtractorManyQueries extends SchemaExtractor {
 	}
 
 	@Override
-	protected Map<String, SchemaPropertyNodeInfo> findAllObjectTypeProperties(@Nonnull List<SchemaClass> classes, @Nonnull SchemaExtractorRequest request) {
-		Map<String, SchemaPropertyNodeInfo> properties = new HashMap<>();
+	protected Map<String, SchemaExtractorPropertyNodeInfo> findAllObjectTypeProperties(@Nonnull List<SchemaClass> classes, @Nonnull SchemaExtractorRequest request) {
+		Map<String, SchemaExtractorPropertyNodeInfo> properties = new HashMap<>();
 		List<QueryResult> queryResults;
 		for(SchemaClass domainClass: classes){
 			String query = SchemaExtractorQueries.FIND_OBJECT_PROPERTIES_WITH_DOMAIN_RANGE_FOR_KNOWN_CLASS.getSparqlQuery();
@@ -77,7 +77,7 @@ public class SchemaExtractorManyQueries extends SchemaExtractor {
 		return properties;
 	}
 
-	private void updateGraphOfClassesWithNeighbors(@Nonnull String domainClass, @Nonnull List<QueryResult> queryResults, @Nonnull Map<String, SchemaClassNodeInfo> graphOfClasses,
+	private void updateGraphOfClassesWithNeighbors(@Nonnull String domainClass, @Nonnull List<QueryResult> queryResults, @Nonnull Map<String, SchemaExtractorClassNodeInfo> graphOfClasses,
 													 @Nonnull SchemaExtractorRequest request){
 		for(QueryResult queryResult: queryResults){
 			String classB = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_B);
@@ -89,7 +89,7 @@ public class SchemaExtractorManyQueries extends SchemaExtractor {
 		}
 	}
 
-	private void processAllDataTypeProperties(@Nullable String domainClass, @Nonnull Map<String, SchemaPropertyNodeInfo> properties, @Nonnull List<QueryResult> queryResults){
+	private void processAllDataTypeProperties(@Nullable String domainClass, @Nonnull Map<String, SchemaExtractorPropertyNodeInfo> properties, @Nonnull List<QueryResult> queryResults){
 		for(QueryResult queryResult: queryResults){
 			String propertyName = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY);
 			String instances = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT);
@@ -98,10 +98,10 @@ public class SchemaExtractorManyQueries extends SchemaExtractor {
 				continue;
 			}
 			if(!properties.containsKey(propertyName)){
-				properties.put(propertyName, new SchemaPropertyNodeInfo());
+				properties.put(propertyName, new SchemaExtractorPropertyNodeInfo());
 			}
-			SchemaPropertyNodeInfo property = properties.get(propertyName);
-			SchemaClassNodeInfo classInfo = new SchemaClassNodeInfo();
+			SchemaExtractorPropertyNodeInfo property = properties.get(propertyName);
+			SchemaExtractorClassNodeInfo classInfo = new SchemaExtractorClassNodeInfo();
 			classInfo.setClassName(domainClass);
 			classInfo.setInstanceCount(Long.valueOf(instances));
 			property.getDomainClasses().add(classInfo);
@@ -109,7 +109,7 @@ public class SchemaExtractorManyQueries extends SchemaExtractor {
 	}
 
 	private void processAllObjectTypePropertiesWithKnownDomain(@Nullable String domainClass, @Nonnull List<QueryResult> queryResults,
-															   @Nonnull Map<String, SchemaPropertyNodeInfo> properties,
+															   @Nonnull Map<String, SchemaExtractorPropertyNodeInfo> properties,
 															   @Nonnull SchemaExtractorRequest request){
 		for(QueryResult queryResult: queryResults){
 			String propertyName = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY);
@@ -128,7 +128,7 @@ public class SchemaExtractorManyQueries extends SchemaExtractor {
 	}
 
 	private void processAllObjectTypePropertiesWithoutRange(@Nonnull List<QueryResult> queryResults,
-															 @Nonnull Map<String, SchemaPropertyNodeInfo> properties,
+															 @Nonnull Map<String, SchemaExtractorPropertyNodeInfo> properties,
 															 @Nonnull SchemaExtractorRequest request){
 		for(QueryResult queryResult: queryResults){
 			String propertyName = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY);

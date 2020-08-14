@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Setter @Getter
-public class SchemaClassNodeInfo {
+public class SchemaExtractorClassNodeInfo {
 	
 	private String className;
 	private Long instanceCount;

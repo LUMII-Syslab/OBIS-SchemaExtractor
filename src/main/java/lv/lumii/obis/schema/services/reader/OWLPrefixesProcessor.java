@@ -2,7 +2,7 @@ package lv.lumii.obis.schema.services.reader;
 
 import lv.lumii.obis.schema.model.*;
 import lv.lumii.obis.schema.services.reader.dto.OWLOntologyReaderRequest;
-import lv.lumii.obis.schema.services.reader.dto.SchemaProcessingData;
+import lv.lumii.obis.schema.services.reader.dto.OWLOntologyReaderProcessingData;
 import org.apache.commons.lang3.StringUtils;
 import org.semanticweb.owlapi.model.OWLDocumentFormat;
 import org.semanticweb.owlapi.model.OWLOntology;
@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
 public class OWLPrefixesProcessor implements OWLElementProcessor {
 
     @Override
-    public void process(@Nonnull OWLOntology inputOntology, @Nonnull Schema resultSchema, @Nonnull SchemaProcessingData processingData,
+    public void process(@Nonnull OWLOntology inputOntology, @Nonnull Schema resultSchema, @Nonnull OWLOntologyReaderProcessingData processingData,
                         @Nonnull OWLOntologyReaderRequest readerRequest) {
         // find main namespace
         String mainNamespace = findMainNamespace(resultSchema);

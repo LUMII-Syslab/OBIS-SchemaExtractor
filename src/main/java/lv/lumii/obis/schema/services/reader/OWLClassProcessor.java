@@ -4,8 +4,8 @@ import lombok.extern.slf4j.Slf4j;
 import lv.lumii.obis.schema.model.Schema;
 import lv.lumii.obis.schema.model.SchemaClass;
 import lv.lumii.obis.schema.services.reader.dto.OWLOntologyReaderRequest;
-import lv.lumii.obis.schema.services.reader.dto.SchemaCardinalityInfo;
-import lv.lumii.obis.schema.services.reader.dto.SchemaProcessingData;
+import lv.lumii.obis.schema.services.common.dto.SchemaCardinalityInfo;
+import lv.lumii.obis.schema.services.reader.dto.OWLOntologyReaderProcessingData;
 import org.semanticweb.owlapi.model.*;
 import org.semanticweb.owlapi.search.EntitySearcher;
 import org.springframework.stereotype.Service;
@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
 public class OWLClassProcessor implements OWLElementProcessor {
 
     @Override
-    public void process(@Nonnull OWLOntology inputOntology, @Nonnull Schema resultSchema, @Nonnull SchemaProcessingData processingData,
+    public void process(@Nonnull OWLOntology inputOntology, @Nonnull Schema resultSchema, @Nonnull OWLOntologyReaderProcessingData processingData,
                         @Nonnull OWLOntologyReaderRequest readerRequest) {
         List<OWLClass> owlClasses = inputOntology.classesInSignature().collect(Collectors.toList());
         if (owlClasses.isEmpty()) {

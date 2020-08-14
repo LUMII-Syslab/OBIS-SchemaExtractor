@@ -3,7 +3,7 @@ package lv.lumii.obis.schema.services.reader;
 import lv.lumii.obis.schema.model.Schema;
 import lv.lumii.obis.schema.model.SchemaRole;
 import lv.lumii.obis.schema.services.reader.dto.OWLOntologyReaderRequest;
-import lv.lumii.obis.schema.services.reader.dto.SchemaProcessingData;
+import lv.lumii.obis.schema.services.reader.dto.OWLOntologyReaderProcessingData;
 import org.semanticweb.owlapi.model.AxiomType;
 import org.semanticweb.owlapi.model.OWLInverseObjectPropertiesAxiom;
 import org.semanticweb.owlapi.model.OWLObjectPropertyExpression;
@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
 public class OWLInversePropertyProcessor implements OWLElementProcessor {
 
     @Override
-    public void process(@Nonnull OWLOntology inputOntology, @Nonnull Schema resultSchema, @Nonnull SchemaProcessingData processingData,
+    public void process(@Nonnull OWLOntology inputOntology, @Nonnull Schema resultSchema, @Nonnull OWLOntologyReaderProcessingData processingData,
                         @Nonnull OWLOntologyReaderRequest readerRequest) {
         List<OWLInverseObjectPropertiesAxiom> inverseProperties = inputOntology.axioms(AxiomType.INVERSE_OBJECT_PROPERTIES).collect(Collectors.toList());
         for (OWLInverseObjectPropertiesAxiom inverse : inverseProperties) {

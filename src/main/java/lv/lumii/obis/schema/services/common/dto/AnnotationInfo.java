@@ -1,4 +1,4 @@
-package lv.lumii.obis.schema.services.reader.dto;
+package lv.lumii.obis.schema.services.common.dto;
 
 import lombok.Getter;
 import lombok.Setter;

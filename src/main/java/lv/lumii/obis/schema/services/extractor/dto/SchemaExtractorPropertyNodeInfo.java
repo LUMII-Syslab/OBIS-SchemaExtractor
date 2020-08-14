@@ -7,23 +7,23 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Setter @Getter
-public class SchemaPropertyNodeInfo {
+public class SchemaExtractorPropertyNodeInfo {
 
 	private Boolean isObjectProperty = Boolean.FALSE;
 	private String dataType;
 	private Integer minCardinality;
 	private Integer maxCardinality;
-	private List<SchemaDomainRangeInfo> domainRangePairs;
-	private List<SchemaClassNodeInfo> domainClasses;
+	private List<SchemaExtractorDomainRangeInfo> domainRangePairs;
+	private List<SchemaExtractorClassNodeInfo> domainClasses;
 
-	public List<SchemaDomainRangeInfo> getDomainRangePairs() {
+	public List<SchemaExtractorDomainRangeInfo> getDomainRangePairs() {
 		if(domainRangePairs == null){
 			domainRangePairs = new ArrayList<>();
 		}
 		return domainRangePairs;
 	}
 
-	public List<SchemaClassNodeInfo> getDomainClasses() {
+	public List<SchemaExtractorClassNodeInfo> getDomainClasses() {
 		if(domainClasses == null){
 			domainClasses = new ArrayList<>();
 		}

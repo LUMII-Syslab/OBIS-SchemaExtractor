@@ -4,7 +4,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 @Setter @Getter
-public class SchemaDomainRangeInfo {
+public class SchemaExtractorDomainRangeInfo {
 
     private String domainClass;
     private String rangeClass;
@@ -14,9 +14,9 @@ public class SchemaDomainRangeInfo {
     private Boolean validDomain;
     private Boolean validRange;
 
-    public SchemaDomainRangeInfo(){}
+    public SchemaExtractorDomainRangeInfo(){}
 
-    public SchemaDomainRangeInfo(String domainClass){
+    public SchemaExtractorDomainRangeInfo(String domainClass){
         this.domainClass = domainClass;
     }
 }

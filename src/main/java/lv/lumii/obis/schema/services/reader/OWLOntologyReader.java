@@ -5,7 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import lv.lumii.obis.schema.model.Schema;
 import lv.lumii.obis.schema.model.SchemaParameter;
 import lv.lumii.obis.schema.services.reader.dto.OWLOntologyReaderRequest;
-import lv.lumii.obis.schema.services.reader.dto.SchemaProcessingData;
+import lv.lumii.obis.schema.services.reader.dto.OWLOntologyReaderProcessingData;
 import org.semanticweb.owlapi.apibinding.OWLManager;
 import org.semanticweb.owlapi.model.IRI;
 import org.semanticweb.owlapi.model.OWLOntology;
@@ -66,7 +66,7 @@ public class OWLOntologyReader {
         buildReaderProperties(readerRequest, schema);
 
         // initialize intermediate processing data
-        SchemaProcessingData processingData = new SchemaProcessingData();
+        OWLOntologyReaderProcessingData processingData = new OWLOntologyReaderProcessingData();
 
         // invoke all OWL processors
         ontologyProcessor.process(inputOntology, schema, processingData, readerRequest);

@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import lombok.extern.slf4j.Slf4j;
+import lv.lumii.obis.schema.services.common.dto.QueryResult;
+import lv.lumii.obis.schema.services.common.dto.SparqlEndpointConfig;
 import lv.lumii.obis.schema.services.extractor.SchemaExtractorQueries;
 import lv.lumii.obis.schema.services.extractor.dto.SchemaExtractorRequest;
 import org.apache.commons.lang3.StringUtils;

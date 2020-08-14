@@ -7,8 +7,8 @@ import lv.lumii.obis.schema.model.Schema;
 import lv.lumii.obis.schema.model.SchemaClass;
 import lv.lumii.obis.schema.model.SchemaParameter;
 import lv.lumii.obis.schema.services.SchemaUtil;
-import lv.lumii.obis.schema.services.common.QueryResult;
-import lv.lumii.obis.schema.services.common.SparqlEndpointConfig;
+import lv.lumii.obis.schema.services.common.dto.QueryResult;
+import lv.lumii.obis.schema.services.common.dto.SparqlEndpointConfig;
 import lv.lumii.obis.schema.services.common.SparqlEndpointProcessor;
 import lv.lumii.obis.schema.services.enhancer.dto.OWLOntologyEnhancerRequest;
 import org.apache.commons.lang3.StringUtils;
@@ -32,6 +32,8 @@ public class OWLOntologyEnhancer {
     public Schema enhanceSchema(@Nonnull Schema inputSchema, @Nonnull OWLOntologyEnhancerRequest enhancerRequest) {
         SparqlEndpointConfig endpointConfig = new SparqlEndpointConfig(enhancerRequest.getEndpointUrl(), enhancerRequest.getGraphName(), false);
 
+
+
         updateClassInstanceCount(inputSchema, endpointConfig);
         updateDataTypePropertyDomains(inputSchema, endpointConfig);
         updateObjectTypePropertyDomains(inputSchema, endpointConfig);
@@ -45,11 +47,11 @@ public class OWLOntologyEnhancer {
 
     private void updateClassInstanceCount(@Nonnull Schema inputSchema, @Nonnull final SparqlEndpointConfig endpointConfig) {
         inputSchema.getClasses().forEach(schemaClass -> {
-            String query = SchemaEnhancerQuery.FIND_CLASS_INSTANCE_COUNT;
-            query = query.replace(SchemaEnhancerQuery.QUERY_BINDING_NAME_DOMAIN_CLASS, schemaClass.getFullName());
+            String query = SchemaEnhancerQueries.FIND_CLASS_INSTANCE_COUNT;
+            query = query.replace(SchemaEnhancerQueries.QUERY_BINDING_NAME_DOMAIN_CLASS, schemaClass.getFullName());
             List<QueryResult> queryResults = sparqlEndpointProcessor.read(endpointConfig, "FIND_CLASS_INSTANCE_COUNT", query);
             if (!queryResults.isEmpty()) {
-                String instancesCountStr = queryResults.get(0).get(SchemaEnhancerQuery.QUERY_BINDING_NAME_INSTANCES_COUNT);
+                String instancesCountStr = queryResults.get(0).get(SchemaEnhancerQueries.QUERY_BINDING_NAME_INSTANCES_COUNT);
                 schemaClass.setInstanceCount(SchemaUtil.getLongValueFromString(instancesCountStr));
                 if (schemaClass.getInstanceCount() == 0) {
                     schemaClass.setIsAbstract(true);
@@ -64,8 +66,8 @@ public class OWLOntologyEnhancer {
         inputSchema.getAttributes().stream()
                 .filter(schemaAttribute -> noActualClassAssignment(schemaAttribute.getSourceClasses()))
                 .forEach(schemaAttribute -> {
-                    String query = SchemaEnhancerQuery.FIND_DATA_TYPE_PROPERTY_DOMAINS;
-                    query = query.replace(SchemaEnhancerQuery.QUERY_BINDING_NAME_PROPERTY, schemaAttribute.getFullName());
+                    String query = SchemaEnhancerQueries.FIND_DATA_TYPE_PROPERTY_DOMAINS;
+                    query = query.replace(SchemaEnhancerQueries.QUERY_BINDING_NAME_PROPERTY, schemaAttribute.getFullName());
                     List<QueryResult> queryResults = sparqlEndpointProcessor.read(endpointConfig, "FIND_DATA_TYPE_PROPERTY_DOMAINS", query);
                     if (!queryResults.isEmpty()) {
                         Set<String> newDomains = getDomainsFromQueryResults(queryResults);
@@ -85,9 +87,9 @@ public class OWLOntologyEnhancer {
                 .filter(schemaRole -> noActualDomainInClassPair(schemaRole.getClassPairs()))
                 .forEach(schemaRole -> {
                     String targetClass = schemaRole.getClassPairs().get(0).getTargetClass();
-                    String query = SchemaEnhancerQuery.FIND_OBJECT_TYPE_PROPERTY_DOMAINS;
-                    query = query.replace(SchemaEnhancerQuery.QUERY_BINDING_NAME_PROPERTY, schemaRole.getFullName());
-                    query = query.replace(SchemaEnhancerQuery.QUERY_BINDING_NAME_RANGE_CLASS, targetClass);
+                    String query = SchemaEnhancerQueries.FIND_OBJECT_TYPE_PROPERTY_DOMAINS;
+                    query = query.replace(SchemaEnhancerQueries.QUERY_BINDING_NAME_PROPERTY, schemaRole.getFullName());
+                    query = query.replace(SchemaEnhancerQueries.QUERY_BINDING_NAME_RANGE_CLASS, targetClass);
                     List<QueryResult> queryResults = sparqlEndpointProcessor.read(endpointConfig, "FIND_OBJECT_TYPE_PROPERTY_DOMAINS", query);
                     if (!queryResults.isEmpty()) {
                         Set<String> newDomains = getDomainsFromQueryResults(queryResults);
@@ -108,9 +110,9 @@ public class OWLOntologyEnhancer {
                 .filter(schemaRole -> noActualRangeInClassPair(schemaRole.getClassPairs()))
                 .forEach(schemaRole -> {
                     String sourceClass = schemaRole.getClassPairs().get(0).getSourceClass();
-                    String query = SchemaEnhancerQuery.FIND_OBJECT_TYPE_PROPERTY_RANGES;
-                    query = query.replace(SchemaEnhancerQuery.QUERY_BINDING_NAME_PROPERTY, schemaRole.getFullName());
-                    query = query.replace(SchemaEnhancerQuery.QUERY_BINDING_NAME_DOMAIN_CLASS, sourceClass);
+                    String query = SchemaEnhancerQueries.FIND_OBJECT_TYPE_PROPERTY_RANGES;
+                    query = query.replace(SchemaEnhancerQueries.QUERY_BINDING_NAME_PROPERTY, schemaRole.getFullName());
+                    query = query.replace(SchemaEnhancerQueries.QUERY_BINDING_NAME_DOMAIN_CLASS, sourceClass);
                     List<QueryResult> queryResults = sparqlEndpointProcessor.read(endpointConfig, "FIND_OBJECT_TYPE_PROPERTY_RANGES", query);
                     if (!queryResults.isEmpty()) {
                         Set<String> newRanges = getRangesFromQueryResults(queryResults);
@@ -130,8 +132,8 @@ public class OWLOntologyEnhancer {
         inputSchema.getAssociations().stream()
                 .filter(schemaRole -> noActualDomainRangePair(schemaRole.getClassPairs()))
                 .forEach(schemaRole -> {
-                    String query = SchemaEnhancerQuery.FIND_OBJECT_TYPE_PROPERTY_DOMAINS_RANGES;
-                    query = query.replace(SchemaEnhancerQuery.QUERY_BINDING_NAME_PROPERTY, schemaRole.getFullName());
+                    String query = SchemaEnhancerQueries.FIND_OBJECT_TYPE_PROPERTY_DOMAINS_RANGES;
+                    query = query.replace(SchemaEnhancerQueries.QUERY_BINDING_NAME_PROPERTY, schemaRole.getFullName());
                     List<QueryResult> queryResults = sparqlEndpointProcessor.read(endpointConfig, "FIND_OBJECT_TYPE_PROPERTY_DOMAINS_RANGES", query);
                     if (!queryResults.isEmpty()) {
                         Set<String> newDomains = getDomainsFromQueryResults(queryResults);
@@ -158,14 +160,14 @@ public class OWLOntologyEnhancer {
 
     private Set<String> getDomainsFromQueryResults(@Nonnull List<QueryResult> queryResults) {
         return queryResults.stream()
-                .map(queryResult -> queryResult.get(SchemaEnhancerQuery.QUERY_BINDING_NAME_DOMAIN_CLASS))
+                .map(queryResult -> queryResult.get(SchemaEnhancerQueries.QUERY_BINDING_NAME_DOMAIN_CLASS))
                 .filter(className -> StringUtils.isNotEmpty(className) && !SchemaConstants.THING_URI.equalsIgnoreCase(className))
                 .collect(Collectors.toSet());
     }
 
     private Set<String> getRangesFromQueryResults(@Nonnull List<QueryResult> queryResults) {
         return queryResults.stream()
-                .map(queryResult -> queryResult.get(SchemaEnhancerQuery.QUERY_BINDING_NAME_RANGE_CLASS))
+                .map(queryResult -> queryResult.get(SchemaEnhancerQueries.QUERY_BINDING_NAME_RANGE_CLASS))
                 .filter(className -> StringUtils.isNotEmpty(className) && !SchemaConstants.THING_URI.equalsIgnoreCase(className))
                 .collect(Collectors.toSet());
     }
@@ -173,8 +175,8 @@ public class OWLOntologyEnhancer {
     private boolean hasQueryResultsDomainAndRange(@Nonnull List<QueryResult> queryResults, @Nonnull String domain, @Nonnull String range) {
         return queryResults.stream()
                 .anyMatch(queryResult ->
-                        domain.equalsIgnoreCase(queryResult.get(SchemaEnhancerQuery.QUERY_BINDING_NAME_DOMAIN_CLASS))
-                                && range.equalsIgnoreCase(queryResult.get(SchemaEnhancerQuery.QUERY_BINDING_NAME_RANGE_CLASS)));
+                        domain.equalsIgnoreCase(queryResult.get(SchemaEnhancerQueries.QUERY_BINDING_NAME_DOMAIN_CLASS))
+                                && range.equalsIgnoreCase(queryResult.get(SchemaEnhancerQueries.QUERY_BINDING_NAME_RANGE_CLASS)));
     }
 
     private Set<String> getQualifiedDomains(@Nonnull Set<String> newDomains, @Nonnull Schema inputSchema) {
