@@ -8,5 +8,6 @@ public abstract class SchemaProperty extends SchemaElement {
 
 	private Integer minCardinality;
 	private Integer maxCardinality;
+	private Long instanceCount;
 
 }

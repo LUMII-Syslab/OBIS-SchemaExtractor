@@ -2,23 +2,19 @@ package lv.lumii.obis.schema.services.enhancer;
 
 import lombok.Setter;
 import lv.lumii.obis.schema.constants.SchemaConstants;
-import lv.lumii.obis.schema.model.ClassPair;
-import lv.lumii.obis.schema.model.Schema;
-import lv.lumii.obis.schema.model.SchemaClass;
-import lv.lumii.obis.schema.model.SchemaParameter;
+import lv.lumii.obis.schema.model.*;
 import lv.lumii.obis.schema.services.SchemaUtil;
 import lv.lumii.obis.schema.services.common.dto.QueryResult;
 import lv.lumii.obis.schema.services.common.dto.SparqlEndpointConfig;
 import lv.lumii.obis.schema.services.common.SparqlEndpointProcessor;
 import lv.lumii.obis.schema.services.enhancer.dto.OWLOntologyEnhancerRequest;
+import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Nonnull;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -32,17 +28,49 @@ public class OWLOntologyEnhancer {
     public Schema enhanceSchema(@Nonnull Schema inputSchema, @Nonnull OWLOntologyEnhancerRequest enhancerRequest) {
         SparqlEndpointConfig endpointConfig = new SparqlEndpointConfig(enhancerRequest.getEndpointUrl(), enhancerRequest.getGraphName(), false);
 
-
+        Map<String, Long> allProperties = getAllProperties(endpointConfig, enhancerRequest);
 
         updateClassInstanceCount(inputSchema, endpointConfig);
+        updateAbstractProperties(inputSchema.getAttributes(), allProperties);
+        updateAbstractProperties(inputSchema.getAssociations(), allProperties);
         updateDataTypePropertyDomains(inputSchema, endpointConfig);
         updateObjectTypePropertyDomains(inputSchema, endpointConfig);
         updateObjectTypePropertyRanges(inputSchema, endpointConfig);
         updateObjectTypePropertyDomainRangePairs(inputSchema, endpointConfig);
+        addNewPropertiesFromEndpoint(inputSchema, allProperties, endpointConfig);
 
         buildEnhancerProperties(enhancerRequest, inputSchema);
 
         return inputSchema;
+    }
+
+    @Nonnull
+    private Map<String, Long> getAllProperties(@Nonnull final SparqlEndpointConfig endpointConfig, @Nonnull OWLOntologyEnhancerRequest enhancerRequest) {
+        String query = SchemaEnhancerQueries.FIND_ALL_PROPERTIES_WITH_INSTANCE_COUNT;
+        if (enhancerRequest.getLimitToDefineAbstractProperty() != null) {
+            query = SchemaEnhancerQueries.FIND_ALL_PROPERTIES_WITH_INSTANCE_COUNT_WITH_LIMIT;
+            query = query.replace(SchemaEnhancerQueries.QUERY_BINDING_NAME_INSTANCES_COUNT_MIN, enhancerRequest.getLimitToDefineAbstractProperty().toString());
+        }
+        List<QueryResult> queryResults = sparqlEndpointProcessor.read(endpointConfig, "FIND_ALL_PROPERTIES_WITH_INSTANCE_COUNT", query);
+        Map<String, Long> allProperties = new HashMap<>();
+        for (QueryResult queryResult : queryResults) {
+            String propertyName = queryResult.get(SchemaEnhancerQueries.QUERY_BINDING_NAME_PROPERTY);
+            String instancesCountStr = queryResult.get(SchemaEnhancerQueries.QUERY_BINDING_NAME_INSTANCES_COUNT);
+            allProperties.put(propertyName, SchemaUtil.getLongValueFromString(instancesCountStr));
+        }
+        return allProperties;
+    }
+
+    private void updateAbstractProperties(@Nonnull List<? extends SchemaProperty> properties, @Nonnull final Map<String, Long> allProperties) {
+        properties.forEach(property -> {
+            if (!allProperties.containsKey(property.getFullName())) {
+                property.setIsAbstract(Boolean.TRUE);
+                property.setInstanceCount(0L);
+            } else {
+                property.setIsAbstract(Boolean.FALSE);
+                property.setInstanceCount(allProperties.get(property.getFullName()));
+            }
+        });
     }
 
     private void updateClassInstanceCount(@Nonnull Schema inputSchema, @Nonnull final SparqlEndpointConfig endpointConfig) {
@@ -64,7 +92,7 @@ public class OWLOntologyEnhancer {
 
     private void updateDataTypePropertyDomains(@Nonnull Schema inputSchema, @Nonnull final SparqlEndpointConfig endpointConfig) {
         inputSchema.getAttributes().stream()
-                .filter(schemaAttribute -> noActualClassAssignment(schemaAttribute.getSourceClasses()))
+                .filter(schemaAttribute -> BooleanUtils.isNotTrue(schemaAttribute.getIsAbstract()) && noActualClassAssignment(schemaAttribute.getSourceClasses()))
                 .forEach(schemaAttribute -> {
                     String query = SchemaEnhancerQueries.FIND_DATA_TYPE_PROPERTY_DOMAINS;
                     query = query.replace(SchemaEnhancerQueries.QUERY_BINDING_NAME_PROPERTY, schemaAttribute.getFullName());
@@ -84,7 +112,7 @@ public class OWLOntologyEnhancer {
 
     private void updateObjectTypePropertyDomains(@Nonnull Schema inputSchema, @Nonnull final SparqlEndpointConfig endpointConfig) {
         inputSchema.getAssociations().stream()
-                .filter(schemaRole -> noActualDomainInClassPair(schemaRole.getClassPairs()))
+                .filter(schemaRole -> BooleanUtils.isNotTrue(schemaRole.getIsAbstract()) && noActualDomainInClassPair(schemaRole.getClassPairs()))
                 .forEach(schemaRole -> {
                     String targetClass = schemaRole.getClassPairs().get(0).getTargetClass();
                     String query = SchemaEnhancerQueries.FIND_OBJECT_TYPE_PROPERTY_DOMAINS;
@@ -107,7 +135,7 @@ public class OWLOntologyEnhancer {
 
     private void updateObjectTypePropertyRanges(@Nonnull Schema inputSchema, @Nonnull final SparqlEndpointConfig endpointConfig) {
         inputSchema.getAssociations().stream()
-                .filter(schemaRole -> noActualRangeInClassPair(schemaRole.getClassPairs()))
+                .filter(schemaRole -> BooleanUtils.isNotTrue(schemaRole.getIsAbstract()) && noActualRangeInClassPair(schemaRole.getClassPairs()))
                 .forEach(schemaRole -> {
                     String sourceClass = schemaRole.getClassPairs().get(0).getSourceClass();
                     String query = SchemaEnhancerQueries.FIND_OBJECT_TYPE_PROPERTY_RANGES;
@@ -130,7 +158,7 @@ public class OWLOntologyEnhancer {
 
     private void updateObjectTypePropertyDomainRangePairs(@Nonnull Schema inputSchema, @Nonnull final SparqlEndpointConfig endpointConfig) {
         inputSchema.getAssociations().stream()
-                .filter(schemaRole -> noActualDomainRangePair(schemaRole.getClassPairs()))
+                .filter(schemaRole -> BooleanUtils.isNotTrue(schemaRole.getIsAbstract()) && noActualDomainRangePair(schemaRole.getClassPairs()))
                 .forEach(schemaRole -> {
                     String query = SchemaEnhancerQueries.FIND_OBJECT_TYPE_PROPERTY_DOMAINS_RANGES;
                     query = query.replace(SchemaEnhancerQueries.QUERY_BINDING_NAME_PROPERTY, schemaRole.getFullName());
@@ -156,6 +184,17 @@ public class OWLOntologyEnhancer {
                         schemaRole.setIsAbstract(true);
                     }
                 });
+    }
+
+    private void addNewPropertiesFromEndpoint(@Nonnull Schema inputSchema, @Nonnull final Map<String, Long> allProperties, @Nonnull final SparqlEndpointConfig endpointConfig) {
+        List<String> allOntologyProperties = inputSchema.getAttributes().stream().map(SchemaAttribute::getFullName).collect(Collectors.toList());
+        allOntologyProperties.addAll(inputSchema.getAssociations().stream().map(SchemaRole::getFullName).collect(Collectors.toList()));
+
+        allProperties.keySet().forEach(endpointProperty -> {
+            if (!allOntologyProperties.contains(endpointProperty)) {
+                
+            }
+        });
     }
 
     private Set<String> getDomainsFromQueryResults(@Nonnull List<QueryResult> queryResults) {
@@ -243,7 +282,7 @@ public class OWLOntologyEnhancer {
                 && (StringUtils.isEmpty(classPairs.get(0).getSourceClass()) || SchemaConstants.THING_URI.equalsIgnoreCase(classPairs.get(0).getSourceClass()));
     }
 
-    protected void buildEnhancerProperties(@Nonnull OWLOntologyEnhancerRequest request, @Nonnull Schema schema){
+    private void buildEnhancerProperties(@Nonnull OWLOntologyEnhancerRequest request, @Nonnull Schema schema) {
         schema.getParameters().add(
                 new SchemaParameter(SchemaParameter.PARAM_NAME_ENDPOINT, request.getEndpointUrl()));
         schema.getParameters().add(
