@@ -1,6 +1,7 @@
 package lv.lumii.obis.schema.services.enhancer;
 
 import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 import lv.lumii.obis.schema.constants.SchemaConstants;
 import lv.lumii.obis.schema.model.*;
 import lv.lumii.obis.schema.services.SchemaUtil;
@@ -21,6 +22,7 @@ import static lv.lumii.obis.schema.constants.SchemaConstants.DEFAULT_MAX_CARDINA
 import static lv.lumii.obis.schema.constants.SchemaConstants.DEFAULT_MIN_CARDINALITY;
 
 @Service
+@Slf4j
 public class OWLOntologyEnhancer {
 
     @Autowired
@@ -53,18 +55,40 @@ public class OWLOntologyEnhancer {
 
     @Nonnull
     private Map<String, Long> getAllProperties(@Nonnull final SparqlEndpointConfig endpointConfig, @Nonnull OWLOntologyEnhancerRequest enhancerRequest) {
-        String query = SchemaEnhancerQueries.FIND_ALL_PROPERTIES_WITH_INSTANCE_COUNT;
-        if (enhancerRequest.getAbstractPropertyThreshold() != null) {
-            query = SchemaEnhancerQueries.FIND_ALL_PROPERTIES_WITH_INSTANCE_COUNT_WITH_LIMIT;
-            query = query.replace(SchemaEnhancerQueries.QUERY_BINDING_NAME_INSTANCES_COUNT_MIN, enhancerRequest.getAbstractPropertyThreshold().toString());
+        String abstractPropertyThreshold = (enhancerRequest.getAbstractPropertyThreshold() != null) ? enhancerRequest.getAbstractPropertyThreshold().toString() : "0";
+
+        // get total count of all properties
+        String totalPropertyCountQuery = SchemaEnhancerQueries.FIND_ALL_PROPERTIES_TOTAL_COUNT;
+        totalPropertyCountQuery = totalPropertyCountQuery.replace(SchemaEnhancerQueries.QUERY_BINDING_NAME_INSTANCES_COUNT_MIN, abstractPropertyThreshold);
+        List<QueryResult> queryResults = sparqlEndpointProcessor.read(endpointConfig, "FIND_ALL_PROPERTIES_TOTAL_COUNT", totalPropertyCountQuery);
+        if (queryResults.size() < 1) {
+            return new HashMap<>();
         }
-        List<QueryResult> queryResults = sparqlEndpointProcessor.read(endpointConfig, "FIND_ALL_PROPERTIES_WITH_INSTANCE_COUNT", query);
+        String totalCountStr = queryResults.get(0).get(SchemaEnhancerQueries.QUERY_BINDING_NAME_TOTAL_COUNT);
+        long totalCount = SchemaUtil.getLongValueFromString(totalCountStr);
+
+        // DBPedia return only 10000 max items in one search result, so need to execute the query by groups
+        long interationCount = totalCount / SchemaEnhancerQueries.QUERY_CONSTANT_LIMIT;
+        long offset;
+        String query = SchemaEnhancerQueries.FIND_ALL_PROPERTIES_WITH_INSTANCE_COUNT;
+        query = query.replace(SchemaEnhancerQueries.QUERY_BINDING_NAME_INSTANCES_COUNT_MIN, abstractPropertyThreshold);
+        query = query.replace(SchemaEnhancerQueries.QUERY_BINDING_NAME_LIMIT, SchemaEnhancerQueries.QUERY_CONSTANT_LIMIT.toString());
+        queryResults.clear();
+        for (long i = 0; i <= interationCount; i++) {
+            offset = SchemaEnhancerQueries.QUERY_CONSTANT_LIMIT * i;
+            String queryPortion = query.replace(SchemaEnhancerQueries.QUERY_BINDING_NAME_OFFSET, String.valueOf(offset));
+            queryResults.addAll(sparqlEndpointProcessor.read(endpointConfig, "FIND_ALL_PROPERTIES_WITH_INSTANCE_COUNT", queryPortion));
+        }
+
         Map<String, Long> allProperties = new HashMap<>();
         for (QueryResult queryResult : queryResults) {
             String propertyName = queryResult.get(SchemaEnhancerQueries.QUERY_BINDING_NAME_PROPERTY);
             String instancesCountStr = queryResult.get(SchemaEnhancerQueries.QUERY_BINDING_NAME_INSTANCES_COUNT);
             allProperties.put(propertyName, SchemaUtil.getLongValueFromString(instancesCountStr));
         }
+
+        log.info("Found {} properties in the endpoint with abstract property threshold {}", allProperties.size(), abstractPropertyThreshold);
+
         return allProperties;
     }
 
