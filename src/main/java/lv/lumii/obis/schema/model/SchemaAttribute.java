@@ -16,6 +16,9 @@ public class SchemaAttribute extends SchemaProperty {
 	@JsonProperty("SourceClasses")
 	private Set<String> sourceClasses;
 
+	@JsonProperty("SourceClassesDetailed")
+	private Set<SchemaAttributeDomain> sourceClassesDetailed;
+
 	@JsonIgnore
 	private String rangeLookupValues;
 
@@ -24,6 +27,13 @@ public class SchemaAttribute extends SchemaProperty {
 			sourceClasses = new HashSet<>();
 		}
 		return sourceClasses;
+	}
+
+	public Set<SchemaAttributeDomain> getSourceClassesDetailed() {
+		if(sourceClassesDetailed == null){
+			sourceClassesDetailed = new HashSet<>();
+		}
+		return sourceClassesDetailed;
 	}
 
 }

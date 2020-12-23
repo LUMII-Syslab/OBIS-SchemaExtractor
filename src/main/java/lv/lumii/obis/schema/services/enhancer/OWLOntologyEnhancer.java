@@ -18,8 +18,7 @@ import javax.annotation.Nonnull;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static lv.lumii.obis.schema.constants.SchemaConstants.DEFAULT_MAX_CARDINALITY;
-import static lv.lumii.obis.schema.constants.SchemaConstants.DEFAULT_MIN_CARDINALITY;
+import static lv.lumii.obis.schema.constants.SchemaConstants.*;
 
 @Service
 @Slf4j
@@ -42,6 +41,11 @@ public class OWLOntologyEnhancer {
         updateObjectTypePropertyDomains(inputSchema, endpointConfig);
         updateObjectTypePropertyRanges(inputSchema, endpointConfig);
         updateObjectTypePropertyDomainRangePairs(inputSchema, endpointConfig);
+
+        addMissingProperties(inputSchema, endpointConfig, allProperties, enhancerRequest);
+
+        updateDataTypePropertyInstanceCount(inputSchema, endpointConfig);
+        updateObjectTypePropertyInstanceCount(inputSchema, endpointConfig);
 
         if (BooleanUtils.isTrue(enhancerRequest.getCalculateCardinalities())) {
             processCardinalities(inputSchema.getAttributes(), endpointConfig);
@@ -346,6 +350,116 @@ public class OWLOntologyEnhancer {
             }
         }
         property.setMinCardinality(minCardinality);
+    }
+
+    private void addMissingProperties(@Nonnull Schema inputSchema, @Nonnull final SparqlEndpointConfig endpointConfig, Map<String, Long> allProperties,
+                                      @Nonnull OWLOntologyEnhancerRequest enhancerRequest) {
+        List<String> allSchemaProperties = new ArrayList<>();
+        inputSchema.getAttributes().forEach(a -> allSchemaProperties.add(a.getFullName()));
+        inputSchema.getAssociations().forEach(a -> allSchemaProperties.add(a.getFullName()));
+        allProperties.entrySet().stream()
+                .filter(entry -> !allSchemaProperties.contains(entry.getKey()) && entry.getValue() > enhancerRequest.getPropertyInstanceCountThreshold())
+                .forEach(entry -> {
+                    boolean isDataTypeProperty = buildNewDataTypeProperty(inputSchema, endpointConfig, entry);
+                    if (BooleanUtils.isNotTrue(isDataTypeProperty)) {
+                        buildNewObjectTypeProperty(inputSchema, endpointConfig, entry);
+                    }
+                });
+    }
+
+    private boolean buildNewDataTypeProperty(@Nonnull Schema inputSchema, @Nonnull final SparqlEndpointConfig endpointConfig, @Nonnull Map.Entry<String, Long> newProperty) {
+        String query = SchemaEnhancerQueries.FIND_MISSING_DATA_TYPE_PROPERTY_DOMAINS;
+        query = query.replace(SchemaEnhancerQueries.QUERY_BINDING_NAME_PROPERTY, newProperty.getKey());
+        List<QueryResult> queryResults = sparqlEndpointProcessor.read(endpointConfig, "FIND_MISSING_DATA_TYPE_PROPERTY_DOMAINS", query);
+        if (!queryResults.isEmpty()) {
+            String dataType = queryResults.get(0).get(SchemaEnhancerQueries.QUERY_BINDING_NAME_DATA_TYPE);
+            String resultDataType = SchemaConstants.DATA_TYPE_XSD_DEFAULT;
+            if (StringUtils.isNotEmpty(dataType)) {
+                resultDataType = SchemaUtil.parseDataType(dataType);
+            }
+            Set<String> newDomains = getDomainsFromQueryResults(queryResults);
+            newDomains = getQualifiedDomains(newDomains, inputSchema);
+            newDomains = getCleanedDomains(newDomains, inputSchema);
+            if (!newDomains.isEmpty()) {
+                SchemaAttribute newAttribute = new SchemaAttribute();
+                SchemaUtil.setLocalNameAndNamespace(newProperty.getKey(), newAttribute);
+                newAttribute.setType(resultDataType);
+                newAttribute.setSourceClasses(newDomains);
+                newAttribute.setIsAbstract(Boolean.FALSE);
+                newAttribute.setInstanceCount(newProperty.getValue());
+                inputSchema.getAttributes().add(newAttribute);
+                return true;
+            }
+            return false;
+        } else {
+            return false;
+        }
+    }
+
+    private void buildNewObjectTypeProperty(@Nonnull Schema inputSchema, @Nonnull final SparqlEndpointConfig endpointConfig, @Nonnull Map.Entry<String, Long> newProperty) {
+        String query = SchemaEnhancerQueries.FIND_OBJECT_TYPE_PROPERTY_DOMAINS_RANGES;
+        query = query.replace(SchemaEnhancerQueries.QUERY_BINDING_NAME_PROPERTY, newProperty.getKey());
+        List<QueryResult> queryResults = sparqlEndpointProcessor.read(endpointConfig, "FIND_MISSING_OBJECT_TYPE_PROPERTY_DOMAINS_RANGES", query);
+        if (!queryResults.isEmpty()) {
+            Set<String> newDomains = getDomainsFromQueryResults(queryResults);
+            newDomains = getQualifiedDomains(newDomains, inputSchema);
+            newDomains = getCleanedDomains(newDomains, inputSchema);
+            Set<String> newRanges = getRangesFromQueryResults(queryResults);
+            newRanges = getQualifiedDomains(newRanges, inputSchema);
+            newRanges = getCleanedDomains(newRanges, inputSchema);
+            if (!newDomains.isEmpty() && !newRanges.isEmpty()) {
+                SchemaRole newRole = new SchemaRole();
+                SchemaUtil.setLocalNameAndNamespace(newProperty.getKey(), newRole);
+                newRole.setIsAbstract(Boolean.FALSE);
+                newRole.setInstanceCount(newProperty.getValue());
+                for (String newDomain : newDomains) {
+                    for (String newRange : newRanges) {
+                        if (hasQueryResultsDomainAndRange(queryResults, newDomain, newRange)) {
+                            newRole.getClassPairs().add(new ClassPair(newDomain, newRange));
+                        }
+                    }
+                }
+                inputSchema.getAssociations().add(newRole);
+            }
+        }
+        log.info("Cannot build missing property {}", newProperty.getKey());
+    }
+
+    private void updateDataTypePropertyInstanceCount(@Nonnull Schema inputSchema, @Nonnull final SparqlEndpointConfig endpointConfig) {
+        inputSchema.getAttributes().stream()
+                .filter(schemaAttribute -> BooleanUtils.isNotTrue(schemaAttribute.getIsAbstract()))
+                .forEach(schemaAttribute -> {
+                    schemaAttribute.getSourceClasses().forEach(sourceClass -> {
+                        String query = SchemaEnhancerQueries.FIND_DATA_TYPE_PROPERTY_INSTANCE_COUNT;
+                        query = query.replace(SchemaEnhancerQueries.QUERY_BINDING_NAME_PROPERTY, schemaAttribute.getFullName());
+                        query = query.replace(SchemaEnhancerQueries.QUERY_BINDING_NAME_DOMAIN_CLASS, sourceClass);
+                        List<QueryResult> queryResults = sparqlEndpointProcessor.read(endpointConfig, "FIND_DATA_TYPE_PROPERTY_INSTANCE_COUNT", query);
+                        if (!queryResults.isEmpty()) {
+                            String instancesCountStr = queryResults.get(0).get(SchemaEnhancerQueries.QUERY_BINDING_NAME_INSTANCES_COUNT);
+                            schemaAttribute.getSourceClassesDetailed().add(new SchemaAttributeDomain(sourceClass, SchemaUtil.getLongValueFromString(instancesCountStr)));
+                        }
+                    });
+                });
+    }
+
+    private void updateObjectTypePropertyInstanceCount(@Nonnull Schema inputSchema, @Nonnull final SparqlEndpointConfig endpointConfig) {
+        inputSchema.getAssociations().stream()
+                .filter(schemaRole -> BooleanUtils.isNotTrue(schemaRole.getIsAbstract()))
+                .forEach(schemaRole -> {
+                    schemaRole.getClassPairs().forEach(classPair -> {
+                        if (StringUtils.isNotEmpty(classPair.getSourceClass()) && StringUtils.isNotEmpty(classPair.getTargetClass())) {
+                            String query = SchemaEnhancerQueries.FIND_OBJECT_TYPE_PROPERTY_INSTANCE_COUNT;
+                            query = query.replace(SchemaEnhancerQueries.QUERY_BINDING_NAME_PROPERTY, schemaRole.getFullName());
+                            query = query.replace(SchemaEnhancerQueries.QUERY_BINDING_NAME_DOMAIN_CLASS, classPair.getSourceClass());
+                            query = query.replace(SchemaEnhancerQueries.QUERY_BINDING_NAME_RANGE_CLASS, classPair.getTargetClass());
+                            List<QueryResult> queryResults = sparqlEndpointProcessor.read(endpointConfig, "FIND_OBJECT_TYPE_PROPERTY_INSTANCE_COUNT", query);
+                            if (!queryResults.isEmpty()) {
+                                String instancesCountStr = queryResults.get(0).get(SchemaEnhancerQueries.QUERY_BINDING_NAME_INSTANCES_COUNT);
+                                classPair.setInstanceCount(SchemaUtil.getLongValueFromString(instancesCountStr));
+                            }
+                        }
+                    });
+                });
     }
 
     private void buildEnhancerProperties(@Nonnull OWLOntologyEnhancerRequest request, @Nonnull Schema schema) {

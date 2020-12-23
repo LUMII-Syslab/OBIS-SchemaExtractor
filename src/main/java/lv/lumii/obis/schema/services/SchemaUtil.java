@@ -1,6 +1,7 @@
 package lv.lumii.obis.schema.services;
 
 import lombok.extern.slf4j.Slf4j;
+import lv.lumii.obis.schema.model.SchemaElement;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -57,6 +58,24 @@ public class SchemaUtil {
             }
         }
         return longValue;
+    }
+
+    public static void setLocalNameAndNamespace(@Nonnull String fullName, @Nonnull SchemaElement entity){
+        String localName = fullName;
+        String namespace = "";
+
+        int localNameIndex = fullName.lastIndexOf("#");
+        if(localNameIndex == -1){
+            localNameIndex = fullName.lastIndexOf("/");
+        }
+        if(localNameIndex != -1 && localNameIndex < fullName.length()){
+            localName = fullName.substring(localNameIndex + 1);
+            namespace = fullName.substring(0, localNameIndex + 1);
+        }
+
+        entity.setLocalName(localName);
+        entity.setFullName(fullName);
+        entity.setNamespace(namespace);
     }
 
 }

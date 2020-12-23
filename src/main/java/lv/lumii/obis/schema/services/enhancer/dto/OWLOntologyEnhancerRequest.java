@@ -18,7 +18,10 @@ public class OWLOntologyEnhancerRequest {
     @ApiParam(access = "5", value = "Threshold to define abstract property (any property with instance count < threshold will be considered as abstract)", defaultValue = "10")
     private Integer abstractPropertyThreshold;
 
-    @ApiParam(access = "6", value = "Flag whether min and max cardinalities are calculated from the endpoint data", defaultValue = "false")
+    @ApiParam(access = "6", value = "Threshold to define when missing property will be added to the schema (property missing in the ontology and having instance count > threshold)", defaultValue = "1000")
+    private Integer propertyInstanceCountThreshold;
+
+    @ApiParam(access = "7", value = "Flag whether min and max cardinalities are calculated from the endpoint data", defaultValue = "false")
     private Boolean calculateCardinalities;
 
     @ApiParam(hidden = true)

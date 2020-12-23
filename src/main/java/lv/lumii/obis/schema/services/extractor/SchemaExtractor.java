@@ -203,7 +203,7 @@ public abstract class SchemaExtractor {
 
 			if(className != null && !isExcludedResource(className, request.getExcludeSystemClasses(), request.getExcludeMetaDomainClasses())){
 				SchemaClass classEntry = new SchemaClass();
-				setLocalNameAndNamespace(className, classEntry);
+				SchemaUtil.setLocalNameAndNamespace(className, classEntry);
 
 				Long instanceCount = 0L;
 				if(instancesCountStr != null){
@@ -230,24 +230,6 @@ public abstract class SchemaExtractor {
 			excluded = SchemaConstants.EXCLUDED_META_DOMAIN_URI_FROM_ENDPOINT.stream().anyMatch(resourceName::startsWith);
 		}
 		return excluded;
-	}
-
-	protected void setLocalNameAndNamespace(@Nonnull String fullName, @Nonnull SchemaElement entity){
-		String localName = fullName;
-		String namespace = "";
-
-		int localNameIndex = fullName.lastIndexOf("#");
-		if(localNameIndex == -1){
-			localNameIndex = fullName.lastIndexOf("/");
-		}
-		if(localNameIndex != -1 && localNameIndex < fullName.length()){
-			localName = fullName.substring(localNameIndex + 1);
-			namespace = fullName.substring(0, localNameIndex + 1);
-		}
-
-		entity.setLocalName(localName);
-		entity.setFullName(fullName);
-		entity.setNamespace(namespace);
 	}
 
 	@Nonnull
@@ -808,7 +790,7 @@ public abstract class SchemaExtractor {
 			SchemaExtractorPropertyNodeInfo propertyNodeInfo = p.getValue();
 			if(isFalse(p.getValue().getIsObjectProperty())){
 				SchemaAttribute attribute = new SchemaAttribute();
-				setLocalNameAndNamespace(p.getKey(), attribute);
+				SchemaUtil.setLocalNameAndNamespace(p.getKey(), attribute);
 				attribute.setMinCardinality(propertyNodeInfo.getMinCardinality());
 				attribute.setMaxCardinality(propertyNodeInfo.getMaxCardinality());
 				Set<String> uniqueDomains = propertyNodeInfo.getDomainRangePairs().stream().map(SchemaExtractorDomainRangeInfo::getDomainClass).collect(Collectors.toSet());
@@ -827,7 +809,7 @@ public abstract class SchemaExtractor {
 			SchemaExtractorPropertyNodeInfo propertyNodeInfo = p.getValue();
 			if(p.getValue().getIsObjectProperty()){
 				SchemaRole role = new SchemaRole();
-				setLocalNameAndNamespace(p.getKey(), role);
+				SchemaUtil.setLocalNameAndNamespace(p.getKey(), role);
 				role.setMinCardinality(propertyNodeInfo.getMinCardinality());
 				role.setMaxCardinality(propertyNodeInfo.getMaxCardinality());
 				propertyNodeInfo.getDomainRangePairs().forEach(pair -> {

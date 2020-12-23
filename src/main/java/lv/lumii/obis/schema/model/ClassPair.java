@@ -12,6 +12,8 @@ public class ClassPair {
 
 	@JsonProperty("TargetClass")
 	private String targetClass;
+
+	private Long instanceCount;
 	
 	public ClassPair() {}
 	
