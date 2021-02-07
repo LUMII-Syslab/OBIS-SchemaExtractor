@@ -46,6 +46,8 @@ public class OWLOntologyEnhancer {
 
         updateDataTypePropertyInstanceCount(inputSchema, endpointConfig);
         updateObjectTypePropertyInstanceCount(inputSchema, endpointConfig);
+        updateObjectTypePropertyDomainInstanceCount(inputSchema, endpointConfig);
+        updateObjectTypePropertyRangeInstanceCount(inputSchema, endpointConfig);
 
         if (BooleanUtils.isTrue(enhancerRequest.getCalculateCardinalities())) {
             processCardinalities(inputSchema.getAttributes(), endpointConfig);
@@ -430,13 +432,13 @@ public class OWLOntologyEnhancer {
                 .filter(schemaAttribute -> BooleanUtils.isNotTrue(schemaAttribute.getIsAbstract()))
                 .forEach(schemaAttribute -> {
                     schemaAttribute.getSourceClasses().forEach(sourceClass -> {
-                        String query = SchemaEnhancerQueries.FIND_DATA_TYPE_PROPERTY_INSTANCE_COUNT;
+                        String query = SchemaEnhancerQueries.FIND_PROPERTY_DOMAIN_INSTANCE_COUNT;
                         query = query.replace(SchemaEnhancerQueries.QUERY_BINDING_NAME_PROPERTY, schemaAttribute.getFullName());
                         query = query.replace(SchemaEnhancerQueries.QUERY_BINDING_NAME_DOMAIN_CLASS, sourceClass);
                         List<QueryResult> queryResults = sparqlEndpointProcessor.read(endpointConfig, "FIND_DATA_TYPE_PROPERTY_INSTANCE_COUNT", query);
                         if (!queryResults.isEmpty()) {
                             String instancesCountStr = queryResults.get(0).get(SchemaEnhancerQueries.QUERY_BINDING_NAME_INSTANCES_COUNT);
-                            schemaAttribute.getSourceClassesDetailed().add(new SchemaAttributeDomain(sourceClass, SchemaUtil.getLongValueFromString(instancesCountStr)));
+                            schemaAttribute.getSourceClassesDetailed().add(new SchemaPropertyLinkedClassDetails(sourceClass, SchemaUtil.getLongValueFromString(instancesCountStr)));
                         }
                     });
                 });
@@ -459,6 +461,44 @@ public class OWLOntologyEnhancer {
                             }
                         }
                     });
+                });
+    }
+
+    private void updateObjectTypePropertyDomainInstanceCount(@Nonnull Schema inputSchema, @Nonnull final SparqlEndpointConfig endpointConfig) {
+        inputSchema.getAssociations().stream()
+                .filter(schemaRole -> BooleanUtils.isNotTrue(schemaRole.getIsAbstract()))
+                .forEach(schemaRole -> {
+                    schemaRole.getClassPairs().stream()
+                            .map(ClassPair::getSourceClass).filter(Objects::nonNull).collect(Collectors.toSet())
+                            .forEach(sourceClass -> {
+                                String query = SchemaEnhancerQueries.FIND_PROPERTY_DOMAIN_INSTANCE_COUNT;
+                                query = query.replace(SchemaEnhancerQueries.QUERY_BINDING_NAME_PROPERTY, schemaRole.getFullName());
+                                query = query.replace(SchemaEnhancerQueries.QUERY_BINDING_NAME_DOMAIN_CLASS, sourceClass);
+                                List<QueryResult> queryResults = sparqlEndpointProcessor.read(endpointConfig, "FIND_OBJECT_TYPE_PROPERTY_DOMAIN_INSTANCE_COUNT", query);
+                                if (!queryResults.isEmpty()) {
+                                    String instancesCountStr = queryResults.get(0).get(SchemaEnhancerQueries.QUERY_BINDING_NAME_INSTANCES_COUNT);
+                                    schemaRole.getSourceClassesDetailed().add(new SchemaPropertyLinkedClassDetails(sourceClass, SchemaUtil.getLongValueFromString(instancesCountStr)));
+                                }
+                            });
+                });
+    }
+
+    private void updateObjectTypePropertyRangeInstanceCount(@Nonnull Schema inputSchema, @Nonnull final SparqlEndpointConfig endpointConfig) {
+        inputSchema.getAssociations().stream()
+                .filter(schemaRole -> BooleanUtils.isNotTrue(schemaRole.getIsAbstract()))
+                .forEach(schemaRole -> {
+                    schemaRole.getClassPairs().stream()
+                            .map(ClassPair::getTargetClass).filter(Objects::nonNull).collect(Collectors.toSet())
+                            .forEach(targetClass -> {
+                                String query = SchemaEnhancerQueries.FIND_PROPERTY_RANGE_INSTANCE_COUNT;
+                                query = query.replace(SchemaEnhancerQueries.QUERY_BINDING_NAME_PROPERTY, schemaRole.getFullName());
+                                query = query.replace(SchemaEnhancerQueries.QUERY_BINDING_NAME_RANGE_CLASS, targetClass);
+                                List<QueryResult> queryResults = sparqlEndpointProcessor.read(endpointConfig, "FIND_OBJECT_TYPE_PROPERTY_RANGE_INSTANCE_COUNT", query);
+                                if (!queryResults.isEmpty()) {
+                                    String instancesCountStr = queryResults.get(0).get(SchemaEnhancerQueries.QUERY_BINDING_NAME_INSTANCES_COUNT);
+                                    schemaRole.getTargetClassesDetailed().add(new SchemaPropertyLinkedClassDetails(targetClass, SchemaUtil.getLongValueFromString(instancesCountStr)));
+                                }
+                            });
                 });
     }
 
