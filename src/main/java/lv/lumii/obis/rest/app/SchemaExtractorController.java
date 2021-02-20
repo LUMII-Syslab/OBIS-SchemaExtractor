@@ -6,6 +6,7 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import lv.lumii.obis.schema.services.enhancer.OWLOntologyEnhancer;
 import lv.lumii.obis.schema.services.enhancer.dto.OWLOntologyEnhancerRequest;
+import lv.lumii.obis.schema.services.extractor.SchemaExtractorManyQueriesWithoutInheritance;
 import lv.lumii.obis.schema.services.reader.dto.OWLOntologyReaderRequest;
 import lv.lumii.obis.schema.services.extractor.SchemaExtractorFewQueries;
 import lv.lumii.obis.schema.services.extractor.SchemaExtractorManyQueries;
@@ -59,6 +60,8 @@ public class SchemaExtractorController {
     @Autowired
     private SchemaExtractorManyQueries schemaExtractorManyQueries;
     @Autowired
+    private SchemaExtractorManyQueriesWithoutInheritance schemaExtractorManyQueriesWithoutInheritance;
+    @Autowired
     private OWLOntologyReader owlOntologyReader;
     @Autowired
     private OWLOntologyEnhancer owlOntologyEnhancer;
@@ -83,6 +86,8 @@ public class SchemaExtractorController {
         Schema schema;
         if (isTrue(SchemaExtractorRequest.ExtractionVersion.fewComplexQueries.equals(request.getVersion()))) {
             schema = schemaExtractorFewQueries.extractClasses(request);
+        } else if (isTrue(SchemaExtractorRequest.ExtractionVersion.manySmallQueriesWithoutInheritance.equals(request.getVersion()))) {
+            schema = schemaExtractorManyQueriesWithoutInheritance.extractClasses(request);
         } else {
             schema = schemaExtractorManyQueries.extractClasses(request);
         }
@@ -111,6 +116,8 @@ public class SchemaExtractorController {
         Schema schema;
         if (isTrue(SchemaExtractorRequest.ExtractionVersion.fewComplexQueries.equals(request.getVersion()))) {
             schema = schemaExtractorFewQueries.extractSchema(request);
+        } else if (isTrue(SchemaExtractorRequest.ExtractionVersion.manySmallQueriesWithoutInheritance.equals(request.getVersion()))) {
+            schema = schemaExtractorManyQueriesWithoutInheritance.extractSchema(request);
         } else {
             schema = schemaExtractorManyQueries.extractSchema(request);
         }

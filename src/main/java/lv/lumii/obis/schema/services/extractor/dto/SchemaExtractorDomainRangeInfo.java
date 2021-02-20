@@ -19,4 +19,10 @@ public class SchemaExtractorDomainRangeInfo {
     public SchemaExtractorDomainRangeInfo(String domainClass){
         this.domainClass = domainClass;
     }
+
+    public SchemaExtractorDomainRangeInfo(String domainClass, String rangeClass, Long instanceCount) {
+        this.domainClass = domainClass;
+        this.rangeClass = rangeClass;
+        this.instanceCount = instanceCount;
+    }
 }

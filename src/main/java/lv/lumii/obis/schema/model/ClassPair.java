@@ -23,4 +23,9 @@ public class ClassPair {
 		this.targetClass = targetClass;
 	}
 
+	public ClassPair(String sourceClass, String targetClass, Long instanceCount) {
+		this.sourceClass = sourceClass;
+		this.targetClass = targetClass;
+		this.instanceCount = instanceCount;
+	}
 }

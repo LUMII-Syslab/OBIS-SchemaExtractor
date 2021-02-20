@@ -8,6 +8,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import lombok.Setter;
 
+import javax.annotation.Nonnull;
+
 @Setter @Getter
 public class SchemaAttribute extends SchemaProperty {
 	
@@ -16,24 +18,15 @@ public class SchemaAttribute extends SchemaProperty {
 	@JsonProperty("SourceClasses")
 	private Set<String> sourceClasses;
 
-	@JsonProperty("SourceClassesDetailed")
-	private Set<SchemaPropertyLinkedClassDetails> sourceClassesDetailed;
-
 	@JsonIgnore
 	private String rangeLookupValues;
 
+	@Nonnull
 	public Set<String> getSourceClasses() {
 		if(sourceClasses == null){
 			sourceClasses = new HashSet<>();
 		}
 		return sourceClasses;
-	}
-
-	public Set<SchemaPropertyLinkedClassDetails> getSourceClassesDetailed() {
-		if(sourceClassesDetailed == null){
-			sourceClassesDetailed = new HashSet<>();
-		}
-		return sourceClassesDetailed;
 	}
 
 }

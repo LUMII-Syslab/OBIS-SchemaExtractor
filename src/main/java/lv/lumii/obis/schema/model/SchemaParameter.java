@@ -9,6 +9,7 @@ public class SchemaParameter {
     public static final String PARAM_NAME_ENDPOINT = "endpointUrl";
     public static final String PARAM_NAME_GRAPH_NAME = "graphName";
     public static final String PARAM_NAME_MODE = "mode";
+    public static final String PARAM_NAME_VERSION = "extractionVersion";
     public static final String PARAM_NAME_EXCLUDE_SYSTEM_CLASSES = "excludeSystemClasses";
     public static final String PARAM_NAME_EXCLUDE_META_DOMAIN_CLASSES = "excludeMetaDomainClasses";
     public static final String PARAM_NAME_EXCLUDE_PROPERTIES_WITHOUT_CLASSES = "excludePropertiesWithoutClasses";

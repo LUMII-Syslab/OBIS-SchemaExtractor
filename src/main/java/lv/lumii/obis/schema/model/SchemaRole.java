@@ -9,39 +9,33 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import lombok.Setter;
 
+import javax.annotation.Nonnull;
+
 @Setter @Getter
 public class SchemaRole extends SchemaProperty {
 
 	private String inverseProperty;
-	
-	@JsonProperty("ClassPairs")
-	private List<ClassPair> classPairs;
-
-	@JsonProperty("SourceClassesDetailed")
-	private Set<SchemaPropertyLinkedClassDetails> sourceClassesDetailed;
 
 	@JsonProperty("TargetClassesDetailed")
 	private Set<SchemaPropertyLinkedClassDetails> targetClassesDetailed;
 
-	public List<ClassPair> getClassPairs() {
-		if(classPairs == null){
-			classPairs = new ArrayList<>();
-		}
-		return classPairs;
-	}
+	@JsonProperty("ClassPairs")
+	private List<ClassPair> classPairs;
 
-	public Set<SchemaPropertyLinkedClassDetails> getSourceClassesDetailed() {
-		if(sourceClassesDetailed == null){
-			sourceClassesDetailed = new HashSet<>();
-		}
-		return sourceClassesDetailed;
-	}
-
+	@Nonnull
 	public Set<SchemaPropertyLinkedClassDetails> getTargetClassesDetailed() {
 		if(targetClassesDetailed == null){
 			targetClassesDetailed = new HashSet<>();
 		}
 		return targetClassesDetailed;
+	}
+
+	@Nonnull
+	public List<ClassPair> getClassPairs() {
+		if(classPairs == null){
+			classPairs = new ArrayList<>();
+		}
+		return classPairs;
 	}
 
 }
