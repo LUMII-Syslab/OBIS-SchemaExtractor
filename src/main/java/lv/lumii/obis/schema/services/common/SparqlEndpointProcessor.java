@@ -109,8 +109,8 @@ public class SparqlEndpointProcessor {
             qexec = (QueryEngineHTTP) QueryExecutionFactory.sparqlService(endpointUrl, query);
         } else {
             qexec = (QueryEngineHTTP) QueryExecutionFactory.sparqlService(endpointUrl, query, graphName);
+            qexec.addDefaultGraph(graphName);
         }
-        qexec.addDefaultGraph(graphName);
         return qexec;
     }
 
