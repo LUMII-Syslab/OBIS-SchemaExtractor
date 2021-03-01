@@ -27,7 +27,7 @@ import static org.apache.commons.lang3.BooleanUtils.isTrue;
 
 @Slf4j
 @Service
-public class SchemaExtractorManyQueriesWithoutInheritance extends SchemaExtractor {
+public class SchemaExtractorManyQueriesWithDirectProperties extends SchemaExtractor {
 
     @Override
     @Nonnull

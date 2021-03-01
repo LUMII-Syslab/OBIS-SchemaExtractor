@@ -8,7 +8,7 @@ import lombok.Setter;
 public class SchemaExtractorRequest {
 
     public enum ExtractionMode {excludeDataTypesAndCardinalities, excludeCardinalities, full};
-    public enum ExtractionVersion {manySmallQueries, manySmallQueriesWithoutInheritance, fewComplexQueries};
+    public enum ExtractionVersion {manySmallQueries, manySmallQueriesWithDirectProperties, fewComplexQueries};
 
     @ApiParam(access = "1", value = "SPARQL Endpoint URL, for example, http://localhost:8890/sparql", required = true)
     private String endpointUrl;
