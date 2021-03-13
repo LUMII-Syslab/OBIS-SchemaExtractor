@@ -757,10 +757,7 @@ public abstract class SchemaExtractor {
         property.setMaxCardinality(DEFAULT_MAX_CARDINALITY);
     }
 
-    protected void setMinCardinality(@Nullable String propertyName, @Nullable SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequest request) {
-        if (propertyName == null || property == null) {
-            return;
-        }
+    protected void setMinCardinality(@Nonnull String propertyName, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequest request) {
         if (property.getDomainRangePairs().isEmpty() || (property.getDomainRangePairs().size() == 1 && property.getDomainRangePairs().get(0).getDomainClass() == null)) {
             property.setMinCardinality(DEFAULT_MIN_CARDINALITY);
             return;

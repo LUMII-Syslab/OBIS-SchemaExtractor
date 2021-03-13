@@ -134,12 +134,18 @@ public enum SchemaExtractorQueries {
     FIND_PROPERTY_DOMAIN_RANGE_PAIRS(
             "SELECT ?domainClass ?rangeClass (COUNT(?x) as ?instances) WHERE {?x <property> ?y. ?x a ?domainClass. ?y a ?rangeClass. } GROUP BY ?domainClass ?rangeClass"
     ),
+    FIND_PROPERTY_DOMAIN_RANGE_PAIRS_FOR_SPECIFIC_CLASSES(
+            "SELECT (COUNT(?x) as ?instances) WHERE {?x <property> ?y. ?x a <domainClass>. ?y a <rangeClass>.}"
+    ),
 
     COUNT_PROPERTY_ALL_VALUES(
             "SELECT (COUNT(?y) as ?instances) WHERE {?x <property> ?y}"
     ),
     COUNT_PROPERTY_URL_VALUES(
             "SELECT (COUNT(?y) as ?instances) WHERE {?x <property> ?y. FILTER(isURI(?y)) }"
+    ),
+    COUNT_PROPERTY_URL_VALUES_FOR_DOMAIN(
+            "SELECT (COUNT(?y) as ?instances) WHERE {?x a <domainClass>. ?x <property> ?y. FILTER(isURI(?y)) }"
     )
 
 

@@ -16,6 +16,7 @@ public class SchemaExtractorPropertyNodeInfo {
 	private Integer minCardinality;
 	private Integer maxCardinality;
 	private Long instanceCount;
+	private Long objectTripleCount;
 	private List<SchemaExtractorDomainRangeInfo> domainRangePairs;
 	private List<SchemaExtractorClassNodeInfo> domainClasses;
 	private List<SchemaExtractorClassNodeInfo> rangeClasses;

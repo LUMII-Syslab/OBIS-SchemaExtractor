@@ -14,6 +14,7 @@ public abstract class SchemaProperty extends SchemaElement {
 	private Integer minCardinality;
 	private Integer maxCardinality;
 	private Long instanceCount;
+	private Long objectTripleCount;
 
 	@JsonProperty("SourceClassesDetailed")
 	private Set<SchemaPropertyLinkedClassDetails> sourceClassesDetailed;

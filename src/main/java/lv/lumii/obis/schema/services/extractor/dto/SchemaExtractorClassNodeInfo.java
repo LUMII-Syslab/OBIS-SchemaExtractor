@@ -11,6 +11,8 @@ public class SchemaExtractorClassNodeInfo {
 	
 	private String className;
 	private Long instanceCount;
+	private Long objectTripleCount;
+	private Integer minCardinality;
 	private List<String> neighbors;
 
 	public SchemaExtractorClassNodeInfo() {
