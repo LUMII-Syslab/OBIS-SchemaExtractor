@@ -1,6 +1,8 @@
 package lv.lumii.obis.schema.model;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -10,23 +12,34 @@ import lombok.Setter;
 
 import javax.annotation.Nonnull;
 
-@Setter @Getter
+@Setter
+@Getter
 public class SchemaAttribute extends SchemaProperty {
-	
-	private String type;
 
-	@JsonProperty("SourceClasses")
-	private Set<String> sourceClasses;
+    private String type;
 
-	@JsonIgnore
-	private String rangeLookupValues;
+    @JsonProperty("SourceClasses")
+    private Set<String> sourceClasses;
 
-	@Nonnull
-	public Set<String> getSourceClasses() {
-		if(sourceClasses == null){
-			sourceClasses = new HashSet<>();
-		}
-		return sourceClasses;
-	}
+    @JsonIgnore
+    private String rangeLookupValues;
+
+    private List<SchemaAttributeDataType> dataTypes;
+
+    @Nonnull
+    public Set<String> getSourceClasses() {
+        if (sourceClasses == null) {
+            sourceClasses = new HashSet<>();
+        }
+        return sourceClasses;
+    }
+
+    @Nonnull
+    public List<SchemaAttributeDataType> getDataTypes() {
+        if (dataTypes == null) {
+            dataTypes = new ArrayList<>();
+        }
+        return dataTypes;
+    }
 
 }

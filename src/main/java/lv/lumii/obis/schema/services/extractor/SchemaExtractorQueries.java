@@ -110,6 +110,12 @@ public enum SchemaExtractorQueries {
     FIND_PROPERTY_DATA_TYPE(
             "SELECT DISTINCT  (datatype(?value) as ?dataType) WHERE { ?x <property> ?value. }"
     ),
+    FIND_PROPERTY_DATA_TYPE_WITH_TRIPLE_COUNT(
+            "SELECT ?dataType (COUNT(?value) as ?instances) WHERE { { SELECT (datatype(?value) as ?dataType) ?value WHERE { ?x <property> ?value. } } } GROUP BY ?dataType"
+    ),
+    FIND_PROPERTY_DATA_TYPE_LANG_STRING(
+            "SELECT (COUNT(?value) as ?instances) WHERE { ?x <property> ?value. BIND (lang(?value) as ?language) FILTER (BOUND(?language)) }"
+    ),
 
     FIND_PROPERTY_MAX_CARDINALITY(
             "SELECT ?x WHERE { ?x <property> ?value1. ?x <property> ?value2. FILTER (?value1 != ?value2) } LIMIT 1"
@@ -125,6 +131,14 @@ public enum SchemaExtractorQueries {
 
     FIND_PROPERTY_DOMAINS(
             "SELECT ?class (COUNT(?x) as ?instances) WHERE {?x a ?class. ?x <property> ?y} GROUP BY ?class"
+    ),
+
+    FIND_PROPERTY_DOMAINS_WITHOUT_TRIPLE_COUNT(
+            "SELECT distinct ?class WHERE {?x <property> ?y. ?x a ?class. }"
+    ),
+
+    FIND_PROPERTY_DOMAINS_TRIPLE_COUNT(
+            "SELECT (COUNT(?x) as ?instances) WHERE {?x <property> ?y. ?x a domainClass>. }"
     ),
 
     FIND_PROPERTY_RANGES(
@@ -146,6 +160,13 @@ public enum SchemaExtractorQueries {
     ),
     COUNT_PROPERTY_URL_VALUES_FOR_DOMAIN(
             "SELECT (COUNT(?y) as ?instances) WHERE {?x a <domainClass>. ?x <property> ?y. FILTER(isURI(?y)) }"
+    ),
+
+    FIND_CLOSED_RANGE_FOR_PROPERTY(
+            "SELECT ?x ?y WHERE { ?x <property> ?y. FILTER(isURI(?y)) OPTIONAL {?y a ?c} FILTER(!BOUND(?c)) } LIMIT 1"
+    ),
+    FIND_CLOSED_DOMAIN_FOR_PROPERTY(
+            "SELECT ?x ?y WHERE { ?x <property> ?y. OPTIONAL {?x a ?c} FILTER(!BOUND(?c)) } LIMIT 1"
     )
 
 

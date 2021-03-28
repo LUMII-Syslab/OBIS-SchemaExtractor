@@ -18,6 +18,10 @@ public class SchemaExtractorClassNodeInfo {
 	public SchemaExtractorClassNodeInfo() {
 	}
 
+	public SchemaExtractorClassNodeInfo(String className) {
+		this.className = className;
+	}
+
 	public SchemaExtractorClassNodeInfo(String className, Long instanceCount) {
 		this.className = className;
 		this.instanceCount = instanceCount;

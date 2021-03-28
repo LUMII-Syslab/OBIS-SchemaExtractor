@@ -24,6 +24,7 @@ public class SchemaConstants {
 	 * Data types constants
 	 */
 	public static final String DATA_TYPE_XSD_DEFAULT = "xsd:string";
+	public static final String DATA_TYPE_XSD_LANG_STRING = "xsd:langString";
 	public static final String DATA_TYPE_LITERAL = "Literal";
 
 	/**
@@ -63,5 +64,7 @@ public class SchemaConstants {
 	public static final String SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT = "instances";
 	public static final String SPARQL_QUERY_BINDING_NAME_PROPERTY = "property";
 	public static final String SPARQL_QUERY_BINDING_NAME_DATA_TYPE = "dataType";
+	public static final String SPARQL_QUERY_BINDING_NAME_X = "x";
+	public static final String SPARQL_QUERY_BINDING_NAME_Y = "y";
 
 }

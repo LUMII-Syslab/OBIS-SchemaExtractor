@@ -104,7 +104,7 @@ public class OWLOntologyEnhancer {
                 property.setIsAbstract(Boolean.TRUE);
             } else {
                 property.setIsAbstract(Boolean.FALSE);
-                property.setInstanceCount(allProperties.get(property.getFullName()));
+                property.setTripleCount(allProperties.get(property.getFullName()));
             }
         });
     }
@@ -388,7 +388,7 @@ public class OWLOntologyEnhancer {
                 newAttribute.setType(resultDataType);
                 newAttribute.setSourceClasses(newDomains);
                 newAttribute.setIsAbstract(Boolean.FALSE);
-                newAttribute.setInstanceCount(newProperty.getValue());
+                newAttribute.setTripleCount(newProperty.getValue());
                 inputSchema.getAttributes().add(newAttribute);
                 return true;
             }
@@ -413,7 +413,7 @@ public class OWLOntologyEnhancer {
                 SchemaRole newRole = new SchemaRole();
                 SchemaUtil.setLocalNameAndNamespace(newProperty.getKey(), newRole);
                 newRole.setIsAbstract(Boolean.FALSE);
-                newRole.setInstanceCount(newProperty.getValue());
+                newRole.setTripleCount(newProperty.getValue());
                 for (String newDomain : newDomains) {
                     for (String newRange : newRanges) {
                         if (hasQueryResultsDomainAndRange(queryResults, newDomain, newRange)) {
@@ -457,7 +457,7 @@ public class OWLOntologyEnhancer {
                             List<QueryResult> queryResults = sparqlEndpointProcessor.read(endpointConfig, "FIND_OBJECT_TYPE_PROPERTY_INSTANCE_COUNT", query);
                             if (!queryResults.isEmpty()) {
                                 String instancesCountStr = queryResults.get(0).get(SchemaEnhancerQueries.QUERY_BINDING_NAME_INSTANCES_COUNT);
-                                classPair.setInstanceCount(SchemaUtil.getLongValueFromString(instancesCountStr));
+                                classPair.setTripleCount(SchemaUtil.getLongValueFromString(instancesCountStr));
                             }
                         }
                     });

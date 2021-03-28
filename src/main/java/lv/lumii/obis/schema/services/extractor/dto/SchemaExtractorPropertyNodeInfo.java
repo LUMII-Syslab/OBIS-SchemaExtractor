@@ -7,42 +7,53 @@ import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
 
-@Setter @Getter
+@Setter
+@Getter
 public class SchemaExtractorPropertyNodeInfo {
 
-	private String propertyName;
-	private Boolean isObjectProperty = Boolean.FALSE;
-	private String dataType;
-	private Integer minCardinality;
-	private Integer maxCardinality;
-	private Long instanceCount;
-	private Long objectTripleCount;
-	private List<SchemaExtractorDomainRangeInfo> domainRangePairs;
-	private List<SchemaExtractorClassNodeInfo> domainClasses;
-	private List<SchemaExtractorClassNodeInfo> rangeClasses;
+    private String propertyName;
+    private Boolean isObjectProperty = Boolean.FALSE;
+    private String dataType;
+    private Integer minCardinality;
+    private Integer maxCardinality;
+    private Long instanceCount;
+    private Long objectTripleCount;
+    private Boolean isClosedDomain = Boolean.TRUE;
+    private Boolean isClosedRange = Boolean.TRUE;
+    private List<SchemaExtractorDomainRangeInfo> domainRangePairs;
+    private List<SchemaExtractorClassNodeInfo> domainClasses;
+    private List<SchemaExtractorClassNodeInfo> rangeClasses;
+    private List<SchemaExtractorDataTypeInfo> dataTypes;
 
-	@Nonnull
-	public List<SchemaExtractorDomainRangeInfo> getDomainRangePairs() {
-		if(domainRangePairs == null){
-			domainRangePairs = new ArrayList<>();
-		}
-		return domainRangePairs;
-	}
+    @Nonnull
+    public List<SchemaExtractorDomainRangeInfo> getDomainRangePairs() {
+        if (domainRangePairs == null) {
+            domainRangePairs = new ArrayList<>();
+        }
+        return domainRangePairs;
+    }
 
-	@Nonnull
-	public List<SchemaExtractorClassNodeInfo> getDomainClasses() {
-		if(domainClasses == null){
-			domainClasses = new ArrayList<>();
-		}
-		return domainClasses;
-	}
+    @Nonnull
+    public List<SchemaExtractorClassNodeInfo> getDomainClasses() {
+        if (domainClasses == null) {
+            domainClasses = new ArrayList<>();
+        }
+        return domainClasses;
+    }
 
-	@Nonnull
-	public List<SchemaExtractorClassNodeInfo> getRangeClasses() {
-		if(rangeClasses == null){
-			rangeClasses = new ArrayList<>();
-		}
-		return rangeClasses;
-	}
+    @Nonnull
+    public List<SchemaExtractorClassNodeInfo> getRangeClasses() {
+        if (rangeClasses == null) {
+            rangeClasses = new ArrayList<>();
+        }
+        return rangeClasses;
+    }
 
+    @Nonnull
+    public List<SchemaExtractorDataTypeInfo> getDataTypes() {
+        if (dataTypes == null) {
+            dataTypes = new ArrayList<>();
+        }
+        return dataTypes;
+    }
 }

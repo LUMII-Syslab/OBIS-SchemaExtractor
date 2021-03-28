@@ -13,7 +13,7 @@ public class ClassPair {
 	@JsonProperty("TargetClass")
 	private String targetClass;
 
-	private Long instanceCount;
+	private Long tripleCount;
 	
 	public ClassPair() {}
 	
@@ -23,9 +23,9 @@ public class ClassPair {
 		this.targetClass = targetClass;
 	}
 
-	public ClassPair(String sourceClass, String targetClass, Long instanceCount) {
+	public ClassPair(String sourceClass, String targetClass, Long tripleCount) {
 		this.sourceClass = sourceClass;
 		this.targetClass = targetClass;
-		this.instanceCount = instanceCount;
+		this.tripleCount = tripleCount;
 	}
 }
