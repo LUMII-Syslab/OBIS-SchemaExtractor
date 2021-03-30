@@ -114,7 +114,7 @@ public enum SchemaExtractorQueries {
             "SELECT ?dataType (COUNT(?value) as ?instances) WHERE { { SELECT (datatype(?value) as ?dataType) ?value WHERE { ?x <property> ?value. } } } GROUP BY ?dataType"
     ),
     FIND_PROPERTY_DATA_TYPE_LANG_STRING(
-            "SELECT (COUNT(?value) as ?instances) WHERE { ?x <property> ?value. BIND (lang(?value) as ?language) FILTER (BOUND(?language)) }"
+            "SELECT (COUNT(?value) as ?instances) WHERE { ?x <property> ?value. FILTER (lang(?value) != \"\") }"
     ),
 
     FIND_PROPERTY_MAX_CARDINALITY(

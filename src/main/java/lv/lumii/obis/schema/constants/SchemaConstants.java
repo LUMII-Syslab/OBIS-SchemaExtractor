@@ -24,7 +24,7 @@ public class SchemaConstants {
 	 * Data types constants
 	 */
 	public static final String DATA_TYPE_XSD_DEFAULT = "xsd:string";
-	public static final String DATA_TYPE_XSD_LANG_STRING = "xsd:langString";
+	public static final String DATA_TYPE_RDF_LANG_STRING = "rdf:langString";
 	public static final String DATA_TYPE_LITERAL = "Literal";
 
 	/**
