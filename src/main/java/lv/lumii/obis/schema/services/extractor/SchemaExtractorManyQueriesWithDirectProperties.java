@@ -92,9 +92,13 @@ public class SchemaExtractorManyQueriesWithDirectProperties extends SchemaExtrac
             determinePropertyType(property, request);
 
             // calculate property ranges with instance count
-            if (isTrue(property.getIsObjectProperty())) {
+            if (property.getObjectTripleCount() > 0) {
                 determinePropertyRanges(property, request);
                 determinePropertyDomainRangePairs(property, request);
+            }
+
+            // determine whether property domain and range is closed
+            if (isTrue(property.getIsObjectProperty())) {
                 determinePropertyClosedDomainsAndRanges(property, request);
             }
         }
@@ -113,7 +117,7 @@ public class SchemaExtractorManyQueriesWithDirectProperties extends SchemaExtrac
     }
 
     protected void determinePropertyType(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequest request) {
-        log.info(request.getCorrelationId() + " - determinePropertyType [" + property.getPropertyName() + "]");
+        log.info(request.getCorrelationId() + " - determinePropertyTypeAndCalculateTripleCounts [" + property.getPropertyName() + "]");
 
         // get total count of all property values
         String queryForTotalCount = COUNT_PROPERTY_ALL_VALUES.getSparqlQuery().replace(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
@@ -131,10 +135,9 @@ public class SchemaExtractorManyQueriesWithDirectProperties extends SchemaExtrac
 
         Long instancesCountForTotal = SchemaUtil.getLongValueFromString(queryResultsForTotalCount.get(0).get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
         Long instancesCountForUrl = SchemaUtil.getLongValueFromString(queryResultsForUrlCount.get(0).get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
+
         property.setObjectTripleCount(instancesCountForUrl);
-        if (instancesCountForTotal.equals(0L)) {
-            return;
-        }
+
         if (instancesCountForTotal.equals(instancesCountForUrl)) {
             property.setIsObjectProperty(Boolean.TRUE);
         } else {
@@ -142,19 +145,25 @@ public class SchemaExtractorManyQueriesWithDirectProperties extends SchemaExtrac
         }
 
         // get count of URL values for the specific property and specific domain
-        if (instancesCountForUrl > 0) {
-            property.getDomainClasses().forEach(domainClass -> {
-                String query = SchemaExtractorQueries.COUNT_PROPERTY_URL_VALUES_FOR_DOMAIN.getSparqlQuery().
-                        replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName()).
-                        replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_DOMAIN, domainClass.getClassName());
-                List<QueryResult> queryResults = sparqlEndpointProcessor.read(request, SchemaExtractorQueries.COUNT_PROPERTY_URL_VALUES_FOR_DOMAIN.name(), query);
-                if (queryResults.isEmpty() || queryResults.get(0) == null) {
-                    domainClass.setObjectTripleCount(0L);
-                } else {
-                    Long urlInstancesCountForDomain = SchemaUtil.getLongValueFromString(queryResults.get(0).get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
-                    domainClass.setObjectTripleCount(urlInstancesCountForDomain);
-                }
-            });
+        property.getDomainClasses().forEach(domainClass -> {
+            if (instancesCountForUrl <= 0) {
+                domainClass.setObjectTripleCount(0L);
+            } else {
+                calculatePropertyDomainObjectTripleCount(domainClass, property, request);
+            }
+        });
+    }
+
+    protected void calculatePropertyDomainObjectTripleCount(@Nonnull SchemaExtractorClassNodeInfo domainClass, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequest request) {
+        String query = SchemaExtractorQueries.COUNT_PROPERTY_URL_VALUES_FOR_DOMAIN.getSparqlQuery().
+                replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName()).
+                replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_DOMAIN, domainClass.getClassName());
+        List<QueryResult> queryResults = sparqlEndpointProcessor.read(request, SchemaExtractorQueries.COUNT_PROPERTY_URL_VALUES_FOR_DOMAIN.name(), query);
+        if (queryResults.isEmpty() || queryResults.get(0) == null) {
+            domainClass.setObjectTripleCount(0L);
+        } else {
+            Long urlInstancesCountForDomain = SchemaUtil.getLongValueFromString(queryResults.get(0).get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
+            domainClass.setObjectTripleCount(urlInstancesCountForDomain);
         }
     }
 
@@ -237,7 +246,7 @@ public class SchemaExtractorManyQueriesWithDirectProperties extends SchemaExtrac
     }
 
     protected void determinePropertyClosedDomainsAndRanges(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequest request) {
-        log.info(request.getCorrelationId() + " - determinePropertyClosedDomains [" + property.getPropertyName() + "]");
+        log.info(request.getCorrelationId() + " - determinePropertyClosedDomainsAndRanges [" + property.getPropertyName() + "]");
 
         // check if there is any triple with URI subject but without bound class
         String query = FIND_CLOSED_DOMAIN_FOR_PROPERTY.getSparqlQuery().replace(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
@@ -333,11 +342,18 @@ public class SchemaExtractorManyQueriesWithDirectProperties extends SchemaExtrac
         SchemaAttribute attribute = new SchemaAttribute();
         SchemaUtil.setLocalNameAndNamespace(propertyId, attribute);
         attribute.setMaxCardinality(property.getMaxCardinality());
-        attribute.getSourceClasses().addAll(property.getDomainClasses().stream().map(SchemaExtractorClassNodeInfo::getClassName).collect(Collectors.toSet()));
-        attribute.getSourceClassesDetailed().addAll(convertInternalDtoToApiDto(property.getDomainClasses()));
-        attribute.getDataTypes().addAll(convertInternalDataTypesToApiDto(property.getDataTypes()));
         attribute.setTripleCount(property.getInstanceCount());
         attribute.setObjectTripleCount(property.getObjectTripleCount());
+        attribute.getDataTypes().addAll(convertInternalDataTypesToApiDto(property.getDataTypes()));
+        attribute.getSourceClasses().addAll(property.getDomainClasses().stream().map(SchemaExtractorClassNodeInfo::getClassName).collect(Collectors.toSet()));
+        attribute.getSourceClassesDetailed().addAll(convertInternalDtoToApiDto(property.getDomainClasses()));
+        attribute.getTargetClassesDetailed().addAll(convertInternalDtoToApiDto(property.getRangeClasses()));
+        property.getDomainRangePairs().forEach(pair -> {
+            if (isFalse(isDuplicatePair(attribute.getClassPairs(), pair.getDomainClass(), pair.getRangeClass()))) {
+                attribute.getClassPairs().add(new ClassPair(pair.getDomainClass(), pair.getRangeClass(), pair.getInstanceCount()));
+            }
+        });
+
         return attribute;
     }
 

@@ -138,7 +138,7 @@ public enum SchemaExtractorQueries {
     ),
 
     FIND_PROPERTY_DOMAINS_TRIPLE_COUNT(
-            "SELECT (COUNT(?x) as ?instances) WHERE {?x <property> ?y. ?x a domainClass>. }"
+            "SELECT (COUNT(?x) as ?instances) WHERE {?x <property> ?y. ?x a <domainClass>. }"
     ),
 
     FIND_PROPERTY_RANGES(
