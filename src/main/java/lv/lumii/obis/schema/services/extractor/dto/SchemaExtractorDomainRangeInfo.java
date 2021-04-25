@@ -9,7 +9,7 @@ public class SchemaExtractorDomainRangeInfo {
     private String domainClass;
     private String rangeClass;
 
-    private Long instanceCount;
+    private Long tripleCount;
 
     private Boolean validDomain;
     private Boolean validRange;
@@ -20,9 +20,9 @@ public class SchemaExtractorDomainRangeInfo {
         this.domainClass = domainClass;
     }
 
-    public SchemaExtractorDomainRangeInfo(String domainClass, String rangeClass, Long instanceCount) {
+    public SchemaExtractorDomainRangeInfo(String domainClass, String rangeClass, Long tripleCount) {
         this.domainClass = domainClass;
         this.rangeClass = rangeClass;
-        this.instanceCount = instanceCount;
+        this.tripleCount = tripleCount;
     }
 }

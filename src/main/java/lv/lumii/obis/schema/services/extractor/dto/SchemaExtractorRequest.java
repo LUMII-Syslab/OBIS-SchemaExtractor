@@ -16,7 +16,7 @@ public class SchemaExtractorRequest {
     @ApiParam(access = "2", value = "Named Graph (optional). If no graph name provided, the search will involve all graphs from the endpoint", allowEmptyValue = true)
     private String graphName;
 
-    @ApiParam(access = "3", value = "Extraction Version: a lot of small SPARQL queries or just a few but complex queries", defaultValue = "manySmallQueries", required = true)
+    @ApiParam(access = "3", value = "Extraction Version: a lot of small SPARQL queries or just a few but complex queries", defaultValue = "manySmallQueriesWithDirectProperties", required = true)
     private ExtractionVersion version;
 
     @ApiParam(access = "4", value = "Extraction Complexity: excludeDataTypesAndCardinalities, excludeCardinalities, full", defaultValue = "full", required = true)

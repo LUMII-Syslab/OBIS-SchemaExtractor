@@ -16,10 +16,10 @@ public class SchemaExtractorPropertyNodeInfo {
     private String dataType;
     private Integer minCardinality;
     private Integer maxCardinality;
-    private Long instanceCount;
+    private Long tripleCount;
     private Long objectTripleCount;
-    private Boolean isClosedDomain = Boolean.TRUE;
-    private Boolean isClosedRange = Boolean.TRUE;
+    private Boolean isClosedDomain;
+    private Boolean isClosedRange;
     private List<SchemaExtractorDomainRangeInfo> domainRangePairs;
     private List<SchemaExtractorClassNodeInfo> domainClasses;
     private List<SchemaExtractorClassNodeInfo> rangeClasses;

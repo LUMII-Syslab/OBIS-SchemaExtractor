@@ -125,12 +125,8 @@ public enum SchemaExtractorQueries {
             "SELECT ?x WHERE { ?x a <class>. OPTIONAL { ?x ?prop ?value. FILTER (?prop = <property>) } FILTER (!BOUND(?prop)) } LIMIT 1 "
     ),
 
-    FIND_ALL_PROPERTIES(
-            "SELECT ?property (COUNT(?x) as ?instances) WHERE {?x ?property ?y} GROUP BY ?property"
-    ),
-
-    FIND_PROPERTY_DOMAINS(
-            "SELECT ?class (COUNT(?x) as ?instances) WHERE {?x a ?class. ?x <property> ?y} GROUP BY ?class"
+    FIND_ALL_PROPERTIES_WITHOUT_TRIPLE_COUNT(
+            "SELECT DISTINCT ?property WHERE {?x ?property ?y}"
     ),
 
     FIND_PROPERTY_DOMAINS_WITHOUT_TRIPLE_COUNT(
@@ -141,8 +137,12 @@ public enum SchemaExtractorQueries {
             "SELECT (COUNT(?x) as ?instances) WHERE {?x <property> ?y. ?x a <domainClass>. }"
     ),
 
-    FIND_PROPERTY_RANGES(
-            "SELECT ?class (COUNT(?y) as ?instances) WHERE {?y a ?class. ?x <property> ?y} GROUP BY ?class"
+    FIND_PROPERTY_RANGES_WITHOUT_TRIPLE_COUNT(
+            "SELECT distinct ?class WHERE {?x <property> ?y. ?y a ?class. } "
+    ),
+
+    FIND_PROPERTY_RANGES_TRIPLE_COUNT(
+            "SELECT (COUNT(?x) as ?instances) WHERE {?x <property> ?y. ?y a <rangeClass>. }"
     ),
 
     FIND_PROPERTY_DOMAIN_RANGE_PAIRS(

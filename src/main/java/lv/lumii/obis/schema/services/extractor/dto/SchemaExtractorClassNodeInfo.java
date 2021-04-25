@@ -10,7 +10,7 @@ import java.util.List;
 public class SchemaExtractorClassNodeInfo {
 	
 	private String className;
-	private Long instanceCount;
+	private Long tripleCount;
 	private Long objectTripleCount;
 	private Integer minCardinality;
 	private List<String> neighbors;
@@ -22,9 +22,9 @@ public class SchemaExtractorClassNodeInfo {
 		this.className = className;
 	}
 
-	public SchemaExtractorClassNodeInfo(String className, Long instanceCount) {
+	public SchemaExtractorClassNodeInfo(String className, Long tripleCount) {
 		this.className = className;
-		this.instanceCount = instanceCount;
+		this.tripleCount = tripleCount;
 	}
 
 	public List<String> getNeighbors() {

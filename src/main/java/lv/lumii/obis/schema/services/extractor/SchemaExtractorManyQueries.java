@@ -103,7 +103,7 @@ public class SchemaExtractorManyQueries extends SchemaExtractor {
 			SchemaExtractorPropertyNodeInfo property = properties.get(propertyName);
 			SchemaExtractorClassNodeInfo classInfo = new SchemaExtractorClassNodeInfo();
 			classInfo.setClassName(domainClass);
-			classInfo.setInstanceCount(Long.valueOf(instances));
+			classInfo.setTripleCount(Long.valueOf(instances));
 			property.getDomainClasses().add(classInfo);
 		}
 	}

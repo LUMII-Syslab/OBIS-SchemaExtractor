@@ -46,7 +46,7 @@ public abstract class SchemaExtractor {
         buildClasses(request, schema);
         buildDataTypeProperties(request, schema);
         buildObjectTypeProperties(request, schema);
-        buildNamespaceMap(request, schema);
+        buildNamespaceMap(schema);
         return schema;
     }
 
@@ -54,7 +54,7 @@ public abstract class SchemaExtractor {
     public Schema extractClasses(@Nonnull SchemaExtractorRequest request) {
         Schema schema = initializeSchema(request);
         buildClasses(request, schema);
-        buildNamespaceMap(request, schema);
+        buildNamespaceMap(schema);
         return schema;
     }
 
@@ -156,7 +156,7 @@ public abstract class SchemaExtractor {
     protected abstract Map<String, SchemaExtractorPropertyNodeInfo> findAllObjectTypeProperties(@Nonnull List<SchemaClass> classes,
                                                                                                 @Nonnull SchemaExtractorRequest request);
 
-    protected void buildNamespaceMap(@Nonnull SchemaExtractorRequest request, @Nonnull Schema schema) {
+    protected void buildNamespaceMap(@Nonnull Schema schema) {
         String mainNamespace = findMainNamespace(schema);
         if (StringUtils.isNotEmpty(mainNamespace)) {
             schema.setDefaultNamespace(mainNamespace);
@@ -207,17 +207,7 @@ public abstract class SchemaExtractor {
             if (className != null && !isExcludedResource(className, request.getExcludeSystemClasses(), request.getExcludeMetaDomainClasses())) {
                 SchemaClass classEntry = new SchemaClass();
                 SchemaUtil.setLocalNameAndNamespace(className, classEntry);
-
-                Long instanceCount = 0L;
-                if (instancesCountStr != null) {
-                    try {
-                        instanceCount = Long.valueOf(instancesCountStr);
-                    } catch (NumberFormatException e) {
-                        // do nothing
-                    }
-                }
-                classEntry.setInstanceCount(instanceCount);
-
+                classEntry.setInstanceCount(SchemaUtil.getLongValueFromString(instancesCountStr));
                 classes.add(classEntry);
             }
         }
@@ -241,7 +231,7 @@ public abstract class SchemaExtractor {
         classes.forEach(c -> {
             SchemaExtractorClassNodeInfo classInfo = new SchemaExtractorClassNodeInfo();
             classInfo.setClassName(c.getFullName());
-            classInfo.setInstanceCount(c.getInstanceCount());
+            classInfo.setTripleCount(c.getInstanceCount());
             graphOfClasses.put(c.getFullName(), classInfo);
         });
         return graphOfClasses;
@@ -273,7 +263,7 @@ public abstract class SchemaExtractor {
                     if (compareResult != 0) {
                         return compareResult;
                     }
-                    compareResult = o1.getValue().getInstanceCount().compareTo(o2.getValue().getInstanceCount());
+                    compareResult = o1.getValue().getTripleCount().compareTo(o2.getValue().getTripleCount());
                     if (compareResult != 0) {
                         return compareResult;
                     } else {
@@ -288,8 +278,8 @@ public abstract class SchemaExtractor {
     protected List<String> sortNeighborsByInstances(@Nonnull List<String> neighbors, @Nonnull Map<String, SchemaExtractorClassNodeInfo> classesGraph) {
         return neighbors.stream()
                 .sorted((o1, o2) -> {
-                    Long neighborInstances1 = classesGraph.get(o1).getInstanceCount();
-                    Long neighborInstances2 = classesGraph.get(o2).getInstanceCount();
+                    Long neighborInstances1 = classesGraph.get(o1).getTripleCount();
+                    Long neighborInstances2 = classesGraph.get(o2).getTripleCount();
                     int compareResult = neighborInstances1.compareTo(neighborInstances2);
                     if (compareResult == 0) {
                         return nullSafeStringComparator.compare(classesGraph.get(o1).getClassName(), classesGraph.get(o2).getClassName());
@@ -305,8 +295,8 @@ public abstract class SchemaExtractor {
     protected List<SchemaClass> sortClassesByInstances(@Nonnull List<SchemaClass> classes, @Nonnull Map<String, SchemaExtractorClassNodeInfo> classesGraph) {
         return classes.stream()
                 .sorted((o1, o2) -> {
-                    Long neighborInstances1 = classesGraph.get(o1.getFullName()).getInstanceCount();
-                    Long neighborInstances2 = classesGraph.get(o2.getFullName()).getInstanceCount();
+                    Long neighborInstances1 = classesGraph.get(o1.getFullName()).getTripleCount();
+                    Long neighborInstances2 = classesGraph.get(o2.getFullName()).getTripleCount();
                     int compareResult = neighborInstances2.compareTo(neighborInstances1);
                     if (compareResult == 0) {
                         return nullSafeStringComparator.compare(o2.getFullName(), o1.getFullName());
@@ -417,8 +407,8 @@ public abstract class SchemaExtractor {
                                @Nonnull SchemaExtractorRequest request) {
 
         for (String neighbor : neighbors) {
-            Long neighborInstances = classesGraph.get(neighbor).getInstanceCount();
-            if (neighborInstances < currentClassInfo.getInstanceCount()) {
+            Long neighborInstances = classesGraph.get(neighbor).getTripleCount();
+            if (neighborInstances < currentClassInfo.getTripleCount()) {
                 continue;
             }
             String query = SchemaExtractorQueries.CHECK_SUPERCLASS.getSparqlQuery();
@@ -513,7 +503,7 @@ public abstract class SchemaExtractor {
         SchemaExtractorDomainRangeInfo domainRange = new SchemaExtractorDomainRangeInfo();
         domainRange.setValidDomain(false);
         domainRange.setValidRange(false);
-        domainRange.setInstanceCount(Long.valueOf(instances));
+        domainRange.setTripleCount(Long.valueOf(instances));
         property.getDomainRangePairs().add(domainRange);
 
         // if property without domain and range class
@@ -606,7 +596,7 @@ public abstract class SchemaExtractor {
 
         for (String subClassName : domainClass.getSubClasses()) {
             SchemaExtractorDomainRangeInfo subDomainRangeEntry = getDomainRangePair(subClassName, domainRangeEntry.getRangeClass(), domainRangePairs);
-            if (subDomainRangeEntry != null && subDomainRangeEntry.getInstanceCount().equals(domainRangeEntry.getInstanceCount())) {
+            if (subDomainRangeEntry != null && subDomainRangeEntry.getTripleCount().equals(domainRangeEntry.getTripleCount())) {
                 return getPropertyDomainRangePairWithDomain(subDomainRangeEntry, domainRangePairs, classes);
             }
         }
@@ -622,7 +612,7 @@ public abstract class SchemaExtractor {
         }
         for (String subClassName : rangeClass.getSubClasses()) {
             SchemaExtractorDomainRangeInfo subDomainRangeEntry = getDomainRangePair(domainRangeEntry.getDomainClass(), subClassName, domainRangePairs);
-            if (subDomainRangeEntry != null && subDomainRangeEntry.getInstanceCount().equals(domainRangeEntry.getInstanceCount())) {
+            if (subDomainRangeEntry != null && subDomainRangeEntry.getTripleCount().equals(domainRangeEntry.getTripleCount())) {
                 return getPropertyDomainRangePairWithRange(subDomainRangeEntry, domainRangePairs, classes);
             }
         }
@@ -647,7 +637,7 @@ public abstract class SchemaExtractor {
             SchemaExtractorPropertyNodeInfo property = properties.get(propertyName);
             SchemaExtractorClassNodeInfo classInfo = new SchemaExtractorClassNodeInfo();
             classInfo.setClassName(className);
-            classInfo.setInstanceCount(Long.valueOf(instances));
+            classInfo.setTripleCount(Long.valueOf(instances));
             property.getDomainClasses().add(classInfo);
         }
     }
@@ -704,8 +694,8 @@ public abstract class SchemaExtractor {
         for (String subClassName : rootClass.getSubClasses()) {
             for (SchemaExtractorClassNodeInfo info : assignedClasses) {
                 if (info != null && info.getClassName() != null && info.getClassName().equals(subClassName)
-                        && info.getInstanceCount() != null
-                        && info.getInstanceCount().equals(classWithMaxCount.getInstanceCount())) {
+                        && info.getTripleCount() != null
+                        && info.getTripleCount().equals(classWithMaxCount.getTripleCount())) {
                     return findPropertyClass(info, propertyName, assignedClasses, classes);
                 }
             }
