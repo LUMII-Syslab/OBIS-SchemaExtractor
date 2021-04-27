@@ -24,4 +24,16 @@ public class JsonSchemaService {
 		return null;
 	}
 
+	@Nullable
+	public String getJsonSchemaString(@Nonnull lv.lumii.obis.schema.model.v2.Schema schema){
+		ObjectMapper mapper = new ObjectMapper();
+		mapper.setSerializationInclusion(Include.NON_NULL);
+		try {
+			return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(schema);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+
 }

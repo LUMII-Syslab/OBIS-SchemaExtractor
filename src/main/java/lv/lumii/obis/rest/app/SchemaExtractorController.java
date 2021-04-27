@@ -7,6 +7,8 @@ import lombok.extern.slf4j.Slf4j;
 import lv.lumii.obis.schema.services.enhancer.OWLOntologyEnhancer;
 import lv.lumii.obis.schema.services.enhancer.dto.OWLOntologyEnhancerRequest;
 import lv.lumii.obis.schema.services.extractor.SchemaExtractorManyQueriesWithDirectProperties;
+import lv.lumii.obis.schema.services.extractor.v2.SchemaExtractor;
+import lv.lumii.obis.schema.services.extractor.v2.dto.SimpleSchemaExtractorRequest;
 import lv.lumii.obis.schema.services.reader.dto.OWLOntologyReaderRequest;
 import lv.lumii.obis.schema.services.extractor.SchemaExtractorFewQueries;
 import lv.lumii.obis.schema.services.extractor.SchemaExtractorManyQueries;
@@ -56,6 +58,8 @@ public class SchemaExtractorController {
     private static volatile SecureRandom secureRandom;
 
     @Autowired
+    private SchemaExtractor schemaExtractor;
+    @Autowired
     private SchemaExtractorFewQueries schemaExtractorFewQueries;
     @Autowired
     private SchemaExtractorManyQueries schemaExtractorManyQueries;
@@ -67,6 +71,31 @@ public class SchemaExtractorController {
     private OWLOntologyEnhancer owlOntologyEnhancer;
     @Autowired
     private JsonSchemaService jsonSchemaService;
+
+
+    @RequestMapping(value = "/v2/endpoint/buildFullSchema", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON)
+    @ApiOperation(
+            value = "Extract and analyze data from SPARQL endpoint and build full schema model (version 2)",
+            consumes = MediaType.APPLICATION_JSON,
+            produces = MediaType.APPLICATION_JSON,
+            response = lv.lumii.obis.schema.model.v2.Schema.class
+    )
+    @SuppressWarnings("unused")
+    public String buildFullSchemaFromEndpointV2(@Validated @ModelAttribute @NotNull SimpleSchemaExtractorRequest request) {
+        request.setCorrelationId(generateCorrelationId());
+        String requestJson = new Gson().toJson(request);
+
+        log.info(String.format(SCHEMA_EXTRACT_MESSAGE_START, requestJson));
+
+        LocalDateTime startTime = LocalDateTime.now();
+        lv.lumii.obis.schema.model.v2.Schema schema = schemaExtractor.extractSchema(new SchemaExtractorRequest(request));
+        LocalDateTime endTime = LocalDateTime.now();
+
+        log.info(String.format(SCHEMA_EXTRACT_MESSAGE_END, calculateExecutionTime(startTime, endTime), requestJson));
+
+        return jsonSchemaService.getJsonSchemaString(schema);
+    }
+
 
     @RequestMapping(value = "/endpoint/buildClasses", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON)
     @ApiOperation(

@@ -125,8 +125,8 @@ public enum SchemaExtractorQueries {
             "SELECT ?x WHERE { ?x a <class>. OPTIONAL { ?x ?prop ?value. FILTER (?prop = <property>) } FILTER (!BOUND(?prop)) } LIMIT 1 "
     ),
 
-    FIND_ALL_PROPERTIES_WITHOUT_TRIPLE_COUNT(
-            "SELECT DISTINCT ?property WHERE {?x ?property ?y}"
+    FIND_ALL_PROPERTIES(
+            "SELECT ?property (COUNT(?x) as ?instances) WHERE {?x ?property ?y} GROUP BY ?property"
     ),
 
     FIND_PROPERTY_DOMAINS_WITHOUT_TRIPLE_COUNT(
@@ -152,9 +152,6 @@ public enum SchemaExtractorQueries {
             "SELECT (COUNT(?x) as ?instances) WHERE {?x <property> ?y. ?x a <domainClass>. ?y a <rangeClass>.}"
     ),
 
-    COUNT_PROPERTY_ALL_VALUES(
-            "SELECT (COUNT(?y) as ?instances) WHERE {?x <property> ?y}"
-    ),
     COUNT_PROPERTY_URL_VALUES(
             "SELECT (COUNT(?y) as ?instances) WHERE {?x <property> ?y. FILTER(isURI(?y)) }"
     ),

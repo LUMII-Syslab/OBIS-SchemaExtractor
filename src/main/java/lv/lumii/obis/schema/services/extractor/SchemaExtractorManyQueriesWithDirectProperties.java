@@ -45,8 +45,8 @@ public class SchemaExtractorManyQueriesWithDirectProperties extends SchemaExtrac
     protected void buildProperties(@Nonnull SchemaExtractorRequest request, @Nonnull Schema schema) {
 
         // find all properties with triple count
-        log.info(request.getCorrelationId() + " - findAllPropertiesWithoutTripleCount");
-        List<QueryResult> queryResults = sparqlEndpointProcessor.read(request, FIND_ALL_PROPERTIES_WITHOUT_TRIPLE_COUNT);
+        log.info(request.getCorrelationId() + " - findAllPropertiesWithTripleCount");
+        List<QueryResult> queryResults = sparqlEndpointProcessor.read(request, FIND_ALL_PROPERTIES);
         Map<String, SchemaExtractorPropertyNodeInfo> properties = processProperties(queryResults);
         log.info(request.getCorrelationId() + String.format(" - found %d properties", properties.size()));
 
@@ -61,12 +61,17 @@ public class SchemaExtractorManyQueriesWithDirectProperties extends SchemaExtrac
     protected Map<String, SchemaExtractorPropertyNodeInfo> processProperties(@Nonnull List<QueryResult> queryResults) {
         Map<String, SchemaExtractorPropertyNodeInfo> properties = new HashMap<>();
         for (QueryResult queryResult : queryResults) {
+
             String propertyName = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY);
+            String instancesCountStr = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT);
+
             if (!properties.containsKey(propertyName)) {
                 properties.put(propertyName, new SchemaExtractorPropertyNodeInfo());
             }
+
             SchemaExtractorPropertyNodeInfo property = properties.get(propertyName);
             property.setPropertyName(propertyName);
+            property.setTripleCount(SchemaUtil.getLongValueFromString(instancesCountStr));
         }
         return properties;
     }
@@ -76,7 +81,6 @@ public class SchemaExtractorManyQueriesWithDirectProperties extends SchemaExtrac
 
             SchemaExtractorPropertyNodeInfo property = entry.getValue();
 
-            determinePropertyTripleCount(property, request);
             determinePropertyObjectTripleCount(property, request);
             determinePropertyType(property, request);
 
@@ -101,19 +105,6 @@ public class SchemaExtractorManyQueriesWithDirectProperties extends SchemaExtrac
                 determinePropertyDomainsMinCardinality(property, request);
             }
         }
-    }
-
-    protected void determinePropertyTripleCount(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequest request) {
-        log.info(request.getCorrelationId() + " - determinePropertyTripleCount [" + property.getPropertyName() + "]");
-
-        // get total count of all property values
-        Long totalTripleCount = 0L;
-        String queryForTotalCount = COUNT_PROPERTY_ALL_VALUES.getSparqlQuery().replace(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
-        List<QueryResult> queryResultsForTotalCount = sparqlEndpointProcessor.read(request, COUNT_PROPERTY_ALL_VALUES.name(), queryForTotalCount);
-        if (!queryResultsForTotalCount.isEmpty() && queryResultsForTotalCount.get(0) != null) {
-            totalTripleCount = SchemaUtil.getLongValueFromString(queryResultsForTotalCount.get(0).get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
-        }
-        property.setTripleCount(totalTripleCount);
     }
 
     protected void determinePropertyObjectTripleCount(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequest request) {

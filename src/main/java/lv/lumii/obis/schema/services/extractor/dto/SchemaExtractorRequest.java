@@ -3,6 +3,9 @@ package lv.lumii.obis.schema.services.extractor.dto;
 import io.swagger.annotations.ApiParam;
 import lombok.Getter;
 import lombok.Setter;
+import lv.lumii.obis.schema.services.extractor.v2.dto.SimpleSchemaExtractorRequest;
+
+import javax.annotation.Nonnull;
 
 @Setter @Getter
 public class SchemaExtractorRequest {
@@ -36,6 +39,17 @@ public class SchemaExtractorRequest {
 
     @ApiParam(hidden = true)
     private String correlationId;
+
+    public SchemaExtractorRequest() {
+    }
+
+    public SchemaExtractorRequest(@Nonnull SimpleSchemaExtractorRequest simpleRequest) {
+        this.correlationId = simpleRequest.getCorrelationId();
+        this.endpointUrl = simpleRequest.getEndpointUrl();
+        this.graphName = simpleRequest.getGraphName();
+        this.mode = simpleRequest.getMode();
+        this.enableLogging = simpleRequest.getEnableLogging();
+    }
 
     public ExtractionVersion getVersion() {
         if(version == null){
