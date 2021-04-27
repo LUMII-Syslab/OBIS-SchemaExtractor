@@ -19,17 +19,11 @@ public class ClassPair {
 
 	private Boolean targetImportanceIndex;
 	
-	public ClassPair() {}
-	
-	public ClassPair(String sourceClass, String targetClass) {
-		super();
-		this.sourceClass = sourceClass;
-		this.targetClass = targetClass;
-	}
-
-	public ClassPair(String sourceClass, String targetClass, Long tripleCount) {
+	public ClassPair(String sourceClass, String targetClass, Long tripleCount, Boolean sourceImportanceIndex, Boolean targetImportanceIndex) {
 		this.sourceClass = sourceClass;
 		this.targetClass = targetClass;
 		this.tripleCount = tripleCount;
+		this.sourceImportanceIndex = sourceImportanceIndex;
+		this.targetImportanceIndex = targetImportanceIndex;
 	}
 }

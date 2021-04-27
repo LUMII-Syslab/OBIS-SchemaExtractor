@@ -130,6 +130,8 @@ public class SchemaExtractor {
                 determinePropertyDataTypes(property, request);
             }
 
+            determinePrincipalDomainsAndTargets(property, request);
+
             if (SchemaExtractorRequest.ExtractionMode.full.equals(request.getMode())) {
                 determinePropertyMaxCardinality(property, request);
                 determinePropertyDomainsMinCardinality(property, request);
@@ -357,6 +359,12 @@ public class SchemaExtractor {
         property.setMaxCardinality(DEFAULT_MAX_CARDINALITY);
     }
 
+    protected void determinePrincipalDomainsAndTargets(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequest request) {
+        property.getDomainClasses().forEach(domainClass -> domainClass.setImportanceIndex(Boolean.TRUE));
+        property.getRangeClasses().forEach(rangeClass -> rangeClass.setImportanceIndex(Boolean.TRUE));
+        property.getDomainRangePairs().forEach(pair -> { pair.setSourceImportanceIndex(Boolean.TRUE); pair.setTargetImportanceIndex(Boolean.TRUE);});
+    }
+
     protected void formatProperties(@Nonnull Map<String, SchemaExtractorPropertyNodeInfo> properties, @Nonnull Schema schema) {
         for (Map.Entry<String, SchemaExtractorPropertyNodeInfo> p : properties.entrySet()) {
 
@@ -374,7 +382,8 @@ public class SchemaExtractor {
             property.getTargetClasses().addAll(convertInternalDtoToApiDto(propertyData.getRangeClasses()));
             propertyData.getDomainRangePairs().forEach(pair -> {
                 if (isFalse(isDuplicatePair(property.getClassPairs(), pair.getDomainClass(), pair.getRangeClass()))) {
-                    property.getClassPairs().add(new ClassPair(pair.getDomainClass(), pair.getRangeClass(), pair.getTripleCount()));
+                    property.getClassPairs().add(new ClassPair(pair.getDomainClass(), pair.getRangeClass(),
+                            pair.getTripleCount(), pair.getSourceImportanceIndex(), pair.getTargetImportanceIndex()));
                 }
             });
 
@@ -385,7 +394,7 @@ public class SchemaExtractor {
     protected Set<SchemaPropertyLinkedClassDetails> convertInternalDtoToApiDto(@Nonnull List<SchemaExtractorClassNodeInfo> internalDtos) {
         return internalDtos.stream()
                 .map(internalDto -> new SchemaPropertyLinkedClassDetails(
-                        internalDto.getClassName(), internalDto.getTripleCount(), internalDto.getObjectTripleCount(), internalDto.getMinCardinality())).
+                        internalDto.getClassName(), internalDto.getTripleCount(), internalDto.getObjectTripleCount(), internalDto.getMinCardinality(), internalDto.getImportanceIndex())).
                         collect(Collectors.toSet());
     }
 
