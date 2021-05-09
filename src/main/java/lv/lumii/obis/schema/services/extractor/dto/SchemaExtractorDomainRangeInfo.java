@@ -14,8 +14,8 @@ public class SchemaExtractorDomainRangeInfo {
     private Boolean validDomain;
     private Boolean validRange;
 
-    private Boolean sourceImportanceIndex;
-    private Boolean targetImportanceIndex;
+    private Integer sourceImportanceIndex;
+    private Integer targetImportanceIndex;
 
     public SchemaExtractorDomainRangeInfo(){}
 

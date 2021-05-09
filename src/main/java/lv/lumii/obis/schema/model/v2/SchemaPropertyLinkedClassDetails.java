@@ -13,11 +13,11 @@ public class SchemaPropertyLinkedClassDetails {
 
     private Long objectTripleCount;
 
-    private Boolean importanceIndex;
+    private Integer importanceIndex;
 
     private Integer minCardinality;
 
-    public SchemaPropertyLinkedClassDetails(String classFullName, Long tripleCount, Long objectTripleCount, Integer minCardinality, Boolean importanceIndex) {
+    public SchemaPropertyLinkedClassDetails(String classFullName, Long tripleCount, Long objectTripleCount, Integer minCardinality, Integer importanceIndex) {
         this.classFullName = classFullName;
         this.tripleCount = tripleCount;
         this.objectTripleCount = objectTripleCount;

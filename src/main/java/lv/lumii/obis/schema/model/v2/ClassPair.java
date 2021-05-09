@@ -15,11 +15,11 @@ public class ClassPair {
 
 	private Long tripleCount;
 
-	private Boolean sourceImportanceIndex;
+	private Integer sourceImportanceIndex;
 
-	private Boolean targetImportanceIndex;
+	private Integer targetImportanceIndex;
 	
-	public ClassPair(String sourceClass, String targetClass, Long tripleCount, Boolean sourceImportanceIndex, Boolean targetImportanceIndex) {
+	public ClassPair(String sourceClass, String targetClass, Long tripleCount, Integer sourceImportanceIndex, Integer targetImportanceIndex) {
 		this.sourceClass = sourceClass;
 		this.targetClass = targetClass;
 		this.tripleCount = tripleCount;

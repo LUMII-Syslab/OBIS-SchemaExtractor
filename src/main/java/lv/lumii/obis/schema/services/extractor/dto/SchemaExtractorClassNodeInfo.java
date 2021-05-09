@@ -14,7 +14,7 @@ public class SchemaExtractorClassNodeInfo {
 	private Long objectTripleCount;
 	private Integer minCardinality;
 	private List<String> neighbors;
-	private Boolean importanceIndex;
+	private Integer importanceIndex;
 
 	public SchemaExtractorClassNodeInfo() {
 	}

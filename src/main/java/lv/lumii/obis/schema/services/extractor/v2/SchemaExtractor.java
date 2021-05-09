@@ -360,9 +360,9 @@ public class SchemaExtractor {
     }
 
     protected void determinePrincipalDomainsAndTargets(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequest request) {
-        property.getDomainClasses().forEach(domainClass -> domainClass.setImportanceIndex(Boolean.TRUE));
-        property.getRangeClasses().forEach(rangeClass -> rangeClass.setImportanceIndex(Boolean.TRUE));
-        property.getDomainRangePairs().forEach(pair -> { pair.setSourceImportanceIndex(Boolean.TRUE); pair.setTargetImportanceIndex(Boolean.TRUE);});
+        property.getDomainClasses().forEach(domainClass -> domainClass.setImportanceIndex(0));
+        property.getRangeClasses().forEach(rangeClass -> rangeClass.setImportanceIndex(0));
+        property.getDomainRangePairs().forEach(pair -> { pair.setSourceImportanceIndex(0); pair.setTargetImportanceIndex(0);});
     }
 
     protected void formatProperties(@Nonnull Map<String, SchemaExtractorPropertyNodeInfo> properties, @Nonnull Schema schema) {
