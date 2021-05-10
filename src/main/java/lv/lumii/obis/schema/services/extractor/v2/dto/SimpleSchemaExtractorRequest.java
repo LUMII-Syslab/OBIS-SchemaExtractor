@@ -3,7 +3,6 @@ package lv.lumii.obis.schema.services.extractor.v2.dto;
 import io.swagger.annotations.ApiParam;
 import lombok.Getter;
 import lombok.Setter;
-import lv.lumii.obis.schema.services.extractor.dto.SchemaExtractorRequest;
 
 @Setter @Getter
 public class SimpleSchemaExtractorRequest {
@@ -14,20 +13,40 @@ public class SimpleSchemaExtractorRequest {
     @ApiParam(access = "2", value = "Named Graph (optional). If no graph name provided, the search will involve all graphs from the endpoint", allowEmptyValue = true)
     private String graphName;
 
-    @ApiParam(access = "3", value = "Extraction Complexity: excludeDataTypesAndCardinalities, excludeCardinalities, full", defaultValue = "full", required = true)
-    private SchemaExtractorRequest.ExtractionMode mode;
+    @ApiParam(access = "3", value = "Calculate subclass relations", defaultValue = "true", required = true)
+    private Boolean calculateSubClassRelations;
 
-    @ApiParam(access = "4", value = "Enable SPARQL Query Logging to the file", defaultValue = "false", required = true)
+    @ApiParam(access = "4", value = "Calculate data types for attributes", defaultValue = "true", required = true)
+    private Boolean calculateDataTypes;
+
+    @ApiParam(access = "5", value = "Calculate min and max cardinalities for all properties", defaultValue = "true", required = true)
+    private Boolean calculateCardinalities;
+
+    @ApiParam(access = "6", value = "Enable SPARQL Query Logging to the file", defaultValue = "false", required = true)
     private Boolean enableLogging;
 
     @ApiParam(hidden = true)
     private String correlationId;
 
-    public SchemaExtractorRequest.ExtractionMode getMode() {
-        if(mode == null){
-            mode = SchemaExtractorRequest.ExtractionMode.full;
+    public Boolean getCalculateSubClassRelations() {
+        if(calculateSubClassRelations == null){
+            calculateSubClassRelations = Boolean.FALSE;
         }
-        return mode;
+        return calculateSubClassRelations;
+    }
+
+    public Boolean getCalculateDataTypes() {
+        if(calculateDataTypes == null){
+            calculateDataTypes = Boolean.FALSE;
+        }
+        return calculateDataTypes;
+    }
+
+    public Boolean getCalculateCardinalities() {
+        if(calculateCardinalities == null){
+            calculateCardinalities = Boolean.FALSE;
+        }
+        return calculateCardinalities;
     }
 
     public Boolean getEnableLogging() {

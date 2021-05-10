@@ -40,6 +40,13 @@ public class SchemaExtractorRequest {
     @ApiParam(hidden = true)
     private String correlationId;
 
+    @ApiParam(hidden = true)
+    private Boolean calculateSubClassRelations;
+    @ApiParam(hidden = true)
+    private Boolean calculateDataTypes;
+    @ApiParam(hidden = true)
+    private Boolean calculateCardinalities;
+
     public SchemaExtractorRequest() {
     }
 
@@ -47,7 +54,9 @@ public class SchemaExtractorRequest {
         this.correlationId = simpleRequest.getCorrelationId();
         this.endpointUrl = simpleRequest.getEndpointUrl();
         this.graphName = simpleRequest.getGraphName();
-        this.mode = simpleRequest.getMode();
+        this.calculateSubClassRelations = simpleRequest.getCalculateSubClassRelations();
+        this.calculateDataTypes = simpleRequest.getCalculateDataTypes();
+        this.calculateCardinalities = simpleRequest.getCalculateCardinalities();
         this.enableLogging = simpleRequest.getEnableLogging();
     }
 
