@@ -17,11 +17,14 @@ public class SchemaPropertyLinkedClassDetails {
 
     private Integer minCardinality;
 
-    public SchemaPropertyLinkedClassDetails(String classFullName, Long tripleCount, Long objectTripleCount, Integer minCardinality, Integer importanceIndex) {
+    private Integer maxInverseCardinality;
+
+    public SchemaPropertyLinkedClassDetails(String classFullName, Long tripleCount, Long objectTripleCount, Integer minCardinality, Integer maxInverseCardinality, Integer importanceIndex) {
         this.classFullName = classFullName;
         this.tripleCount = tripleCount;
         this.objectTripleCount = objectTripleCount;
         this.minCardinality = minCardinality;
+        this.maxInverseCardinality = maxInverseCardinality;
         this.importanceIndex = importanceIndex;
     }
 }

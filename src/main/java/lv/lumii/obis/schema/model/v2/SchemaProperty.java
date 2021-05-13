@@ -14,6 +14,7 @@ import java.util.Set;
 public class SchemaProperty extends SchemaElement {
 
 	private Integer maxCardinality;
+	private Integer maxInverseCardinality;
 	private Long tripleCount;
 	private Long objectTripleCount;
 	private Boolean closedDomain;
