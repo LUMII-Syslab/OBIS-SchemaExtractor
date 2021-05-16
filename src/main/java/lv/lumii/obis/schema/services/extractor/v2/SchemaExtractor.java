@@ -88,7 +88,7 @@ public class SchemaExtractor {
             String className = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS);
             String instancesCountStr = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT);
 
-            if (StringUtils.isNotEmpty(className)) {
+            if (StringUtils.isNotEmpty(className) && !isExcludedResource(className, request.getExcludedNamespaces())) {
                 SchemaClass classEntry = new SchemaClass();
                 setLocalNameAndNamespace(className, classEntry);
                 classEntry.setInstanceCount(SchemaUtil.getLongValueFromString(instancesCountStr));
@@ -103,7 +103,7 @@ public class SchemaExtractor {
         // find all properties with triple count
         log.info(request.getCorrelationId() + " - findAllPropertiesWithTripleCount");
         List<QueryResult> queryResults = sparqlEndpointProcessor.read(request, FIND_ALL_PROPERTIES);
-        Map<String, SchemaExtractorPropertyNodeInfo> properties = processProperties(queryResults);
+        Map<String, SchemaExtractorPropertyNodeInfo> properties = processProperties(queryResults, request);
         log.info(request.getCorrelationId() + String.format(" - found %d properties", properties.size()));
 
         // fill properties with additional data
@@ -114,19 +114,21 @@ public class SchemaExtractor {
     }
 
     @Nonnull
-    protected Map<String, SchemaExtractorPropertyNodeInfo> processProperties(@Nonnull List<QueryResult> queryResults) {
+    protected Map<String, SchemaExtractorPropertyNodeInfo> processProperties(@Nonnull List<QueryResult> queryResults, @Nonnull SchemaExtractorRequest request) {
         Map<String, SchemaExtractorPropertyNodeInfo> properties = new HashMap<>();
         for (QueryResult queryResult : queryResults) {
 
             String propertyName = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY);
             String instancesCountStr = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT);
 
-            if (!properties.containsKey(propertyName)) {
-                properties.put(propertyName, new SchemaExtractorPropertyNodeInfo());
+            if(StringUtils.isNotEmpty(propertyName) && !isExcludedResource(propertyName, request.getExcludedNamespaces())){
+                if (!properties.containsKey(propertyName)) {
+                    properties.put(propertyName, new SchemaExtractorPropertyNodeInfo());
+                }
+                SchemaExtractorPropertyNodeInfo property = properties.get(propertyName);
+                property.setPropertyName(propertyName);
+                property.setTripleCount(SchemaUtil.getLongValueFromString(instancesCountStr));
             }
-            SchemaExtractorPropertyNodeInfo property = properties.get(propertyName);
-            property.setPropertyName(propertyName);
-            property.setTripleCount(SchemaUtil.getLongValueFromString(instancesCountStr));
         }
         return properties;
     }
@@ -198,7 +200,7 @@ public class SchemaExtractor {
 
         for (QueryResult queryResult : queryResults) {
             String className = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS);
-            if (StringUtils.isNotEmpty(className)) {
+            if (StringUtils.isNotEmpty(className) && !isExcludedResource(className, request.getExcludedNamespaces())) {
                 property.getDomainClasses().add(new SchemaExtractorClassNodeInfo(className));
             }
         }
@@ -249,7 +251,7 @@ public class SchemaExtractor {
 
         for (QueryResult queryResult : queryResults) {
             String className = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS);
-            if (StringUtils.isNotEmpty(className)) {
+            if (StringUtils.isNotEmpty(className) && !isExcludedResource(className, request.getExcludedNamespaces())) {
                 property.getRangeClasses().add(new SchemaExtractorClassNodeInfo(className));
             }
         }
@@ -280,7 +282,8 @@ public class SchemaExtractor {
             String domainClass = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_DOMAIN);
             String rangeClass = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_RANGE);
             String tripleCountStr = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT);
-            if (StringUtils.isNotEmpty(domainClass) && StringUtils.isNotEmpty(rangeClass)) {
+            if (StringUtils.isNotEmpty(domainClass) && StringUtils.isNotEmpty(rangeClass)
+                    && !isExcludedResource(domainClass, request.getExcludedNamespaces()) && !isExcludedResource(rangeClass, request.getExcludedNamespaces())) {
                 property.getDomainRangePairs().add(new SchemaExtractorDomainRangeInfo(domainClass, rangeClass, SchemaUtil.getLongValueFromString(tripleCountStr)));
             }
         }
@@ -540,7 +543,7 @@ public class SchemaExtractor {
                                                      @Nonnull SchemaExtractorRequest request) {
         for (QueryResult queryResult : queryResults) {
             String classB = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_B);
-            if (StringUtils.isNotEmpty(classB)) {
+            if (StringUtils.isNotEmpty(classB) && !isExcludedResource(classB, request.getExcludedNamespaces())) {
                 if (graphOfClasses.containsKey(domainClass)) {
                     graphOfClasses.get(domainClass).getNeighbors().add(classB);
                 }
@@ -762,6 +765,10 @@ public class SchemaExtractor {
         }
 
         return accessible;
+    }
+
+    protected boolean isExcludedResource(@Nullable String resourceId, @Nonnull List<String> excludedResources) {
+        return StringUtils.isNotEmpty(resourceId) && excludedResources.stream().anyMatch(resourceId::startsWith);
     }
 
 }

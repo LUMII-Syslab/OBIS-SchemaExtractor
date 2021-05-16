@@ -4,6 +4,10 @@ import io.swagger.annotations.ApiParam;
 import lombok.Getter;
 import lombok.Setter;
 
+import javax.annotation.Nonnull;
+import java.util.ArrayList;
+import java.util.List;
+
 @Setter @Getter
 public class SimpleSchemaExtractorRequest {
 
@@ -22,7 +26,10 @@ public class SimpleSchemaExtractorRequest {
     @ApiParam(access = "5", value = "Calculate min and max cardinalities for all properties", defaultValue = "true", required = true)
     private Boolean calculateCardinalities;
 
-    @ApiParam(access = "6", value = "Enable SPARQL Query Logging to the file", defaultValue = "false", required = true)
+    @ApiParam(access = "6", value = "List of excluded namespaces", allowEmptyValue = true)
+    private List<String> excludedNamespaces;
+
+    @ApiParam(access = "7", value = "Enable SPARQL Query Logging to the file", defaultValue = "false", required = true)
     private Boolean enableLogging;
 
     @ApiParam(hidden = true)
@@ -54,5 +61,13 @@ public class SimpleSchemaExtractorRequest {
             enableLogging = Boolean.FALSE;
         }
         return enableLogging;
+    }
+
+    @Nonnull
+    public List<String> getExcludedNamespaces() {
+        if(excludedNamespaces == null) {
+            excludedNamespaces = new ArrayList<>();
+        }
+        return excludedNamespaces;
     }
 }

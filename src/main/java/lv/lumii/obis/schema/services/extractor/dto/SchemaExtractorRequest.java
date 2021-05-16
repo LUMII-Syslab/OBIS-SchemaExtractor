@@ -6,6 +6,8 @@ import lombok.Setter;
 import lv.lumii.obis.schema.services.extractor.v2.dto.SimpleSchemaExtractorRequest;
 
 import javax.annotation.Nonnull;
+import java.util.ArrayList;
+import java.util.List;
 
 @Setter @Getter
 public class SchemaExtractorRequest {
@@ -46,6 +48,8 @@ public class SchemaExtractorRequest {
     private Boolean calculateDataTypes;
     @ApiParam(hidden = true)
     private Boolean calculateCardinalities;
+    @ApiParam(hidden = true)
+    private List<String> excludedNamespaces;
 
     public SchemaExtractorRequest() {
     }
@@ -57,6 +61,7 @@ public class SchemaExtractorRequest {
         this.calculateSubClassRelations = simpleRequest.getCalculateSubClassRelations();
         this.calculateDataTypes = simpleRequest.getCalculateDataTypes();
         this.calculateCardinalities = simpleRequest.getCalculateCardinalities();
+        this.excludedNamespaces = simpleRequest.getExcludedNamespaces();
         this.enableLogging = simpleRequest.getEnableLogging();
     }
 
@@ -100,5 +105,13 @@ public class SchemaExtractorRequest {
             excludePropertiesWithoutClasses = Boolean.TRUE;
         }
         return excludePropertiesWithoutClasses;
+    }
+
+    @Nonnull
+    public List<String> getExcludedNamespaces() {
+        if(excludedNamespaces == null) {
+            excludedNamespaces = new ArrayList<>();
+        }
+        return excludedNamespaces;
     }
 }
