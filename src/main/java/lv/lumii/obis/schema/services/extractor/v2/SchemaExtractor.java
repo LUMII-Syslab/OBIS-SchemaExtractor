@@ -160,9 +160,11 @@ public class SchemaExtractor {
 
             if (isTrue(request.getCalculateCardinalities())) {
                 determinePropertyMaxCardinality(property, request);
+                determinePropertyDomainsMaxCardinality(property, request);
                 determinePropertyDomainsMinCardinality(property, request);
                 if (property.getObjectTripleCount() > 0) {
                     determinePropertyInverseMaxCardinality(property, request);
+                    determinePropertyRangesInverseMinCardinality(property, request);
                     determinePropertyRangesInverseMaxCardinality(property, request);
                 }
             }
@@ -390,6 +392,21 @@ public class SchemaExtractor {
         property.setMaxCardinality(DEFAULT_MAX_CARDINALITY);
     }
 
+    protected void determinePropertyDomainsMaxCardinality(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequest request) {
+        log.info(request.getCorrelationId() + " - determinePropertyDomainsMaxCardinality [" + property.getPropertyName() + "]");
+        property.getDomainClasses().forEach(domainClass -> {
+            String query = FIND_PROPERTY_MAX_CARDINALITY_FOR_DOMAIN.getSparqlQuery().
+                    replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName()).
+                    replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS, domainClass.getClassName());
+            List<QueryResult> queryResults = sparqlEndpointProcessor.read(request, SchemaExtractorQueries.FIND_PROPERTY_MAX_CARDINALITY_FOR_DOMAIN.name(), query);
+            if (queryResults.isEmpty()) {
+                domainClass.setMaxCardinality(1);
+            } else {
+                domainClass.setMaxCardinality(DEFAULT_MAX_CARDINALITY);
+            }
+        });
+    }
+
     protected void determinePropertyInverseMaxCardinality(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequest request) {
         log.info(request.getCorrelationId() + " - determinePropertyInverseMaxCardinality [" + property.getPropertyName() + "]");
         String query = SchemaExtractorQueries.FIND_INVERSE_PROPERTY_MAX_CARDINALITY.getSparqlQuery().replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
@@ -409,6 +426,17 @@ public class SchemaExtractor {
                     .replace(SPARQL_QUERY_BINDING_NAME_CLASS_RANGE, rangeClass.getClassName());
             List<QueryResult> queryResults = sparqlEndpointProcessor.read(request, SchemaExtractorQueries.FIND_INVERSE_PROPERTY_MAX_CARDINALITY_FOR_RANGE.name(), queryInverseCardinalities);
             rangeClass.setMaxInverseCardinality(queryResults.isEmpty() ? 1 : DEFAULT_MAX_CARDINALITY);
+        });
+    }
+
+    protected void determinePropertyRangesInverseMinCardinality(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequest request) {
+        log.info(request.getCorrelationId() + " - determinePropertyRangesInverseMinCardinality [" + property.getPropertyName() + "]");
+        property.getRangeClasses().forEach(rangeClass -> {
+            String query = FIND_INVERSE_PROPERTY_MIN_CARDINALITY.getSparqlQuery().
+                    replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName()).
+                    replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS, rangeClass.getClassName());
+            List<QueryResult> queryResults = sparqlEndpointProcessor.read(request, SchemaExtractorQueries.FIND_INVERSE_PROPERTY_MIN_CARDINALITY.name(), query);
+            rangeClass.setMinInverseCardinality(!queryResults.isEmpty() ? DEFAULT_MIN_CARDINALITY : 1);
         });
     }
 
@@ -452,7 +480,9 @@ public class SchemaExtractor {
         return internalDtos.stream()
                 .map(internalDto -> new SchemaPropertyLinkedClassDetails(
                         internalDto.getClassName(), internalDto.getTripleCount(), internalDto.getObjectTripleCount(),
-                        internalDto.getMinCardinality(), internalDto.getMaxInverseCardinality(), internalDto.getImportanceIndex())).
+                        internalDto.getMinCardinality(), internalDto.getMaxCardinality(),
+                        internalDto.getMinInverseCardinality(), internalDto.getMaxInverseCardinality(),
+                        internalDto.getImportanceIndex())).
                         collect(Collectors.toSet());
     }
 

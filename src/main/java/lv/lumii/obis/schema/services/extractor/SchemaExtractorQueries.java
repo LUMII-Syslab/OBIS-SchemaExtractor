@@ -121,6 +121,10 @@ public enum SchemaExtractorQueries {
             "SELECT ?x WHERE { ?x <property> ?value1. ?x <property> ?value2. FILTER (?value1 != ?value2) } LIMIT 1"
     ),
 
+    FIND_PROPERTY_MAX_CARDINALITY_FOR_DOMAIN(
+            "SELECT ?x WHERE { ?x a <class>. ?x <property> ?value1. ?x <property> ?value2. FILTER (?value1 != ?value2) } LIMIT 1"
+    ),
+
     FIND_INVERSE_PROPERTY_MAX_CARDINALITY(
             "SELECT ?y WHERE { ?x1 <property> ?y. ?x2 <property> ?y. FILTER (?x1 != ?x2) } LIMIT 1"
     ),
@@ -131,6 +135,10 @@ public enum SchemaExtractorQueries {
 
     FIND_PROPERTY_MIN_CARDINALITY(
             "SELECT ?x WHERE { ?x a <class>. OPTIONAL { ?x ?prop ?value. FILTER (?prop = <property>) } FILTER (!BOUND(?prop)) } LIMIT 1 "
+    ),
+
+    FIND_INVERSE_PROPERTY_MIN_CARDINALITY(
+            "SELECT ?y WHERE { ?y a <class>. OPTIONAL { ?x ?prop ?y. FILTER (?prop = <property>) } FILTER (!BOUND(?prop)) } LIMIT 1 "
     ),
 
     FIND_ALL_PROPERTIES(

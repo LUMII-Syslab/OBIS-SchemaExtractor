@@ -13,6 +13,8 @@ public class SchemaExtractorClassNodeInfo {
 	private Long tripleCount;
 	private Long objectTripleCount;
 	private Integer minCardinality;
+	private Integer maxCardinality;
+	private Integer minInverseCardinality;
 	private Integer maxInverseCardinality;
 	private List<String> neighbors;
 	private Integer importanceIndex;
