@@ -10,6 +10,7 @@ import lv.lumii.obis.schema.services.common.SparqlEndpointProcessor;
 import lv.lumii.obis.schema.services.common.dto.QueryResult;
 import lv.lumii.obis.schema.services.extractor.SchemaExtractorQueries;
 import lv.lumii.obis.schema.services.extractor.dto.*;
+import lv.lumii.obis.schema.services.extractor.v2.dto.SchemaExtractorPropertyLinkedClassInfo;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -107,7 +108,7 @@ public class SchemaExtractor {
         log.info(request.getCorrelationId() + String.format(" - found %d properties", properties.size()));
 
         // fill properties with additional data
-        enrichProperties(properties, request);
+        enrichProperties(properties, schema, request);
 
         // fill schema object with attributes and roles
         formatProperties(properties, schema);
@@ -121,7 +122,7 @@ public class SchemaExtractor {
             String propertyName = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY);
             String instancesCountStr = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT);
 
-            if(StringUtils.isNotEmpty(propertyName) && isNotExcludedResource(propertyName, request.getExcludedNamespaces())){
+            if (StringUtils.isNotEmpty(propertyName) && isNotExcludedResource(propertyName, request.getExcludedNamespaces())) {
                 if (!properties.containsKey(propertyName)) {
                     properties.put(propertyName, new SchemaExtractorPropertyNodeInfo());
                 }
@@ -133,7 +134,7 @@ public class SchemaExtractor {
         return properties;
     }
 
-    protected void enrichProperties(@Nonnull Map<String, SchemaExtractorPropertyNodeInfo> properties, @Nonnull SchemaExtractorRequest request) {
+    protected void enrichProperties(@Nonnull Map<String, SchemaExtractorPropertyNodeInfo> properties, @Nonnull Schema schema, @Nonnull SchemaExtractorRequest request) {
         for (Map.Entry<String, SchemaExtractorPropertyNodeInfo> entry : properties.entrySet()) {
 
             SchemaExtractorPropertyNodeInfo property = entry.getValue();
@@ -156,7 +157,7 @@ public class SchemaExtractor {
                 determinePropertyDataTypes(property, request);
             }
 
-            determinePrincipalDomainsAndTargets(property, request);
+            determinePrincipalDomainsAndTargets(property, schema.getClasses(), request);
 
             if (isTrue(request.getCalculateCardinalities())) {
                 determinePropertyMaxCardinality(property, request);
@@ -440,13 +441,77 @@ public class SchemaExtractor {
         });
     }
 
-    protected void determinePrincipalDomainsAndTargets(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequest request) {
-        property.getDomainClasses().forEach(domainClass -> domainClass.setImportanceIndex(0));
+    protected void determinePrincipalDomainsAndTargets(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull List<SchemaClass> classes,
+                                                       @Nonnull SchemaExtractorRequest request) {
+        determinePrincipalDomains(property, classes, request);
         property.getRangeClasses().forEach(rangeClass -> rangeClass.setImportanceIndex(0));
         property.getDomainRangePairs().forEach(pair -> {
             pair.setSourceImportanceIndex(0);
             pair.setTargetImportanceIndex(0);
         });
+    }
+
+    protected void determinePrincipalDomains(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull List<SchemaClass> classes,
+                                             @Nonnull SchemaExtractorRequest request) {
+
+        // prepare data - classes with property triple count and total class instance count
+        List<SchemaExtractorPropertyLinkedClassInfo> domainClasses = new ArrayList<>();
+        property.getDomainClasses().forEach(domainClass -> {
+            SchemaClass schemaClass = findClass(classes, domainClass.getClassName());
+            if (schemaClass != null) {
+                SchemaExtractorPropertyLinkedClassInfo newItem = new SchemaExtractorPropertyLinkedClassInfo();
+                newItem.setClassName(domainClass.getClassName());
+                newItem.setClassTotalTripleCount(schemaClass.getInstanceCount());
+                newItem.setPropertyTripleCount(domainClass.getTripleCount());
+                domainClasses.add(newItem);
+            }
+        });
+
+        // sort property classes by triple count (descending) and then by total class triple count (ascending)
+        List<SchemaExtractorPropertyLinkedClassInfo> sortedDomainClasses = sortPropertyLinkedClassesByTripleCount(domainClasses);
+
+        // set important indexes
+        Set<String> importantClasses = new HashSet<>();
+        int index = 1;
+        for (SchemaExtractorPropertyLinkedClassInfo currentClass : sortedDomainClasses) {
+
+            // skip owl:Thing and rdf:Resource
+            if (OWL_RDF_TOP_LEVEL_RESOURCES.contains(currentClass.getClassName())) {
+                currentClass.setImportanceIndex(0);
+                continue;
+            }
+
+            // add the first real class as important
+            if (importantClasses.isEmpty()) {
+                importantClasses.add(currentClass.getClassName());
+                currentClass.setImportanceIndex(index++);
+                continue;
+            }
+
+            // check whether processed classes include the current class any subclass
+            boolean isIncludedSubclassOrSuperClass = false;
+            for (String includedClass : importantClasses) {
+                boolean isIncludedSubClass = isClassAccessibleFromSuperclasses(includedClass, currentClass.getClassName(), classes);
+                boolean isIncludedSuperClass = isClassAccessibleFromSubclasses(includedClass, currentClass.getClassName(), classes);
+                if (isIncludedSubClass || isIncludedSuperClass) {
+                    isIncludedSubclassOrSuperClass = true;
+                    break;
+                }
+            }
+            if (isIncludedSubclassOrSuperClass) {
+                currentClass.setImportanceIndex(0);
+            } else {
+                currentClass.setImportanceIndex(index++);
+            }
+        }
+
+        // map important indexes back to the result
+        property.getDomainClasses().forEach(domainClass -> {
+            SchemaExtractorPropertyLinkedClassInfo classInfo = sortedDomainClasses.stream()
+                    .filter(c -> c.getClassName().equalsIgnoreCase(domainClass.getClassName())).findFirst().orElse(null);
+            domainClass.setImportanceIndex((classInfo != null) ? classInfo.getImportanceIndex() : 0);
+        });
+
     }
 
     protected void formatProperties(@Nonnull Map<String, SchemaExtractorPropertyNodeInfo> properties, @Nonnull Schema schema) {
@@ -634,6 +699,21 @@ public class SchemaExtractor {
                     int compareResult = neighborInstances2.compareTo(neighborInstances1);
                     if (compareResult == 0) {
                         return nullSafeStringComparator.compare(o2.getFullName(), o1.getFullName());
+                    } else {
+                        return compareResult;
+                    }
+                })
+                .collect(Collectors.toList());
+    }
+
+    @Nonnull
+    protected List<SchemaExtractorPropertyLinkedClassInfo> sortPropertyLinkedClassesByTripleCount(@Nonnull List<SchemaExtractorPropertyLinkedClassInfo> propertyLinkedClasses) {
+        // sort property classes by triple count (descending) and then by total class triple count (ascending)
+        return propertyLinkedClasses.stream()
+                .sorted((o1, o2) -> {
+                    int compareResult = o2.getPropertyTripleCount().compareTo(o1.getPropertyTripleCount());
+                    if (compareResult == 0) {
+                        return o1.getClassTotalTripleCount().compareTo(o2.getClassTotalTripleCount());
                     } else {
                         return compareResult;
                     }
