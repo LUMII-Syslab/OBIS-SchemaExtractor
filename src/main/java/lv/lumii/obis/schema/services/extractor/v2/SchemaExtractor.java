@@ -157,7 +157,7 @@ public class SchemaExtractor {
                 determinePropertyDataTypes(property, request);
             }
 
-            determinePrincipalDomainsAndTargets(property, schema.getClasses(), request);
+            determinePrincipalDomainsAndRanges(property, schema.getClasses(), request);
 
             if (isTrue(request.getCalculateCardinalities())) {
                 determinePropertyMaxCardinality(property, request);
@@ -441,39 +441,51 @@ public class SchemaExtractor {
         });
     }
 
-    protected void determinePrincipalDomainsAndTargets(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull List<SchemaClass> classes,
-                                                       @Nonnull SchemaExtractorRequest request) {
-        determinePrincipalClasses(property.getDomainClasses(), classes, request);
-        determinePrincipalClasses(property.getRangeClasses(), classes, request);
-        property.getDomainRangePairs().forEach(pair -> {
-            pair.setSourceImportanceIndex(0);
-            pair.setTargetImportanceIndex(0);
+    protected void determinePrincipalDomainsAndRanges(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull List<SchemaClass> classes,
+                                                      @Nonnull SchemaExtractorRequest request) {
+
+        log.info(request.getCorrelationId() + " - determinePrincipalDomainClasses [" + property.getPropertyName() + "]");
+        List<SchemaExtractorPropertyLinkedClassInfo> principalDomains = determinePrincipalClasses(
+                buildAndSortPropertyLinkedClasses(property.getDomainClasses(), classes), classes);
+        mapPrincipalClasses(property.getDomainClasses(), principalDomains);
+
+        log.info(request.getCorrelationId() + " - determinePrincipalRangeClasses [" + property.getPropertyName() + "]");
+        List<SchemaExtractorPropertyLinkedClassInfo> principalRanges = determinePrincipalClasses(
+                buildAndSortPropertyLinkedClasses(property.getRangeClasses(), classes), classes);
+        mapPrincipalClasses(property.getRangeClasses(), principalRanges);
+
+        log.info(request.getCorrelationId() + " - determinePrincipalDomainRangePairs [" + property.getPropertyName() + "]");
+        // set pair target important indexes
+        property.getDomainClasses().forEach(domainClass -> {
+            List<SchemaExtractorDomainRangeInfo> pairsForSpecificDomain = findPairsWithSpecificDomain(property.getDomainRangePairs(), domainClass.getClassName());
+            List<SchemaExtractorPropertyLinkedClassInfo> principalPairRanges = determinePrincipalClasses(
+                    buildAndSortPropertyPairRanges(pairsForSpecificDomain, classes), classes);
+            pairsForSpecificDomain.forEach(linkedPair -> {
+                SchemaExtractorPropertyLinkedClassInfo pairWithIndex = principalPairRanges.stream()
+                        .filter(pairRange -> pairRange.getClassName().equalsIgnoreCase(linkedPair.getRangeClass())).findFirst().orElse(null);
+                linkedPair.setTargetImportanceIndex((pairWithIndex != null) ? pairWithIndex.getImportanceIndex() : 0);
+            });
+        });
+        // set pair target important indexes
+        property.getRangeClasses().forEach(rangeClass -> {
+            List<SchemaExtractorDomainRangeInfo> pairsForSpecificRange = findPairsWithSpecificRange(property.getDomainRangePairs(), rangeClass.getClassName());
+            List<SchemaExtractorPropertyLinkedClassInfo> principalPairDomains = determinePrincipalClasses(
+                    buildAndSortPropertyPairDomains(pairsForSpecificRange, classes), classes);
+            pairsForSpecificRange.forEach(linkedPair -> {
+                SchemaExtractorPropertyLinkedClassInfo pairWithIndex = principalPairDomains.stream()
+                        .filter(pairRange -> pairRange.getClassName().equalsIgnoreCase(linkedPair.getDomainClass())).findFirst().orElse(null);
+                linkedPair.setSourceImportanceIndex((pairWithIndex != null) ? pairWithIndex.getImportanceIndex() : 0);
+            });
         });
     }
 
-    protected void determinePrincipalClasses(@Nonnull List<SchemaExtractorClassNodeInfo> propertyLinkedClasses, @Nonnull List<SchemaClass> classes,
-                                             @Nonnull SchemaExtractorRequest request) {
-
-        // prepare data - classes with property triple count and total class instance count
-        List<SchemaExtractorPropertyLinkedClassInfo> classesForProcessing = new ArrayList<>();
-        propertyLinkedClasses.forEach(linkedClass -> {
-            SchemaClass schemaClass = findClass(classes, linkedClass.getClassName());
-            if (schemaClass != null) {
-                SchemaExtractorPropertyLinkedClassInfo newItem = new SchemaExtractorPropertyLinkedClassInfo();
-                newItem.setClassName(linkedClass.getClassName());
-                newItem.setClassTotalTripleCount(schemaClass.getInstanceCount());
-                newItem.setPropertyTripleCount(linkedClass.getTripleCount());
-                classesForProcessing.add(newItem);
-            }
-        });
-
-        // sort property classes by triple count (descending) and then by total class triple count (ascending)
-        List<SchemaExtractorPropertyLinkedClassInfo> sortedClasses = sortPropertyLinkedClassesByTripleCount(classesForProcessing);
+    @Nonnull
+    protected List<SchemaExtractorPropertyLinkedClassInfo> determinePrincipalClasses(@Nonnull List<SchemaExtractorPropertyLinkedClassInfo> propertyLinkedClassesSorted, @Nonnull List<SchemaClass> classes) {
 
         // set important indexes
         Set<String> importantClasses = new HashSet<>();
         int index = 1;
-        for (SchemaExtractorPropertyLinkedClassInfo currentClass : sortedClasses) {
+        for (SchemaExtractorPropertyLinkedClassInfo currentClass : propertyLinkedClassesSorted) {
 
             // skip owl:Thing and rdf:Resource
             if (OWL_RDF_TOP_LEVEL_RESOURCES.contains(currentClass.getClassName())) {
@@ -505,13 +517,7 @@ public class SchemaExtractor {
             }
         }
 
-        // map important indexes back to the result
-        propertyLinkedClasses.forEach(linkedClass -> {
-            SchemaExtractorPropertyLinkedClassInfo classInfo = sortedClasses.stream()
-                    .filter(c -> c.getClassName().equalsIgnoreCase(linkedClass.getClassName())).findFirst().orElse(null);
-            linkedClass.setImportanceIndex((classInfo != null) ? classInfo.getImportanceIndex() : 0);
-        });
-
+        return propertyLinkedClassesSorted;
     }
 
     protected void formatProperties(@Nonnull Map<String, SchemaExtractorPropertyNodeInfo> properties, @Nonnull Schema schema) {
@@ -884,6 +890,82 @@ public class SchemaExtractor {
 
     protected boolean isNotExcludedResource(@Nullable String resourceId, @Nonnull List<String> excludedResources) {
         return StringUtils.isNotEmpty(resourceId) && excludedResources.stream().noneMatch(resourceId::startsWith);
+    }
+
+    @Nullable
+    protected SchemaExtractorClassNodeInfo findLinkedClass(@Nonnull List<SchemaExtractorClassNodeInfo> classes, @Nonnull String searchClass) {
+        return classes.stream().filter(c -> searchClass.equalsIgnoreCase(c.getClassName())).findFirst().orElse(null);
+    }
+
+    @Nonnull
+    protected List<SchemaExtractorDomainRangeInfo> findPairsWithSpecificDomain(@Nonnull List<SchemaExtractorDomainRangeInfo> allPairs, @Nonnull String domainClass) {
+        return allPairs.stream().filter(pair -> domainClass.equalsIgnoreCase(pair.getDomainClass())).collect(Collectors.toList());
+    }
+
+    @Nonnull
+    protected List<SchemaExtractorDomainRangeInfo> findPairsWithSpecificRange(@Nonnull List<SchemaExtractorDomainRangeInfo> allPairs, @Nonnull String rangeClass) {
+        return allPairs.stream().filter(pair -> rangeClass.equalsIgnoreCase(pair.getRangeClass())).collect(Collectors.toList());
+    }
+
+    @Nonnull
+    protected List<SchemaExtractorPropertyLinkedClassInfo> buildAndSortPropertyLinkedClasses(@Nonnull List<SchemaExtractorClassNodeInfo> propertyLinkedClasses, @Nonnull List<SchemaClass> classes) {
+        // prepare data - classes with property triple count and total class instance count
+        List<SchemaExtractorPropertyLinkedClassInfo> classesForProcessing = new ArrayList<>();
+        propertyLinkedClasses.forEach(linkedClass -> {
+            SchemaClass schemaClass = findClass(classes, linkedClass.getClassName());
+            if (schemaClass != null) {
+                SchemaExtractorPropertyLinkedClassInfo newItem = new SchemaExtractorPropertyLinkedClassInfo();
+                newItem.setClassName(linkedClass.getClassName());
+                newItem.setClassTotalTripleCount(schemaClass.getInstanceCount());
+                newItem.setPropertyTripleCount(linkedClass.getTripleCount());
+                classesForProcessing.add(newItem);
+            }
+        });
+
+        // sort property classes by triple count (descending) and then by total class triple count (ascending)
+        return sortPropertyLinkedClassesByTripleCount(classesForProcessing);
+    }
+
+    protected void mapPrincipalClasses(@Nonnull List<SchemaExtractorClassNodeInfo> propertyLinkedClasses, @Nonnull List<SchemaExtractorPropertyLinkedClassInfo> principalClasses) {
+        propertyLinkedClasses.forEach(linkedClass -> {
+            SchemaExtractorPropertyLinkedClassInfo classInfo = principalClasses.stream()
+                    .filter(c -> c.getClassName().equalsIgnoreCase(linkedClass.getClassName())).findFirst().orElse(null);
+            linkedClass.setImportanceIndex((classInfo != null) ? classInfo.getImportanceIndex() : 0);
+        });
+    }
+
+    @Nonnull
+    protected List<SchemaExtractorPropertyLinkedClassInfo> buildAndSortPropertyPairRanges(@Nonnull List<SchemaExtractorDomainRangeInfo> propertyLinkedPairs, @Nonnull List<SchemaClass> classes) {
+        List<SchemaExtractorPropertyLinkedClassInfo> classesForProcessing = new ArrayList<>();
+        propertyLinkedPairs.forEach(linkedPair -> {
+            SchemaClass schemaClass = findClass(classes, linkedPair.getRangeClass());
+            if (schemaClass != null) {
+                SchemaExtractorPropertyLinkedClassInfo newItem = new SchemaExtractorPropertyLinkedClassInfo();
+                newItem.setClassName(linkedPair.getRangeClass());
+                newItem.setClassTotalTripleCount(schemaClass.getInstanceCount());
+                newItem.setPropertyTripleCount(linkedPair.getTripleCount());
+                classesForProcessing.add(newItem);
+            }
+        });
+        // sort property classes by triple count (descending) and then by total class triple count (ascending)
+        return sortPropertyLinkedClassesByTripleCount(classesForProcessing);
+    }
+
+    @Nonnull
+    protected List<SchemaExtractorPropertyLinkedClassInfo> buildAndSortPropertyPairDomains(@Nonnull List<SchemaExtractorDomainRangeInfo> propertyLinkedPairs, @Nonnull List<SchemaClass> classes) {
+        List<SchemaExtractorPropertyLinkedClassInfo> classesForProcessing = new ArrayList<>();
+        propertyLinkedPairs.forEach(linkedPair -> {
+            SchemaClass schemaClass = findClass(classes, linkedPair.getDomainClass());
+            if (schemaClass != null) {
+                SchemaExtractorPropertyLinkedClassInfo newItem = new SchemaExtractorPropertyLinkedClassInfo();
+                newItem.setClassName(linkedPair.getDomainClass());
+                newItem.setClassTotalTripleCount(schemaClass.getInstanceCount());
+                newItem.setPropertyTripleCount(linkedPair.getTripleCount());
+                classesForProcessing.add(newItem);
+            }
+        });
+        // sort property classes by triple count (descending) and then by total class triple count (ascending)
+        return sortPropertyLinkedClassesByTripleCount(classesForProcessing);
     }
 
 }
