@@ -13,6 +13,10 @@ public class SchemaPropertyLinkedClassDetails {
 
     private Long objectTripleCount;
 
+    private Boolean closedDomain;
+
+    private Boolean closedRange;
+
     private Integer importanceIndex;
 
     private Integer minCardinality;
@@ -24,12 +28,15 @@ public class SchemaPropertyLinkedClassDetails {
     private Integer maxInverseCardinality;
 
     public SchemaPropertyLinkedClassDetails(String classFullName, Long tripleCount, Long objectTripleCount,
+                                            Boolean closedDomain, Boolean closedRange,
                                             Integer minCardinality, Integer maxCardinality,
                                             Integer minInverseCardinality, Integer maxInverseCardinality,
                                             Integer importanceIndex) {
         this.classFullName = classFullName;
         this.tripleCount = tripleCount;
         this.objectTripleCount = objectTripleCount;
+        this.closedDomain = closedDomain;
+        this.closedRange = closedRange;
         this.minCardinality = minCardinality;
         this.maxCardinality = maxCardinality;
         this.minInverseCardinality = minInverseCardinality;

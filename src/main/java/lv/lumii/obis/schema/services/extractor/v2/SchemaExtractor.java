@@ -313,7 +313,7 @@ public class SchemaExtractor {
     protected void determinePropertyClosedDomainsAndRanges(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequest request) {
         log.info(request.getCorrelationId() + " - determinePropertyClosedDomainsAndRanges [" + property.getPropertyName() + "]");
 
-        // check if there is any triple with URI subject but without bound class
+        // check if there is any triple with URI subject but without bound class - property level
         if (property.getDomainClasses().isEmpty()) {
             property.setIsClosedDomain(null);
         } else {
@@ -339,6 +339,40 @@ public class SchemaExtractor {
             } else {
                 property.setIsClosedRange(Boolean.TRUE);
             }
+        }
+
+        // check if there is any triple with URI subject but without bound class - property source class level
+        if(isTrue(property.getIsClosedRange())) {
+            property.getDomainClasses().forEach(domainClass -> domainClass.setIsClosedRange(Boolean.TRUE));
+        } else {
+            property.getDomainClasses().forEach(domainClass -> {
+                String query = FIND_CLOSED_RANGE_FOR_PROPERTY_AND_CLASS.getSparqlQuery()
+                        .replace(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName())
+                        .replace(SPARQL_QUERY_BINDING_NAME_CLASS, domainClass.getClassName());
+                List<QueryResult> queryResults = sparqlEndpointProcessor.read(request, FIND_CLOSED_RANGE_FOR_PROPERTY_AND_CLASS.name(), query);
+                if (!queryResults.isEmpty() && StringUtils.isNotEmpty(queryResults.get(0).get(SPARQL_QUERY_BINDING_NAME_X))) {
+                    domainClass.setIsClosedRange(Boolean.FALSE);
+                } else {
+                    domainClass.setIsClosedRange(Boolean.TRUE);
+                }
+            });
+        }
+
+        // check if there is any triple with URI object but without bound class - property target class level
+        if(isTrue(property.getIsClosedDomain())) {
+            property.getRangeClasses().forEach(rangeClass -> rangeClass.setIsClosedDomain(Boolean.TRUE));
+        } else {
+            property.getRangeClasses().forEach(rangeClass -> {
+                String query = FIND_CLOSED_DOMAIN_FOR_PROPERTY_AND_CLASS.getSparqlQuery()
+                        .replace(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName())
+                        .replace(SPARQL_QUERY_BINDING_NAME_CLASS, rangeClass.getClassName());
+                List<QueryResult> queryResults = sparqlEndpointProcessor.read(request, FIND_CLOSED_DOMAIN_FOR_PROPERTY_AND_CLASS.name(), query);
+                if (!queryResults.isEmpty() && StringUtils.isNotEmpty(queryResults.get(0).get(SPARQL_QUERY_BINDING_NAME_X))) {
+                    rangeClass.setIsClosedDomain(Boolean.FALSE);
+                } else {
+                    rangeClass.setIsClosedDomain(Boolean.TRUE);
+                }
+            });
         }
 
     }
@@ -551,6 +585,7 @@ public class SchemaExtractor {
         return internalDtos.stream()
                 .map(internalDto -> new SchemaPropertyLinkedClassDetails(
                         internalDto.getClassName(), internalDto.getTripleCount(), internalDto.getObjectTripleCount(),
+                        internalDto.getIsClosedDomain(), internalDto.getIsClosedRange(),
                         internalDto.getMinCardinality(), internalDto.getMaxCardinality(),
                         internalDto.getMinInverseCardinality(), internalDto.getMaxInverseCardinality(),
                         internalDto.getImportanceIndex())).
