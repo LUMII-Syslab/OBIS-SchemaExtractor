@@ -315,7 +315,7 @@ public class SchemaExtractor {
 
         // check if there is any triple with URI subject but without bound class - property level
         if (property.getDomainClasses().isEmpty()) {
-            property.setIsClosedDomain(null);
+            property.setIsClosedDomain((property.getTripleCount() > 0) ? Boolean.FALSE : null);
         } else {
             String query = FIND_CLOSED_DOMAIN_FOR_PROPERTY.getSparqlQuery().replace(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
             List<QueryResult> queryResults = sparqlEndpointProcessor.read(request, FIND_CLOSED_DOMAIN_FOR_PROPERTY.name(), query);
@@ -328,13 +328,11 @@ public class SchemaExtractor {
 
         // check if there is any triple with URI object but without bound class
         if (property.getRangeClasses().isEmpty()) {
-            property.setIsClosedRange(null);
+            property.setIsClosedRange((property.getObjectTripleCount() > 0) ? Boolean.FALSE : null);
         } else {
             String query = FIND_CLOSED_RANGE_FOR_PROPERTY.getSparqlQuery().replace(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
             List<QueryResult> queryResults = sparqlEndpointProcessor.read(request, FIND_CLOSED_RANGE_FOR_PROPERTY.name(), query);
-            if (!queryResults.isEmpty()
-                    && StringUtils.isNotEmpty(queryResults.get(0).get(SPARQL_QUERY_BINDING_NAME_X))
-                    && StringUtils.isNotEmpty(queryResults.get(0).get(SPARQL_QUERY_BINDING_NAME_Y))) {
+            if (!queryResults.isEmpty() && StringUtils.isNotEmpty(queryResults.get(0).get(SPARQL_QUERY_BINDING_NAME_Y))) {
                 property.setIsClosedRange(Boolean.FALSE);
             } else {
                 property.setIsClosedRange(Boolean.TRUE);
@@ -350,7 +348,7 @@ public class SchemaExtractor {
                         .replace(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName())
                         .replace(SPARQL_QUERY_BINDING_NAME_CLASS, domainClass.getClassName());
                 List<QueryResult> queryResults = sparqlEndpointProcessor.read(request, FIND_CLOSED_RANGE_FOR_PROPERTY_AND_CLASS.name(), query);
-                if (!queryResults.isEmpty() && StringUtils.isNotEmpty(queryResults.get(0).get(SPARQL_QUERY_BINDING_NAME_X))) {
+                if (!queryResults.isEmpty() && StringUtils.isNotEmpty(queryResults.get(0).get(SPARQL_QUERY_BINDING_NAME_Y))) {
                     domainClass.setIsClosedRange(Boolean.FALSE);
                 } else {
                     domainClass.setIsClosedRange(Boolean.TRUE);
