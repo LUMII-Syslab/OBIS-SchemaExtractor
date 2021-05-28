@@ -155,6 +155,7 @@ public class SchemaExtractor {
 
             if (isFalse(property.getIsObjectProperty()) && isTrue(request.getCalculateDataTypes())) {
                 determinePropertyDataTypes(property, request);
+                determinePropertyDomainsDataTypes(property, request);
             }
 
             determinePrincipalDomainsAndRanges(property, schema.getClasses(), request);
@@ -340,7 +341,7 @@ public class SchemaExtractor {
         }
 
         // check if there is any triple with URI subject but without bound class - property source class level
-        if(isTrue(property.getIsClosedRange())) {
+        if (isTrue(property.getIsClosedRange())) {
             property.getDomainClasses().forEach(domainClass -> domainClass.setIsClosedRange(Boolean.TRUE));
         } else {
             property.getDomainClasses().forEach(domainClass -> {
@@ -357,7 +358,7 @@ public class SchemaExtractor {
         }
 
         // check if there is any triple with URI object but without bound class - property target class level
-        if(isTrue(property.getIsClosedDomain())) {
+        if (isTrue(property.getIsClosedDomain())) {
             property.getRangeClasses().forEach(rangeClass -> rangeClass.setIsClosedDomain(Boolean.TRUE));
         } else {
             property.getRangeClasses().forEach(rangeClass -> {
@@ -397,6 +398,36 @@ public class SchemaExtractor {
                 property.getDataTypes().add(new SchemaExtractorDataTypeInfo(DATA_TYPE_RDF_LANG_STRING, tripleCount));
             }
         }
+    }
+
+    protected void determinePropertyDomainsDataTypes(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequest request) {
+        log.info(request.getCorrelationId() + " - determinePropertyDomainsDataTypes [" + property.getPropertyName() + "]");
+
+        property.getDomainClasses().forEach(domainClass -> {
+            // find data types
+            String query = FIND_PROPERTY_DATA_TYPE_WITH_TRIPLE_COUNT_FOR_DOMAIN.getSparqlQuery().
+                    replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName()).
+                    replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS, domainClass.getClassName());
+            List<QueryResult> queryResults = sparqlEndpointProcessor.read(request, SchemaExtractorQueries.FIND_PROPERTY_DATA_TYPE_WITH_TRIPLE_COUNT_FOR_DOMAIN.name(), query);
+            for (QueryResult queryResult : queryResults) {
+                String resultDataType = queryResult.get(SPARQL_QUERY_BINDING_NAME_DATA_TYPE);
+                Long tripleCount = SchemaUtil.getLongValueFromString(queryResult.get(SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
+                if (StringUtils.isNotEmpty(resultDataType)) {
+                    domainClass.getDataTypes().add(new SchemaExtractorDataTypeInfo(SchemaUtil.parseDataType(resultDataType), tripleCount));
+                }
+            }
+            // find language tag
+            query = SchemaExtractorQueries.FIND_PROPERTY_DATA_TYPE_LANG_STRING_FOR_DOMAIN.getSparqlQuery().
+                    replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName()).
+                    replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS, domainClass.getClassName());
+            queryResults = sparqlEndpointProcessor.read(request, SchemaExtractorQueries.FIND_PROPERTY_DATA_TYPE_LANG_STRING_FOR_DOMAIN.name(), query);
+            if (!queryResults.isEmpty()) {
+                Long tripleCount = SchemaUtil.getLongValueFromString(queryResults.get(0).get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
+                if (tripleCount > 0L) {
+                    domainClass.getDataTypes().add(new SchemaExtractorDataTypeInfo(DATA_TYPE_RDF_LANG_STRING, tripleCount));
+                }
+            }
+        });
     }
 
     protected void determinePropertyDomainsMinCardinality(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequest request) {
@@ -586,7 +617,7 @@ public class SchemaExtractor {
                         internalDto.getIsClosedDomain(), internalDto.getIsClosedRange(),
                         internalDto.getMinCardinality(), internalDto.getMaxCardinality(),
                         internalDto.getMinInverseCardinality(), internalDto.getMaxInverseCardinality(),
-                        internalDto.getImportanceIndex())).
+                        internalDto.getImportanceIndex(), internalDto.getDataTypes())).
                         collect(Collectors.toSet());
     }
 

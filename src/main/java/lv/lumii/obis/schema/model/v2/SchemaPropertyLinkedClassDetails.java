@@ -1,7 +1,13 @@
 package lv.lumii.obis.schema.model.v2;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import lombok.Setter;
+import lv.lumii.obis.schema.services.extractor.dto.SchemaExtractorDataTypeInfo;
+import org.springframework.util.CollectionUtils;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Setter
 @Getter
@@ -27,11 +33,14 @@ public class SchemaPropertyLinkedClassDetails {
 
     private Integer maxInverseCardinality;
 
+    @JsonProperty("DataTypes")
+    private List<DataType> dataTypes;
+
     public SchemaPropertyLinkedClassDetails(String classFullName, Long tripleCount, Long objectTripleCount,
                                             Boolean closedDomain, Boolean closedRange,
                                             Integer minCardinality, Integer maxCardinality,
                                             Integer minInverseCardinality, Integer maxInverseCardinality,
-                                            Integer importanceIndex) {
+                                            Integer importanceIndex, List<SchemaExtractorDataTypeInfo> dataTypes) {
         this.classFullName = classFullName;
         this.tripleCount = tripleCount;
         this.objectTripleCount = objectTripleCount;
@@ -42,5 +51,10 @@ public class SchemaPropertyLinkedClassDetails {
         this.minInverseCardinality = minInverseCardinality;
         this.maxInverseCardinality = maxInverseCardinality;
         this.importanceIndex = importanceIndex;
+        if(!CollectionUtils.isEmpty(dataTypes)) {
+            this.dataTypes = dataTypes.stream().map(d -> new DataType(d.getDataType(), d.getTripleCount())).collect(Collectors.toList());
+        } else {
+            this.dataTypes = null;
+        }
     }
 }
