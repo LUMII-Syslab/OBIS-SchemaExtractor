@@ -160,7 +160,7 @@ public enum SchemaExtractorQueries {
     ),
 
     FIND_PROPERTY_RANGES_WITHOUT_TRIPLE_COUNT(
-            "SELECT distinct ?class WHERE {?x <property> ?y. ?y a ?class. } "
+            "SELECT distinct ?class WHERE {?x <property> ?y. OPTIONAL{ ?y a ?class.} } "
     ),
 
     FIND_PROPERTY_RANGES_TRIPLE_COUNT(
