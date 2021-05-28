@@ -610,15 +610,16 @@ public class SchemaExtractor {
         }
     }
 
-    protected Set<SchemaPropertyLinkedClassDetails> convertInternalDtoToApiDto(@Nonnull List<SchemaExtractorClassNodeInfo> internalDtos) {
-        return internalDtos.stream()
-                .map(internalDto -> new SchemaPropertyLinkedClassDetails(
-                        internalDto.getClassName(), internalDto.getTripleCount(), internalDto.getObjectTripleCount(),
-                        internalDto.getIsClosedDomain(), internalDto.getIsClosedRange(),
-                        internalDto.getMinCardinality(), internalDto.getMaxCardinality(),
-                        internalDto.getMinInverseCardinality(), internalDto.getMaxInverseCardinality(),
-                        internalDto.getImportanceIndex(), internalDto.getDataTypes())).
-                        collect(Collectors.toSet());
+    protected List<SchemaPropertyLinkedClassDetails> convertInternalDtoToApiDto(@Nonnull List<SchemaExtractorClassNodeInfo> internalDtos) {
+        return sortPropertyLinkedClassesByImportanceIndexAndTripleCount(
+                internalDtos.stream()
+                        .map(internalDto -> new SchemaPropertyLinkedClassDetails(
+                                internalDto.getClassName(), internalDto.getTripleCount(), internalDto.getObjectTripleCount(),
+                                internalDto.getIsClosedDomain(), internalDto.getIsClosedRange(),
+                                internalDto.getMinCardinality(), internalDto.getMaxCardinality(),
+                                internalDto.getMinInverseCardinality(), internalDto.getMaxInverseCardinality(),
+                                internalDto.getImportanceIndex(), internalDto.getDataTypes())).
+                        collect(Collectors.toList()));
     }
 
     protected List<DataType> convertInternalDataTypesToApiDto(@Nonnull List<SchemaExtractorDataTypeInfo> internalDtos) {
@@ -787,6 +788,21 @@ public class SchemaExtractor {
                     } else {
                         return compareResult;
                     }
+                })
+                .collect(Collectors.toList());
+    }
+
+    @Nonnull
+    protected List<SchemaPropertyLinkedClassDetails> sortPropertyLinkedClassesByImportanceIndexAndTripleCount(@Nonnull List<SchemaPropertyLinkedClassDetails> propertyLinkedClasses) {
+        // sort property classes by importance index (ascending) leaving 0 as last and then by triple count (descending)
+        return propertyLinkedClasses.stream()
+                .sorted((o1, o2) -> {
+                    int indexA = o1.getImportanceIndex();
+                    int indexB = o2.getImportanceIndex();
+                    if(indexA == indexB) return o2.getTripleCount().compareTo(o1.getTripleCount());
+                    if(indexA == 0) return 1;
+                    if(indexB == 0) return -1;
+                    return Integer.compare(indexA, indexB);
                 })
                 .collect(Collectors.toList());
     }

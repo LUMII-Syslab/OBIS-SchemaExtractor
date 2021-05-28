@@ -24,10 +24,10 @@ public class SchemaProperty extends SchemaElement {
 	private List<DataType> dataTypes;
 
 	@JsonProperty("SourceClasses")
-	private Set<SchemaPropertyLinkedClassDetails> sourceClasses;
+	private List<SchemaPropertyLinkedClassDetails> sourceClasses;
 
 	@JsonProperty("TargetClasses")
-	private Set<SchemaPropertyLinkedClassDetails> targetClasses;
+	private List<SchemaPropertyLinkedClassDetails> targetClasses;
 
 	@JsonProperty("ClassPairs")
 	private List<ClassPair> classPairs;
@@ -41,17 +41,17 @@ public class SchemaProperty extends SchemaElement {
 	}
 
 	@Nonnull
-	public Set<SchemaPropertyLinkedClassDetails> getSourceClasses() {
+	public List<SchemaPropertyLinkedClassDetails> getSourceClasses() {
 		if(sourceClasses == null){
-			sourceClasses = new HashSet<>();
+			sourceClasses = new ArrayList<>();
 		}
 		return sourceClasses;
 	}
 
 	@Nonnull
-	public Set<SchemaPropertyLinkedClassDetails> getTargetClasses() {
+	public List<SchemaPropertyLinkedClassDetails> getTargetClasses() {
 		if(targetClasses == null){
-			targetClasses = new HashSet<>();
+			targetClasses = new ArrayList<>();
 		}
 		return targetClasses;
 	}
