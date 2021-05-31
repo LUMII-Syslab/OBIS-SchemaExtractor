@@ -16,6 +16,7 @@ public class SchemaProperty extends SchemaElement {
 	private Integer maxCardinality;
 	private Integer maxInverseCardinality;
 	private Long tripleCount;
+	private Long dataTripleCount;
 	private Long objectTripleCount;
 	private Boolean closedDomain;
 	private Boolean closedRange;

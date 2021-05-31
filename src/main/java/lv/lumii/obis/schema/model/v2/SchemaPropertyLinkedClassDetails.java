@@ -17,6 +17,8 @@ public class SchemaPropertyLinkedClassDetails {
 
     private Long tripleCount;
 
+    private Long dataTripleCount;
+
     private Long objectTripleCount;
 
     private Boolean closedDomain;
@@ -36,13 +38,15 @@ public class SchemaPropertyLinkedClassDetails {
     @JsonProperty("DataTypes")
     private List<DataType> dataTypes;
 
-    public SchemaPropertyLinkedClassDetails(String classFullName, Long tripleCount, Long objectTripleCount,
+    public SchemaPropertyLinkedClassDetails(String classFullName,
+                                            Long tripleCount, Long dataTripleCount, Long objectTripleCount,
                                             Boolean closedDomain, Boolean closedRange,
                                             Integer minCardinality, Integer maxCardinality,
                                             Integer minInverseCardinality, Integer maxInverseCardinality,
                                             Integer importanceIndex, List<SchemaExtractorDataTypeInfo> dataTypes) {
         this.classFullName = classFullName;
         this.tripleCount = tripleCount;
+        this.dataTripleCount = dataTripleCount;
         this.objectTripleCount = objectTripleCount;
         this.closedDomain = closedDomain;
         this.closedRange = closedRange;

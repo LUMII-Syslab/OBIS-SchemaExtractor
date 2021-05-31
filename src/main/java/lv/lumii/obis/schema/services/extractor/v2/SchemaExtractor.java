@@ -140,11 +140,13 @@ public class SchemaExtractor {
             SchemaExtractorPropertyNodeInfo property = entry.getValue();
 
             determinePropertyObjectTripleCount(property, request);
+            determinePropertyDataTripleCount(property, request);
             determinePropertyType(property, request);
 
             determinePropertyDomains(property, request);
             determinePropertyDomainTripleCount(property, request);
             determinePropertyDomainObjectTripleCount(property, request);
+            determinePropertyDomainDataTripleCount(property, request);
 
             if (property.getObjectTripleCount() > 0) {
                 determinePropertyRanges(property, request);
@@ -184,6 +186,19 @@ public class SchemaExtractor {
             objectTripleCount = SchemaUtil.getLongValueFromString(queryResultsForUrlCount.get(0).get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
         }
         property.setObjectTripleCount(objectTripleCount);
+    }
+
+    protected void determinePropertyDataTripleCount(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequest request) {
+        log.info(request.getCorrelationId() + " - determinePropertyDataTripleCount [" + property.getPropertyName() + "]");
+
+        // get count of URL values for the specific property
+        Long dataTripleCount = 0L;
+        String queryForUrlCount = COUNT_PROPERTY_LITERAL_VALUES.getSparqlQuery().replace(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
+        List<QueryResult> queryResults = sparqlEndpointProcessor.read(request, COUNT_PROPERTY_LITERAL_VALUES.name(), queryForUrlCount);
+        if (!queryResults.isEmpty() && queryResults.get(0) != null) {
+            dataTripleCount = SchemaUtil.getLongValueFromString(queryResults.get(0).get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
+        }
+        property.setDataTripleCount(dataTripleCount);
     }
 
     protected void determinePropertyType(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequest request) {
@@ -242,6 +257,28 @@ public class SchemaExtractor {
                 } else {
                     Long objectTripleCountForDomain = SchemaUtil.getLongValueFromString(queryResults.get(0).get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
                     domainClass.setObjectTripleCount(objectTripleCountForDomain);
+                }
+            }
+        });
+    }
+
+    protected void determinePropertyDomainDataTripleCount(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequest request) {
+        log.info(request.getCorrelationId() + " - determineDataTripleCountForAllPropertyDomains [" + property.getPropertyName() + "]");
+
+        // get count of literal values for the specific property and specific domain
+        property.getDomainClasses().forEach(domainClass -> {
+            if (property.getDataTripleCount() <= 0) {
+                domainClass.setDataTripleCount(0L);
+            } else {
+                String query = COUNT_PROPERTY_LITERAL_VALUES_FOR_DOMAIN.getSparqlQuery().
+                        replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName()).
+                        replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_DOMAIN, domainClass.getClassName());
+                List<QueryResult> queryResults = sparqlEndpointProcessor.read(request, SchemaExtractorQueries.COUNT_PROPERTY_LITERAL_VALUES_FOR_DOMAIN.name(), query);
+                if (queryResults.isEmpty() || queryResults.get(0) == null) {
+                    domainClass.setDataTripleCount(0L);
+                } else {
+                    Long dataTripleCountForDomain = SchemaUtil.getLongValueFromString(queryResults.get(0).get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
+                    domainClass.setDataTripleCount(dataTripleCountForDomain);
                 }
             }
         });
@@ -593,6 +630,7 @@ public class SchemaExtractor {
             property.setMaxCardinality(propertyData.getMaxCardinality());
             property.setMaxInverseCardinality(propertyData.getMaxInverseCardinality());
             property.setTripleCount(propertyData.getTripleCount());
+            property.setDataTripleCount(propertyData.getDataTripleCount());
             property.setObjectTripleCount(propertyData.getObjectTripleCount());
             property.setClosedDomain(propertyData.getIsClosedDomain());
             property.setClosedRange(propertyData.getIsClosedRange());
@@ -614,7 +652,8 @@ public class SchemaExtractor {
         return sortPropertyLinkedClassesByImportanceIndexAndTripleCount(
                 internalDtos.stream()
                         .map(internalDto -> new SchemaPropertyLinkedClassDetails(
-                                internalDto.getClassName(), internalDto.getTripleCount(), internalDto.getObjectTripleCount(),
+                                internalDto.getClassName(),
+                                internalDto.getTripleCount(), internalDto.getDataTripleCount(), internalDto.getObjectTripleCount(),
                                 internalDto.getIsClosedDomain(), internalDto.getIsClosedRange(),
                                 internalDto.getMinCardinality(), internalDto.getMaxCardinality(),
                                 internalDto.getMinInverseCardinality(), internalDto.getMaxInverseCardinality(),

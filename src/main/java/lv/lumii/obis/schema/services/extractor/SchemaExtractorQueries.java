@@ -180,6 +180,12 @@ public enum SchemaExtractorQueries {
     COUNT_PROPERTY_URL_VALUES_FOR_DOMAIN(
             "SELECT (COUNT(?y) as ?instances) WHERE {?x a <domainClass>. ?x <property> ?y. FILTER(isURI(?y)) }"
     ),
+    COUNT_PROPERTY_LITERAL_VALUES(
+            "SELECT (COUNT(?y) as ?instances) WHERE {?x <property> ?y. FILTER(isLiteral(?y)) }"
+    ),
+    COUNT_PROPERTY_LITERAL_VALUES_FOR_DOMAIN(
+        "SELECT (COUNT(?y) as ?instances) WHERE {?x a <domainClass>. ?x <property> ?y. FILTER(isLiteral(?y)) }"
+    ),
 
     FIND_CLOSED_RANGE_FOR_PROPERTY(
             "SELECT ?x ?y WHERE { ?x <property> ?y. FILTER(isURI(?y)) OPTIONAL {?y a ?c} FILTER(!BOUND(?c)) } LIMIT 1"

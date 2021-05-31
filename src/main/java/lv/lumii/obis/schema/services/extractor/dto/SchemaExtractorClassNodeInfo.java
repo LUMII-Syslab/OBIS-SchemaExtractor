@@ -12,6 +12,7 @@ public class SchemaExtractorClassNodeInfo {
 	
 	private String className;
 	private Long tripleCount;
+	private Long dataTripleCount;
 	private Long objectTripleCount;
 	private Boolean isClosedDomain;
 	private Boolean isClosedRange;
