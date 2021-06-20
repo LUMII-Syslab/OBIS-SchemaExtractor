@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.io.InputStream;
 
 @Service
 public class JsonSchemaService {
@@ -30,6 +31,17 @@ public class JsonSchemaService {
 		mapper.setSerializationInclusion(Include.NON_NULL);
 		try {
 			return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(schema);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+
+	@Nullable
+	public <T> T getObjectFromJsonStream(@Nonnull InputStream inputStream, Class<T> objectToConvert){
+		ObjectMapper mapper = new ObjectMapper();
+		try {
+			return mapper.readValue(inputStream, objectToConvert);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

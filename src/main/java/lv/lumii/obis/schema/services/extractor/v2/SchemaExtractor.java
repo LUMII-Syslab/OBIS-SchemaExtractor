@@ -37,22 +37,22 @@ public class SchemaExtractor {
     protected SparqlEndpointProcessor sparqlEndpointProcessor;
 
     @Nonnull
-    public Schema extractSchema(@Nonnull SchemaExtractorRequest request) {
+    public Schema extractSchema(@Nonnull SchemaExtractorRequestDto request) {
         Schema schema = initializeSchema(request);
         buildClasses(request, schema);
         buildProperties(request, schema);
-        buildNamespaceMap(schema);
+        buildNamespaceMap(request, schema);
         return schema;
     }
 
-    protected Schema initializeSchema(@Nonnull SchemaExtractorRequest request) {
+    protected Schema initializeSchema(@Nonnull SchemaExtractorRequestDto request) {
         Schema schema = new Schema();
         schema.setName((StringUtils.isNotEmpty(request.getGraphName())) ? request.getGraphName() + "_Schema" : "Schema");
         buildExtractionProperties(request, schema);
         return schema;
     }
 
-    protected void buildClasses(@Nonnull SchemaExtractorRequest request, @Nonnull Schema schema) {
+    protected void buildClasses(@Nonnull SchemaExtractorRequestDto request, @Nonnull Schema schema) {
         log.info(request.getCorrelationId() + " - findAllClassesWithInstanceCount");
         List<QueryResult> queryResults = sparqlEndpointProcessor.read(request, FIND_CLASSES_WITH_INSTANCE_COUNT);
         List<SchemaClass> classes = processClasses(queryResults, request);
@@ -82,7 +82,7 @@ public class SchemaExtractor {
         }
     }
 
-    protected List<SchemaClass> processClasses(@Nonnull List<QueryResult> queryResults, @Nonnull SchemaExtractorRequest request) {
+    protected List<SchemaClass> processClasses(@Nonnull List<QueryResult> queryResults, @Nonnull SchemaExtractorRequestDto request) {
         List<SchemaClass> classes = new ArrayList<>();
 
         for (QueryResult queryResult : queryResults) {
@@ -99,7 +99,7 @@ public class SchemaExtractor {
         return classes;
     }
 
-    protected void buildProperties(@Nonnull SchemaExtractorRequest request, @Nonnull Schema schema) {
+    protected void buildProperties(@Nonnull SchemaExtractorRequestDto request, @Nonnull Schema schema) {
 
         // find all properties with triple count
         log.info(request.getCorrelationId() + " - findAllPropertiesWithTripleCount");
@@ -115,7 +115,7 @@ public class SchemaExtractor {
     }
 
     @Nonnull
-    protected Map<String, SchemaExtractorPropertyNodeInfo> processProperties(@Nonnull List<QueryResult> queryResults, @Nonnull SchemaExtractorRequest request) {
+    protected Map<String, SchemaExtractorPropertyNodeInfo> processProperties(@Nonnull List<QueryResult> queryResults, @Nonnull SchemaExtractorRequestDto request) {
         Map<String, SchemaExtractorPropertyNodeInfo> properties = new HashMap<>();
         for (QueryResult queryResult : queryResults) {
 
@@ -134,7 +134,7 @@ public class SchemaExtractor {
         return properties;
     }
 
-    protected void enrichProperties(@Nonnull Map<String, SchemaExtractorPropertyNodeInfo> properties, @Nonnull Schema schema, @Nonnull SchemaExtractorRequest request) {
+    protected void enrichProperties(@Nonnull Map<String, SchemaExtractorPropertyNodeInfo> properties, @Nonnull Schema schema, @Nonnull SchemaExtractorRequestDto request) {
         for (Map.Entry<String, SchemaExtractorPropertyNodeInfo> entry : properties.entrySet()) {
 
             SchemaExtractorPropertyNodeInfo property = entry.getValue();
@@ -175,7 +175,7 @@ public class SchemaExtractor {
         }
     }
 
-    protected void determinePropertyObjectTripleCount(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequest request) {
+    protected void determinePropertyObjectTripleCount(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request) {
         log.info(request.getCorrelationId() + " - determinePropertyObjectTripleCount [" + property.getPropertyName() + "]");
 
         // get count of URL values for the specific property
@@ -188,7 +188,7 @@ public class SchemaExtractor {
         property.setObjectTripleCount(objectTripleCount);
     }
 
-    protected void determinePropertyDataTripleCount(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequest request) {
+    protected void determinePropertyDataTripleCount(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request) {
         log.info(request.getCorrelationId() + " - determinePropertyDataTripleCount [" + property.getPropertyName() + "]");
 
         // get count of URL values for the specific property
@@ -201,7 +201,7 @@ public class SchemaExtractor {
         property.setDataTripleCount(dataTripleCount);
     }
 
-    protected void determinePropertyType(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequest request) {
+    protected void determinePropertyType(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request) {
         log.info(request.getCorrelationId() + " - determinePropertyType [" + property.getPropertyName() + "]");
 
         if (property.getTripleCount().equals(property.getObjectTripleCount())) {
@@ -211,7 +211,7 @@ public class SchemaExtractor {
         }
     }
 
-    protected void determinePropertyDomains(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequest request) {
+    protected void determinePropertyDomains(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request) {
         log.info(request.getCorrelationId() + " - determinePropertyDomains [" + property.getPropertyName() + "]");
 
         String query = FIND_PROPERTY_DOMAINS_WITHOUT_TRIPLE_COUNT.getSparqlQuery().replace(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
@@ -225,7 +225,7 @@ public class SchemaExtractor {
         }
     }
 
-    protected void determinePropertyDomainTripleCount(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequest request) {
+    protected void determinePropertyDomainTripleCount(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request) {
         log.info(request.getCorrelationId() + " - determineTripleCountForAllPropertyDomains [" + property.getPropertyName() + "]");
         property.getDomainClasses().forEach(domainClass -> {
             String queryTripleCounts = FIND_PROPERTY_DOMAINS_TRIPLE_COUNT.getSparqlQuery()
@@ -240,7 +240,7 @@ public class SchemaExtractor {
         });
     }
 
-    protected void determinePropertyDomainObjectTripleCount(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequest request) {
+    protected void determinePropertyDomainObjectTripleCount(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request) {
         log.info(request.getCorrelationId() + " - determineObjectTripleCountForAllPropertyDomains [" + property.getPropertyName() + "]");
 
         // get count of URL values for the specific property and specific domain
@@ -262,7 +262,7 @@ public class SchemaExtractor {
         });
     }
 
-    protected void determinePropertyDomainDataTripleCount(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequest request) {
+    protected void determinePropertyDomainDataTripleCount(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request) {
         log.info(request.getCorrelationId() + " - determineDataTripleCountForAllPropertyDomains [" + property.getPropertyName() + "]");
 
         // get count of literal values for the specific property and specific domain
@@ -284,7 +284,7 @@ public class SchemaExtractor {
         });
     }
 
-    protected void determinePropertyRanges(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequest request) {
+    protected void determinePropertyRanges(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request) {
         log.info(request.getCorrelationId() + " - determinePropertyRanges [" + property.getPropertyName() + "]");
 
         String query = FIND_PROPERTY_RANGES_WITHOUT_TRIPLE_COUNT.getSparqlQuery().replace(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
@@ -298,7 +298,7 @@ public class SchemaExtractor {
         }
     }
 
-    protected void determinePropertyRangeTripleCount(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequest request) {
+    protected void determinePropertyRangeTripleCount(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request) {
         log.info(request.getCorrelationId() + " - determineTripleCountForAllPropertyRanges [" + property.getPropertyName() + "]");
         property.getRangeClasses().forEach(rangeClass -> {
             String queryTripleCounts = FIND_PROPERTY_RANGES_TRIPLE_COUNT.getSparqlQuery()
@@ -313,7 +313,7 @@ public class SchemaExtractor {
         });
     }
 
-    protected void determinePropertyDomainRangePairs(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequest request) {
+    protected void determinePropertyDomainRangePairs(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request) {
         log.info(request.getCorrelationId() + " - determinePropertyDomainRangePairs [" + property.getPropertyName() + "]");
 
         String query = FIND_PROPERTY_DOMAIN_RANGE_PAIRS.getSparqlQuery().replace(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
@@ -348,7 +348,7 @@ public class SchemaExtractor {
         }
     }
 
-    protected void determinePropertyClosedDomainsAndRanges(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequest request) {
+    protected void determinePropertyClosedDomainsAndRanges(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request) {
         log.info(request.getCorrelationId() + " - determinePropertyClosedDomainsAndRanges [" + property.getPropertyName() + "]");
 
         // check if there is any triple with URI subject but without bound class - property level
@@ -413,7 +413,7 @@ public class SchemaExtractor {
 
     }
 
-    protected void determinePropertyDataTypes(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequest request) {
+    protected void determinePropertyDataTypes(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request) {
         log.info(request.getCorrelationId() + " - determinePropertyDataTypes [" + property.getPropertyName() + "]");
         // find data types
         String query = SchemaExtractorQueries.FIND_PROPERTY_DATA_TYPE_WITH_TRIPLE_COUNT.getSparqlQuery().replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
@@ -437,7 +437,7 @@ public class SchemaExtractor {
         }
     }
 
-    protected void determinePropertyDomainsDataTypes(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequest request) {
+    protected void determinePropertyDomainsDataTypes(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request) {
         log.info(request.getCorrelationId() + " - determinePropertyDomainsDataTypes [" + property.getPropertyName() + "]");
 
         property.getDomainClasses().forEach(domainClass -> {
@@ -467,7 +467,7 @@ public class SchemaExtractor {
         });
     }
 
-    protected void determinePropertyDomainsMinCardinality(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequest request) {
+    protected void determinePropertyDomainsMinCardinality(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request) {
         log.info(request.getCorrelationId() + " - determinePropertyDomainsMinCardinality [" + property.getPropertyName() + "]");
         property.getDomainClasses().forEach(domainClass -> {
             String query = SchemaExtractorQueries.FIND_PROPERTY_MIN_CARDINALITY.getSparqlQuery().
@@ -482,7 +482,7 @@ public class SchemaExtractor {
         });
     }
 
-    protected void determinePropertyMaxCardinality(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequest request) {
+    protected void determinePropertyMaxCardinality(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request) {
         log.info(request.getCorrelationId() + " - determinePropertyMaxCardinality [" + property.getPropertyName() + "]");
         String query = SchemaExtractorQueries.FIND_PROPERTY_MAX_CARDINALITY.getSparqlQuery().replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
         List<QueryResult> queryResults = sparqlEndpointProcessor.read(request, SchemaExtractorQueries.FIND_PROPERTY_MAX_CARDINALITY.name(), query);
@@ -493,7 +493,7 @@ public class SchemaExtractor {
         property.setMaxCardinality(DEFAULT_MAX_CARDINALITY);
     }
 
-    protected void determinePropertyDomainsMaxCardinality(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequest request) {
+    protected void determinePropertyDomainsMaxCardinality(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request) {
         log.info(request.getCorrelationId() + " - determinePropertyDomainsMaxCardinality [" + property.getPropertyName() + "]");
         property.getDomainClasses().forEach(domainClass -> {
             String query = FIND_PROPERTY_MAX_CARDINALITY_FOR_DOMAIN.getSparqlQuery().
@@ -508,7 +508,7 @@ public class SchemaExtractor {
         });
     }
 
-    protected void determinePropertyInverseMaxCardinality(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequest request) {
+    protected void determinePropertyInverseMaxCardinality(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request) {
         log.info(request.getCorrelationId() + " - determinePropertyInverseMaxCardinality [" + property.getPropertyName() + "]");
         String query = SchemaExtractorQueries.FIND_INVERSE_PROPERTY_MAX_CARDINALITY.getSparqlQuery().replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
         List<QueryResult> queryResults = sparqlEndpointProcessor.read(request, SchemaExtractorQueries.FIND_INVERSE_PROPERTY_MAX_CARDINALITY.name(), query);
@@ -519,7 +519,7 @@ public class SchemaExtractor {
         property.setMaxInverseCardinality(DEFAULT_MAX_CARDINALITY);
     }
 
-    protected void determinePropertyRangesInverseMaxCardinality(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequest request) {
+    protected void determinePropertyRangesInverseMaxCardinality(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request) {
         log.info(request.getCorrelationId() + " - determineInverseMaxCardinalityForPropertyRanges [" + property.getPropertyName() + "]");
         property.getRangeClasses().forEach(rangeClass -> {
             String queryInverseCardinalities = FIND_INVERSE_PROPERTY_MAX_CARDINALITY_FOR_RANGE.getSparqlQuery()
@@ -530,7 +530,7 @@ public class SchemaExtractor {
         });
     }
 
-    protected void determinePropertyRangesInverseMinCardinality(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequest request) {
+    protected void determinePropertyRangesInverseMinCardinality(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request) {
         log.info(request.getCorrelationId() + " - determinePropertyRangesInverseMinCardinality [" + property.getPropertyName() + "]");
         property.getRangeClasses().forEach(rangeClass -> {
             String query = FIND_INVERSE_PROPERTY_MIN_CARDINALITY.getSparqlQuery().
@@ -542,7 +542,7 @@ public class SchemaExtractor {
     }
 
     protected void determinePrincipalDomainsAndRanges(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull List<SchemaClass> classes,
-                                                      @Nonnull SchemaExtractorRequest request) {
+                                                      @Nonnull SchemaExtractorRequestDto request) {
 
         log.info(request.getCorrelationId() + " - determinePrincipalDomainClasses [" + property.getPropertyName() + "]");
         List<SchemaExtractorPropertyLinkedClassInfo> principalDomains = determinePrincipalClasses(
@@ -668,11 +668,16 @@ public class SchemaExtractor {
                         collect(Collectors.toList());
     }
 
-    protected void buildNamespaceMap(@Nonnull Schema schema) {
-        String mainNamespace = findMainNamespace(schema);
-        if (StringUtils.isNotEmpty(mainNamespace)) {
-            schema.setDefaultNamespace(mainNamespace);
-            schema.getPrefixes().add(new NamespacePrefixEntry(SchemaConstants.DEFAULT_NAMESPACE_PREFIX, mainNamespace));
+    protected void buildNamespaceMap(@Nonnull SchemaExtractorRequestDto request, @Nonnull Schema schema) {
+        if (request.getPredefinedNamespaces() != null && request.getPredefinedNamespaces().getNamespaceItems() != null) {
+            request.getPredefinedNamespaces().getNamespaceItems().forEach(namespaceItem ->
+                    schema.getPrefixes().add(new NamespacePrefixEntry(namespaceItem.getPrefix(), namespaceItem.getNamespace())));
+        } else {
+            String mainNamespace = findMainNamespace(schema);
+            if (StringUtils.isNotEmpty(mainNamespace)) {
+                schema.setDefaultNamespace(mainNamespace);
+                schema.getPrefixes().add(new NamespacePrefixEntry(SchemaConstants.DEFAULT_NAMESPACE_PREFIX, mainNamespace));
+            }
         }
     }
 
@@ -693,7 +698,7 @@ public class SchemaExtractor {
         return namespacesWithCounts.entrySet().stream().max(Map.Entry.comparingByValue()).get().getKey();
     }
 
-    protected void buildExtractionProperties(@Nonnull SchemaExtractorRequest request, @Nonnull Schema schema) {
+    protected void buildExtractionProperties(@Nonnull SchemaExtractorRequestDto request, @Nonnull Schema schema) {
         schema.getParameters().add(new SchemaParameter(SchemaParameter.PARAM_NAME_ENDPOINT, request.getEndpointUrl()));
         schema.getParameters().add(new SchemaParameter(SchemaParameter.PARAM_NAME_GRAPH_NAME, request.getGraphName()));
         schema.getParameters().add(new SchemaParameter(SchemaParameter.PARAM_NAME_CALCULATE_SUBCLASS_RELATIONS, request.getCalculateSubClassRelations().toString()));
@@ -738,7 +743,7 @@ public class SchemaExtractor {
         return graphOfClasses;
     }
 
-    protected void findIntersectionClassesAndUpdateClassNeighbors(@Nonnull List<SchemaClass> classes, @Nonnull Map<String, SchemaExtractorClassNodeInfo> graphOfClasses, @Nonnull SchemaExtractorRequest request) {
+    protected void findIntersectionClassesAndUpdateClassNeighbors(@Nonnull List<SchemaClass> classes, @Nonnull Map<String, SchemaExtractorClassNodeInfo> graphOfClasses, @Nonnull SchemaExtractorRequestDto request) {
         List<QueryResult> queryResults;
         for (SchemaClass classA : classes) {
             String query = SchemaExtractorQueries.FIND_INTERSECTION_CLASSES_FOR_KNOWN_CLASS.getSparqlQuery();
@@ -750,7 +755,7 @@ public class SchemaExtractor {
     }
 
     protected void updateGraphOfClassesWithNeighbors(@Nonnull String domainClass, @Nonnull List<QueryResult> queryResults, @Nonnull Map<String, SchemaExtractorClassNodeInfo> graphOfClasses,
-                                                     @Nonnull SchemaExtractorRequest request) {
+                                                     @Nonnull SchemaExtractorRequestDto request) {
         for (QueryResult queryResult : queryResults) {
             String classB = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_B);
             if (StringUtils.isNotEmpty(classB) && isNotExcludedResource(classB, request.getExcludedNamespaces())) {
@@ -838,16 +843,16 @@ public class SchemaExtractor {
                 .sorted((o1, o2) -> {
                     int indexA = o1.getImportanceIndex();
                     int indexB = o2.getImportanceIndex();
-                    if(indexA == indexB) return o2.getTripleCount().compareTo(o1.getTripleCount());
-                    if(indexA == 0) return 1;
-                    if(indexB == 0) return -1;
+                    if (indexA == indexB) return o2.getTripleCount().compareTo(o1.getTripleCount());
+                    if (indexA == 0) return 1;
+                    if (indexB == 0) return -1;
                     return Integer.compare(indexA, indexB);
                 })
                 .collect(Collectors.toList());
     }
 
     protected void processSuperclasses(@Nonnull Map<String, SchemaExtractorClassNodeInfo> classesGraph, @Nonnull List<SchemaClass> classes,
-                                       @Nonnull SchemaExtractorRequest request) {
+                                       @Nonnull SchemaExtractorRequestDto request) {
 
         for (Map.Entry<String, SchemaExtractorClassNodeInfo> entry : classesGraph.entrySet()) {
 
@@ -873,7 +878,7 @@ public class SchemaExtractor {
 
     protected void findSuperClass(@Nonnull SchemaClass currentClass, @Nonnull SchemaExtractorClassNodeInfo currentClassInfo, @Nonnull List<String> neighbors,
                                   @Nonnull Map<String, SchemaExtractorClassNodeInfo> classesGraph, List<SchemaClass> classes,
-                                  @Nonnull SchemaExtractorRequest request) {
+                                  @Nonnull SchemaExtractorRequestDto request) {
 
         for (String neighbor : neighbors) {
             Long neighborInstances = classesGraph.get(neighbor).getTripleCount();
@@ -949,7 +954,7 @@ public class SchemaExtractor {
     //		c. is not accessible from X
     // 6. repeat validation
     protected void updateMultipleInheritanceSuperclasses(@Nonnull Map<String, SchemaExtractorClassNodeInfo> classesGraph, @Nonnull List<SchemaClass> classes,
-                                                         @Nonnull SchemaExtractorRequest request) {
+                                                         @Nonnull SchemaExtractorRequestDto request) {
 
         List<SchemaClass> sortedClasses = sortClassesByTripleCountDesc(classes, classesGraph);
 
@@ -984,7 +989,7 @@ public class SchemaExtractor {
     }
 
     protected boolean validateAllNeighbors(@Nonnull SchemaClass currentClass, @Nonnull SchemaExtractorClassNodeInfo currentClassInfo, @Nonnull List<SchemaClass> classes,
-                                           @Nonnull Map<String, SchemaExtractorClassNodeInfo> classesGraph, @Nonnull SchemaExtractorRequest request) {
+                                           @Nonnull Map<String, SchemaExtractorClassNodeInfo> classesGraph, @Nonnull SchemaExtractorRequestDto request) {
         boolean accessible = true;
         List<String> notAccessibleNeighbors = new ArrayList<>();
         for (String neighbor : currentClassInfo.getNeighbors()) {

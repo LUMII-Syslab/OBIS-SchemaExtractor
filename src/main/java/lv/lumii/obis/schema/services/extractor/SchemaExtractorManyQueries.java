@@ -24,7 +24,7 @@ import static org.apache.commons.lang3.BooleanUtils.isFalse;
 public class SchemaExtractorManyQueries extends SchemaExtractor {
 
 	@Override
-	protected void findIntersectionClassesAndUpdateClassNeighbors(@Nonnull List<SchemaClass> classes, @Nonnull Map<String, SchemaExtractorClassNodeInfo> graphOfClasses, @Nonnull SchemaExtractorRequest request) {
+	protected void findIntersectionClassesAndUpdateClassNeighbors(@Nonnull List<SchemaClass> classes, @Nonnull Map<String, SchemaExtractorClassNodeInfo> graphOfClasses, @Nonnull SchemaExtractorRequestDto request) {
 		List<QueryResult> queryResults;
 		for(SchemaClass classA: classes){
             String query = SchemaExtractorQueries.FIND_INTERSECTION_CLASSES_FOR_KNOWN_CLASS.getSparqlQuery();
@@ -36,7 +36,7 @@ public class SchemaExtractorManyQueries extends SchemaExtractor {
 	}
 
 	@Override
-	protected Map<String, SchemaExtractorPropertyNodeInfo> findAllDataTypeProperties(@Nonnull List<SchemaClass> classes, @Nonnull SchemaExtractorRequest request) {
+	protected Map<String, SchemaExtractorPropertyNodeInfo> findAllDataTypeProperties(@Nonnull List<SchemaClass> classes, @Nonnull SchemaExtractorRequestDto request) {
 		Map<String, SchemaExtractorPropertyNodeInfo> properties = new HashMap<>();
 		List<QueryResult> queryResults;
 		for(SchemaClass domainClass: classes){
@@ -56,7 +56,7 @@ public class SchemaExtractorManyQueries extends SchemaExtractor {
 	}
 
 	@Override
-	protected Map<String, SchemaExtractorPropertyNodeInfo> findAllObjectTypeProperties(@Nonnull List<SchemaClass> classes, @Nonnull SchemaExtractorRequest request) {
+	protected Map<String, SchemaExtractorPropertyNodeInfo> findAllObjectTypeProperties(@Nonnull List<SchemaClass> classes, @Nonnull SchemaExtractorRequestDto request) {
 		Map<String, SchemaExtractorPropertyNodeInfo> properties = new HashMap<>();
 		List<QueryResult> queryResults;
 		for(SchemaClass domainClass: classes){
@@ -78,7 +78,7 @@ public class SchemaExtractorManyQueries extends SchemaExtractor {
 	}
 
 	private void updateGraphOfClassesWithNeighbors(@Nonnull String domainClass, @Nonnull List<QueryResult> queryResults, @Nonnull Map<String, SchemaExtractorClassNodeInfo> graphOfClasses,
-													 @Nonnull SchemaExtractorRequest request){
+													 @Nonnull SchemaExtractorRequestDto request){
 		for(QueryResult queryResult: queryResults){
 			String classB = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_B);
 			if(classB != null && !isExcludedResource(classB, request.getExcludeSystemClasses(), request.getExcludeMetaDomainClasses())){
@@ -110,7 +110,7 @@ public class SchemaExtractorManyQueries extends SchemaExtractor {
 
 	private void processAllObjectTypePropertiesWithKnownDomain(@Nullable String domainClass, @Nonnull List<QueryResult> queryResults,
 															   @Nonnull Map<String, SchemaExtractorPropertyNodeInfo> properties,
-															   @Nonnull SchemaExtractorRequest request){
+															   @Nonnull SchemaExtractorRequestDto request){
 		for(QueryResult queryResult: queryResults){
 			String propertyName = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY);
 			String rangeClass = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_RANGE);
@@ -129,7 +129,7 @@ public class SchemaExtractorManyQueries extends SchemaExtractor {
 
 	private void processAllObjectTypePropertiesWithoutRange(@Nonnull List<QueryResult> queryResults,
 															 @Nonnull Map<String, SchemaExtractorPropertyNodeInfo> properties,
-															 @Nonnull SchemaExtractorRequest request){
+															 @Nonnull SchemaExtractorRequestDto request){
 		for(QueryResult queryResult: queryResults){
 			String propertyName = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY);
 			String domainClass = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_DOMAIN);

@@ -7,14 +7,13 @@ import lombok.extern.slf4j.Slf4j;
 import lv.lumii.obis.schema.services.enhancer.OWLOntologyEnhancer;
 import lv.lumii.obis.schema.services.enhancer.dto.OWLOntologyEnhancerRequest;
 import lv.lumii.obis.schema.services.extractor.SchemaExtractorManyQueriesWithDirectProperties;
+import lv.lumii.obis.schema.services.extractor.dto.SchemaExtractorRequestDto;
 import lv.lumii.obis.schema.services.extractor.v2.SchemaExtractor;
-import lv.lumii.obis.schema.services.extractor.v2.dto.SimpleSchemaExtractorRequest;
 import lv.lumii.obis.schema.services.reader.dto.OWLOntologyReaderRequest;
 import lv.lumii.obis.schema.services.extractor.SchemaExtractorFewQueries;
 import lv.lumii.obis.schema.services.extractor.SchemaExtractorManyQueries;
 import lv.lumii.obis.schema.model.Schema;
 import lv.lumii.obis.schema.services.*;
-import lv.lumii.obis.schema.services.extractor.dto.SchemaExtractorRequest;
 import lv.lumii.obis.schema.services.reader.OWLOntologyReader;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,8 +26,6 @@ import javax.validation.constraints.NotNull;
 
 import javax.ws.rs.core.MediaType;
 import java.io.*;
-import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.LocalDateTime;
 
@@ -44,18 +41,16 @@ import static org.apache.commons.lang3.BooleanUtils.isTrue;
 @Setter
 public class SchemaExtractorController {
 
-    private static final String RNG_ALGORITHM = "SHA1PRNG";
-
     private static final String SCHEMA_EXTRACT_MESSAGE_START = "Starting to read schema from the endpoint with parameters %s";
     private static final String SCHEMA_EXTRACT_MESSAGE_END = "Completed JSON schema extraction in %s from the specified endpoint with parameters %s";
 
     private static final String SCHEMA_READ_FILE_MESSAGE_START = "Request %s - Starting to read Schema JSON from the OWL file [%s]";
     private static final String SCHEMA_READ_FILE_MESSAGE_END = "Request %s - Completed to read Schema JSON from the OWL file [%s] in %s";
+    private static final String SCHEMA_READ_PREFIX_FILE_MESSAGE_START = "Request %s - Starting to read Prefixes from the JSON file [%s]";
+    private static final String SCHEMA_READ_PREFIX_FILE_MESSAGE_END = "Request %s - Completed to read Prefixes from the JSON file [%s]";
     private static final String SCHEMA_ENHANCE_MESSAGE_START = "Request %s - Starting to enhance Schema with SPARQL endpoint data [%s]";
     private static final String SCHEMA_ENHANCE_MESSAGE_END = "Request %s - Completed to enhance Schema with SPARQL endpoint data [%s] in %s";
     private static final String SCHEMA_READ_FILE_MESSAGE_ERROR = "Request %s - Cannot read Schema JSON from the specified OWL file [%s]";
-
-    private static volatile SecureRandom secureRandom;
 
     @Autowired
     private SchemaExtractor schemaExtractor;
@@ -71,9 +66,11 @@ public class SchemaExtractorController {
     private OWLOntologyEnhancer owlOntologyEnhancer;
     @Autowired
     private JsonSchemaService jsonSchemaService;
+    @Autowired
+    private SchemaExtractorRequestBuilder requestBuilder;
 
 
-    @RequestMapping(value = "/v2/endpoint/buildFullSchema", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON)
+    @RequestMapping(value = "/v2/endpoint/buildFullSchema", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON)
     @ApiOperation(
             value = "Extract and analyze data from SPARQL endpoint and build full schema model (version 2)",
             consumes = MediaType.APPLICATION_JSON,
@@ -81,16 +78,30 @@ public class SchemaExtractorController {
             response = lv.lumii.obis.schema.model.v2.Schema.class
     )
     @SuppressWarnings("unused")
-    public String buildFullSchemaFromEndpointV2(@Validated @ModelAttribute @NotNull SimpleSchemaExtractorRequest request) {
-        request.setCorrelationId(generateCorrelationId());
+    public String buildFullSchemaFromEndpointV2(@Validated @ModelAttribute @NotNull SchemaExtractorRequestNew request,
+                                                @RequestParam(value ="namespacePrefixFile", required=false)
+                                                @ApiParam(access = "99", value = "Valid JSON file with predefined namespaces") MultipartFile namespacePrefixFile) {
+
+        SchemaExtractorRequestDto requestDto = requestBuilder.buildRequest(request);
+
         String requestJson = new Gson().toJson(request);
-
         log.info(String.format(SCHEMA_EXTRACT_MESSAGE_START, requestJson));
-
         LocalDateTime startTime = LocalDateTime.now();
-        lv.lumii.obis.schema.model.v2.Schema schema = schemaExtractor.extractSchema(new SchemaExtractorRequest(request));
-        LocalDateTime endTime = LocalDateTime.now();
 
+        // 1. Read prefixes from the external JSON file
+        if (namespacePrefixFile != null && !namespacePrefixFile.isEmpty()) {
+            log.info(String.format(SCHEMA_READ_PREFIX_FILE_MESSAGE_START, requestDto.getCorrelationId(), namespacePrefixFile.getOriginalFilename()));
+            try {
+                requestBuilder.applyPredefinedNamespaces(requestDto, namespacePrefixFile.getInputStream());
+            } catch (IOException e) {
+                log.error(String.format(SCHEMA_READ_PREFIX_FILE_MESSAGE_END, requestDto.getCorrelationId(), namespacePrefixFile.getOriginalFilename()));
+            }
+        }
+
+        // 2. Build the schema from the endpoint
+        lv.lumii.obis.schema.model.v2.Schema schema = schemaExtractor.extractSchema(requestDto);
+
+        LocalDateTime endTime = LocalDateTime.now();
         log.info(String.format(SCHEMA_EXTRACT_MESSAGE_END, calculateExecutionTime(startTime, endTime), requestJson));
 
         return jsonSchemaService.getJsonSchemaString(schema);
@@ -105,20 +116,20 @@ public class SchemaExtractorController {
             response = Schema.class
     )
     @SuppressWarnings("unused")
-    public String buildClassesFromEndpoint(@Validated @ModelAttribute @NotNull SchemaExtractorRequest request) {
-        request.setCorrelationId(generateCorrelationId());
+    public String buildClassesFromEndpoint(@Validated @ModelAttribute @NotNull SchemaExtractorRequestOld request) {
+        SchemaExtractorRequestDto requestDto = requestBuilder.buildRequest(request);
         String requestJson = new Gson().toJson(request);
 
         log.info(String.format(SCHEMA_EXTRACT_MESSAGE_START, requestJson));
 
         LocalDateTime startTime = LocalDateTime.now();
         Schema schema;
-        if (isTrue(SchemaExtractorRequest.ExtractionVersion.fewComplexQueries.equals(request.getVersion()))) {
-            schema = schemaExtractorFewQueries.extractClasses(request);
-        } else if (isTrue(SchemaExtractorRequest.ExtractionVersion.manySmallQueriesWithDirectProperties.equals(request.getVersion()))) {
-            schema = schemaExtractorManyQueriesWithDirectProperties.extractClasses(request);
+        if (isTrue(SchemaExtractorRequestOld.ExtractionVersion.fewComplexQueries.equals(request.getVersion()))) {
+            schema = schemaExtractorFewQueries.extractClasses(requestDto);
+        } else if (isTrue(SchemaExtractorRequestOld.ExtractionVersion.manySmallQueriesWithDirectProperties.equals(request.getVersion()))) {
+            schema = schemaExtractorManyQueriesWithDirectProperties.extractClasses(requestDto);
         } else {
-            schema = schemaExtractorManyQueries.extractClasses(request);
+            schema = schemaExtractorManyQueries.extractClasses(requestDto);
         }
         LocalDateTime endTime = LocalDateTime.now();
 
@@ -135,20 +146,20 @@ public class SchemaExtractorController {
             response = Schema.class
     )
     @SuppressWarnings("unused")
-    public String buildFullSchemaFromEndpoint(@Validated @ModelAttribute @NotNull SchemaExtractorRequest request) {
-        request.setCorrelationId(generateCorrelationId());
+    public String buildFullSchemaFromEndpoint(@Validated @ModelAttribute @NotNull SchemaExtractorRequestOld request) {
+        SchemaExtractorRequestDto requestDto = requestBuilder.buildRequest(request);
         String requestJson = new Gson().toJson(request);
 
         log.info(String.format(SCHEMA_EXTRACT_MESSAGE_START, requestJson));
 
         LocalDateTime startTime = LocalDateTime.now();
         Schema schema;
-        if (isTrue(SchemaExtractorRequest.ExtractionVersion.fewComplexQueries.equals(request.getVersion()))) {
-            schema = schemaExtractorFewQueries.extractSchema(request);
-        } else if (isTrue(SchemaExtractorRequest.ExtractionVersion.manySmallQueriesWithDirectProperties.equals(request.getVersion()))) {
-            schema = schemaExtractorManyQueriesWithDirectProperties.extractSchema(request);
+        if (isTrue(SchemaExtractorRequestOld.ExtractionVersion.fewComplexQueries.equals(request.getVersion()))) {
+            schema = schemaExtractorFewQueries.extractSchema(requestDto);
+        } else if (isTrue(SchemaExtractorRequestOld.ExtractionVersion.manySmallQueriesWithDirectProperties.equals(request.getVersion()))) {
+            schema = schemaExtractorManyQueriesWithDirectProperties.extractSchema(requestDto);
         } else {
-            schema = schemaExtractorManyQueries.extractSchema(request);
+            schema = schemaExtractorManyQueries.extractSchema(requestDto);
         }
         LocalDateTime endTime = LocalDateTime.now();
 
@@ -168,7 +179,7 @@ public class SchemaExtractorController {
     public String buildFullSchemaFromOwl(@RequestParam("file") @ApiParam(access = "1", value = "Upload OWL file", required = true) MultipartFile file,
                                          @Validated @ModelAttribute @NotNull OWLOntologyReaderRequest readerRequest,
                                          @Validated @ModelAttribute @NotNull OWLOntologyEnhancerRequest enhancerRequest) {
-        String correlationId = generateCorrelationId();
+        String correlationId = requestBuilder.generateCorrelationId();
 
         // READ OWL ontology file and convert to Schema JSON format
         LocalDateTime startTime = LocalDateTime.now();
@@ -198,17 +209,6 @@ public class SchemaExtractorController {
         }
 
         return jsonSchemaService.getJsonSchemaString(schema);
-    }
-
-    private static String generateCorrelationId() {
-        try {
-            if (secureRandom == null) {
-                secureRandom = SecureRandom.getInstance(RNG_ALGORITHM);
-            }
-            return Long.toString(Math.abs(secureRandom.nextLong()));
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("Error generating unique correlation id for SchemaExtractor request: ", e);
-        }
     }
 
     private String calculateExecutionTime(@Nonnull LocalDateTime startLocalDateTime, @Nonnull LocalDateTime endLocalDateTime) {

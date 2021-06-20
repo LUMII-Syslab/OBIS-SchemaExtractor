@@ -7,7 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import lv.lumii.obis.schema.services.common.dto.QueryResult;
 import lv.lumii.obis.schema.services.common.dto.SparqlEndpointConfig;
 import lv.lumii.obis.schema.services.extractor.SchemaExtractorQueries;
-import lv.lumii.obis.schema.services.extractor.dto.SchemaExtractorRequest;
+import lv.lumii.obis.schema.services.extractor.dto.SchemaExtractorRequestDto;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.jena.query.Query;
 import org.apache.jena.query.QueryExecutionFactory;
@@ -27,12 +27,12 @@ import javax.annotation.Nullable;
 public class SparqlEndpointProcessor {
 
     @Nonnull
-    public List<QueryResult> read(@Nonnull SchemaExtractorRequest request, @Nonnull SchemaExtractorQueries queryItem) {
+    public List<QueryResult> read(@Nonnull SchemaExtractorRequestDto request, @Nonnull SchemaExtractorQueries queryItem) {
         return read(request, queryItem.name(), queryItem.getSparqlQuery());
     }
 
     @Nonnull
-    public List<QueryResult> read(@Nonnull SchemaExtractorRequest request, @Nonnull String queryName, @Nonnull String sparqlQuery) {
+    public List<QueryResult> read(@Nonnull SchemaExtractorRequestDto request, @Nonnull String queryName, @Nonnull String sparqlQuery) {
         return read(new SparqlEndpointConfig(request.getEndpointUrl(), request.getGraphName(), request.getEnableLogging()),
                 queryName, sparqlQuery);
     }

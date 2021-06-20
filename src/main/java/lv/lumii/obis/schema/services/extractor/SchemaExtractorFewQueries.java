@@ -20,14 +20,14 @@ import static lv.lumii.obis.schema.services.extractor.SchemaExtractorQueries.*;
 public class SchemaExtractorFewQueries extends SchemaExtractor {
 
 	@Override
-	protected void findIntersectionClassesAndUpdateClassNeighbors(@Nonnull List<SchemaClass> classes, @Nonnull Map<String, SchemaExtractorClassNodeInfo> graphOfClasses, @Nonnull SchemaExtractorRequest request) {
+	protected void findIntersectionClassesAndUpdateClassNeighbors(@Nonnull List<SchemaClass> classes, @Nonnull Map<String, SchemaExtractorClassNodeInfo> graphOfClasses, @Nonnull SchemaExtractorRequestDto request) {
 		List<QueryResult> queryResults = sparqlEndpointProcessor.read(request, FIND_INTERSECTION_CLASSES);
 		updateGraphOfClassesWithNeighbors(queryResults, graphOfClasses, request);
 		queryResults.clear();
 	}
 
 	@Override
-	protected Map<String, SchemaExtractorPropertyNodeInfo> findAllDataTypeProperties(@Nonnull List<SchemaClass> classes, @Nonnull SchemaExtractorRequest request) {
+	protected Map<String, SchemaExtractorPropertyNodeInfo> findAllDataTypeProperties(@Nonnull List<SchemaClass> classes, @Nonnull SchemaExtractorRequestDto request) {
 		List<QueryResult> queryResults = sparqlEndpointProcessor.read(request, FIND_ALL_DATATYPE_PROPERTIES);
 		Map<String, SchemaExtractorPropertyNodeInfo> properties = new HashMap<>();
 		processAllDataTypeProperties(queryResults, properties, request);
@@ -35,7 +35,7 @@ public class SchemaExtractorFewQueries extends SchemaExtractor {
 	}
 
 	@Override
-	protected Map<String, SchemaExtractorPropertyNodeInfo> findAllObjectTypeProperties(@Nonnull List<SchemaClass> classes, @Nonnull SchemaExtractorRequest request) {
+	protected Map<String, SchemaExtractorPropertyNodeInfo> findAllObjectTypeProperties(@Nonnull List<SchemaClass> classes, @Nonnull SchemaExtractorRequestDto request) {
 		List<QueryResult> queryResults = sparqlEndpointProcessor.read(request, FIND_OBJECT_PROPERTIES_WITH_DOMAIN_RANGE);
 		Map<String, SchemaExtractorPropertyNodeInfo> properties = new HashMap<>();
 		processAllObjectTypeProperties(queryResults, properties, request);
