@@ -159,12 +159,20 @@ public enum SchemaExtractorQueries {
             "SELECT (COUNT(?x) as ?instances) WHERE {?x <property> ?y. ?x a <domainClass>. }"
     ),
 
+    CHECK_CLASS_AS_PROPERTY_DOMAIN(
+            "SELECT ?x WHERE {?x <property> ?y. ?x a <class>. } LIMIT 1"
+    ),
+
     FIND_PROPERTY_RANGES_WITHOUT_TRIPLE_COUNT(
             "SELECT distinct ?class WHERE {?x <property> ?y. OPTIONAL{ ?y a ?class.} } "
     ),
 
     FIND_PROPERTY_RANGES_TRIPLE_COUNT(
             "SELECT (COUNT(?x) as ?instances) WHERE {?x <property> ?y. ?y a <rangeClass>. }"
+    ),
+
+    CHECK_CLASS_AS_PROPERTY_RANGE(
+            "SELECT ?y WHERE {?x <property> ?y. ?y a <class>. } LIMIT 1"
     ),
 
     FIND_PROPERTY_DOMAIN_RANGE_PAIRS(

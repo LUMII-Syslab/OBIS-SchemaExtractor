@@ -143,13 +143,13 @@ public class SchemaExtractor {
             determinePropertyDataTripleCount(property, request);
             determinePropertyType(property, request);
 
-            determinePropertyDomains(property, request);
+            determinePropertyDomains(property, schema, request);
             determinePropertyDomainTripleCount(property, request);
             determinePropertyDomainObjectTripleCount(property, request);
             determinePropertyDomainDataTripleCount(property, request);
 
             if (property.getObjectTripleCount() > 0) {
-                determinePropertyRanges(property, request);
+                determinePropertyRanges(property, schema, request);
                 determinePropertyRangeTripleCount(property, request);
                 determinePropertyDomainRangePairs(property, request);
                 determinePropertyClosedDomainsAndRanges(property, request);
@@ -211,7 +211,7 @@ public class SchemaExtractor {
         }
     }
 
-    protected void determinePropertyDomains(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request) {
+    protected void determinePropertyDomains(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull Schema schema, @Nonnull SchemaExtractorRequestDto request) {
         log.info(request.getCorrelationId() + " - determinePropertyDomains [" + property.getPropertyName() + "]");
 
         String query = FIND_PROPERTY_DOMAINS_WITHOUT_TRIPLE_COUNT.getSparqlQuery().replace(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
@@ -222,6 +222,18 @@ public class SchemaExtractor {
             if (StringUtils.isNotEmpty(className) && isNotExcludedResource(className, request.getExcludedNamespaces())) {
                 property.getDomainClasses().add(new SchemaExtractorClassNodeInfo(className));
             }
+        }
+
+        if (property.getDomainClasses().isEmpty()) {
+            schema.getClasses().forEach(potentialDomain -> {
+                String checkDomainQuery = CHECK_CLASS_AS_PROPERTY_DOMAIN.getSparqlQuery()
+                        .replace(SPARQL_QUERY_BINDING_NAME_CLASS, potentialDomain.getFullName())
+                        .replace(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
+                List<QueryResult> checkDomainQueryResults = sparqlEndpointProcessor.read(request, CHECK_CLASS_AS_PROPERTY_DOMAIN.name(), checkDomainQuery);
+                if (!checkDomainQueryResults.isEmpty()) {
+                    property.getDomainClasses().add(new SchemaExtractorClassNodeInfo(potentialDomain.getFullName()));
+                }
+            });
         }
     }
 
@@ -284,7 +296,7 @@ public class SchemaExtractor {
         });
     }
 
-    protected void determinePropertyRanges(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request) {
+    protected void determinePropertyRanges(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull Schema schema, @Nonnull SchemaExtractorRequestDto request) {
         log.info(request.getCorrelationId() + " - determinePropertyRanges [" + property.getPropertyName() + "]");
 
         String query = FIND_PROPERTY_RANGES_WITHOUT_TRIPLE_COUNT.getSparqlQuery().replace(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
@@ -295,6 +307,18 @@ public class SchemaExtractor {
             if (StringUtils.isNotEmpty(className) && isNotExcludedResource(className, request.getExcludedNamespaces())) {
                 property.getRangeClasses().add(new SchemaExtractorClassNodeInfo(className));
             }
+        }
+
+        if (property.getRangeClasses().isEmpty()) {
+            schema.getClasses().forEach(potentialRange -> {
+                String checkRangeQuery = CHECK_CLASS_AS_PROPERTY_RANGE.getSparqlQuery()
+                        .replace(SPARQL_QUERY_BINDING_NAME_CLASS, potentialRange.getFullName())
+                        .replace(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
+                List<QueryResult> checkRangeQueryResults = sparqlEndpointProcessor.read(request, CHECK_CLASS_AS_PROPERTY_RANGE.name(), checkRangeQuery);
+                if (!checkRangeQueryResults.isEmpty()) {
+                    property.getRangeClasses().add(new SchemaExtractorClassNodeInfo(potentialRange.getFullName()));
+                }
+            });
         }
     }
 
