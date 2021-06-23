@@ -182,9 +182,15 @@ public class SchemaExtractor {
         // get count of URL values for the specific property
         Long objectTripleCount = 0L;
         String queryForUrlCount = COUNT_PROPERTY_URL_VALUES.getSparqlQuery().replace(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
-        List<QueryResult> queryResultsForUrlCount = sparqlEndpointProcessor.read(request, COUNT_PROPERTY_URL_VALUES.name(), queryForUrlCount);
-        if (!queryResultsForUrlCount.isEmpty() && queryResultsForUrlCount.get(0) != null) {
-            objectTripleCount = SchemaUtil.getLongValueFromString(queryResultsForUrlCount.get(0).get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
+        QueryResponse queryResponseForUrlCount = sparqlEndpointProcessor.read(request, COUNT_PROPERTY_URL_VALUES.name(), queryForUrlCount, true);
+        if (!queryResponseForUrlCount.hasErrors() && !queryResponseForUrlCount.getResults().isEmpty() && queryResponseForUrlCount.getResults().get(0) != null) {
+            objectTripleCount = SchemaUtil.getLongValueFromString(queryResponseForUrlCount.getResults().get(0).get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
+        } else {
+            String checkQueryForUrlCount = CHECK_PROPERTY_URL_VALUES.getSparqlQuery().replace(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
+            QueryResponse checkQueryResponseForUrlCount = sparqlEndpointProcessor.read(request, CHECK_PROPERTY_URL_VALUES.name(), checkQueryForUrlCount, false);
+            if (!checkQueryResponseForUrlCount.hasErrors() && !checkQueryResponseForUrlCount.getResults().isEmpty() && checkQueryResponseForUrlCount.getResults().get(0) != null) {
+                objectTripleCount = -1L;
+            }
         }
         property.setObjectTripleCount(objectTripleCount);
     }
@@ -194,10 +200,16 @@ public class SchemaExtractor {
 
         // get count of URL values for the specific property
         Long dataTripleCount = 0L;
-        String queryForUrlCount = COUNT_PROPERTY_LITERAL_VALUES.getSparqlQuery().replace(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
-        List<QueryResult> queryResults = sparqlEndpointProcessor.read(request, COUNT_PROPERTY_LITERAL_VALUES.name(), queryForUrlCount);
-        if (!queryResults.isEmpty() && queryResults.get(0) != null) {
-            dataTripleCount = SchemaUtil.getLongValueFromString(queryResults.get(0).get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
+        String queryForLiteralCount = COUNT_PROPERTY_LITERAL_VALUES.getSparqlQuery().replace(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
+        QueryResponse queryResponseForLiteralCount = sparqlEndpointProcessor.read(request, COUNT_PROPERTY_LITERAL_VALUES.name(), queryForLiteralCount, true);
+        if (!queryResponseForLiteralCount.hasErrors() && !queryResponseForLiteralCount.getResults().isEmpty() && queryResponseForLiteralCount.getResults().get(0) != null) {
+            dataTripleCount = SchemaUtil.getLongValueFromString(queryResponseForLiteralCount.getResults().get(0).get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
+        } else {
+            String checkQueryForLiteralCount = CHECK_PROPERTY_LITERAL_VALUES.getSparqlQuery().replace(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
+            QueryResponse checkQueryResponseForLiteralCount = sparqlEndpointProcessor.read(request, CHECK_PROPERTY_LITERAL_VALUES.name(), checkQueryForLiteralCount, false);
+            if (!checkQueryResponseForLiteralCount.hasErrors() && !checkQueryResponseForLiteralCount.getResults().isEmpty() && checkQueryResponseForLiteralCount.getResults().get(0) != null) {
+                dataTripleCount = -1L;
+            }
         }
         property.setDataTripleCount(dataTripleCount);
     }
@@ -258,18 +270,24 @@ public class SchemaExtractor {
 
         // get count of URL values for the specific property and specific domain
         property.getDomainClasses().forEach(domainClass -> {
-            if (property.getObjectTripleCount() <= 0) {
+            if (property.getObjectTripleCount() == 0) {
                 domainClass.setObjectTripleCount(0L);
             } else {
                 String query = SchemaExtractorQueries.COUNT_PROPERTY_URL_VALUES_FOR_DOMAIN.getSparqlQuery().
                         replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName()).
                         replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_DOMAIN, domainClass.getClassName());
-                List<QueryResult> queryResults = sparqlEndpointProcessor.read(request, SchemaExtractorQueries.COUNT_PROPERTY_URL_VALUES_FOR_DOMAIN.name(), query);
-                if (queryResults.isEmpty() || queryResults.get(0) == null) {
-                    domainClass.setObjectTripleCount(0L);
-                } else {
-                    Long objectTripleCountForDomain = SchemaUtil.getLongValueFromString(queryResults.get(0).get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
+                QueryResponse queryResponse = sparqlEndpointProcessor.read(request, SchemaExtractorQueries.COUNT_PROPERTY_URL_VALUES_FOR_DOMAIN.name(), query, true);
+                if (!queryResponse.hasErrors() && !queryResponse.getResults().isEmpty() && queryResponse.getResults().get(0) != null) {
+                    Long objectTripleCountForDomain = SchemaUtil.getLongValueFromString(queryResponse.getResults().get(0).get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
                     domainClass.setObjectTripleCount(objectTripleCountForDomain);
+                } else {
+                    String checkQuery = SchemaExtractorQueries.CHECK_PROPERTY_URL_VALUES_FOR_DOMAIN.getSparqlQuery().
+                            replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName()).
+                            replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_DOMAIN, domainClass.getClassName());
+                    QueryResponse checkQueryResponse = sparqlEndpointProcessor.read(request, SchemaExtractorQueries.CHECK_PROPERTY_URL_VALUES_FOR_DOMAIN.name(), checkQuery, false);
+                    if (!checkQueryResponse.hasErrors() && !checkQueryResponse.getResults().isEmpty()) {
+                        domainClass.setObjectTripleCount(-1L);
+                    }
                 }
             }
         });
@@ -280,18 +298,24 @@ public class SchemaExtractor {
 
         // get count of literal values for the specific property and specific domain
         property.getDomainClasses().forEach(domainClass -> {
-            if (property.getDataTripleCount() <= 0) {
+            if (property.getDataTripleCount() == 0) {
                 domainClass.setDataTripleCount(0L);
             } else {
                 String query = COUNT_PROPERTY_LITERAL_VALUES_FOR_DOMAIN.getSparqlQuery().
                         replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName()).
                         replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_DOMAIN, domainClass.getClassName());
-                List<QueryResult> queryResults = sparqlEndpointProcessor.read(request, SchemaExtractorQueries.COUNT_PROPERTY_LITERAL_VALUES_FOR_DOMAIN.name(), query);
-                if (queryResults.isEmpty() || queryResults.get(0) == null) {
-                    domainClass.setDataTripleCount(0L);
-                } else {
-                    Long dataTripleCountForDomain = SchemaUtil.getLongValueFromString(queryResults.get(0).get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
+                QueryResponse queryResponse = sparqlEndpointProcessor.read(request, SchemaExtractorQueries.COUNT_PROPERTY_LITERAL_VALUES_FOR_DOMAIN.name(), query, true);
+                if (!queryResponse.hasErrors() && !queryResponse.getResults().isEmpty() && queryResponse.getResults().get(0) != null) {
+                    Long dataTripleCountForDomain = SchemaUtil.getLongValueFromString(queryResponse.getResults().get(0).get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
                     domainClass.setDataTripleCount(dataTripleCountForDomain);
+                } else {
+                    String checkQuery = SchemaExtractorQueries.CHECK_PROPERTY_LITERAL_VALUES_FOR_DOMAIN.getSparqlQuery().
+                            replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName()).
+                            replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_DOMAIN, domainClass.getClassName());
+                    QueryResponse checkQueryResponse = sparqlEndpointProcessor.read(request, SchemaExtractorQueries.CHECK_PROPERTY_LITERAL_VALUES_FOR_DOMAIN.name(), checkQuery, false);
+                    if (!checkQueryResponse.hasErrors() && !checkQueryResponse.getResults().isEmpty()) {
+                        domainClass.setDataTripleCount(-1L);
+                    }
                 }
             }
         });

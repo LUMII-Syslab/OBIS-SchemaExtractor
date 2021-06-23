@@ -189,14 +189,26 @@ public enum SchemaExtractorQueries {
     COUNT_PROPERTY_URL_VALUES(
             "SELECT (COUNT(?y) as ?instances) WHERE {?x <property> ?y. FILTER(isURI(?y)) }"
     ),
+    CHECK_PROPERTY_URL_VALUES(
+            "SELECT ?y where {?x <property> ?y. FILTER(isURI(?y)) } LIMIT 1"
+    ),
     COUNT_PROPERTY_URL_VALUES_FOR_DOMAIN(
             "SELECT (COUNT(?y) as ?instances) WHERE {?x a <domainClass>. ?x <property> ?y. FILTER(isURI(?y)) }"
+    ),
+    CHECK_PROPERTY_URL_VALUES_FOR_DOMAIN(
+            "SELECT ?y WHERE {?x a <domainClass>. ?x <property> ?y. FILTER(isURI(?y)) } LIMIT 1"
     ),
     COUNT_PROPERTY_LITERAL_VALUES(
             "SELECT (COUNT(?y) as ?instances) WHERE {?x <property> ?y. FILTER(isLiteral(?y)) }"
     ),
+    CHECK_PROPERTY_LITERAL_VALUES(
+            "SELECT ?y WHERE {?x <property> ?y. FILTER(isLiteral(?y)) LIMIT 1}"
+    ),
     COUNT_PROPERTY_LITERAL_VALUES_FOR_DOMAIN(
         "SELECT (COUNT(?y) as ?instances) WHERE {?x a <domainClass>. ?x <property> ?y. FILTER(isLiteral(?y)) }"
+    ),
+    CHECK_PROPERTY_LITERAL_VALUES_FOR_DOMAIN(
+            "SELECT ?y WHERE {?x a <domainClass>. ?x <property> ?y. FILTER(isLiteral(?y)) } LIMIT 1"
     ),
 
     FIND_CLOSED_RANGE_FOR_PROPERTY(
