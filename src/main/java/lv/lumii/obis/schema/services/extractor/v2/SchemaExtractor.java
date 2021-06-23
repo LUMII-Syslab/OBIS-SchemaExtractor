@@ -7,6 +7,7 @@ import lv.lumii.obis.schema.constants.SchemaConstants;
 import lv.lumii.obis.schema.model.v2.*;
 import lv.lumii.obis.schema.services.SchemaUtil;
 import lv.lumii.obis.schema.services.common.SparqlEndpointProcessor;
+import lv.lumii.obis.schema.services.common.dto.QueryResponse;
 import lv.lumii.obis.schema.services.common.dto.QueryResult;
 import lv.lumii.obis.schema.services.extractor.SchemaExtractorQueries;
 import lv.lumii.obis.schema.services.extractor.dto.*;
@@ -215,22 +216,22 @@ public class SchemaExtractor {
         log.info(request.getCorrelationId() + " - determinePropertyDomains [" + property.getPropertyName() + "]");
 
         String query = FIND_PROPERTY_DOMAINS_WITHOUT_TRIPLE_COUNT.getSparqlQuery().replace(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
-        List<QueryResult> queryResults = sparqlEndpointProcessor.read(request, FIND_PROPERTY_DOMAINS_WITHOUT_TRIPLE_COUNT.name(), query);
+        QueryResponse queryResponse = sparqlEndpointProcessor.read(request, FIND_PROPERTY_DOMAINS_WITHOUT_TRIPLE_COUNT.name(), query, true);
 
-        for (QueryResult queryResult : queryResults) {
+        for (QueryResult queryResult : queryResponse.getResults()) {
             String className = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS);
             if (StringUtils.isNotEmpty(className) && isNotExcludedResource(className, request.getExcludedNamespaces())) {
                 property.getDomainClasses().add(new SchemaExtractorClassNodeInfo(className));
             }
         }
 
-        if (property.getDomainClasses().isEmpty()) {
+        if (queryResponse.hasErrors() && property.getDomainClasses().isEmpty()) {
             schema.getClasses().forEach(potentialDomain -> {
                 String checkDomainQuery = CHECK_CLASS_AS_PROPERTY_DOMAIN.getSparqlQuery()
                         .replace(SPARQL_QUERY_BINDING_NAME_CLASS, potentialDomain.getFullName())
                         .replace(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
-                List<QueryResult> checkDomainQueryResults = sparqlEndpointProcessor.read(request, CHECK_CLASS_AS_PROPERTY_DOMAIN.name(), checkDomainQuery, false);
-                if (!checkDomainQueryResults.isEmpty()) {
+                QueryResponse checkDomainQueryResponse = sparqlEndpointProcessor.read(request, CHECK_CLASS_AS_PROPERTY_DOMAIN.name(), checkDomainQuery, false);
+                if (!checkDomainQueryResponse.hasErrors() && !checkDomainQueryResponse.getResults().isEmpty()) {
                     property.getDomainClasses().add(new SchemaExtractorClassNodeInfo(potentialDomain.getFullName()));
                 }
             });
@@ -300,22 +301,22 @@ public class SchemaExtractor {
         log.info(request.getCorrelationId() + " - determinePropertyRanges [" + property.getPropertyName() + "]");
 
         String query = FIND_PROPERTY_RANGES_WITHOUT_TRIPLE_COUNT.getSparqlQuery().replace(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
-        List<QueryResult> queryResults = sparqlEndpointProcessor.read(request, FIND_PROPERTY_RANGES_WITHOUT_TRIPLE_COUNT.name(), query);
+        QueryResponse queryResponse = sparqlEndpointProcessor.read(request, FIND_PROPERTY_RANGES_WITHOUT_TRIPLE_COUNT.name(), query, true);
 
-        for (QueryResult queryResult : queryResults) {
+        for (QueryResult queryResult : queryResponse.getResults()) {
             String className = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS);
             if (StringUtils.isNotEmpty(className) && isNotExcludedResource(className, request.getExcludedNamespaces())) {
                 property.getRangeClasses().add(new SchemaExtractorClassNodeInfo(className));
             }
         }
 
-        if (property.getRangeClasses().isEmpty()) {
+        if (queryResponse.hasErrors() && property.getRangeClasses().isEmpty()) {
             schema.getClasses().forEach(potentialRange -> {
                 String checkRangeQuery = CHECK_CLASS_AS_PROPERTY_RANGE.getSparqlQuery()
                         .replace(SPARQL_QUERY_BINDING_NAME_CLASS, potentialRange.getFullName())
                         .replace(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
-                List<QueryResult> checkRangeQueryResults = sparqlEndpointProcessor.read(request, CHECK_CLASS_AS_PROPERTY_RANGE.name(), checkRangeQuery, false);
-                if (!checkRangeQueryResults.isEmpty()) {
+                QueryResponse checkRangeQueryResponse = sparqlEndpointProcessor.read(request, CHECK_CLASS_AS_PROPERTY_RANGE.name(), checkRangeQuery, false);
+                if (!checkRangeQueryResponse.hasErrors() && !checkRangeQueryResponse.getResults().isEmpty()) {
                     property.getRangeClasses().add(new SchemaExtractorClassNodeInfo(potentialRange.getFullName()));
                 }
             });
@@ -768,13 +769,31 @@ public class SchemaExtractor {
     }
 
     protected void findIntersectionClassesAndUpdateClassNeighbors(@Nonnull List<SchemaClass> classes, @Nonnull Map<String, SchemaExtractorClassNodeInfo> graphOfClasses, @Nonnull SchemaExtractorRequestDto request) {
-        List<QueryResult> queryResults;
+        QueryResponse queryResponse;
         for (SchemaClass classA : classes) {
-            String query = SchemaExtractorQueries.FIND_INTERSECTION_CLASSES_FOR_KNOWN_CLASS.getSparqlQuery();
-            query = query.replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_DOMAIN, classA.getFullName());
-            queryResults = sparqlEndpointProcessor.read(request, FIND_INTERSECTION_CLASSES_FOR_KNOWN_CLASS.name(), query);
-            updateGraphOfClassesWithNeighbors(classA.getFullName(), queryResults, graphOfClasses, request);
-            queryResults.clear();
+            String query = SchemaExtractorQueries.FIND_INTERSECTION_CLASSES_FOR_KNOWN_CLASS.getSparqlQuery()
+                    .replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_DOMAIN, classA.getFullName());
+            queryResponse = sparqlEndpointProcessor.read(request, FIND_INTERSECTION_CLASSES_FOR_KNOWN_CLASS.name(), query, true);
+            if (!queryResponse.getResults().isEmpty()) {
+                updateGraphOfClassesWithNeighbors(classA.getFullName(), queryResponse.getResults(), graphOfClasses, request);
+                queryResponse.getResults().clear();
+            }
+            if (queryResponse.hasErrors()) {
+                classes.forEach(classB -> {
+                    if (!classA.getFullName().equalsIgnoreCase(classB.getFullName())
+                            && isNotExcludedResource(classB.getFullName(), request.getExcludedNamespaces())) {
+                        String checkQuery = CHECK_CLASS_INTERSECTION.getSparqlQuery()
+                                .replace(SPARQL_QUERY_BINDING_NAME_CLASS_A, classA.getFullName())
+                                .replace(SPARQL_QUERY_BINDING_NAME_CLASS_B, classB.getFullName());
+                        QueryResponse checkQueryResponse = sparqlEndpointProcessor.read(request, CHECK_CLASS_INTERSECTION.name(), checkQuery, false);
+                        if (!checkQueryResponse.hasErrors() && !checkQueryResponse.getResults().isEmpty()) {
+                            if (graphOfClasses.containsKey(classA.getFullName())) {
+                                graphOfClasses.get(classA.getFullName()).getNeighbors().add(classB.getFullName());
+                            }
+                        }
+                    }
+                });
+            }
         }
     }
 

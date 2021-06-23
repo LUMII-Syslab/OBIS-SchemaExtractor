@@ -30,7 +30,7 @@ public class SchemaExtractorRequestNew {
     @ApiParam(access = "6", value = "List of excluded namespaces", allowEmptyValue = true)
     private List<String> excludedNamespaces;
 
-    @ApiParam(access = "7", value = "Enable SPARQL Query Logging to the file", defaultValue = "false", required = true)
+    @ApiParam(access = "7", value = "Enable SPARQL Query Logging to the file", defaultValue = "true", required = true)
     private Boolean enableLogging;
 
     public Boolean getCalculateSubClassRelations() {

@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import lombok.extern.slf4j.Slf4j;
+import lv.lumii.obis.schema.services.common.dto.QueryResponse;
 import lv.lumii.obis.schema.services.common.dto.QueryResult;
 import lv.lumii.obis.schema.services.common.dto.SparqlEndpointConfig;
 import lv.lumii.obis.schema.services.extractor.SchemaExtractorQueries;
@@ -38,19 +39,22 @@ public class SparqlEndpointProcessor {
     }
 
     @Nonnull
-    public List<QueryResult> read(@Nonnull SchemaExtractorRequestDto request, @Nonnull String queryName, @Nonnull String sparqlQuery, boolean withRetry) {
+    public QueryResponse read(@Nonnull SchemaExtractorRequestDto request, @Nonnull String queryName, @Nonnull String sparqlQuery, boolean withRetry) {
         return read(new SparqlEndpointConfig(request.getEndpointUrl(), request.getGraphName(), request.getEnableLogging()),
                 queryName, sparqlQuery, withRetry);
     }
 
     @Nonnull
     public List<QueryResult> read(@Nonnull SparqlEndpointConfig request, @Nonnull String queryName, @Nonnull String sparqlQuery) {
-        return read(request, queryName, sparqlQuery, true);
+        return read(request, queryName, sparqlQuery, true).getResults();
     }
 
     @Nonnull
-    public List<QueryResult> read(@Nonnull SparqlEndpointConfig request, @Nonnull String queryName, @Nonnull String sparqlQuery, boolean withRetry) {
+    private QueryResponse read(@Nonnull SparqlEndpointConfig request, @Nonnull String queryName, @Nonnull String sparqlQuery, boolean withRetry) {
         List<QueryResult> queryResults = new ArrayList<>();
+        QueryResponse response = new QueryResponse();
+        response.setResults(queryResults);
+        response.setHasErrors(false);
 
         Query query;
         try {
@@ -58,7 +62,8 @@ public class SparqlEndpointProcessor {
         } catch (Exception e) {
             log.error(String.format("SPARQL query syntax or formatting exception for the query %s", queryName));
             log.error("\n" + sparqlQuery);
-            return queryResults;
+            response.setHasErrors(true);
+            return response;
         }
 
         if (request.isEnableLogging()) {
@@ -68,7 +73,8 @@ public class SparqlEndpointProcessor {
         QueryEngineHTTP qexec = getQueryExecutor(request.getEndpointUrl(), request.getGraphName(), query);
         ResultSet results = requestData(qexec, withRetry, queryName, sparqlQuery);
         if (results == null) {
-            return queryResults;
+            response.setHasErrors(true);
+            return response;
         }
         while (results.hasNext()) {
             QuerySolution s = results.next();
@@ -86,7 +92,8 @@ public class SparqlEndpointProcessor {
             }
         }
         qexec.close();
-        return queryResults;
+        response.setHasErrors(false);
+        return response;
     }
 
     @Nullable

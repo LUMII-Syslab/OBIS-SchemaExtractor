@@ -28,6 +28,10 @@ public enum SchemaExtractorQueries {
                     + "}"
     ),
 
+    CHECK_CLASS_INTERSECTION(
+            "SELECT ?x where {?x a <classA>. ?x a <classB>} LIMIT 1"
+    ),
+
     CHECK_SUPERCLASS(
             "SELECT ?x WHERE { ?x a <classA>. OPTIONAL { ?x ?a ?value. FILTER (?value = <classB>) } FILTER (!BOUND(?value)) } LIMIT 1 "
     ),
