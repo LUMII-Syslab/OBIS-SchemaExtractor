@@ -38,7 +38,18 @@ public class SparqlEndpointProcessor {
     }
 
     @Nonnull
+    public List<QueryResult> read(@Nonnull SchemaExtractorRequestDto request, @Nonnull String queryName, @Nonnull String sparqlQuery, boolean withRetry) {
+        return read(new SparqlEndpointConfig(request.getEndpointUrl(), request.getGraphName(), request.getEnableLogging()),
+                queryName, sparqlQuery, withRetry);
+    }
+
+    @Nonnull
     public List<QueryResult> read(@Nonnull SparqlEndpointConfig request, @Nonnull String queryName, @Nonnull String sparqlQuery) {
+        return read(request, queryName, sparqlQuery, true);
+    }
+
+    @Nonnull
+    public List<QueryResult> read(@Nonnull SparqlEndpointConfig request, @Nonnull String queryName, @Nonnull String sparqlQuery, boolean withRetry) {
         List<QueryResult> queryResults = new ArrayList<>();
 
         Query query;
@@ -55,7 +66,7 @@ public class SparqlEndpointProcessor {
         }
 
         QueryEngineHTTP qexec = getQueryExecutor(request.getEndpointUrl(), request.getGraphName(), query);
-        ResultSet results = requestData(qexec, queryName, sparqlQuery);
+        ResultSet results = requestData(qexec, withRetry, queryName, sparqlQuery);
         if (results == null) {
             return queryResults;
         }
@@ -79,12 +90,12 @@ public class SparqlEndpointProcessor {
     }
 
     @Nullable
-    private ResultSet requestData(@Nonnull QueryEngineHTTP qexec, @Nonnull String queryName, @Nonnull String sparqlQuery) {
-        return requestData(qexec, 0, queryName, sparqlQuery);
+    private ResultSet requestData(@Nonnull QueryEngineHTTP qexec, boolean withRetry, @Nonnull String queryName, @Nonnull String sparqlQuery) {
+        return requestData(qexec, 0, withRetry, queryName, sparqlQuery);
     }
 
     @Nullable
-    private ResultSet requestData(@Nonnull QueryEngineHTTP qexec, int attempt, @Nonnull String queryName, @Nonnull String sparqlQuery) {
+    private ResultSet requestData(@Nonnull QueryEngineHTTP qexec, int attempt, boolean withRetry, @Nonnull String queryName, @Nonnull String sparqlQuery) {
         ResultSet resultSet = null;
         try {
             resultSet = qexec.execSelect();
@@ -92,11 +103,16 @@ public class SparqlEndpointProcessor {
                 log.error(String.format("SPARQL Endpoint returned a valid response after an attempt number %d", attempt + 1));
             }
         } catch (Exception e) {
-            log.error(String.format("SPARQL Endpoint Exception status '%s'. This was attempt number %d for the query %s", e.getMessage(), attempt + 1, queryName));
-            log.error("\n" + sparqlQuery);
-            if (attempt < 1) {
-                qexec.addParam("timeout", "1200000");
-                return requestData(qexec, ++attempt, queryName, sparqlQuery);
+            if (withRetry) {
+                log.error(String.format("SPARQL Endpoint Exception status '%s'. This was attempt number %d for the query %s", e.getMessage(), attempt + 1, queryName));
+                log.error("\n" + sparqlQuery);
+                if (attempt < 1) {
+                    qexec.addParam("timeout", "1200000");
+                    return requestData(qexec, ++attempt, withRetry, queryName, sparqlQuery);
+                }
+            } else {
+                log.error(String.format("SPARQL Endpoint Exception status '%s' for the query %s", e.getMessage(), queryName));
+                log.error("\n" + sparqlQuery);
             }
             e.printStackTrace();
         }

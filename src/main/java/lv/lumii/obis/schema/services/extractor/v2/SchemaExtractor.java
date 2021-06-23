@@ -229,7 +229,7 @@ public class SchemaExtractor {
                 String checkDomainQuery = CHECK_CLASS_AS_PROPERTY_DOMAIN.getSparqlQuery()
                         .replace(SPARQL_QUERY_BINDING_NAME_CLASS, potentialDomain.getFullName())
                         .replace(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
-                List<QueryResult> checkDomainQueryResults = sparqlEndpointProcessor.read(request, CHECK_CLASS_AS_PROPERTY_DOMAIN.name(), checkDomainQuery);
+                List<QueryResult> checkDomainQueryResults = sparqlEndpointProcessor.read(request, CHECK_CLASS_AS_PROPERTY_DOMAIN.name(), checkDomainQuery, false);
                 if (!checkDomainQueryResults.isEmpty()) {
                     property.getDomainClasses().add(new SchemaExtractorClassNodeInfo(potentialDomain.getFullName()));
                 }
@@ -314,7 +314,7 @@ public class SchemaExtractor {
                 String checkRangeQuery = CHECK_CLASS_AS_PROPERTY_RANGE.getSparqlQuery()
                         .replace(SPARQL_QUERY_BINDING_NAME_CLASS, potentialRange.getFullName())
                         .replace(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
-                List<QueryResult> checkRangeQueryResults = sparqlEndpointProcessor.read(request, CHECK_CLASS_AS_PROPERTY_RANGE.name(), checkRangeQuery);
+                List<QueryResult> checkRangeQueryResults = sparqlEndpointProcessor.read(request, CHECK_CLASS_AS_PROPERTY_RANGE.name(), checkRangeQuery, false);
                 if (!checkRangeQueryResults.isEmpty()) {
                     property.getRangeClasses().add(new SchemaExtractorClassNodeInfo(potentialRange.getFullName()));
                 }
