@@ -76,5 +76,6 @@ public class SchemaConstants {
     public static final String SPARQL_QUERY_BINDING_NAME_DATA_TYPE = "dataType";
     public static final String SPARQL_QUERY_BINDING_NAME_X = "x";
     public static final String SPARQL_QUERY_BINDING_NAME_Y = "y";
+    public static final String SPARQL_QUERY_BINDING_NAME_CUSTOM_FILTER = "customFilter";
 
 }

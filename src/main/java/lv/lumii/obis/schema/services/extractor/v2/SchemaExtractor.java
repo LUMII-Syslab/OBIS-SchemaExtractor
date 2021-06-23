@@ -32,6 +32,8 @@ public class SchemaExtractor {
 
     private static Comparator<String> nullSafeStringComparator = Comparator.nullsLast(String::compareToIgnoreCase);
 
+    private enum ImportanceIndexValidationType {DOMAIN, RANGE, PAIR_DOMAIN, PAIR_RANGE}
+
     @Autowired
     @Setter
     @Getter
@@ -40,8 +42,9 @@ public class SchemaExtractor {
     @Nonnull
     public Schema extractSchema(@Nonnull SchemaExtractorRequestDto request) {
         Schema schema = initializeSchema(request);
-        buildClasses(request, schema);
-        buildProperties(request, schema);
+        Map<String, SchemaExtractorClassNodeInfo> graphOfClasses = new HashMap<>();
+        buildClasses(request, schema, graphOfClasses);
+        buildProperties(request, schema, graphOfClasses);
         buildNamespaceMap(request, schema);
         return schema;
     }
@@ -53,7 +56,7 @@ public class SchemaExtractor {
         return schema;
     }
 
-    protected void buildClasses(@Nonnull SchemaExtractorRequestDto request, @Nonnull Schema schema) {
+    protected void buildClasses(@Nonnull SchemaExtractorRequestDto request, @Nonnull Schema schema, @Nonnull Map<String, SchemaExtractorClassNodeInfo> graphOfClasses) {
         log.info(request.getCorrelationId() + " - findAllClassesWithInstanceCount");
         List<QueryResult> queryResults = sparqlEndpointProcessor.read(request, FIND_CLASSES_WITH_INSTANCE_COUNT);
         List<SchemaClass> classes = processClasses(queryResults, request);
@@ -62,7 +65,9 @@ public class SchemaExtractor {
 
         if (isTrue(request.getCalculateSubClassRelations())) {
 
-            Map<String, SchemaExtractorClassNodeInfo> graphOfClasses = buildGraphOfClasses(classes);
+            for (SchemaClass c : classes) {
+                graphOfClasses.put(c.getFullName(), new SchemaExtractorClassNodeInfo(c.getFullName(), c.getInstanceCount()));
+            }
             queryResults.clear();
 
             // find intersection classes
@@ -100,7 +105,7 @@ public class SchemaExtractor {
         return classes;
     }
 
-    protected void buildProperties(@Nonnull SchemaExtractorRequestDto request, @Nonnull Schema schema) {
+    protected void buildProperties(@Nonnull SchemaExtractorRequestDto request, @Nonnull Schema schema, @Nonnull Map<String, SchemaExtractorClassNodeInfo> graphOfClasses) {
 
         // find all properties with triple count
         log.info(request.getCorrelationId() + " - findAllPropertiesWithTripleCount");
@@ -109,7 +114,7 @@ public class SchemaExtractor {
         log.info(request.getCorrelationId() + String.format(" - found %d properties", properties.size()));
 
         // fill properties with additional data
-        enrichProperties(properties, schema, request);
+        enrichProperties(properties, schema, graphOfClasses, request);
 
         // fill schema object with attributes and roles
         formatProperties(properties, schema);
@@ -135,7 +140,8 @@ public class SchemaExtractor {
         return properties;
     }
 
-    protected void enrichProperties(@Nonnull Map<String, SchemaExtractorPropertyNodeInfo> properties, @Nonnull Schema schema, @Nonnull SchemaExtractorRequestDto request) {
+    protected void enrichProperties(@Nonnull Map<String, SchemaExtractorPropertyNodeInfo> properties, @Nonnull Schema schema,
+                                    @Nonnull Map<String, SchemaExtractorClassNodeInfo> graphOfClasses, @Nonnull SchemaExtractorRequestDto request) {
         for (Map.Entry<String, SchemaExtractorPropertyNodeInfo> entry : properties.entrySet()) {
 
             SchemaExtractorPropertyNodeInfo property = entry.getValue();
@@ -161,7 +167,7 @@ public class SchemaExtractor {
                 determinePropertyDomainsDataTypes(property, request);
             }
 
-            determinePrincipalDomainsAndRanges(property, schema.getClasses(), request);
+            determinePrincipalDomainsAndRanges(property, schema.getClasses(), graphOfClasses, request);
 
             if (isTrue(request.getCalculateCardinalities())) {
                 determinePropertyMaxCardinality(property, request);
@@ -591,24 +597,25 @@ public class SchemaExtractor {
     }
 
     protected void determinePrincipalDomainsAndRanges(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull List<SchemaClass> classes,
+                                                      @Nonnull Map<String, SchemaExtractorClassNodeInfo> graphOfClasses,
                                                       @Nonnull SchemaExtractorRequestDto request) {
 
         log.info(request.getCorrelationId() + " - determinePrincipalDomainClasses [" + property.getPropertyName() + "]");
-        List<SchemaExtractorPropertyLinkedClassInfo> principalDomains = determinePrincipalClasses(
-                buildAndSortPropertyLinkedClasses(property.getDomainClasses(), classes), classes);
+        List<SchemaExtractorPropertyLinkedClassInfo> principalDomains = determinePrincipalClasses(property,
+                buildAndSortPropertyLinkedClasses(property.getDomainClasses(), classes), classes, graphOfClasses, request, ImportanceIndexValidationType.DOMAIN, null, null);
         mapPrincipalClasses(property.getDomainClasses(), principalDomains);
 
         log.info(request.getCorrelationId() + " - determinePrincipalRangeClasses [" + property.getPropertyName() + "]");
-        List<SchemaExtractorPropertyLinkedClassInfo> principalRanges = determinePrincipalClasses(
-                buildAndSortPropertyLinkedClasses(property.getRangeClasses(), classes), classes);
+        List<SchemaExtractorPropertyLinkedClassInfo> principalRanges = determinePrincipalClasses(property,
+                buildAndSortPropertyLinkedClasses(property.getRangeClasses(), classes), classes, graphOfClasses, request, ImportanceIndexValidationType.RANGE, null, null);
         mapPrincipalClasses(property.getRangeClasses(), principalRanges);
 
         log.info(request.getCorrelationId() + " - determinePrincipalDomainRangePairs [" + property.getPropertyName() + "]");
         // set pair target important indexes
         property.getDomainClasses().forEach(domainClass -> {
             List<SchemaExtractorDomainRangeInfo> pairsForSpecificDomain = findPairsWithSpecificDomain(property.getDomainRangePairs(), domainClass.getClassName());
-            List<SchemaExtractorPropertyLinkedClassInfo> principalPairRanges = determinePrincipalClasses(
-                    buildAndSortPropertyPairRanges(pairsForSpecificDomain, classes), classes);
+            List<SchemaExtractorPropertyLinkedClassInfo> principalPairRanges = determinePrincipalClasses(property,
+                    buildAndSortPropertyPairRanges(pairsForSpecificDomain, classes), classes, graphOfClasses, request, ImportanceIndexValidationType.PAIR_DOMAIN, domainClass.getClassName(), null);
             pairsForSpecificDomain.forEach(linkedPair -> {
                 SchemaExtractorPropertyLinkedClassInfo pairWithIndex = principalPairRanges.stream()
                         .filter(pairRange -> pairRange.getClassName().equalsIgnoreCase(linkedPair.getRangeClass())).findFirst().orElse(null);
@@ -618,8 +625,8 @@ public class SchemaExtractor {
         // set pair target important indexes
         property.getRangeClasses().forEach(rangeClass -> {
             List<SchemaExtractorDomainRangeInfo> pairsForSpecificRange = findPairsWithSpecificRange(property.getDomainRangePairs(), rangeClass.getClassName());
-            List<SchemaExtractorPropertyLinkedClassInfo> principalPairDomains = determinePrincipalClasses(
-                    buildAndSortPropertyPairDomains(pairsForSpecificRange, classes), classes);
+            List<SchemaExtractorPropertyLinkedClassInfo> principalPairDomains = determinePrincipalClasses(property,
+                    buildAndSortPropertyPairDomains(pairsForSpecificRange, classes), classes, graphOfClasses, request, ImportanceIndexValidationType.PAIR_RANGE, null, rangeClass.getClassName());
             pairsForSpecificRange.forEach(linkedPair -> {
                 SchemaExtractorPropertyLinkedClassInfo pairWithIndex = principalPairDomains.stream()
                         .filter(pairRange -> pairRange.getClassName().equalsIgnoreCase(linkedPair.getDomainClass())).findFirst().orElse(null);
@@ -629,7 +636,14 @@ public class SchemaExtractor {
     }
 
     @Nonnull
-    protected List<SchemaExtractorPropertyLinkedClassInfo> determinePrincipalClasses(@Nonnull List<SchemaExtractorPropertyLinkedClassInfo> propertyLinkedClassesSorted, @Nonnull List<SchemaClass> classes) {
+    protected List<SchemaExtractorPropertyLinkedClassInfo> determinePrincipalClasses(@Nonnull SchemaExtractorPropertyNodeInfo property,
+                                                                                     @Nonnull List<SchemaExtractorPropertyLinkedClassInfo> propertyLinkedClassesSorted,
+                                                                                     @Nonnull List<SchemaClass> classes,
+                                                                                     @Nonnull Map<String, SchemaExtractorClassNodeInfo> graphOfClasses,
+                                                                                     @Nonnull SchemaExtractorRequestDto request,
+                                                                                     @Nonnull ImportanceIndexValidationType importanceIndexValidationType,
+                                                                                     @Nullable String domainClass,
+                                                                                     @Nullable String rangeClass) {
 
         // set important indexes
         Set<String> importantClasses = new HashSet<>();
@@ -661,12 +675,112 @@ public class SchemaExtractor {
             }
             if (isIncludedSubclassOrSuperClass) {
                 currentClass.setImportanceIndex(0);
-            } else {
-                currentClass.setImportanceIndex(index++);
+                continue;
+            }
+
+            // check whether there is partial intersaction and if yes - check case by case
+            if (graphOfClasses.get(currentClass.getClassName()) != null) {
+                List<String> currentClassNeighbors = graphOfClasses.get(currentClass.getClassName()).getNeighbors();
+                List<String> includedClassesToCheckWith = currentClassNeighbors.stream().filter(importantClasses::contains).collect(Collectors.toList());
+
+                if(includedClassesToCheckWith.isEmpty()) {
+                    currentClass.setImportanceIndex(index++);
+                    importantClasses.add(currentClass.getClassName());
+                    continue;
+                }
+
+                boolean needToInclude = false;
+
+                switch (importanceIndexValidationType) {
+                    case DOMAIN:
+                        needToInclude = checkNewPrincipalDomainClass(property.getPropertyName(), currentClass.getClassName(), includedClassesToCheckWith, request);
+                        break;
+                    case RANGE:
+                        needToInclude = checkNewPrincipalRangeClass(property.getPropertyName(), currentClass.getClassName(), includedClassesToCheckWith, request);
+                        break;
+                    case PAIR_DOMAIN:
+                        if(StringUtils.isNotEmpty(domainClass)) {
+                            needToInclude = checkNewPrincipalRangeClassForDomain(property.getPropertyName(), domainClass, currentClass.getClassName(), includedClassesToCheckWith, request);
+                        }
+                        break;
+                    case PAIR_RANGE:
+                        if(StringUtils.isNotEmpty(rangeClass)) {
+                            needToInclude = checkNewPrincipalDomainClassForDomain(property.getPropertyName(), rangeClass, currentClass.getClassName(), includedClassesToCheckWith, request);
+                        }
+                        break;
+                    default:
+                        break;
+                }
+
+                if (needToInclude) {
+                    currentClass.setImportanceIndex(index++);
+                    importantClasses.add(currentClass.getClassName());
+                } else {
+                    currentClass.setImportanceIndex(0);
+                }
             }
         }
 
         return propertyLinkedClassesSorted;
+    }
+
+    protected boolean checkNewPrincipalDomainClass(@Nonnull String propertyName, @Nonnull String newDomainClass, @Nonnull List<String> existingClasses, @Nonnull SchemaExtractorRequestDto request) {
+        String query = CHECK_PRINCIPAL_DOMAIN.getSparqlQuery().
+                replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY, propertyName).
+                replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_A, newDomainClass).
+                replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CUSTOM_FILTER, buildCustomFilterToCheckPrincipalClass(existingClasses));
+        QueryResponse queryResponse = sparqlEndpointProcessor.read(request, CHECK_PRINCIPAL_DOMAIN.name(), query, true);
+        return !queryResponse.hasErrors() && !queryResponse.getResults().isEmpty();
+    }
+
+    protected boolean checkNewPrincipalRangeClass(@Nonnull String propertyName, @Nonnull String newRangeClass, @Nonnull List<String> existingClasses, @Nonnull SchemaExtractorRequestDto request) {
+
+        String query = CHECK_PRINCIPAL_RANGE.getSparqlQuery().
+                replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY, propertyName).
+                replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_A, newRangeClass).
+                replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CUSTOM_FILTER, buildCustomFilterToCheckPrincipalClass(existingClasses));
+        QueryResponse queryResponse = sparqlEndpointProcessor.read(request, CHECK_PRINCIPAL_RANGE.name(), query, true);
+        return !queryResponse.hasErrors() && !queryResponse.getResults().isEmpty();
+    }
+
+    protected boolean checkNewPrincipalRangeClassForDomain(@Nonnull String propertyName, @Nonnull String domainClass, @Nonnull String newRangeClass, @Nonnull List<String> existingClasses, @Nonnull SchemaExtractorRequestDto request) {
+
+        String query = CHECK_PRINCIPAL_RANGE_FOR_DOMAIN.getSparqlQuery().
+                replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY, propertyName).
+                replace(SPARQL_QUERY_BINDING_NAME_CLASS_DOMAIN, domainClass).
+                replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_A, newRangeClass).
+                replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CUSTOM_FILTER, buildCustomFilterToCheckPrincipalClass(existingClasses));
+        QueryResponse queryResponse = sparqlEndpointProcessor.read(request, CHECK_PRINCIPAL_RANGE_FOR_DOMAIN.name(), query, true);
+        return !queryResponse.hasErrors() && !queryResponse.getResults().isEmpty();
+    }
+
+    protected boolean checkNewPrincipalDomainClassForDomain(@Nonnull String propertyName, @Nonnull String rangeClass, @Nonnull String newDomainClass, @Nonnull List<String> existingClasses, @Nonnull SchemaExtractorRequestDto request) {
+
+        String query = CHECK_PRINCIPAL_DOMAIN_FOR_RANGE.getSparqlQuery().
+                replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY, propertyName).
+                replace(SPARQL_QUERY_BINDING_NAME_CLASS_RANGE, rangeClass).
+                replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_A, newDomainClass).
+                replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CUSTOM_FILTER, buildCustomFilterToCheckPrincipalClass(existingClasses));
+        QueryResponse queryResponse = sparqlEndpointProcessor.read(request, CHECK_PRINCIPAL_DOMAIN_FOR_RANGE.name(), query, true);
+        return !queryResponse.hasErrors() && !queryResponse.getResults().isEmpty();
+    }
+
+    protected String buildCustomFilterToCheckPrincipalClass(@Nonnull List<String> existingClasses) {
+        StringBuilder customFilter = new StringBuilder(StringUtils.EMPTY);
+        for(int i = 0; i < existingClasses.size(); i++) {
+            if(i == 0) {
+                customFilter
+                        .append("?cc=<")
+                        .append(existingClasses.get(i))
+                        .append(">");
+            } else {
+                customFilter.
+                        append(" || ?cc=<")
+                        .append(existingClasses.get(i))
+                        .append(">");
+            }
+        }
+        return customFilter.toString();
     }
 
     protected void formatProperties(@Nonnull Map<String, SchemaExtractorPropertyNodeInfo> properties, @Nonnull Schema schema) {
@@ -781,15 +895,6 @@ public class SchemaExtractor {
                 && ((p.getSourceClass() == null && domain == null) || (p.getSourceClass() != null && p.getSourceClass().equals(domain)))
                 && ((p.getTargetClass() == null && range == null) || (p.getTargetClass() != null && p.getTargetClass().equals(range)))
         );
-    }
-
-    @Nonnull
-    protected Map<String, SchemaExtractorClassNodeInfo> buildGraphOfClasses(@Nonnull List<SchemaClass> classes) {
-        Map<String, SchemaExtractorClassNodeInfo> graphOfClasses = new HashMap<>();
-        classes.forEach(c -> {
-            graphOfClasses.put(c.getFullName(), new SchemaExtractorClassNodeInfo(c.getFullName(), c.getInstanceCount()));
-        });
-        return graphOfClasses;
     }
 
     protected void findIntersectionClassesAndUpdateClassNeighbors(@Nonnull List<SchemaClass> classes, @Nonnull Map<String, SchemaExtractorClassNodeInfo> graphOfClasses, @Nonnull SchemaExtractorRequestDto request) {
