@@ -19,6 +19,9 @@ public class SchemaExtractorRequestDto {
     /**
      * Actual properties for new services
      */
+
+    public enum CalculateCardinalitiesMode {none, propertyLevelOnly, propertyLevelAndClassContext}
+
     private String correlationId;
     private Boolean enableLogging;
 
@@ -26,8 +29,10 @@ public class SchemaExtractorRequestDto {
     private String graphName;
 
     private Boolean calculateSubClassRelations;
+    private Boolean calculateDomainAndRangePairs;
     private Boolean calculateDataTypes;
-    private Boolean calculateCardinalities;
+    private CalculateCardinalitiesMode calculateCardinalitiesMode;
+    private Integer minimalAnalyzedClassSize;
     private List<String> excludedNamespaces;
     private SchemaExtractorPredefinedNamespaces predefinedNamespaces;
 

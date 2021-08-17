@@ -12,6 +12,8 @@ import java.util.List;
 @Getter
 public class SchemaExtractorRequestNew {
 
+    public enum CalculateCardinalitiesMode {none, propertyLevelOnly, propertyLevelAndClassContext}
+
     @ApiParam(access = "1", value = "SPARQL Endpoint URL, for example, http://localhost:8890/sparql", required = true)
     private String endpointUrl;
 
@@ -21,16 +23,22 @@ public class SchemaExtractorRequestNew {
     @ApiParam(access = "3", value = "Calculate subclass relations", defaultValue = "true", required = true)
     private Boolean calculateSubClassRelations;
 
-    @ApiParam(access = "4", value = "Calculate data types for attributes", defaultValue = "true", required = true)
+    @ApiParam(access = "4", value = "Calculate domain and range pairs", defaultValue = "true", required = true)
+    private Boolean calculateDomainAndRangePairs;
+
+    @ApiParam(access = "5", value = "Calculate data types for attributes", defaultValue = "true", required = true)
     private Boolean calculateDataTypes;
 
-    @ApiParam(access = "5", value = "Calculate min and max cardinalities for all properties", defaultValue = "true", required = true)
-    private Boolean calculateCardinalities;
+    @ApiParam(access = "6", value = "Calculate min and max cardinalities for all properties", defaultValue = "propertyLevelAndClassContext", required = true)
+    private CalculateCardinalitiesMode calculateCardinalitiesMode;
 
-    @ApiParam(access = "6", value = "List of excluded namespaces", allowEmptyValue = true)
+    @ApiParam(access = "7", value = "Minimal Analyzed Class Size", defaultValue = "10", required = true)
+    private Integer minimalAnalyzedClassSize;
+
+    @ApiParam(access = "8", value = "List of excluded namespaces", allowEmptyValue = true)
     private List<String> excludedNamespaces;
 
-    @ApiParam(access = "7", value = "Enable SPARQL Query Logging to the file", defaultValue = "true", required = true)
+    @ApiParam(access = "9", value = "Enable SPARQL Query Logging to the file", defaultValue = "true", required = true)
     private Boolean enableLogging;
 
     public Boolean getCalculateSubClassRelations() {
@@ -40,6 +48,13 @@ public class SchemaExtractorRequestNew {
         return calculateSubClassRelations;
     }
 
+    public Boolean getCalculateDomainAndRangePairs() {
+        if (calculateDomainAndRangePairs == null) {
+            calculateDomainAndRangePairs = Boolean.FALSE;
+        }
+        return calculateDomainAndRangePairs;
+    }
+
     public Boolean getCalculateDataTypes() {
         if (calculateDataTypes == null) {
             calculateDataTypes = Boolean.FALSE;
@@ -47,11 +62,11 @@ public class SchemaExtractorRequestNew {
         return calculateDataTypes;
     }
 
-    public Boolean getCalculateCardinalities() {
-        if (calculateCardinalities == null) {
-            calculateCardinalities = Boolean.FALSE;
+    public CalculateCardinalitiesMode getCalculateCardinalitiesMode() {
+        if (calculateCardinalitiesMode == null) {
+            calculateCardinalitiesMode = CalculateCardinalitiesMode.none;
         }
-        return calculateCardinalities;
+        return calculateCardinalitiesMode;
     }
 
     public Boolean getEnableLogging() {

@@ -23,8 +23,7 @@ import java.util.stream.Collectors;
 
 import static lv.lumii.obis.schema.constants.SchemaConstants.*;
 import static lv.lumii.obis.schema.services.extractor.SchemaExtractorQueries.*;
-import static org.apache.commons.lang3.BooleanUtils.isFalse;
-import static org.apache.commons.lang3.BooleanUtils.isTrue;
+import static org.apache.commons.lang3.BooleanUtils.*;
 
 @Slf4j
 @Service
@@ -99,6 +98,11 @@ public class SchemaExtractor {
                 SchemaClass classEntry = new SchemaClass();
                 setLocalNameAndNamespace(className, classEntry);
                 classEntry.setInstanceCount(SchemaUtil.getLongValueFromString(instancesCountStr));
+                if (classEntry.getInstanceCount() < request.getMinimalAnalyzedClassSize()) {
+                    classEntry.setPropertiesInSchema(Boolean.FALSE);
+                } else {
+                    classEntry.setPropertiesInSchema(null);
+                }
                 classes.add(classEntry);
             }
         }
@@ -158,7 +162,9 @@ public class SchemaExtractor {
             if (property.getObjectTripleCount() > 0) {
                 determinePropertyRanges(property, schema, request);
                 determinePropertyRangeTripleCount(property, request);
-                determinePropertyDomainRangePairs(property, request);
+                if (isTrue(request.getCalculateDomainAndRangePairs())) {
+                    determinePropertyDomainRangePairs(property, schema, request);
+                }
                 determinePropertyClosedDomainsAndRanges(property, request);
             }
 
@@ -169,15 +175,27 @@ public class SchemaExtractor {
 
             determinePrincipalDomainsAndRanges(property, schema.getClasses(), graphOfClasses, request);
 
-            if (isTrue(request.getCalculateCardinalities())) {
-                determinePropertyMaxCardinality(property, request);
-                determinePropertyDomainsMaxCardinality(property, request);
-                determinePropertyDomainsMinCardinality(property, request);
-                if (property.getObjectTripleCount() > 0) {
-                    determinePropertyInverseMaxCardinality(property, request);
-                    determinePropertyRangesInverseMinCardinality(property, request);
-                    determinePropertyRangesInverseMaxCardinality(property, request);
-                }
+            switch (request.getCalculateCardinalitiesMode()) {
+                case propertyLevelOnly:
+                    determinePropertyMaxCardinality(property, request);
+                    if (property.getObjectTripleCount() > 0) {
+                        determinePropertyInverseMaxCardinality(property, request);
+                    }
+                    break;
+                case propertyLevelAndClassContext:
+                    determinePropertyMaxCardinality(property, request);
+                    determinePropertyDomainsMaxCardinality(property, request);
+                    determinePropertyDomainsMinCardinality(property, request);
+                    if (property.getObjectTripleCount() > 0) {
+                        determinePropertyInverseMaxCardinality(property, request);
+                        determinePropertyRangesInverseMinCardinality(property, request);
+                        determinePropertyRangesInverseMaxCardinality(property, request);
+                    }
+                    break;
+                case none:
+                    // do not calculate cardinalities
+                default:
+                    break;
             }
         }
     }
@@ -239,18 +257,23 @@ public class SchemaExtractor {
         for (QueryResult queryResult : queryResponse.getResults()) {
             String className = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS);
             if (StringUtils.isNotEmpty(className) && isNotExcludedResource(className, request.getExcludedNamespaces())) {
-                property.getDomainClasses().add(new SchemaExtractorClassNodeInfo(className));
+                SchemaClass schemaClass = findClass(schema.getClasses(), className);
+                if (schemaClass != null && isNotFalse(schemaClass.getPropertiesInSchema())) {
+                    property.getDomainClasses().add(new SchemaExtractorClassNodeInfo(className));
+                }
             }
         }
 
         if (queryResponse.hasErrors() && property.getDomainClasses().isEmpty()) {
             schema.getClasses().forEach(potentialDomain -> {
-                String checkDomainQuery = CHECK_CLASS_AS_PROPERTY_DOMAIN.getSparqlQuery()
-                        .replace(SPARQL_QUERY_BINDING_NAME_CLASS, potentialDomain.getFullName())
-                        .replace(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
-                QueryResponse checkDomainQueryResponse = sparqlEndpointProcessor.read(request, CHECK_CLASS_AS_PROPERTY_DOMAIN.name(), checkDomainQuery, false);
-                if (!checkDomainQueryResponse.hasErrors() && !checkDomainQueryResponse.getResults().isEmpty()) {
-                    property.getDomainClasses().add(new SchemaExtractorClassNodeInfo(potentialDomain.getFullName()));
+                if (isNotFalse(potentialDomain.getPropertiesInSchema())) {
+                    String checkDomainQuery = CHECK_CLASS_AS_PROPERTY_DOMAIN.getSparqlQuery()
+                            .replace(SPARQL_QUERY_BINDING_NAME_CLASS, potentialDomain.getFullName())
+                            .replace(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
+                    QueryResponse checkDomainQueryResponse = sparqlEndpointProcessor.read(request, CHECK_CLASS_AS_PROPERTY_DOMAIN.name(), checkDomainQuery, false);
+                    if (!checkDomainQueryResponse.hasErrors() && !checkDomainQueryResponse.getResults().isEmpty()) {
+                        property.getDomainClasses().add(new SchemaExtractorClassNodeInfo(potentialDomain.getFullName()));
+                    }
                 }
             });
         }
@@ -336,18 +359,23 @@ public class SchemaExtractor {
         for (QueryResult queryResult : queryResponse.getResults()) {
             String className = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS);
             if (StringUtils.isNotEmpty(className) && isNotExcludedResource(className, request.getExcludedNamespaces())) {
-                property.getRangeClasses().add(new SchemaExtractorClassNodeInfo(className));
+                SchemaClass schemaClass = findClass(schema.getClasses(), className);
+                if (schemaClass != null && isNotFalse(schemaClass.getPropertiesInSchema())) {
+                    property.getRangeClasses().add(new SchemaExtractorClassNodeInfo(className));
+                }
             }
         }
 
         if (queryResponse.hasErrors() && property.getRangeClasses().isEmpty()) {
             schema.getClasses().forEach(potentialRange -> {
-                String checkRangeQuery = CHECK_CLASS_AS_PROPERTY_RANGE.getSparqlQuery()
-                        .replace(SPARQL_QUERY_BINDING_NAME_CLASS, potentialRange.getFullName())
-                        .replace(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
-                QueryResponse checkRangeQueryResponse = sparqlEndpointProcessor.read(request, CHECK_CLASS_AS_PROPERTY_RANGE.name(), checkRangeQuery, false);
-                if (!checkRangeQueryResponse.hasErrors() && !checkRangeQueryResponse.getResults().isEmpty()) {
-                    property.getRangeClasses().add(new SchemaExtractorClassNodeInfo(potentialRange.getFullName()));
+                if (isNotFalse(potentialRange.getPropertiesInSchema())) {
+                    String checkRangeQuery = CHECK_CLASS_AS_PROPERTY_RANGE.getSparqlQuery()
+                            .replace(SPARQL_QUERY_BINDING_NAME_CLASS, potentialRange.getFullName())
+                            .replace(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
+                    QueryResponse checkRangeQueryResponse = sparqlEndpointProcessor.read(request, CHECK_CLASS_AS_PROPERTY_RANGE.name(), checkRangeQuery, false);
+                    if (!checkRangeQueryResponse.hasErrors() && !checkRangeQueryResponse.getResults().isEmpty()) {
+                        property.getRangeClasses().add(new SchemaExtractorClassNodeInfo(potentialRange.getFullName()));
+                    }
                 }
             });
         }
@@ -368,7 +396,7 @@ public class SchemaExtractor {
         });
     }
 
-    protected void determinePropertyDomainRangePairs(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request) {
+    protected void determinePropertyDomainRangePairs(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull Schema schema, @Nonnull SchemaExtractorRequestDto request) {
         log.info(request.getCorrelationId() + " - determinePropertyDomainRangePairs [" + property.getPropertyName() + "]");
 
         String query = FIND_PROPERTY_DOMAIN_RANGE_PAIRS.getSparqlQuery().replace(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
@@ -380,7 +408,12 @@ public class SchemaExtractor {
             String tripleCountStr = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT);
             if (StringUtils.isNotEmpty(domainClass) && StringUtils.isNotEmpty(rangeClass)
                     && isNotExcludedResource(domainClass, request.getExcludedNamespaces()) && isNotExcludedResource(rangeClass, request.getExcludedNamespaces())) {
-                property.getDomainRangePairs().add(new SchemaExtractorDomainRangeInfo(domainClass, rangeClass, SchemaUtil.getLongValueFromString(tripleCountStr)));
+                SchemaClass domainSchemaClass = findClass(schema.getClasses(), domainClass);
+                SchemaClass rangeSchemaClass = findClass(schema.getClasses(), rangeClass);
+                if (domainSchemaClass != null && isNotFalse(domainSchemaClass.getPropertiesInSchema())
+                        && rangeSchemaClass != null && isNotFalse(rangeSchemaClass.getPropertiesInSchema())) {
+                    property.getDomainRangePairs().add(new SchemaExtractorDomainRangeInfo(domainClass, rangeClass, SchemaUtil.getLongValueFromString(tripleCountStr)));
+                }
             }
         }
         // endpoint was not able to return class pairs with direct query, so trying to match each domain and range class combination
@@ -435,7 +468,7 @@ public class SchemaExtractor {
         // check if there is any triple with URI subject but without bound class - property source class level
         if (isTrue(property.getIsClosedRange())) {
             property.getDomainClasses().forEach(domainClass -> domainClass.setIsClosedRange(Boolean.TRUE));
-        } else {
+        } else if (isTrue(request.getCalculateDomainAndRangePairs())) {
             property.getDomainClasses().forEach(domainClass -> {
                 String query = FIND_CLOSED_RANGE_FOR_PROPERTY_AND_CLASS.getSparqlQuery()
                         .replace(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName())
@@ -452,7 +485,7 @@ public class SchemaExtractor {
         // check if there is any triple with URI object but without bound class - property target class level
         if (isTrue(property.getIsClosedDomain())) {
             property.getRangeClasses().forEach(rangeClass -> rangeClass.setIsClosedDomain(Boolean.TRUE));
-        } else {
+        } else if (isTrue(request.getCalculateDomainAndRangePairs())) {
             property.getRangeClasses().forEach(rangeClass -> {
                 String query = FIND_CLOSED_DOMAIN_FOR_PROPERTY_AND_CLASS.getSparqlQuery()
                         .replace(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName())
@@ -465,7 +498,6 @@ public class SchemaExtractor {
                 }
             });
         }
-
     }
 
     protected void determinePropertyDataTypes(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request) {
@@ -683,7 +715,7 @@ public class SchemaExtractor {
                 List<String> currentClassNeighbors = graphOfClasses.get(currentClass.getClassName()).getNeighbors();
                 List<String> includedClassesToCheckWith = currentClassNeighbors.stream().filter(importantClasses::contains).collect(Collectors.toList());
 
-                if(includedClassesToCheckWith.isEmpty()) {
+                if (includedClassesToCheckWith.isEmpty()) {
                     currentClass.setImportanceIndex(index++);
                     importantClasses.add(currentClass.getClassName());
                     continue;
@@ -699,12 +731,12 @@ public class SchemaExtractor {
                         needToInclude = checkNewPrincipalRangeClass(property.getPropertyName(), currentClass.getClassName(), includedClassesToCheckWith, request);
                         break;
                     case PAIR_DOMAIN:
-                        if(StringUtils.isNotEmpty(domainClass)) {
+                        if (StringUtils.isNotEmpty(domainClass)) {
                             needToInclude = checkNewPrincipalRangeClassForDomain(property.getPropertyName(), domainClass, currentClass.getClassName(), includedClassesToCheckWith, request);
                         }
                         break;
                     case PAIR_RANGE:
-                        if(StringUtils.isNotEmpty(rangeClass)) {
+                        if (StringUtils.isNotEmpty(rangeClass)) {
                             needToInclude = checkNewPrincipalDomainClassForDomain(property.getPropertyName(), rangeClass, currentClass.getClassName(), includedClassesToCheckWith, request);
                         }
                         break;
@@ -767,8 +799,8 @@ public class SchemaExtractor {
 
     protected String buildCustomFilterToCheckPrincipalClass(@Nonnull List<String> existingClasses) {
         StringBuilder customFilter = new StringBuilder(StringUtils.EMPTY);
-        for(int i = 0; i < existingClasses.size(); i++) {
-            if(i == 0) {
+        for (int i = 0; i < existingClasses.size(); i++) {
+            if (i == 0) {
                 customFilter
                         .append("?cc=<")
                         .append(existingClasses.get(i))
@@ -865,8 +897,12 @@ public class SchemaExtractor {
         schema.getParameters().add(new SchemaParameter(SchemaParameter.PARAM_NAME_ENDPOINT, request.getEndpointUrl()));
         schema.getParameters().add(new SchemaParameter(SchemaParameter.PARAM_NAME_GRAPH_NAME, request.getGraphName()));
         schema.getParameters().add(new SchemaParameter(SchemaParameter.PARAM_NAME_CALCULATE_SUBCLASS_RELATIONS, request.getCalculateSubClassRelations().toString()));
+        schema.getParameters().add(new SchemaParameter(SchemaParameter.PARAM_NAME_CALCULATE_DOMAIN_AND_RANGE_PAIRS, request.getCalculateDomainAndRangePairs().toString()));
         schema.getParameters().add(new SchemaParameter(SchemaParameter.PARAM_NAME_CALCULATE_DATA_TYPES, request.getCalculateDataTypes().toString()));
-        schema.getParameters().add(new SchemaParameter(SchemaParameter.PARAM_NAME_CALCULATE_CARDINALITIES, request.getCalculateCardinalities().toString()));
+        schema.getParameters().add(new SchemaParameter(SchemaParameter.PARAM_NAME_CALCULATE_CARDINALITIES, request.getCalculateCardinalitiesMode().toString()));
+        if (request.getMinimalAnalyzedClassSize() != null) {
+            schema.getParameters().add(new SchemaParameter(SchemaParameter.PARAM_NAME_MIN_CLASS_SIZE, request.getMinimalAnalyzedClassSize().toString()));
+        }
         if (!request.getExcludedNamespaces().isEmpty()) {
             schema.getParameters().add(new SchemaParameter(SchemaParameter.PARAM_NAME_EXCLUDED_NAMESPACES, request.getExcludedNamespaces().toString()));
         }
@@ -910,7 +946,9 @@ public class SchemaExtractor {
             if (queryResponse.hasErrors()) {
                 classes.forEach(classB -> {
                     if (!classA.getFullName().equalsIgnoreCase(classB.getFullName())
-                            && isNotExcludedResource(classB.getFullName(), request.getExcludedNamespaces())) {
+                            && isNotExcludedResource(classB.getFullName(), request.getExcludedNamespaces())
+                            && (isNotFalse(classA.getPropertiesInSchema()) || isNotFalse(classB.getPropertiesInSchema()))
+                    ) {
                         String checkQuery = CHECK_CLASS_INTERSECTION.getSparqlQuery()
                                 .replace(SPARQL_QUERY_BINDING_NAME_CLASS_A, classA.getFullName())
                                 .replace(SPARQL_QUERY_BINDING_NAME_CLASS_B, classB.getFullName());

@@ -20,6 +20,8 @@ public class SchemaClass extends SchemaElement {
 
 	private Long instanceCount;
 
+	private Boolean propertiesInSchema;
+
 	@Nonnull
 	public Set<String> getSuperClasses() {
 		if(superClasses == null){

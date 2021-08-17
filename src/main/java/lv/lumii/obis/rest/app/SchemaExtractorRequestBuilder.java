@@ -4,7 +4,6 @@ import com.google.common.base.Enums;
 import lv.lumii.obis.schema.services.JsonSchemaService;
 import lv.lumii.obis.schema.services.extractor.dto.SchemaExtractorRequestDto;
 import lv.lumii.obis.schema.services.extractor.v2.dto.SchemaExtractorPredefinedNamespaces;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Nonnull;
@@ -31,8 +30,10 @@ public class SchemaExtractorRequestBuilder {
         requestDto.setEndpointUrl(request.getEndpointUrl());
         requestDto.setGraphName(request.getGraphName());
         requestDto.setCalculateSubClassRelations(request.getCalculateSubClassRelations());
+        requestDto.setCalculateDomainAndRangePairs(request.getCalculateDomainAndRangePairs());
         requestDto.setCalculateDataTypes(request.getCalculateDataTypes());
-        requestDto.setCalculateCardinalities(request.getCalculateCardinalities());
+        requestDto.setCalculateCardinalitiesMode(Enums.getIfPresent(SchemaExtractorRequestDto.CalculateCardinalitiesMode.class, request.getCalculateCardinalitiesMode().name()).orNull());
+        requestDto.setMinimalAnalyzedClassSize(request.getMinimalAnalyzedClassSize());
         requestDto.setExcludedNamespaces(request.getExcludedNamespaces());
         requestDto.setEnableLogging(request.getEnableLogging());
         return requestDto;
