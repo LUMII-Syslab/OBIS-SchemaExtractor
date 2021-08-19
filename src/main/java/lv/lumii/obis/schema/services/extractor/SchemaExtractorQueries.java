@@ -42,7 +42,7 @@ public enum SchemaExtractorQueries {
                     + "?x ?property ?value." + "\n\t"
                     + "OPTIONAL { ?x a ?class. }" + "\n\t"
                     + "FILTER (?property != rdf:type)" + "\n"
-                    + "FILTER (!isURI(?value))" + "\n"
+                    + "FILTER (isLiteral(?value))" + "\n"
                     + "} GROUP BY ?property ?class"
     ),
 
@@ -52,7 +52,7 @@ public enum SchemaExtractorQueries {
                     + "?x a <domainClass>." + "\n\t"
                     + "?x ?property ?value." + "\n\t"
                     + "FILTER (?property != rdf:type)" + "\n\t"
-                    + "FILTER (!isURI(?value))" + "\n"
+                    + "FILTER (isLiteral(?value))" + "\n"
                     + "} GROUP BY ?property"
     ),
 
@@ -62,7 +62,7 @@ public enum SchemaExtractorQueries {
                     + "?x ?property ?value." + "\n\t"
                     + "OPTIONAL { ?x a ?domainClass. }" + "\n\t"
                     + "FILTER (?property != rdf:type)" + "\n\t"
-                    + "FILTER (!isURI(?value))" + "\n\t"
+                    + "FILTER (isLiteral(?value))" + "\n\t"
                     + "FILTER (!BOUND(?domainClass))" + "\n"
                     + "} GROUP BY ?property"
     ),
@@ -73,7 +73,7 @@ public enum SchemaExtractorQueries {
                     + "?x ?property ?value." + "\n\t"
                     + "OPTIONAL { ?x a ?domainClass. }" + "\n\t"
                     + "FILTER (?property != rdf:type)" + "\n\t"
-                    + "FILTER (isURI(?value))" + "\n\t"
+                    + "FILTER (!isLiteral(?value))" + "\n\t"
                     + "OPTIONAL { ?value a ?rangeClass. }" + "\n"
                     + "} GROUP BY ?property ?domainClass ?rangeClass"
     ),
@@ -84,7 +84,7 @@ public enum SchemaExtractorQueries {
                     + "?x a <domainClass>." + "\n\t"
                     + "?x ?property ?value." + "\n\t"
                     + "FILTER (?property != rdf:type)" + "\n\t"
-                    + "FILTER (isURI(?value))" + "\n\t"
+                    + "FILTER (!isLiteral(?value))" + "\n\t"
                     + "?value a ?rangeClass." + "\n"
                     + "} GROUP BY ?property ?rangeClass"
     ),
@@ -93,7 +93,7 @@ public enum SchemaExtractorQueries {
                     + "SELECT DISTINCT ?property ?rangeClass (COUNT(?x) as ?instances) WHERE {" + "\n\t"
                     + "?x ?property ?value." + "\n\t"
                     + "FILTER (?property != rdf:type)" + "\n\t"
-                    + "FILTER (isURI(?value))" + "\n\t"
+                    + "FILTER (!isLiteral(?value))" + "\n\t"
                     + "OPTIONAL { ?value a ?rangeClass. }" + "\n"
                     + "OPTIONAL { ?x a ?domainClass. }" + "\n\t"
                     + "FILTER (!BOUND(?domainClass))" + "\n"
@@ -104,7 +104,7 @@ public enum SchemaExtractorQueries {
                     + "SELECT DISTINCT ?property ?domainClass (COUNT(?x) as ?instances) WHERE {" + "\n\t"
                     + "?x ?property ?value." + "\n\t"
                     + "FILTER (?property != rdf:type)" + "\n\t"
-                    + "FILTER (isURI(?value))" + "\n\t"
+                    + "FILTER (!isLiteral(?value))" + "\n\t"
                     + "OPTIONAL { ?value a ?rangeClass. }" + "\n"
                     + "OPTIONAL { ?x a ?domainClass. }" + "\n\t"
                     + "FILTER (!BOUND(?rangeClass))" + "\n"
@@ -187,16 +187,16 @@ public enum SchemaExtractorQueries {
     ),
 
     COUNT_PROPERTY_URL_VALUES(
-            "SELECT (COUNT(?y) as ?instances) WHERE {?x <property> ?y. FILTER(isURI(?y)) }"
+            "SELECT (COUNT(?y) as ?instances) WHERE {?x <property> ?y. FILTER(!isLiteral(?y)) }"
     ),
     CHECK_PROPERTY_URL_VALUES(
-            "SELECT ?y where {?x <property> ?y. FILTER(isURI(?y)) } LIMIT 1"
+            "SELECT ?y where {?x <property> ?y. FILTER(!isLiteral(?y)) } LIMIT 1"
     ),
     COUNT_PROPERTY_URL_VALUES_FOR_DOMAIN(
-            "SELECT (COUNT(?y) as ?instances) WHERE {?x a <domainClass>. ?x <property> ?y. FILTER(isURI(?y)) }"
+            "SELECT (COUNT(?y) as ?instances) WHERE {?x a <domainClass>. ?x <property> ?y. FILTER(!isLiteral(?y)) }"
     ),
     CHECK_PROPERTY_URL_VALUES_FOR_DOMAIN(
-            "SELECT ?y WHERE {?x a <domainClass>. ?x <property> ?y. FILTER(isURI(?y)) } LIMIT 1"
+            "SELECT ?y WHERE {?x a <domainClass>. ?x <property> ?y. FILTER(!isLiteral(?y)) } LIMIT 1"
     ),
     COUNT_PROPERTY_LITERAL_VALUES(
             "SELECT (COUNT(?y) as ?instances) WHERE {?x <property> ?y. FILTER(isLiteral(?y)) }"
@@ -212,13 +212,13 @@ public enum SchemaExtractorQueries {
     ),
 
     FIND_CLOSED_RANGE_FOR_PROPERTY(
-            "SELECT ?x ?y WHERE { ?x <property> ?y. FILTER(isURI(?y)) OPTIONAL {?y a ?c} FILTER(!BOUND(?c)) } LIMIT 1"
+            "SELECT ?x ?y WHERE { ?x <property> ?y. FILTER(!isLiteral(?y)) OPTIONAL {?y a ?c} FILTER(!BOUND(?c)) } LIMIT 1"
     ),
     FIND_CLOSED_DOMAIN_FOR_PROPERTY(
             "SELECT ?x ?y WHERE { ?x <property> ?y. OPTIONAL {?x a ?c} FILTER(!BOUND(?c)) } LIMIT 1"
     ),
     FIND_CLOSED_RANGE_FOR_PROPERTY_AND_CLASS(
-            "SELECT ?x ?y WHERE { ?x a <class>. ?x <property> ?y. FILTER(isURI(?y)) OPTIONAL {?y a ?c} FILTER(!BOUND(?c)) } LIMIT 1"
+            "SELECT ?x ?y WHERE { ?x a <class>. ?x <property> ?y. FILTER(!isLiteral(?y)) OPTIONAL {?y a ?c} FILTER(!BOUND(?c)) } LIMIT 1"
     ),
     FIND_CLOSED_DOMAIN_FOR_PROPERTY_AND_CLASS(
             "SELECT ?x ?y WHERE { ?y a <class>. ?x <property> ?y. OPTIONAL {?x a ?c} FILTER(!BOUND(?c)) } LIMIT 1"

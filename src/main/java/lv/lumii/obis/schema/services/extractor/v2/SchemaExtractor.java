@@ -132,6 +132,12 @@ public class SchemaExtractor {
             String propertyName = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY);
             String instancesCountStr = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT);
 
+            // process only required properties
+            if(request.getIncludedProperties() != null
+                    && !request.getIncludedProperties().isEmpty() && !request.getIncludedProperties().contains(propertyName)) {
+                continue;
+            }
+
             if (StringUtils.isNotEmpty(propertyName) && isNotExcludedResource(propertyName, request.getExcludedNamespaces())) {
                 if (!properties.containsKey(propertyName)) {
                     properties.put(propertyName, new SchemaExtractorPropertyNodeInfo());
@@ -173,7 +179,9 @@ public class SchemaExtractor {
                 determinePropertyDomainsDataTypes(property, request);
             }
 
-            determinePrincipalDomainsAndRanges(property, schema.getClasses(), graphOfClasses, request);
+            if (isTrue(request.getCalculateSubClassRelations())) {
+                determinePrincipalDomainsAndRanges(property, schema.getClasses(), graphOfClasses, request);
+            }
 
             switch (request.getCalculateCardinalitiesMode()) {
                 case propertyLevelOnly:
@@ -1051,9 +1059,9 @@ public class SchemaExtractor {
         // sort property classes by importance index (ascending) leaving 0 as last and then by triple count (descending)
         return propertyLinkedClasses.stream()
                 .sorted((o1, o2) -> {
-                    int indexA = o1.getImportanceIndex();
-                    int indexB = o2.getImportanceIndex();
-                    if (indexA == indexB) return o2.getTripleCount().compareTo(o1.getTripleCount());
+                    int indexA = Optional.ofNullable(o1.getImportanceIndex()).orElse(0);
+                    int indexB = Optional.ofNullable(o2.getImportanceIndex()).orElse(0);
+                    if (indexA == indexB) return Optional.ofNullable(o2.getTripleCount()).orElse(0L).compareTo(Optional.ofNullable(o1.getTripleCount()).orElse(0L));
                     if (indexA == 0) return 1;
                     if (indexB == 0) return -1;
                     return Integer.compare(indexA, indexB);

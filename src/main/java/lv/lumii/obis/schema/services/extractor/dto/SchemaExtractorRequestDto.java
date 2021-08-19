@@ -33,6 +33,7 @@ public class SchemaExtractorRequestDto {
     private Boolean calculateDataTypes;
     private CalculateCardinalitiesMode calculateCardinalitiesMode;
     private Integer minimalAnalyzedClassSize;
+    private List<String> includedProperties;
     private List<String> excludedNamespaces;
     private SchemaExtractorPredefinedNamespaces predefinedNamespaces;
 
