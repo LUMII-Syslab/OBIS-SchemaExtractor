@@ -101,7 +101,7 @@ public class SchemaExtractor {
                 if (classEntry.getInstanceCount() < request.getMinimalAnalyzedClassSize()) {
                     classEntry.setPropertiesInSchema(Boolean.FALSE);
                 } else {
-                    classEntry.setPropertiesInSchema(null);
+                    classEntry.setPropertiesInSchema(Boolean.TRUE);
                 }
                 classes.add(classEntry);
             }
