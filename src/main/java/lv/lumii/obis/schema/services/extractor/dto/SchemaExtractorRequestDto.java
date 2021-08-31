@@ -29,6 +29,7 @@ public class SchemaExtractorRequestDto {
     private String graphName;
 
     private Boolean calculateSubClassRelations;
+    private Boolean calculatePropertyPropertyRelations;
     private Boolean calculateDomainAndRangePairs;
     private Boolean calculateDataTypes;
     private CalculateCardinalitiesMode calculateCardinalitiesMode;

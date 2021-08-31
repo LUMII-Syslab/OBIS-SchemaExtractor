@@ -26,6 +26,9 @@ public class SchemaExtractorPropertyNodeInfo {
     private List<SchemaExtractorClassNodeInfo> domainClasses;
     private List<SchemaExtractorClassNodeInfo> rangeClasses;
     private List<SchemaExtractorDataTypeInfo> dataTypes;
+    private List<SchemaExtractorPropertyRelatedPropertyInfo> followers;
+    private List<SchemaExtractorPropertyRelatedPropertyInfo> outgoingProperties;
+    private List<SchemaExtractorPropertyRelatedPropertyInfo> incomingProperties;
 
     @Nonnull
     public List<SchemaExtractorDomainRangeInfo> getDomainRangePairs() {
@@ -57,5 +60,26 @@ public class SchemaExtractorPropertyNodeInfo {
             dataTypes = new ArrayList<>();
         }
         return dataTypes;
+    }
+
+    public List<SchemaExtractorPropertyRelatedPropertyInfo> getFollowers() {
+        if (followers == null) {
+            followers = new ArrayList<>();
+        }
+        return followers;
+    }
+
+    public List<SchemaExtractorPropertyRelatedPropertyInfo> getOutgoingProperties() {
+        if (outgoingProperties == null) {
+            outgoingProperties = new ArrayList<>();
+        }
+        return outgoingProperties;
+    }
+
+    public List<SchemaExtractorPropertyRelatedPropertyInfo> getIncomingProperties() {
+        if (incomingProperties == null) {
+            incomingProperties = new ArrayList<>();
+        }
+        return incomingProperties;
     }
 }

@@ -133,7 +133,7 @@ public class SchemaExtractor {
             String instancesCountStr = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT);
 
             // process only required properties
-            if(request.getIncludedProperties() != null
+            if (request.getIncludedProperties() != null
                     && !request.getIncludedProperties().isEmpty() && !request.getIncludedProperties().contains(propertyName)) {
                 continue;
             }
@@ -181,6 +181,12 @@ public class SchemaExtractor {
 
             if (isTrue(request.getCalculateSubClassRelations())) {
                 determinePrincipalDomainsAndRanges(property, schema.getClasses(), graphOfClasses, request);
+            }
+
+            if (isTrue(request.getCalculatePropertyPropertyRelations())) {
+                determineFollowers(property, request);
+                determineOutgoingProperties(property, request);
+                determineIncomingProperties(property, request);
             }
 
             switch (request.getCalculateCardinalitiesMode()) {
@@ -562,6 +568,45 @@ public class SchemaExtractor {
         });
     }
 
+    protected void determineFollowers(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request) {
+        log.info(request.getCorrelationId() + " - determinePropertyFollowers [" + property.getPropertyName() + "]");
+        String query = SchemaExtractorQueries.FIND_PROPERTY_FOLLOWERS.getSparqlQuery().replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
+        List<QueryResult> queryResults = sparqlEndpointProcessor.read(request, SchemaExtractorQueries.FIND_PROPERTY_FOLLOWERS.name(), query);
+        for (QueryResult queryResult : queryResults) {
+            String otherProperty = queryResult.get(SPARQL_QUERY_BINDING_NAME_PROPERTY_OTHER);
+            Long tripleCount = SchemaUtil.getLongValueFromString(queryResult.get(SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
+            if (StringUtils.isNotEmpty(otherProperty)) {
+                property.getFollowers().add(new SchemaExtractorPropertyRelatedPropertyInfo(otherProperty, tripleCount));
+            }
+        }
+    }
+
+    protected void determineOutgoingProperties(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request) {
+        log.info(request.getCorrelationId() + " - determinePropertyOutgoingProperties [" + property.getPropertyName() + "]");
+        String query = SchemaExtractorQueries.FIND_PROPERTY_OUTGOING_PROPERTIES.getSparqlQuery().replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
+        List<QueryResult> queryResults = sparqlEndpointProcessor.read(request, SchemaExtractorQueries.FIND_PROPERTY_OUTGOING_PROPERTIES.name(), query);
+        for (QueryResult queryResult : queryResults) {
+            String otherProperty = queryResult.get(SPARQL_QUERY_BINDING_NAME_PROPERTY_OTHER);
+            Long tripleCount = SchemaUtil.getLongValueFromString(queryResult.get(SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
+            if (StringUtils.isNotEmpty(otherProperty)) {
+                property.getOutgoingProperties().add(new SchemaExtractorPropertyRelatedPropertyInfo(otherProperty, tripleCount));
+            }
+        }
+    }
+
+    protected void determineIncomingProperties(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request) {
+        log.info(request.getCorrelationId() + " - determinePropertyIncomingProperties [" + property.getPropertyName() + "]");
+        String query = SchemaExtractorQueries.FIND_PROPERTY_INCOMING_PROPERTIES.getSparqlQuery().replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
+        List<QueryResult> queryResults = sparqlEndpointProcessor.read(request, SchemaExtractorQueries.FIND_PROPERTY_INCOMING_PROPERTIES.name(), query);
+        for (QueryResult queryResult : queryResults) {
+            String otherProperty = queryResult.get(SPARQL_QUERY_BINDING_NAME_PROPERTY_OTHER);
+            Long tripleCount = SchemaUtil.getLongValueFromString(queryResult.get(SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
+            if (StringUtils.isNotEmpty(otherProperty)) {
+                property.getIncomingProperties().add(new SchemaExtractorPropertyRelatedPropertyInfo(otherProperty, tripleCount));
+            }
+        }
+    }
+
     protected void determinePropertyDomainsMinCardinality(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request) {
         log.info(request.getCorrelationId() + " - determinePropertyDomainsMinCardinality [" + property.getPropertyName() + "]");
         property.getDomainClasses().forEach(domainClass -> {
@@ -846,6 +891,9 @@ public class SchemaExtractor {
                             pair.getTripleCount(), pair.getSourceImportanceIndex(), pair.getTargetImportanceIndex()));
                 }
             });
+            property.getFollowers().addAll(convertInternalLinkedPropertyToApiDto(propertyData.getFollowers()));
+            property.getOutgoingProperties().addAll(convertInternalLinkedPropertyToApiDto(propertyData.getOutgoingProperties()));
+            property.getIncomingProperties().addAll(convertInternalLinkedPropertyToApiDto(propertyData.getIncomingProperties()));
 
             schema.getProperties().add(property);
         }
@@ -868,6 +916,13 @@ public class SchemaExtractor {
         return internalDtos.stream()
                 .map(internalDto -> new DataType(
                         internalDto.getDataType(), internalDto.getTripleCount())).
+                        collect(Collectors.toList());
+    }
+
+    protected List<SchemaPropertyLinkedPropertyDetails> convertInternalLinkedPropertyToApiDto(@Nonnull List<SchemaExtractorPropertyRelatedPropertyInfo> internalDtos) {
+        return sortPropertyLinkedPropertiesByTripleCount(internalDtos).stream()
+                .map(internalDto -> new SchemaPropertyLinkedPropertyDetails(
+                        internalDto.getPropertyName(), internalDto.getTripleCount())).
                         collect(Collectors.toList());
     }
 
@@ -1055,13 +1110,29 @@ public class SchemaExtractor {
     }
 
     @Nonnull
+    protected List<SchemaExtractorPropertyRelatedPropertyInfo> sortPropertyLinkedPropertiesByTripleCount(@Nonnull List<SchemaExtractorPropertyRelatedPropertyInfo> propertyRelatedProperties) {
+        // sort properties by triple count (descending) and then by property name (natural)
+        return propertyRelatedProperties.stream()
+                .sorted((o1, o2) -> {
+                    int compareResult = o2.getTripleCount().compareTo(o1.getTripleCount());
+                    if (compareResult == 0) {
+                        return o1.getPropertyName().compareTo(o2.getPropertyName());
+                    } else {
+                        return compareResult;
+                    }
+                })
+                .collect(Collectors.toList());
+    }
+
+    @Nonnull
     protected List<SchemaPropertyLinkedClassDetails> sortPropertyLinkedClassesByImportanceIndexAndTripleCount(@Nonnull List<SchemaPropertyLinkedClassDetails> propertyLinkedClasses) {
         // sort property classes by importance index (ascending) leaving 0 as last and then by triple count (descending)
         return propertyLinkedClasses.stream()
                 .sorted((o1, o2) -> {
                     int indexA = Optional.ofNullable(o1.getImportanceIndex()).orElse(0);
                     int indexB = Optional.ofNullable(o2.getImportanceIndex()).orElse(0);
-                    if (indexA == indexB) return Optional.ofNullable(o2.getTripleCount()).orElse(0L).compareTo(Optional.ofNullable(o1.getTripleCount()).orElse(0L));
+                    if (indexA == indexB)
+                        return Optional.ofNullable(o2.getTripleCount()).orElse(0L).compareTo(Optional.ofNullable(o1.getTripleCount()).orElse(0L));
                     if (indexA == 0) return 1;
                     if (indexB == 0) return -1;
                     return Integer.compare(indexA, indexB);

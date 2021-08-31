@@ -23,22 +23,25 @@ public class SchemaExtractorRequestNew {
     @ApiParam(access = "3", value = "Calculate subclass relations", defaultValue = "true", required = true)
     private Boolean calculateSubClassRelations;
 
-    @ApiParam(access = "4", value = "Calculate domain and range pairs", defaultValue = "true", required = true)
+    @ApiParam(access = "4", value = "Calculate property-property relations", defaultValue = "true", required = true)
+    private Boolean calculatePropertyPropertyRelations;
+
+    @ApiParam(access = "5", value = "Calculate domain and range pairs", defaultValue = "true", required = true)
     private Boolean calculateDomainAndRangePairs;
 
-    @ApiParam(access = "5", value = "Calculate data types for attributes", defaultValue = "true", required = true)
+    @ApiParam(access = "6", value = "Calculate data types for attributes", defaultValue = "true", required = true)
     private Boolean calculateDataTypes;
 
-    @ApiParam(access = "6", value = "Calculate min and max cardinalities for all properties", defaultValue = "propertyLevelAndClassContext", required = true)
+    @ApiParam(access = "7", value = "Calculate min and max cardinalities for all properties", defaultValue = "propertyLevelAndClassContext", required = true)
     private CalculateCardinalitiesMode calculateCardinalitiesMode;
 
-    @ApiParam(access = "7", value = "Minimal Analyzed Class Size (set 0 if all classes should be analyzed)", defaultValue = "10", required = true)
+    @ApiParam(access = "8", value = "Minimal Analyzed Class Size (set 0 if all classes should be analyzed)", defaultValue = "10", required = true)
     private Integer minimalAnalyzedClassSize;
 
-    @ApiParam(access = "8", value = "List of included properties (if not specified - all properties will be analyzed)", allowEmptyValue = true)
+    @ApiParam(access = "9", value = "List of included properties (if not specified - all properties will be analyzed)", allowEmptyValue = true)
     private List<String> includedProperties;
 
-    @ApiParam(access = "9", value = "List of excluded namespaces", allowEmptyValue = true)
+    @ApiParam(access = "91", value = "List of excluded namespaces", allowEmptyValue = true)
     private List<String> excludedNamespaces;
 
     @ApiParam(access = "99", value = "Enable SPARQL Query Logging to the file", defaultValue = "true", required = true)
@@ -49,6 +52,13 @@ public class SchemaExtractorRequestNew {
             calculateSubClassRelations = Boolean.FALSE;
         }
         return calculateSubClassRelations;
+    }
+
+    public Boolean getCalculatePropertyPropertyRelations() {
+        if (calculatePropertyPropertyRelations == null) {
+            calculatePropertyPropertyRelations = Boolean.FALSE;
+        }
+        return calculatePropertyPropertyRelations;
     }
 
     public Boolean getCalculateDomainAndRangePairs() {

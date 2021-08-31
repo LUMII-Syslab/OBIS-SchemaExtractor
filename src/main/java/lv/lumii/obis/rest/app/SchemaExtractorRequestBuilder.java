@@ -30,6 +30,7 @@ public class SchemaExtractorRequestBuilder {
         requestDto.setEndpointUrl(request.getEndpointUrl());
         requestDto.setGraphName(request.getGraphName());
         requestDto.setCalculateSubClassRelations(request.getCalculateSubClassRelations());
+        requestDto.setCalculatePropertyPropertyRelations(request.getCalculatePropertyPropertyRelations());
         requestDto.setCalculateDomainAndRangePairs(request.getCalculateDomainAndRangePairs());
         requestDto.setCalculateDataTypes(request.getCalculateDataTypes());
         requestDto.setCalculateCardinalitiesMode(Enums.getIfPresent(SchemaExtractorRequestDto.CalculateCardinalitiesMode.class, request.getCalculateCardinalitiesMode().name()).orNull());
