@@ -999,10 +999,6 @@ public class SchemaExtractor {
     protected void findIntersectionClassesAndUpdateClassNeighbors(@Nonnull List<SchemaClass> classes, @Nonnull Map<String, SchemaExtractorClassNodeInfo> graphOfClasses, @Nonnull SchemaExtractorRequestDto request) {
         QueryResponse queryResponse;
         for (SchemaClass classA : classes) {
-            // skip small classes
-            if(isFalse(classA.getPropertiesInSchema())) {
-                continue;
-            }
             String query = SchemaExtractorQueries.FIND_INTERSECTION_CLASSES_FOR_KNOWN_CLASS.getSparqlQuery()
                     .replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_DOMAIN, classA.getFullName());
             queryResponse = sparqlEndpointProcessor.read(request, FIND_INTERSECTION_CLASSES_FOR_KNOWN_CLASS.name(), query, true);
@@ -1150,7 +1146,7 @@ public class SchemaExtractor {
         for (Map.Entry<String, SchemaExtractorClassNodeInfo> entry : classesGraph.entrySet()) {
 
             SchemaClass currentClass = findClass(classes, entry.getKey());
-            if (currentClass == null || THING_NAME.equals(currentClass.getLocalName()) || isFalse(currentClass.getPropertiesInSchema())) {
+            if (currentClass == null || THING_NAME.equals(currentClass.getLocalName())) {
                 continue;
             }
 
@@ -1254,7 +1250,7 @@ public class SchemaExtractor {
         for (SchemaClass currentClass : sortedClasses) {
 
             // 1. exclude THING class
-            if (THING_NAME.equals(currentClass.getLocalName()) || currentClass.getSuperClasses().isEmpty() || isFalse(currentClass.getPropertiesInSchema())) {
+            if (THING_NAME.equals(currentClass.getLocalName()) || currentClass.getSuperClasses().isEmpty()) {
                 continue;
             }
             if (currentClass.getSuperClasses().size() == 1) {
