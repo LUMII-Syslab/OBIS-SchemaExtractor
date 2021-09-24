@@ -35,7 +35,7 @@ public class SchemaExtractorRequestNew {
     @ApiParam(access = "7", value = "Calculate min and max cardinalities for all properties", defaultValue = "propertyLevelAndClassContext", required = true)
     private CalculateCardinalitiesMode calculateCardinalitiesMode;
 
-    @ApiParam(access = "8", value = "Minimal Analyzed Class Size (set 0 if all classes should be analyzed)", defaultValue = "10", required = true)
+    @ApiParam(access = "8", value = "Minimal Analyzed Class Size (set 0 if all classes should be analyzed)", defaultValue = "0", required = true)
     private Integer minimalAnalyzedClassSize;
 
     @ApiParam(access = "9", value = "List of included properties (if not specified - all properties will be analyzed)", allowEmptyValue = true)

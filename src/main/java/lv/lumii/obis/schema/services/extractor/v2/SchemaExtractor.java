@@ -1171,7 +1171,7 @@ public class SchemaExtractor {
 
         for (String neighbor : neighbors) {
             Long neighborInstances = classesGraph.get(neighbor).getTripleCount();
-            if (neighborInstances < currentClassInfo.getTripleCount()) {
+            if (neighborInstances < currentClassInfo.getTripleCount() || neighborInstances < request.getMinimalAnalyzedClassSize()) {
                 continue;
             }
             String query = SchemaExtractorQueries.CHECK_SUPERCLASS.getSparqlQuery();
