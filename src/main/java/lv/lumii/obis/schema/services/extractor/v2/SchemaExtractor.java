@@ -171,8 +171,13 @@ public class SchemaExtractor {
                 if (isTrue(request.getCalculateDomainAndRangePairs())) {
                     determinePropertyDomainRangePairs(property, schema, request);
                 }
-                determinePropertyClosedDomainsAndRanges(property, request);
+
             }
+
+            determinePropertyClosedDomains(property, request);
+            determinePropertyClosedRanges(property, request);
+            determinePropertyClosedRangesOnSourceClassLevel(property, request);
+            determinePropertyClosedDomainsOnTargetClassLevel(property, request);
 
             if (isFalse(property.getIsObjectProperty()) && isTrue(request.getCalculateDataTypes())) {
                 determinePropertyDataTypes(property, request);
@@ -218,7 +223,7 @@ public class SchemaExtractor {
         log.info(request.getCorrelationId() + " - determinePropertyObjectTripleCount [" + property.getPropertyName() + "]");
 
         // get count of URL values for the specific property
-        Long objectTripleCount = 0L;
+        long objectTripleCount = 0L;
         String queryForUrlCount = COUNT_PROPERTY_URL_VALUES.getSparqlQuery().replace(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
         QueryResponse queryResponseForUrlCount = sparqlEndpointProcessor.read(request, COUNT_PROPERTY_URL_VALUES.name(), queryForUrlCount, true);
         if (!queryResponseForUrlCount.hasErrors() && !queryResponseForUrlCount.getResults().isEmpty() && queryResponseForUrlCount.getResults().get(0) != null) {
@@ -237,7 +242,7 @@ public class SchemaExtractor {
         log.info(request.getCorrelationId() + " - determinePropertyDataTripleCount [" + property.getPropertyName() + "]");
 
         // get count of URL values for the specific property
-        Long dataTripleCount = 0L;
+        long dataTripleCount = 0L;
         String queryForLiteralCount = COUNT_PROPERTY_LITERAL_VALUES.getSparqlQuery().replace(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
         QueryResponse queryResponseForLiteralCount = sparqlEndpointProcessor.read(request, COUNT_PROPERTY_LITERAL_VALUES.name(), queryForLiteralCount, true);
         if (!queryResponseForLiteralCount.hasErrors() && !queryResponseForLiteralCount.getResults().isEmpty() && queryResponseForLiteralCount.getResults().get(0) != null) {
@@ -450,8 +455,8 @@ public class SchemaExtractor {
         }
     }
 
-    protected void determinePropertyClosedDomainsAndRanges(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request) {
-        log.info(request.getCorrelationId() + " - determinePropertyClosedDomainsAndRanges [" + property.getPropertyName() + "]");
+    protected void determinePropertyClosedDomains(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request) {
+        log.info(request.getCorrelationId() + " - determinePropertyClosedDomains [" + property.getPropertyName() + "]");
 
         // check if there is any triple with URI subject but without bound class - property level
         if (property.getDomainClasses().isEmpty()) {
@@ -465,6 +470,10 @@ public class SchemaExtractor {
                 property.setIsClosedDomain(Boolean.TRUE);
             }
         }
+    }
+
+    protected void determinePropertyClosedRanges(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request) {
+        log.info(request.getCorrelationId() + " - determinePropertyClosedRanges [" + property.getPropertyName() + "]");
 
         // check if there is any triple with URI object but without bound class
         if (property.getRangeClasses().isEmpty()) {
@@ -478,6 +487,10 @@ public class SchemaExtractor {
                 property.setIsClosedRange(Boolean.TRUE);
             }
         }
+    }
+
+    protected void determinePropertyClosedRangesOnSourceClassLevel(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request) {
+        log.info(request.getCorrelationId() + " - determinePropertyClosedRangesOnSourceClassLevel [" + property.getPropertyName() + "]");
 
         // check if there is any triple with URI subject but without bound class - property source class level
         if (isTrue(property.getIsClosedRange())) {
@@ -495,6 +508,10 @@ public class SchemaExtractor {
                 }
             });
         }
+    }
+
+    protected void determinePropertyClosedDomainsOnTargetClassLevel(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request) {
+        log.info(request.getCorrelationId() + " - determinePropertyClosedRangesOnTargetClassLevel [" + property.getPropertyName() + "]");
 
         // check if there is any triple with URI object but without bound class - property target class level
         if (isTrue(property.getIsClosedDomain())) {
@@ -1303,11 +1320,6 @@ public class SchemaExtractor {
 
     protected boolean isNotExcludedResource(@Nullable String resourceId, @Nonnull List<String> excludedResources) {
         return StringUtils.isNotEmpty(resourceId) && excludedResources.stream().noneMatch(resourceId::startsWith);
-    }
-
-    @Nullable
-    protected SchemaExtractorClassNodeInfo findLinkedClass(@Nonnull List<SchemaExtractorClassNodeInfo> classes, @Nonnull String searchClass) {
-        return classes.stream().filter(c -> searchClass.equalsIgnoreCase(c.getClassName())).findFirst().orElse(null);
     }
 
     @Nonnull
