@@ -5,12 +5,14 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import lv.lumii.obis.schema.constants.SchemaConstants;
 import lv.lumii.obis.schema.model.v2.*;
+import lv.lumii.obis.schema.services.JsonSchemaService;
 import lv.lumii.obis.schema.services.SchemaUtil;
 import lv.lumii.obis.schema.services.common.SparqlEndpointProcessor;
 import lv.lumii.obis.schema.services.common.dto.QueryResponse;
 import lv.lumii.obis.schema.services.common.dto.QueryResult;
 import lv.lumii.obis.schema.services.extractor.SchemaExtractorQueries;
 import lv.lumii.obis.schema.services.extractor.dto.*;
+import lv.lumii.obis.schema.services.extractor.v2.dto.SchemaExtractorPredefinedNamespaces;
 import lv.lumii.obis.schema.services.extractor.v2.dto.SchemaExtractorPropertyLinkedClassInfo;
 import lv.lumii.obis.schema.services.extractor.v2.dto.SchemaExtractorRequestedClassDto;
 import lv.lumii.obis.schema.services.extractor.v2.dto.SchemaExtractorRequestedPropertyDto;
@@ -20,6 +22,8 @@ import org.springframework.stereotype.Service;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -39,6 +43,11 @@ public class SchemaExtractor {
     @Setter
     @Getter
     protected SparqlEndpointProcessor sparqlEndpointProcessor;
+
+    @Autowired
+    @Setter
+    @Getter
+    private JsonSchemaService jsonSchemaService;
 
     @Nonnull
     public Schema extractSchema(@Nonnull SchemaExtractorRequestDto request) {
@@ -994,20 +1003,46 @@ public class SchemaExtractor {
     }
 
     protected void buildNamespaceMap(@Nonnull SchemaExtractorRequestDto request, @Nonnull Schema schema) {
+        // 1. apply namespaces defined in the request
         if (request.getPredefinedNamespaces() != null && request.getPredefinedNamespaces().getNamespaceItems() != null) {
             request.getPredefinedNamespaces().getNamespaceItems().forEach(namespaceItem ->
                     schema.getPrefixes().add(new NamespacePrefixEntry(namespaceItem.getPrefix(), namespaceItem.getNamespace())));
-        } else {
-            String mainNamespace = findMainNamespace(schema);
-            if (StringUtils.isNotEmpty(mainNamespace)) {
-                schema.setDefaultNamespace(mainNamespace);
-                schema.getPrefixes().add(new NamespacePrefixEntry(SchemaConstants.DEFAULT_NAMESPACE_PREFIX, mainNamespace));
+            return;
+        }
+
+        // 2. apply namespaces from the system config file and use only the ones from the current schema
+        Set<String> orderedNamespaces = getAllNamespacesOrderedByUsageCount(schema);
+        try {
+            FileInputStream inputStream = new FileInputStream(SchemaConstants.GLOBAL_NAMESPACE_PATH);
+            SchemaExtractorPredefinedNamespaces predefinedNamespaces = jsonSchemaService.getObjectFromJsonStream(inputStream, SchemaExtractorPredefinedNamespaces.class);
+            if (predefinedNamespaces != null && predefinedNamespaces.getNamespaceItems() != null) {
+                predefinedNamespaces.getNamespaceItems().forEach(namespaceItem -> {
+                    if (orderedNamespaces.contains(namespaceItem.getNamespace())) {
+                        schema.getPrefixes().add(new NamespacePrefixEntry(namespaceItem.getPrefix(), namespaceItem.getNamespace()));
+                    }
+                });
             }
+            return;
+        } catch (IOException e) {
+            log.error("Cannot read namespaces from the system configuration");
+            e.printStackTrace();
+        }
+
+        // 3. apply namespaces from the analyzed schema with auto generated prefixes
+        int index = 0;
+        for (String namespace : orderedNamespaces) {
+            if (index == 0) {
+                schema.setDefaultNamespace(namespace);
+                schema.getPrefixes().add(new NamespacePrefixEntry(SchemaConstants.DEFAULT_NAMESPACE_PREFIX, namespace));
+            } else {
+                schema.getPrefixes().add(new NamespacePrefixEntry(SchemaConstants.DEFAULT_NAMESPACE_PREFIX_AUTO + index, namespace));
+            }
+            index++;
         }
     }
 
-    @Nullable
-    protected String findMainNamespace(@Nonnull Schema schema) {
+    @Nonnull
+    protected Set<String> getAllNamespacesOrderedByUsageCount(@Nonnull Schema schema) {
         List<String> namespaces = new ArrayList<>();
         for (SchemaClass item : schema.getClasses()) {
             namespaces.add(item.getNamespace());
@@ -1015,12 +1050,13 @@ public class SchemaExtractor {
         for (SchemaProperty item : schema.getProperties()) {
             namespaces.add(item.getNamespace());
         }
-        if (namespaces.isEmpty()) {
-            return null;
-        }
         Map<String, Long> namespacesWithCounts = namespaces.stream()
                 .collect(Collectors.groupingBy(e -> e, Collectors.counting()));
-        return namespacesWithCounts.entrySet().stream().max(Map.Entry.comparingByValue()).get().getKey();
+        Set<String> orderedNamespaces = new LinkedHashSet<>();
+        namespacesWithCounts.entrySet().stream().sorted(Map.Entry.comparingByValue(Comparator.reverseOrder())).forEach(entry -> {
+            orderedNamespaces.add(entry.getKey());
+        });
+        return orderedNamespaces;
     }
 
     protected void buildExtractionProperties(@Nonnull SchemaExtractorRequestDto request, @Nonnull Schema schema) {
