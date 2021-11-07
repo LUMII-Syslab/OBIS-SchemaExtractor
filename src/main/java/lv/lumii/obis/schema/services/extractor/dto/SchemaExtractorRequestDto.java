@@ -3,17 +3,22 @@ package lv.lumii.obis.schema.services.extractor.dto;
 import lombok.Getter;
 import lombok.Setter;
 import lv.lumii.obis.schema.services.extractor.v2.dto.SchemaExtractorPredefinedNamespaces;
+import lv.lumii.obis.schema.services.extractor.v2.dto.SchemaExtractorRequestedClassDto;
+import lv.lumii.obis.schema.services.extractor.v2.dto.SchemaExtractorRequestedPropertyDto;
 
 import javax.annotation.Nonnull;
+import java.util.ArrayList;
 import java.util.List;
 
-@Setter @Getter
+@Setter
+@Getter
 public class SchemaExtractorRequestDto {
 
     /**
      * DEPRECATED enums for old services
      */
     public enum ExtractionMode {excludeDataTypesAndCardinalities, excludeCardinalities, full}
+
     public enum ExtractionVersion {manySmallQueries, manySmallQueriesWithDirectProperties, fewComplexQueries}
 
     /**
@@ -34,7 +39,8 @@ public class SchemaExtractorRequestDto {
     private Boolean calculateDataTypes;
     private CalculateCardinalitiesMode calculateCardinalitiesMode;
     private Integer minimalAnalyzedClassSize;
-    private List<String> includedProperties;
+    private List<SchemaExtractorRequestedClassDto> includedClasses;
+    private List<SchemaExtractorRequestedPropertyDto> includedProperties;
     private List<String> excludedNamespaces;
     private SchemaExtractorPredefinedNamespaces predefinedNamespaces;
 
@@ -49,5 +55,21 @@ public class SchemaExtractorRequestDto {
 
     public SchemaExtractorRequestDto(@Nonnull String correlationId) {
         this.correlationId = correlationId;
+    }
+
+    @Nonnull
+    public List<SchemaExtractorRequestedClassDto> getIncludedClasses() {
+        if (includedClasses == null) {
+            includedClasses = new ArrayList<>();
+        }
+        return includedClasses;
+    }
+
+    @Nonnull
+    public List<SchemaExtractorRequestedPropertyDto> getIncludedProperties() {
+        if (includedProperties == null) {
+            includedProperties = new ArrayList<>();
+        }
+        return includedProperties;
     }
 }

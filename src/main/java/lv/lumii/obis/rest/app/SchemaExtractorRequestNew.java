@@ -38,13 +38,10 @@ public class SchemaExtractorRequestNew {
     @ApiParam(access = "8", value = "Minimal Analyzed Class Size (set 0 if all classes should be analyzed)", defaultValue = "0", required = true)
     private Integer minimalAnalyzedClassSize;
 
-    @ApiParam(access = "9", value = "List of included properties (if not specified - all properties will be analyzed)", allowEmptyValue = true)
-    private List<String> includedProperties;
-
-    @ApiParam(access = "91", value = "List of excluded namespaces", allowEmptyValue = true)
+    @ApiParam(access = "9", value = "List of excluded namespaces", allowEmptyValue = true)
     private List<String> excludedNamespaces;
 
-    @ApiParam(access = "99", value = "Enable SPARQL Query Logging to the file", defaultValue = "true", required = true)
+    @ApiParam(access = "91", value = "Enable SPARQL Query Logging to the file", defaultValue = "true", required = true)
     private Boolean enableLogging;
 
     public Boolean getCalculateSubClassRelations() {
@@ -87,14 +84,6 @@ public class SchemaExtractorRequestNew {
             enableLogging = Boolean.FALSE;
         }
         return enableLogging;
-    }
-
-    @Nonnull
-    public List<String> getIncludedProperties() {
-        if (includedProperties == null) {
-            includedProperties = new ArrayList<>();
-        }
-        return includedProperties;
     }
 
     @Nonnull

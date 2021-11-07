@@ -46,8 +46,15 @@ public class SchemaExtractorController {
 
     private static final String SCHEMA_READ_FILE_MESSAGE_START = "Request %s - Starting to read Schema JSON from the OWL file [%s]";
     private static final String SCHEMA_READ_FILE_MESSAGE_END = "Request %s - Completed to read Schema JSON from the OWL file [%s] in %s";
+    private static final String SCHEMA_READ_INCLUDED_CLASSES_MESSAGE_START = "Request %s - Starting to read included classes from the CSV file [%s]";
+    private static final String SCHEMA_READ_INCLUDED_CLASSES_MESSAGE_END = "Request %s - Completed to read included classes from the CSV file [%s]";
+    private static final String SCHEMA_READ_INCLUDED_CLASSES_MESSAGE_ERROR = "Request %s - Cannot read included classes from the CSV file [%s]";
+    private static final String SCHEMA_READ_INCLUDED_PROPERTIES_MESSAGE_START = "Request %s - Starting to read included properties from the CSV file [%s]";
+    private static final String SCHEMA_READ_INCLUDED_PROPERTIES_MESSAGE_END = "Request %s - Completed to read included properties from the CSV file [%s]";
+    private static final String SCHEMA_READ_INCLUDED_PROPERTIES_MESSAGE_ERROR = "Request %s - Cannot read included properties from the CSV file [%s]";
     private static final String SCHEMA_READ_PREFIX_FILE_MESSAGE_START = "Request %s - Starting to read Prefixes from the JSON file [%s]";
     private static final String SCHEMA_READ_PREFIX_FILE_MESSAGE_END = "Request %s - Completed to read Prefixes from the JSON file [%s]";
+    private static final String SCHEMA_READ_PREFIX_FILE_MESSAGE_ERROR = "Request %s - Cannot read Prefixes from the JSON file [%s]";
     private static final String SCHEMA_ENHANCE_MESSAGE_START = "Request %s - Starting to enhance Schema with SPARQL endpoint data [%s]";
     private static final String SCHEMA_ENHANCE_MESSAGE_END = "Request %s - Completed to enhance Schema with SPARQL endpoint data [%s] in %s";
     private static final String SCHEMA_READ_FILE_MESSAGE_ERROR = "Request %s - Cannot read Schema JSON from the specified OWL file [%s]";
@@ -79,31 +86,60 @@ public class SchemaExtractorController {
     )
     @SuppressWarnings("unused")
     public String buildFullSchemaFromEndpointV2(@Validated @ModelAttribute @NotNull SchemaExtractorRequestNew request,
+                                                @RequestParam(value ="includedClassesFile", required=false)
+                                                    @ApiParam(access = "92", value = "Valid CSV file with the list of included classes (if not specified - all classes will be analyzed)") MultipartFile includedClassesCsvFile,
+                                                @RequestParam(value ="includedPropertiesFile", required=false)
+                                                    @ApiParam(access = "93", value = "Valid CSV file with the list of included properties (if not specified - all properties will be analyzed)") MultipartFile includedPropertiesCsvFile,
                                                 @RequestParam(value ="namespacePrefixFile", required=false)
-                                                @ApiParam(access = "99", value = "Valid JSON file with predefined namespaces") MultipartFile namespacePrefixFile) {
+                                                    @ApiParam(access = "94", value = "Valid JSON file with predefined namespaces") MultipartFile namespacePrefixFile) {
 
+        // 1. Create the request object
         SchemaExtractorRequestDto requestDto = requestBuilder.buildRequest(request);
 
         String requestJson = new Gson().toJson(request);
         log.info(String.format(SCHEMA_EXTRACT_MESSAGE_START, requestJson));
         LocalDateTime startTime = LocalDateTime.now();
 
-        // 1. Read prefixes from the external JSON file
+        // 2. Read included classes from the external CSV file
+        if (includedClassesCsvFile != null && !includedClassesCsvFile.isEmpty()) {
+            log.info(String.format(SCHEMA_READ_INCLUDED_CLASSES_MESSAGE_START, requestDto.getCorrelationId(), includedClassesCsvFile.getOriginalFilename()));
+            try {
+                requestBuilder.applyIncludedClasses(requestDto, includedClassesCsvFile.getInputStream());
+            } catch (IOException e) {
+                log.error(String.format(SCHEMA_READ_INCLUDED_CLASSES_MESSAGE_ERROR, requestDto.getCorrelationId(), includedClassesCsvFile.getOriginalFilename()));
+            }
+            log.info(String.format(SCHEMA_READ_INCLUDED_CLASSES_MESSAGE_END, requestDto.getCorrelationId(), includedClassesCsvFile.getOriginalFilename()));
+        }
+
+        // 3. Read included properties from the external CSV file
+        if (includedPropertiesCsvFile != null && !includedPropertiesCsvFile.isEmpty()) {
+            log.info(String.format(SCHEMA_READ_INCLUDED_PROPERTIES_MESSAGE_START, requestDto.getCorrelationId(), includedPropertiesCsvFile.getOriginalFilename()));
+            try {
+                requestBuilder.applyIncludedProperties(requestDto, includedPropertiesCsvFile.getInputStream());
+            } catch (IOException e) {
+                log.error(String.format(SCHEMA_READ_INCLUDED_PROPERTIES_MESSAGE_ERROR, requestDto.getCorrelationId(), includedPropertiesCsvFile.getOriginalFilename()));
+            }
+            log.info(String.format(SCHEMA_READ_INCLUDED_PROPERTIES_MESSAGE_END, requestDto.getCorrelationId(), includedPropertiesCsvFile.getOriginalFilename()));
+        }
+
+        // 4. Read prefixes from the external JSON file
         if (namespacePrefixFile != null && !namespacePrefixFile.isEmpty()) {
             log.info(String.format(SCHEMA_READ_PREFIX_FILE_MESSAGE_START, requestDto.getCorrelationId(), namespacePrefixFile.getOriginalFilename()));
             try {
                 requestBuilder.applyPredefinedNamespaces(requestDto, namespacePrefixFile.getInputStream());
             } catch (IOException e) {
-                log.error(String.format(SCHEMA_READ_PREFIX_FILE_MESSAGE_END, requestDto.getCorrelationId(), namespacePrefixFile.getOriginalFilename()));
+                log.error(String.format(SCHEMA_READ_PREFIX_FILE_MESSAGE_ERROR, requestDto.getCorrelationId(), namespacePrefixFile.getOriginalFilename()));
             }
+            log.info(String.format(SCHEMA_READ_PREFIX_FILE_MESSAGE_END, requestDto.getCorrelationId(), namespacePrefixFile.getOriginalFilename()));
         }
 
-        // 2. Build the schema from the endpoint
+        // 5. Build the schema from the endpoint
         lv.lumii.obis.schema.model.v2.Schema schema = schemaExtractor.extractSchema(requestDto);
 
         LocalDateTime endTime = LocalDateTime.now();
         log.info(String.format(SCHEMA_EXTRACT_MESSAGE_END, calculateExecutionTime(startTime, endTime), requestJson));
 
+        // 6. Return the result JSON schema
         return jsonSchemaService.getJsonSchemaString(schema);
     }
 
