@@ -1,6 +1,7 @@
 package lv.lumii.obis.schema.services.reader;
 
-import lv.lumii.obis.schema.model.*;
+import lv.lumii.obis.schema.model.v1.NamespacePrefixEntry;
+import lv.lumii.obis.schema.model.v1.Schema;
 import lv.lumii.obis.schema.services.reader.dto.OWLOntologyReaderRequest;
 import lv.lumii.obis.schema.services.reader.dto.OWLOntologyReaderProcessingData;
 import org.apache.commons.lang3.StringUtils;

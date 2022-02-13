@@ -1,8 +1,8 @@
 package lv.lumii.obis.schema.services.reader;
 
 import lombok.extern.slf4j.Slf4j;
-import lv.lumii.obis.schema.model.Schema;
-import lv.lumii.obis.schema.model.SchemaClass;
+import lv.lumii.obis.schema.model.v1.Schema;
+import lv.lumii.obis.schema.model.v1.SchemaClass;
 import lv.lumii.obis.schema.services.reader.dto.OWLOntologyReaderRequest;
 import lv.lumii.obis.schema.services.common.dto.SchemaCardinalityInfo;
 import lv.lumii.obis.schema.services.reader.dto.OWLOntologyReaderProcessingData;

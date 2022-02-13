@@ -2,7 +2,7 @@ package lv.lumii.obis.schema.services.reader.dto;
 
 import lombok.Getter;
 import lombok.Setter;
-import lv.lumii.obis.schema.model.SchemaClass;
+import lv.lumii.obis.schema.model.v1.SchemaClass;
 import lv.lumii.obis.schema.services.common.dto.SchemaCardinalityInfo;
 
 import javax.annotation.Nonnull;

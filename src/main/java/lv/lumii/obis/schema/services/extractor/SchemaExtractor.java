@@ -8,7 +8,7 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import lv.lumii.obis.schema.constants.SchemaConstants;
-import lv.lumii.obis.schema.model.*;
+import lv.lumii.obis.schema.model.v1.*;
 import lv.lumii.obis.schema.services.SchemaUtil;
 import lv.lumii.obis.schema.services.common.dto.QueryResult;
 import lv.lumii.obis.schema.services.common.SparqlEndpointProcessor;

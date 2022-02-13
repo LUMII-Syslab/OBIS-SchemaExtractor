@@ -3,7 +3,7 @@ package lv.lumii.obis.schema.services;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import lv.lumii.obis.schema.model.Schema;
+import lv.lumii.obis.schema.model.v1.Schema;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Nonnull;

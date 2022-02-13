@@ -1,8 +1,8 @@
 package lv.lumii.obis.schema.services.reader;
 
-import lv.lumii.obis.schema.model.Schema;
-import lv.lumii.obis.schema.model.SchemaAttribute;
-import lv.lumii.obis.schema.model.SchemaClass;
+import lv.lumii.obis.schema.model.v1.Schema;
+import lv.lumii.obis.schema.model.v1.SchemaAttribute;
+import lv.lumii.obis.schema.model.v1.SchemaClass;
 import lv.lumii.obis.schema.services.SchemaUtil;
 import lv.lumii.obis.schema.services.reader.dto.OWLOntologyReaderRequest;
 import lv.lumii.obis.schema.services.reader.dto.OWLOntologyReaderProcessingData;

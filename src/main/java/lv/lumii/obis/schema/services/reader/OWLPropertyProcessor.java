@@ -1,6 +1,6 @@
 package lv.lumii.obis.schema.services.reader;
 
-import lv.lumii.obis.schema.model.SchemaProperty;
+import lv.lumii.obis.schema.model.v1.SchemaProperty;
 import lv.lumii.obis.schema.services.common.dto.SchemaCardinalityInfo;
 
 import javax.annotation.Nonnull;

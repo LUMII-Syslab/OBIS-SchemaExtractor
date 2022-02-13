@@ -1,7 +1,7 @@
 package lv.lumii.obis.schema.services.extractor;
 
 import lombok.extern.slf4j.Slf4j;
-import lv.lumii.obis.schema.model.*;
+import lv.lumii.obis.schema.model.v1.SchemaClass;
 import lv.lumii.obis.schema.services.common.dto.QueryResult;
 import lv.lumii.obis.schema.services.extractor.dto.*;
 import org.springframework.stereotype.Service;

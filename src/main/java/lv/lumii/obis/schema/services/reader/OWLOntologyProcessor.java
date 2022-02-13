@@ -1,6 +1,6 @@
 package lv.lumii.obis.schema.services.reader;
 
-import lv.lumii.obis.schema.model.Schema;
+import lv.lumii.obis.schema.model.v1.Schema;
 import lv.lumii.obis.schema.services.reader.dto.OWLOntologyReaderRequest;
 import lv.lumii.obis.schema.services.reader.dto.OWLOntologyReaderProcessingData;
 import org.semanticweb.owlapi.model.OWLOntology;

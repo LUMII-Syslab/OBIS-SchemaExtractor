@@ -1,7 +1,7 @@
 package lv.lumii.obis.schema.services;
 
 import lombok.extern.slf4j.Slf4j;
-import lv.lumii.obis.schema.model.SchemaElement;
+import lv.lumii.obis.schema.model.v1.SchemaElement;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;

@@ -33,7 +33,7 @@ public class SwaggerConfig {
                 .build()
                 .useDefaultResponseMessages(false)
                 .apiInfo(apiEndPointsInfo())
-                .tags(new Tag("services", ""));
+                .tags(new Tag("Services V1", ""), new Tag("Services V2", ""));
     }
 
     private ApiInfo apiEndPointsInfo() {
