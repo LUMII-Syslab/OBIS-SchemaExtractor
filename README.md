@@ -58,7 +58,7 @@ Schema Extractor RESTful APIs are expressed using JSON services and described in
 - http://localhost:8080/schema-extractor-rest/endpoint/buildFullSchema?endpointUrl=http://localhost:8890/sparql&graphName=MiniUniv&mode=simple&enableLogging=true&excludeSystemClasses=true&excludeMetaDomainClasses=true
 
 **Response Example:**
-- JSON file with extracted schema information, example [SampleExtractedSchema.json](build/SampleExtractedSchema.json)
+- JSON file with extracted schema information, example [SampleExtractedSchema.json](build/SampleExtractedSchemaV1.json)
 
 ## SPARQL Endpoint Usage V2
 
@@ -85,7 +85,7 @@ Schema Extractor RESTful APIs are expressed using JSON services and described in
 - http://localhost:8080/schema-extractor-rest/endpoint/buildFullSchema?endpointUrl=http://localhost:8890/sparql&graphName=MiniUniv&mode=simple&enableLogging=true&excludeSystemClasses=true&excludeMetaDomainClasses=true
 
 **Response Example:**
-- JSON file with extracted schema information, example [SampleExtractedSchema.json](build/SampleExtractedSchema.json)
+- JSON file with extracted schema information, example [SampleExtractedSchema.json](build/SampleExtractedSchemaV2.json)
 
 ## RDF/OWL File Usage
 
