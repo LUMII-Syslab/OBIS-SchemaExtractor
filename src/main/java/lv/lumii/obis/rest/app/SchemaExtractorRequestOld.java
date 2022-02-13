@@ -15,7 +15,7 @@ public class SchemaExtractorRequestOld {
     @ApiParam(access = "1", value = "SPARQL Endpoint URL, for example, http://localhost:8890/sparql", required = true)
     private String endpointUrl;
 
-    @ApiParam(access = "2", value = "Named Graph (optional). If no graph name provided, the search will involve all graphs from the endpoint", allowEmptyValue = true)
+    @ApiParam(access = "2", value = "Named Graph (optional, recommended). If no graph name provided, the search will involve all graphs from the endpoint", allowEmptyValue = true)
     private String graphName;
 
     @ApiParam(access = "3", value = "Extraction Version: a lot of small SPARQL queries or just a few but complex queries", defaultValue = "manySmallQueriesWithDirectProperties", required = true)

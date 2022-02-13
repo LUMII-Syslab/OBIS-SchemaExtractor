@@ -17,7 +17,7 @@ public class SchemaExtractorRequestNew {
     @ApiParam(access = "1", value = "SPARQL Endpoint URL, for example, http://localhost:8890/sparql", required = true)
     private String endpointUrl;
 
-    @ApiParam(access = "2", value = "Named Graph (optional). If no graph name provided, the search will involve all graphs from the endpoint", allowEmptyValue = true)
+    @ApiParam(access = "2", value = "Named Graph (optional, recommended). If no graph name provided, the search will involve all graphs from the endpoint", allowEmptyValue = true)
     private String graphName;
 
     @ApiParam(access = "3", value = "Calculate subclass relations", defaultValue = "true", required = true)
@@ -35,7 +35,7 @@ public class SchemaExtractorRequestNew {
     @ApiParam(access = "7", value = "Calculate min and max cardinalities for all properties", defaultValue = "propertyLevelAndClassContext", required = true)
     private CalculateCardinalitiesMode calculateCardinalitiesMode;
 
-    @ApiParam(access = "8", value = "Minimal Analyzed Class Size (set 0 if all classes should be analyzed)", defaultValue = "0", required = true)
+    @ApiParam(access = "8", value = "Minimal Analyzed Class Size (set 1 if all classes should be analyzed)", defaultValue = "1", required = true)
     private Integer minimalAnalyzedClassSize;
 
     @ApiParam(access = "9", value = "List of excluded namespaces", allowEmptyValue = true)
