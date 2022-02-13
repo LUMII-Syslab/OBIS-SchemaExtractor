@@ -33,65 +33,28 @@ Schema Extractor RESTful APIs are expressed using JSON services and described in
 | [V1 OWL/RDF File](#rdfowl-file-usage)  | /schema-extractor-rest/v1/owlFile/buildFullSchema  | Extract and analyze schema from OWL ontology file and then enhance with data from SPARQL endpoint (if provided)  |
 | [V2 SPARQL Endpoint](#sparql-endpoint-usage-v2) | /schema-extractor-rest/v2/endpoint/buildFullSchema  | Extract and analyze data from SPARQL endpoint and build full schema model (version 2)  |
 
-## SPARQL Endpoint Usage V1
+### SPARQL Endpoint Usage V1
 
-- GET http://server:port/schema-extractor-rest/v1/endpoint/buildFullSchema
+GET http://server:port/schema-extractor-rest/v1/endpoint/buildFullSchema
+
+```sh
+curl -X GET "http://localhost:8080/schema-extractor-rest/v1/endpoint/buildFullSchema?endpointUrl=http%3A%2F%2Flocalhost%3A8890%2Fsparql&graphName=MiniUniv&version=fewComplexQueries&mode=full&enableLogging=false&excludeSystemClasses=true&excludeMetaDomainClasses=false&excludePropertiesWithoutClasses=true" -H "accept: application/json"
+```
+Example JSON response - [SampleExtractedSchemaV1.json](build/SampleExtractedSchemaV1.json)
+
+### SPARQL Endpoint Usage V2
+
+POST http://server:port/schema-extractor-rest/v2/endpoint/buildFullSchema
   
-**Available Service Path Parameters:**
-- **endpointUrl** (mandatory) - SPARQL endpoint URL
-- **graphName** (optional, recommended) - named graph used for schema extraction. If no graph name provided, the search will involve all graphs from the endpoints. Note - it may impact performance, thus it is recommended to provide required graph.
-- **mode** (optional) - extraction complexity. If no mode provided, it is processed as *full* by default. If the data source is large or complex, full mode may impact performance.
-  - **full** analyzed items: classes, class hierarchy (superclass/subclass), data type properties, object type properties with domain/range associations, property data types, property cardinalities
-  - **data** analyzed items: classes, class hierarchy (superclass/subclass), data type properties, object type properties with domain/range associations, property data types
-  - **simple** - analyzed items: classes, class hierarchy (superclass/subclass), data type properties, object type properties with domain/range associations
-- **enableLogging** (optional) - SPARQL query logging to the file
-  - **false** (default): executed queries are not logged
-  - **true**: executed queries are logged to the file /logs/obis-extractor.log (in web application server root folder)
-- **excludeSystemClasses** (optional) - indicator whether Virtuoso system classes (namespace http://www.openlinksw.com/schemas/virtrdf) should be added to the response
-  - **false**: Virtuoso system classes are added to the final list of schema classes
-  - **true** (default): Virtuoso system classes are skipped
-- **excludeMetaDomainClasses** (optional) - indicator whether meta domain classes (namespaces http://www.w3.org/2002/07/owl, http://www.w3.org/2000/01/rdf-schema, http://www.w3.org/1999/02/22-rdf-syntax-ns) should be added to the response
-  - **false** (default): OWL/RDF domain classes are considered as real data classes and are added to the final list of schema classes
-  - **true**: OWL/RDF domain classes are skipped, however, OWL/RDF properties are assigned to data domain/range pairs if real data classes have these properties
+```sh
+curl -X POST "http://localhost:8080/schema-extractor-rest/v2/endpoint/buildFullSchema?endpointUrl=http%3A%2F%2Flocalhost%3A8890%2Fsparql&graphName=MiniUniv&calculateSubClassRelations=true&calculatePropertyPropertyRelations=true&calculateDomainAndRangePairs=true&calculateDataTypes=true&calculateCardinalitiesMode=propertyLevelAndClassContext&minimalAnalyzedClassSize=0&enableLogging=true" -H "accept: application/json" -H "Content-Type: multipart/form-data"
+```
+Example JSON response - [SampleExtractedSchemaV2.json](build/SampleExtractedSchemaV2.json)
 
-**Request URL Example:**
-- http://localhost:8080/schema-extractor-rest/endpoint/buildFullSchema?endpointUrl=http://localhost:8890/sparql&graphName=MiniUniv&mode=simple&enableLogging=true&excludeSystemClasses=true&excludeMetaDomainClasses=true
+### RDF/OWL File Usage
 
-**Response Example:**
-- JSON file with extracted schema information, example [SampleExtractedSchema.json](build/SampleExtractedSchemaV1.json)
+POST http://server:port/schema-extractor-rest/v1/owlFile/buildFullSchema
 
-## SPARQL Endpoint Usage V2
-
-- GET http://server:port/schema-extractor-rest/v2/endpoint/buildFullSchema
-  
-**Available Service Path Parameters:**
-- **endpointUrl** (mandatory) - SPARQL endpoint URL
-- **graphName** (optional, recommended) - named graph used for schema extraction. If no graph name provided, the search will involve all graphs from the endpoints. Note - it may impact performance, thus it is recommended to provide required graph.
-- **mode** (optional) - extraction complexity. If no mode provided, it is processed as *full* by default. If the data source is large or complex, full mode may impact performance.
-  - **full** analyzed items: classes, class hierarchy (superclass/subclass), data type properties, object type properties with domain/range associations, property data types, property cardinalities
-  - **data** analyzed items: classes, class hierarchy (superclass/subclass), data type properties, object type properties with domain/range associations, property data types
-  - **simple** - analyzed items: classes, class hierarchy (superclass/subclass), data type properties, object type properties with domain/range associations
-- **enableLogging** (optional) - SPARQL query logging to the file
-  - **false** (default): executed queries are not logged
-  - **true**: executed queries are logged to the file /logs/obis-extractor.log (in web application server root folder)
-- **excludeSystemClasses** (optional) - indicator whether Virtuoso system classes (namespace http://www.openlinksw.com/schemas/virtrdf) should be added to the response
-  - **false**: Virtuoso system classes are added to the final list of schema classes
-  - **true** (default): Virtuoso system classes are skipped
-- **excludeMetaDomainClasses** (optional) - indicator whether meta domain classes (namespaces http://www.w3.org/2002/07/owl, http://www.w3.org/2000/01/rdf-schema, http://www.w3.org/1999/02/22-rdf-syntax-ns) should be added to the response
-  - **false** (default): OWL/RDF domain classes are considered as real data classes and are added to the final list of schema classes
-  - **true**: OWL/RDF domain classes are skipped, however, OWL/RDF properties are assigned to data domain/range pairs if real data classes have these properties
-
-**Request URL Example:**
-- http://localhost:8080/schema-extractor-rest/endpoint/buildFullSchema?endpointUrl=http://localhost:8890/sparql&graphName=MiniUniv&mode=simple&enableLogging=true&excludeSystemClasses=true&excludeMetaDomainClasses=true
-
-**Response Example:**
-- JSON file with extracted schema information, example [SampleExtractedSchema.json](build/SampleExtractedSchemaV2.json)
-
-## RDF/OWL File Usage
-
-**URL:** http://server:port/schema-extractor-rest/v1/owlFile/buildFullSchema
-
-**curl:**
 ```sh
 curl -X POST "http://localhost:8080/schema-extractor-rest/v1/owlFile/buildFullSchema?abstractPropertyThreshold=10&propertyInstanceCountThreshold=1000&calculateCardinalities=false" -H "accept: application/json" -H "Content-Type: multipart/form-data" -F "file=@SampleTestOntology.owl;type="
 ```
