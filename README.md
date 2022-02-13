@@ -27,11 +27,11 @@ If you need different port, run executable JAR file `java -jar schema-extractor-
 
 Schema Extractor RESTful APIs are expressed using JSON services and described in Swagger http://server:port/swagger-ui.html with requests and response models examples.
 
-| Version  | Service URL | Description |
-| ------------- | ------------- | ------------- |
-| [V1 SPARQL Endpoint](#sparql-endpoint-usage-v1)  | /schema-extractor-rest/v1/endpoint/buildFullSchema  | Extract and analyze data from SPARQL endpoint and build full schema model (version 1)  |
-| [V1 OWL/RDF File](#rdfowl-file-usage)  | /schema-extractor-rest/v1/owlFile/buildFullSchema  | Extract and analyze schema from OWL ontology file and then enhance with data from SPARQL endpoint (if provided)  |
-| [V2 SPARQL Endpoint](#sparql-endpoint-usage-v2) | /schema-extractor-rest/v2/endpoint/buildFullSchema  | Extract and analyze data from SPARQL endpoint and build full schema model (version 2)  |
+| Service Type and Version  | Description |
+| ------------- | ------------- |
+| [V1 SPARQL Endpoint](#sparql-endpoint-usage-v1)  | Extract and analyze data from SPARQL endpoint and build full schema model (version 1)  |
+| [V1 OWL/RDF File](#rdfowl-file-usage) | Extract and analyze schema from OWL ontology file and then enhance with data from SPARQL endpoint (if provided)  |
+| [V2 SPARQL Endpoint](#sparql-endpoint-usage-v2) | Extract and analyze data from SPARQL endpoint and build full schema model (version 2)  |
 
 ### SPARQL Endpoint Usage V1
 
