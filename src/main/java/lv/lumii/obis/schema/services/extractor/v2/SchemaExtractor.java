@@ -1024,8 +1024,7 @@ public class SchemaExtractor {
             }
             return;
         } catch (IOException e) {
-            log.error("Cannot read namespaces from the system configuration");
-            e.printStackTrace();
+            log.info("Cannot read namespaces from the system configuration: namespaces.json file was not found or was incorrectly formatted. The namespaces will be auto generated from the given schema");
         }
 
         // 3. apply namespaces from the analyzed schema with auto generated prefixes
