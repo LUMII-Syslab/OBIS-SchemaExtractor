@@ -18,6 +18,7 @@ import javax.ws.rs.core.MediaType;
 import java.io.*;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * REST Controller to process Schema Extractor web requests.
@@ -60,11 +61,11 @@ public class SchemaExtractorControllerV2 {
     @SuppressWarnings("unused")
     public String buildFullSchemaFromEndpointV2(@Validated @ModelAttribute @Nonnull SchemaExtractorRequestNew request,
                                                 @RequestParam(value ="includedClassesFile", required=false)
-                                                @ApiParam(access = "92", value = "Valid CSV file with the list of included classes (if not specified - all classes will be analyzed)") MultipartFile includedClassesCsvFile,
+                                                @ApiParam(access = "93", value = "Valid CSV file with the list of included classes (if not specified - all classes will be analyzed)") MultipartFile includedClassesCsvFile,
                                                 @RequestParam(value ="includedPropertiesFile", required=false)
-                                                @ApiParam(access = "93", value = "Valid CSV file with the list of included properties (if not specified - all properties will be analyzed)") MultipartFile includedPropertiesCsvFile,
+                                                @ApiParam(access = "94", value = "Valid CSV file with the list of included properties (if not specified - all properties will be analyzed)") MultipartFile includedPropertiesCsvFile,
                                                 @RequestParam(value ="namespacePrefixFile", required=false)
-                                                @ApiParam(access = "94", value = "Valid JSON file with predefined namespaces") MultipartFile namespacePrefixFile) {
+                                                @ApiParam(access = "95", value = "Valid JSON file with predefined namespaces") MultipartFile namespacePrefixFile) {
 
         // 1. Create the request object
         SchemaExtractorRequestDto requestDto = requestBuilder.buildRequest(request);

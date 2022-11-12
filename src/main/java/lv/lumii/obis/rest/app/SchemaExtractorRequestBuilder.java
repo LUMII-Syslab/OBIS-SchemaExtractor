@@ -6,6 +6,7 @@ import lv.lumii.obis.schema.services.JsonSchemaService;
 import lv.lumii.obis.schema.services.extractor.dto.SchemaExtractorRequestDto;
 import lv.lumii.obis.schema.services.extractor.v2.dto.SchemaExtractorPredefinedNamespaces;
 import lv.lumii.obis.schema.services.extractor.v2.dto.SchemaExtractorRequestedClassDto;
+import lv.lumii.obis.schema.services.extractor.v2.dto.SchemaExtractorRequestedLabelDto;
 import lv.lumii.obis.schema.services.extractor.v2.dto.SchemaExtractorRequestedPropertyDto;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
@@ -16,7 +17,9 @@ import java.io.InputStream;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class SchemaExtractorRequestBuilder {
@@ -42,6 +45,7 @@ public class SchemaExtractorRequestBuilder {
         requestDto.setCalculateDomainAndRangePairs(request.getCalculateDomainAndRangePairs());
         requestDto.setCalculateDataTypes(request.getCalculateDataTypes());
         requestDto.setCalculateCardinalitiesMode(Enums.getIfPresent(SchemaExtractorRequestDto.CalculateCardinalitiesMode.class, request.getCalculateCardinalitiesMode().name()).orNull());
+        requestDto.setIncludedLabels(applyLabels(request.getAddedLabels()));
         requestDto.setMinimalAnalyzedClassSize(request.getMinimalAnalyzedClassSize());
         requestDto.setExcludedNamespaces(request.getExcludedNamespaces());
         requestDto.setEnableLogging(request.getEnableLogging());
@@ -106,6 +110,33 @@ public class SchemaExtractorRequestBuilder {
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException("Error generating unique correlation id for SchemaExtractor request: ", e);
         }
+    }
+
+    private List<SchemaExtractorRequestedLabelDto> applyLabels(@Nonnull List<String> includedLabels) {
+        List<SchemaExtractorRequestedLabelDto> requestedLabelDtos = new ArrayList<>();
+
+        // Expected label format: <label>@{<list of languages>}
+        // Example 1: http://www.w3.org/2000/01/rdf-schema#label
+        // Example 2: http://www.w3.org/2000/01/rdf-schema#label@{en}
+        // Example 3: http://www.w3.org/2000/01/rdf-schema#label@{en;es;lv}
+        for (String label : includedLabels) {
+            if (StringUtils.isEmpty(label)) continue;
+
+            String[] parts = label.split("@", 2);
+
+            if (parts[0].trim().length() == 0) continue;
+
+            if (parts.length == 1 || parts[1].trim().length() < 3) {
+                requestedLabelDtos.add(new SchemaExtractorRequestedLabelDto(parts[0]));
+                continue;
+            }
+
+            String[] languages = parts[1].substring(1, parts[1].length() - 1).split("\\s*;\\s*");
+            requestedLabelDtos.add(
+                    new SchemaExtractorRequestedLabelDto(parts[0], Arrays.stream(languages).collect(Collectors.toList())));
+        }
+
+        return requestedLabelDtos;
     }
 
 }

@@ -247,6 +247,13 @@ public enum SchemaExtractorQueries {
             "SELECT ?x ?y WHERE { ?x a <classA>. ?x <property> ?y. ?y a <rangeClass>. OPTIONAL {?x a ?cc. FILTER (customFilter)} FILTER (!BOUND(?cc))} LIMIT 1"
     ),
 
+    FIND_LABEL(
+            "SELECT (STR(?z) as ?value) (LANG(?z) as ?language) WHERE { ?x ?y ?z. FILTER(?x = <resource>) FILTER(?y = <property>) }"
+    ),
+    FIND_LABEL_WITH_LANG(
+            "SELECT (STR(?z) as ?value) (LANG(?z) as ?language) WHERE { ?x ?y ?z. FILTER(?x = <resource>) FILTER(?y = <property>) FILTER (customFilter) }"
+    ),
+
     ;
 
 

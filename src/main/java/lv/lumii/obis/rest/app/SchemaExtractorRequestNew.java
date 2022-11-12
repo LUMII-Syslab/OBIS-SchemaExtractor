@@ -35,13 +35,16 @@ public class SchemaExtractorRequestNew {
     @ApiParam(access = "7", value = "Calculate min and max cardinalities for all properties", defaultValue = "propertyLevelAndClassContext", required = true)
     private CalculateCardinalitiesMode calculateCardinalitiesMode;
 
-    @ApiParam(access = "8", value = "Minimal Analyzed Class Size (set 1 if all classes should be analyzed)", defaultValue = "1", required = true)
+    @ApiParam(access = "8", value = "Add label information", allowEmptyValue = true)
+    private List<String> addedLabels;
+
+    @ApiParam(access = "9", value = "Minimal Analyzed Class Size (set 1 if all classes should be analyzed)", defaultValue = "1", required = true)
     private Integer minimalAnalyzedClassSize;
 
-    @ApiParam(access = "9", value = "List of excluded namespaces", allowEmptyValue = true)
+    @ApiParam(access = "91", value = "List of excluded namespaces", allowEmptyValue = true)
     private List<String> excludedNamespaces;
 
-    @ApiParam(access = "91", value = "Enable SPARQL Query Logging to the file", defaultValue = "true", required = true)
+    @ApiParam(access = "92", value = "Enable SPARQL Query Logging to the file", defaultValue = "true", required = true)
     private Boolean enableLogging;
 
     public Boolean getCalculateSubClassRelations() {
@@ -92,5 +95,13 @@ public class SchemaExtractorRequestNew {
             excludedNamespaces = new ArrayList<>();
         }
         return excludedNamespaces;
+    }
+
+    @Nonnull
+    public List<String> getAddedLabels() {
+        if (addedLabels == null) {
+            addedLabels = new ArrayList<>();
+        }
+        return addedLabels;
     }
 }

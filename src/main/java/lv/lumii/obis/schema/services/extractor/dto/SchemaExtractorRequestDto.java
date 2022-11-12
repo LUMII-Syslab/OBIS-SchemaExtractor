@@ -4,6 +4,7 @@ import lombok.Getter;
 import lombok.Setter;
 import lv.lumii.obis.schema.services.extractor.v2.dto.SchemaExtractorPredefinedNamespaces;
 import lv.lumii.obis.schema.services.extractor.v2.dto.SchemaExtractorRequestedClassDto;
+import lv.lumii.obis.schema.services.extractor.v2.dto.SchemaExtractorRequestedLabelDto;
 import lv.lumii.obis.schema.services.extractor.v2.dto.SchemaExtractorRequestedPropertyDto;
 
 import javax.annotation.Nonnull;
@@ -39,6 +40,7 @@ public class SchemaExtractorRequestDto {
     private Boolean calculateDataTypes;
     private CalculateCardinalitiesMode calculateCardinalitiesMode;
     private Integer minimalAnalyzedClassSize;
+    private List<SchemaExtractorRequestedLabelDto> includedLabels;
     private List<SchemaExtractorRequestedClassDto> includedClasses;
     private List<SchemaExtractorRequestedPropertyDto> includedProperties;
     private List<String> excludedNamespaces;
@@ -71,5 +73,13 @@ public class SchemaExtractorRequestDto {
             includedProperties = new ArrayList<>();
         }
         return includedProperties;
+    }
+
+    @Nonnull
+    public List<SchemaExtractorRequestedLabelDto> getIncludedLabels() {
+        if (includedLabels == null) {
+            includedLabels = new ArrayList<>();
+        }
+        return includedLabels;
     }
 }

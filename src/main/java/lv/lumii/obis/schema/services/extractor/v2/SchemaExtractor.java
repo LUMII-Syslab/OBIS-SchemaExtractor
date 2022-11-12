@@ -12,10 +12,7 @@ import lv.lumii.obis.schema.services.common.dto.QueryResponse;
 import lv.lumii.obis.schema.services.common.dto.QueryResult;
 import lv.lumii.obis.schema.services.extractor.SchemaExtractorQueries;
 import lv.lumii.obis.schema.services.extractor.dto.*;
-import lv.lumii.obis.schema.services.extractor.v2.dto.SchemaExtractorPredefinedNamespaces;
-import lv.lumii.obis.schema.services.extractor.v2.dto.SchemaExtractorPropertyLinkedClassInfo;
-import lv.lumii.obis.schema.services.extractor.v2.dto.SchemaExtractorRequestedClassDto;
-import lv.lumii.obis.schema.services.extractor.v2.dto.SchemaExtractorRequestedPropertyDto;
+import lv.lumii.obis.schema.services.extractor.v2.dto.*;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -55,6 +52,7 @@ public class SchemaExtractor {
         Map<String, SchemaExtractorClassNodeInfo> graphOfClasses = new HashMap<>();
         buildClasses(request, schema, graphOfClasses);
         buildProperties(request, schema, graphOfClasses);
+        buildLabels(request, schema);
         buildNamespaceMap(request, schema);
         return schema;
     }
@@ -992,14 +990,14 @@ public class SchemaExtractor {
         return internalDtos.stream()
                 .map(internalDto -> new DataType(
                         internalDto.getDataType(), internalDto.getTripleCount())).
-                        collect(Collectors.toList());
+                collect(Collectors.toList());
     }
 
     protected List<SchemaPropertyLinkedPropertyDetails> convertInternalLinkedPropertyToApiDto(@Nonnull List<SchemaExtractorPropertyRelatedPropertyInfo> internalDtos) {
         return sortPropertyLinkedPropertiesByTripleCount(internalDtos).stream()
                 .map(internalDto -> new SchemaPropertyLinkedPropertyDetails(
                         internalDto.getPropertyName(), internalDto.getTripleCount())).
-                        collect(Collectors.toList());
+                collect(Collectors.toList());
     }
 
     protected void buildNamespaceMap(@Nonnull SchemaExtractorRequestDto request, @Nonnull Schema schema) {
@@ -1264,7 +1262,7 @@ public class SchemaExtractor {
 
     protected SchemaClass findClass(@Nonnull List<SchemaClass> classes, @Nullable String className) {
         return classes.stream().filter(
-                schemaClass -> schemaClass.getFullName().equals(className) || schemaClass.getLocalName().equals(className))
+                        schemaClass -> schemaClass.getFullName().equals(className) || schemaClass.getLocalName().equals(className))
                 .findFirst().orElse(null);
     }
 
@@ -1477,6 +1475,57 @@ public class SchemaExtractor {
         });
         // sort property classes by triple count (descending) and then by total class triple count (ascending)
         return sortPropertyLinkedClassesByTripleCount(classesForProcessing);
+    }
+
+    protected void buildLabels(@Nonnull SchemaExtractorRequestDto request, @Nonnull Schema schema) {
+        request.getIncludedLabels().forEach(label -> {
+            log.info(request.getCorrelationId() + " - findLabelsForClasses");
+            buildLabelsForSchemaElements(request, label, schema.getClasses());
+            log.info(request.getCorrelationId() + " - findLabelsForProperties");
+            buildLabelsForSchemaElements(request, label, schema.getProperties());
+        });
+    }
+
+    protected void buildLabelsForSchemaElements(@Nonnull SchemaExtractorRequestDto request, @Nonnull SchemaExtractorRequestedLabelDto label,
+                                                @Nonnull List<? extends SchemaElement> elements) {
+        elements.forEach(element -> {
+            String query;
+            QueryResponse queryResponse;
+            if (label.getLanguages().isEmpty()) {
+                query = FIND_LABEL.getSparqlQuery()
+                        .replace(SPARQL_QUERY_BINDING_NAME_RESOURCE, element.getFullName())
+                        .replace(SPARQL_QUERY_BINDING_NAME_PROPERTY, label.getLabelProperty());
+                queryResponse = sparqlEndpointProcessor.read(request, FIND_LABEL.name(), query, false);
+            } else {
+                query = FIND_LABEL_WITH_LANG.getSparqlQuery()
+                        .replace(SPARQL_QUERY_BINDING_NAME_RESOURCE, element.getFullName())
+                        .replace(SPARQL_QUERY_BINDING_NAME_PROPERTY, label.getLabelProperty())
+                        .replace(SPARQL_QUERY_BINDING_NAME_CUSTOM_FILTER, buildFilterWithLanguages(label.getLanguages()));
+                queryResponse = sparqlEndpointProcessor.read(request, FIND_LABEL_WITH_LANG.name(), query, false);
+            }
+            for (QueryResult queryResult : queryResponse.getResults()) {
+                String value = queryResult.get(SPARQL_QUERY_BINDING_NAME_VALUE);
+                String language = queryResult.get(SPARQL_QUERY_BINDING_NAME_LANGUAGE);
+                if (StringUtils.isNotEmpty(value)) {
+                    if (StringUtils.isNotEmpty(language)) {
+                        element.getLabels().add(new Label(label.getLabelProperty(), value, language));
+                    } else {
+                        element.getLabels().add(new Label(label.getLabelProperty(), value));
+                    }
+                }
+            }
+        });
+    }
+
+    protected String buildFilterWithLanguages(@Nonnull List<String> languages) {
+        StringBuilder customFilter = new StringBuilder("lang(?z) = ''");
+        languages.forEach(lang -> {
+            customFilter.
+                    append(" || lang(?z) = '")
+                    .append(lang)
+                    .append("'");
+        });
+        return customFilter.toString();
     }
 
 }
