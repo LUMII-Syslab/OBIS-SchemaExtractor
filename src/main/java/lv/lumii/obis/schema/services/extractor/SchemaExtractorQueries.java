@@ -152,13 +152,13 @@ public enum SchemaExtractorQueries {
     ),
 
     FIND_PROPERTY_FOLLOWERS(
-            "SELECT ?p2 (COUNT(?x) as ?instances) WHERE { { SELECT ?x where { [] <property> ?x } } ?x ?p2 [] } GROUP BY ?p2"
+            "SELECT ?p2 (COUNT(?x) as ?instances) WHERE { { SELECT DISTINCT ?x where { [] <property> ?x } } ?x ?p2 [] } GROUP BY ?p2"
     ),
     FIND_PROPERTY_OUTGOING_PROPERTIES(
-            "SELECT ?p2 (COUNT(?x) as ?instances) WHERE { { SELECT ?x WHERE { ?x <property> [] } } ?x ?p2 [] } GROUP BY ?p2"
+            "SELECT ?p2 (COUNT(?x) as ?instances) WHERE { { SELECT DISTINCT ?x WHERE { ?x <property> [] } } ?x ?p2 [] } GROUP BY ?p2"
     ),
     FIND_PROPERTY_INCOMING_PROPERTIES(
-            "SELECT ?p2 (COUNT(?x) as ?instances) WHERE { { SELECT ?x WHERE { [] <property> ?x . FILTER(!isLiteral(?x))} } [] ?p2 ?x } GROUP BY ?p2"
+            "SELECT ?p2 (COUNT(?x) as ?instances) WHERE { { SELECT DISTINCT ?x WHERE { [] <property> ?x . FILTER(!isLiteral(?x))} } [] ?p2 ?x } GROUP BY ?p2"
     ),
 
     FIND_ALL_PROPERTIES(
