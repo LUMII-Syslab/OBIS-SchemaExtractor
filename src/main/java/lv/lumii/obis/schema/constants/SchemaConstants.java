@@ -86,5 +86,9 @@ public class SchemaConstants {
     public static final String SPARQL_QUERY_BINDING_NAME_VALUE = "value";
     public static final String SPARQL_QUERY_BINDING_NAME_LANGUAGE = "language";
     public static final String SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY = "classificationProperty";
+    public static final String SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_A = "classificationPropertyA";
+    public static final String SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_B = "classificationPropertyB";
+    public static final String SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_DOMAIN = "classificationPropertyDomain";
+    public static final String SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_RANGE = "classificationPropertyRange";
 
 }

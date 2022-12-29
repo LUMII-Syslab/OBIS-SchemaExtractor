@@ -17,6 +17,9 @@ public class SchemaExtractorDomainRangeInfo {
     private Integer sourceImportanceIndex;
     private Integer targetImportanceIndex;
 
+    private String classificationPropertyForDomain;
+    private String classificationPropertyForRange;
+
     public SchemaExtractorDomainRangeInfo(){}
 
     public SchemaExtractorDomainRangeInfo(String domainClass){
@@ -27,5 +30,13 @@ public class SchemaExtractorDomainRangeInfo {
         this.domainClass = domainClass;
         this.rangeClass = rangeClass;
         this.tripleCount = tripleCount;
+    }
+
+    public SchemaExtractorDomainRangeInfo(String domainClass, String rangeClass, Long tripleCount, String classificationPropertyForDomain, String classificationPropertyForRange) {
+        this.domainClass = domainClass;
+        this.rangeClass = rangeClass;
+        this.tripleCount = tripleCount;
+        this.classificationPropertyForDomain = classificationPropertyForDomain;
+        this.classificationPropertyForRange = classificationPropertyForRange;
     }
 }

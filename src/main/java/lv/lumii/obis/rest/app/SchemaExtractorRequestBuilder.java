@@ -19,8 +19,11 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import static lv.lumii.obis.schema.constants.SchemaConstants.RDF_TYPE;
 
 @Service
 public class SchemaExtractorRequestBuilder {
@@ -151,7 +154,8 @@ public class SchemaExtractorRequestBuilder {
                 formattedClassificationProperties.add(classificationProperty);
             }
         }
-        return formattedClassificationProperties;
+        return (formattedClassificationProperties.isEmpty())
+                ? Collections.singletonList(RDF_TYPE) : Collections.unmodifiableList(formattedClassificationProperties);
     }
 
 }

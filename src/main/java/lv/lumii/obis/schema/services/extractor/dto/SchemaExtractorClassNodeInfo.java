@@ -24,6 +24,8 @@ public class SchemaExtractorClassNodeInfo {
 	private Integer importanceIndex;
 	private List<SchemaExtractorDataTypeInfo> dataTypes;
 
+	private String classificationProperty;
+
 	public SchemaExtractorClassNodeInfo() {
 	}
 
@@ -31,9 +33,20 @@ public class SchemaExtractorClassNodeInfo {
 		this.className = className;
 	}
 
+	public SchemaExtractorClassNodeInfo(String className, String classificationProperty) {
+		this.className = className;
+		this.classificationProperty = classificationProperty;
+	}
+
 	public SchemaExtractorClassNodeInfo(String className, Long tripleCount) {
 		this.className = className;
 		this.tripleCount = tripleCount;
+	}
+
+	public SchemaExtractorClassNodeInfo(String className, Long tripleCount, String classificationProperty) {
+		this.className = className;
+		this.tripleCount = tripleCount;
+		this.classificationProperty = classificationProperty;
 	}
 
 	public List<String> getNeighbors() {
