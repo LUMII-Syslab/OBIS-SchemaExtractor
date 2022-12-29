@@ -47,6 +47,7 @@ public class SchemaExtractorRequestBuilder {
         requestDto.setCalculateCardinalitiesMode(Enums.getIfPresent(SchemaExtractorRequestDto.CalculateCardinalitiesMode.class, request.getCalculateCardinalitiesMode().name()).orNull());
         requestDto.setIncludedLabels(applyLabels(request.getAddedLabels()));
         requestDto.setMinimalAnalyzedClassSize(request.getMinimalAnalyzedClassSize());
+        requestDto.setClassificationProperties(request.getClassificationProperties());
         requestDto.setExcludedNamespaces(request.getExcludedNamespaces());
         requestDto.setEnableLogging(request.getEnableLogging());
         return requestDto;

@@ -7,7 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import lv.lumii.obis.schema.services.common.dto.QueryResponse;
 import lv.lumii.obis.schema.services.common.dto.QueryResult;
 import lv.lumii.obis.schema.services.common.dto.SparqlEndpointConfig;
-import lv.lumii.obis.schema.services.extractor.SchemaExtractorQueries;
+import lv.lumii.obis.schema.services.extractor.v1.SchemaExtractorQueries;
 import lv.lumii.obis.schema.services.extractor.dto.SchemaExtractorRequestDto;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.jena.query.Query;
@@ -29,6 +29,11 @@ public class SparqlEndpointProcessor {
 
     @Nonnull
     public List<QueryResult> read(@Nonnull SchemaExtractorRequestDto request, @Nonnull SchemaExtractorQueries queryItem) {
+        return read(request, queryItem.name(), queryItem.getSparqlQuery());
+    }
+
+    @Nonnull
+    public List<QueryResult> read(@Nonnull SchemaExtractorRequestDto request, @Nonnull lv.lumii.obis.schema.services.extractor.v2.SchemaExtractorQueries queryItem) {
         return read(request, queryItem.name(), queryItem.getSparqlQuery());
     }
 

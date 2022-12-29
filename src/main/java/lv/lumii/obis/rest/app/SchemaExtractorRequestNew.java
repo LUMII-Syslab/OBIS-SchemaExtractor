@@ -41,10 +41,13 @@ public class SchemaExtractorRequestNew {
     @ApiParam(access = "9", value = "Minimal Analyzed Class Size (set 1 if all classes should be analyzed)", defaultValue = "1", required = true)
     private Integer minimalAnalyzedClassSize;
 
-    @ApiParam(access = "91", value = "List of excluded namespaces", allowEmptyValue = true)
+    @ApiParam(access = "91", value = "List of classification properties, default property is rdf:type", allowEmptyValue = true)
+    private List<String> classificationProperties;
+
+    @ApiParam(access = "92", value = "List of excluded namespaces", allowEmptyValue = true)
     private List<String> excludedNamespaces;
 
-    @ApiParam(access = "92", value = "Enable SPARQL Query Logging to the file", defaultValue = "true", required = true)
+    @ApiParam(access = "93", value = "Enable SPARQL Query Logging to the file", defaultValue = "true", required = true)
     private Boolean enableLogging;
 
     public Boolean getCalculateSubClassRelations() {
@@ -87,6 +90,14 @@ public class SchemaExtractorRequestNew {
             enableLogging = Boolean.FALSE;
         }
         return enableLogging;
+    }
+
+    @Nonnull
+    public List<String> getClassificationProperties() {
+        if (classificationProperties == null) {
+            classificationProperties = new ArrayList<>();
+        }
+        return classificationProperties;
     }
 
     @Nonnull

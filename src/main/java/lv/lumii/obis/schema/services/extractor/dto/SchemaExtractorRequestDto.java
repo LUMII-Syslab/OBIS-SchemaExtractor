@@ -40,6 +40,7 @@ public class SchemaExtractorRequestDto {
     private Boolean calculateDataTypes;
     private CalculateCardinalitiesMode calculateCardinalitiesMode;
     private Integer minimalAnalyzedClassSize;
+    private List<String> classificationProperties;
     private List<SchemaExtractorRequestedLabelDto> includedLabels;
     private List<SchemaExtractorRequestedClassDto> includedClasses;
     private List<SchemaExtractorRequestedPropertyDto> includedProperties;

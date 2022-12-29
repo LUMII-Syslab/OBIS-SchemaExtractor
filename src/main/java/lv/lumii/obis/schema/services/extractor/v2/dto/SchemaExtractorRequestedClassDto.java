@@ -13,4 +13,9 @@ public class SchemaExtractorRequestedClassDto {
     public SchemaExtractorRequestedClassDto(String className) {
         this.className = className;
     }
+
+    @Override
+    public String toString() {
+        return className;
+    }
 }

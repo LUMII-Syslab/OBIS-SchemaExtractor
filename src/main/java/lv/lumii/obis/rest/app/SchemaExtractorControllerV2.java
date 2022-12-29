@@ -18,7 +18,6 @@ import javax.ws.rs.core.MediaType;
 import java.io.*;
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.List;
 
 /**
  * REST Controller to process Schema Extractor web requests.

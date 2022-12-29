@@ -30,4 +30,9 @@ public class SchemaExtractorRequestedLabelDto {
         }
         return languages;
     }
+
+    @Override
+    public String toString() {
+        return "{" + labelProperty + "@" + languages + "}";
+    }
 }

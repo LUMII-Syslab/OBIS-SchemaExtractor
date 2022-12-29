@@ -13,4 +13,9 @@ public class SchemaExtractorRequestedPropertyDto {
     public SchemaExtractorRequestedPropertyDto(String propertyName) {
         this.propertyName = propertyName;
     }
+
+    @Override
+    public String toString() {
+        return propertyName;
+    }
 }

@@ -10,7 +10,6 @@ import lv.lumii.obis.schema.services.SchemaUtil;
 import lv.lumii.obis.schema.services.common.SparqlEndpointProcessor;
 import lv.lumii.obis.schema.services.common.dto.QueryResponse;
 import lv.lumii.obis.schema.services.common.dto.QueryResult;
-import lv.lumii.obis.schema.services.extractor.SchemaExtractorQueries;
 import lv.lumii.obis.schema.services.extractor.dto.*;
 import lv.lumii.obis.schema.services.extractor.v2.dto.*;
 import org.apache.commons.lang3.StringUtils;
@@ -25,14 +24,14 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static lv.lumii.obis.schema.constants.SchemaConstants.*;
-import static lv.lumii.obis.schema.services.extractor.SchemaExtractorQueries.*;
+import static lv.lumii.obis.schema.services.extractor.v2.SchemaExtractorQueries.*;
 import static org.apache.commons.lang3.BooleanUtils.*;
 
 @Slf4j
 @Service
 public class SchemaExtractor {
 
-    private static Comparator<String> nullSafeStringComparator = Comparator.nullsLast(String::compareToIgnoreCase);
+    private static final Comparator<String> nullSafeStringComparator = Comparator.nullsLast(String::compareToIgnoreCase);
 
     private enum ImportanceIndexValidationType {DOMAIN, RANGE, PAIR_DOMAIN, PAIR_RANGE}
 
@@ -123,9 +122,7 @@ public class SchemaExtractor {
 
     protected List<SchemaClass> processClasses(@Nonnull List<SchemaExtractorRequestedClassDto> includedClasses, @Nonnull SchemaExtractorRequestDto request) {
         List<SchemaClass> classes = new ArrayList<>();
-        includedClasses.forEach(c -> {
-            addClass(c.getClassName(), c.getInstanceCount(), classes, request);
-        });
+        includedClasses.forEach(c -> addClass(c.getClassName(), c.getInstanceCount(), classes, request));
         return classes;
     }
 
@@ -189,9 +186,7 @@ public class SchemaExtractor {
     @Nonnull
     protected Map<String, SchemaExtractorPropertyNodeInfo> processProperties(@Nonnull List<SchemaExtractorRequestedPropertyDto> includedProperties, @Nonnull SchemaExtractorRequestDto request) {
         Map<String, SchemaExtractorPropertyNodeInfo> properties = new HashMap<>();
-        includedProperties.forEach(p -> {
-            addProperty(p.getPropertyName(), p.getInstanceCount(), properties, request);
-        });
+        includedProperties.forEach(p -> addProperty(p.getPropertyName(), p.getInstanceCount(), properties, request));
         return properties;
     }
 
@@ -1050,9 +1045,9 @@ public class SchemaExtractor {
         Map<String, Long> namespacesWithCounts = namespaces.stream()
                 .collect(Collectors.groupingBy(e -> e, Collectors.counting()));
         Set<String> orderedNamespaces = new LinkedHashSet<>();
-        namespacesWithCounts.entrySet().stream().sorted(Map.Entry.comparingByValue(Comparator.reverseOrder())).forEach(entry -> {
-            orderedNamespaces.add(entry.getKey());
-        });
+        namespacesWithCounts.entrySet().stream()
+                .sorted(Map.Entry.comparingByValue(Comparator.reverseOrder()))
+                .forEach(entry -> orderedNamespaces.add(entry.getKey()));
         return orderedNamespaces;
     }
 
@@ -1060,11 +1055,24 @@ public class SchemaExtractor {
         schema.getParameters().add(new SchemaParameter(SchemaParameter.PARAM_NAME_ENDPOINT, request.getEndpointUrl()));
         schema.getParameters().add(new SchemaParameter(SchemaParameter.PARAM_NAME_GRAPH_NAME, request.getGraphName()));
         schema.getParameters().add(new SchemaParameter(SchemaParameter.PARAM_NAME_CALCULATE_SUBCLASS_RELATIONS, request.getCalculateSubClassRelations().toString()));
+        schema.getParameters().add(new SchemaParameter(SchemaParameter.PARAM_NAME_CALCULATE_PROPERTY_PROPERTY_RELATIONS, request.getCalculatePropertyPropertyRelations().toString()));
         schema.getParameters().add(new SchemaParameter(SchemaParameter.PARAM_NAME_CALCULATE_DOMAIN_AND_RANGE_PAIRS, request.getCalculateDomainAndRangePairs().toString()));
         schema.getParameters().add(new SchemaParameter(SchemaParameter.PARAM_NAME_CALCULATE_DATA_TYPES, request.getCalculateDataTypes().toString()));
         schema.getParameters().add(new SchemaParameter(SchemaParameter.PARAM_NAME_CALCULATE_CARDINALITIES, request.getCalculateCardinalitiesMode().toString()));
         if (request.getMinimalAnalyzedClassSize() != null) {
             schema.getParameters().add(new SchemaParameter(SchemaParameter.PARAM_NAME_MIN_CLASS_SIZE, request.getMinimalAnalyzedClassSize().toString()));
+        }
+        if (!request.getIncludedLabels().isEmpty()) {
+            schema.getParameters().add(new SchemaParameter(SchemaParameter.PARAM_NAME_INCLUDED_LABELS, request.getIncludedLabels().toString()));
+        }
+        if (!request.getIncludedClasses().isEmpty()) {
+            schema.getParameters().add(new SchemaParameter(SchemaParameter.PARAM_NAME_INCLUDED_CLASSES, request.getIncludedClasses().toString()));
+        }
+        if (!request.getIncludedProperties().isEmpty()) {
+            schema.getParameters().add(new SchemaParameter(SchemaParameter.PARAM_NAME_INCLUDED_PROPERTIES, request.getIncludedProperties().toString()));
+        }
+        if (!request.getClassificationProperties().isEmpty()) {
+            schema.getParameters().add(new SchemaParameter(SchemaParameter.PARAM_NAME_CLASSIFICATION_PROPERTIES, request.getClassificationProperties().toString()));
         }
         if (!request.getExcludedNamespaces().isEmpty()) {
             schema.getParameters().add(new SchemaParameter(SchemaParameter.PARAM_NAME_EXCLUDED_NAMESPACES, request.getExcludedNamespaces().toString()));
@@ -1079,7 +1087,7 @@ public class SchemaExtractor {
         if (localNameIndex == -1) {
             localNameIndex = fullName.lastIndexOf("/");
         }
-        if (localNameIndex != -1 && localNameIndex < fullName.length()) {
+        if (localNameIndex != -1) {
             localName = fullName.substring(localNameIndex + 1);
             namespace = fullName.substring(0, localNameIndex + 1);
         }
@@ -1339,7 +1347,7 @@ public class SchemaExtractor {
     // 3. check if all links are accessible from X
     // 4. if yes - OK, do nothing
     // 5. if no - add link to the next class which:
-    //		a. has less instances
+    //		a. has fewer instances
     //		b. includes all instances from X
     //		c. is not accessible from X
     // 6. repeat validation
@@ -1519,12 +1527,7 @@ public class SchemaExtractor {
 
     protected String buildFilterWithLanguages(@Nonnull List<String> languages) {
         StringBuilder customFilter = new StringBuilder("lang(?z) = ''");
-        languages.forEach(lang -> {
-            customFilter.
-                    append(" || lang(?z) = '")
-                    .append(lang)
-                    .append("'");
-        });
+        languages.forEach(lang -> customFilter.append(" || lang(?z) = '").append(lang).append("'"));
         return customFilter.toString();
     }
 
