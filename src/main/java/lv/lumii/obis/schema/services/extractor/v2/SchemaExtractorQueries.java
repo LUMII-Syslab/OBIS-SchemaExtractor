@@ -7,7 +7,7 @@ import javax.annotation.Nonnull;
 public enum SchemaExtractorQueries {
 
     FIND_CLASSES_WITH_INSTANCE_COUNT(
-            "SELECT ?class (COUNT(?x) as ?instances) WHERE { ?x a ?class. } GROUP BY ?class"
+            "SELECT ?class (COUNT(?x) as ?instances) WHERE { ?x <classificationProperty> ?class. } GROUP BY ?class"
     ),
 
     FIND_INTERSECTION_CLASSES_FOR_KNOWN_CLASS(

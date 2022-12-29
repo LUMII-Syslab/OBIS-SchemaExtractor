@@ -1,6 +1,7 @@
 package lv.lumii.obis.rest.app;
 
 import com.google.common.base.Enums;
+import lv.lumii.obis.schema.constants.SchemaConstants;
 import lv.lumii.obis.schema.services.CsvFileReaderUtil;
 import lv.lumii.obis.schema.services.JsonSchemaService;
 import lv.lumii.obis.schema.services.extractor.dto.SchemaExtractorRequestDto;
@@ -28,8 +29,8 @@ public class SchemaExtractorRequestBuilder {
 
     private static volatile SecureRandom secureRandom;
 
-    private JsonSchemaService jsonSchemaService;
-    private CsvFileReaderUtil csvFileReaderUtil;
+    private final JsonSchemaService jsonSchemaService;
+    private final CsvFileReaderUtil csvFileReaderUtil;
 
     public SchemaExtractorRequestBuilder(JsonSchemaService jsonSchemaService, CsvFileReaderUtil csvFileReaderUtil) {
         this.jsonSchemaService = jsonSchemaService;
@@ -47,7 +48,7 @@ public class SchemaExtractorRequestBuilder {
         requestDto.setCalculateCardinalitiesMode(Enums.getIfPresent(SchemaExtractorRequestDto.CalculateCardinalitiesMode.class, request.getCalculateCardinalitiesMode().name()).orNull());
         requestDto.setIncludedLabels(applyLabels(request.getAddedLabels()));
         requestDto.setMinimalAnalyzedClassSize(request.getMinimalAnalyzedClassSize());
-        requestDto.setClassificationProperties(request.getClassificationProperties());
+        requestDto.setClassificationProperties(applyClassificationProperties(request.getClassificationProperties()));
         requestDto.setExcludedNamespaces(request.getExcludedNamespaces());
         requestDto.setEnableLogging(request.getEnableLogging());
         return requestDto;
@@ -138,6 +139,19 @@ public class SchemaExtractorRequestBuilder {
         }
 
         return requestedLabelDtos;
+    }
+
+    @Nonnull
+    private List<String> applyClassificationProperties(@Nonnull List<String> classificationProperties) {
+        List<String> formattedClassificationProperties = new ArrayList<>();
+        for (String classificationProperty : classificationProperties) {
+            if (classificationProperty != null && SchemaConstants.RDF_TYPE_SHORT.equalsIgnoreCase(classificationProperty.trim())) {
+                formattedClassificationProperties.add(SchemaConstants.RDF_TYPE);
+            } else {
+                formattedClassificationProperties.add(classificationProperty);
+            }
+        }
+        return formattedClassificationProperties;
     }
 
 }

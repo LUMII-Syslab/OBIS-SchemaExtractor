@@ -22,6 +22,8 @@ public class SchemaClass extends SchemaElement {
 
 	private Boolean propertiesInSchema;
 
+	private String classificationProperty;
+
 	@Nonnull
 	public Set<String> getSuperClasses() {
 		if(superClasses == null){

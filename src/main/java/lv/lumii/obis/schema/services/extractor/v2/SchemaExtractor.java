@@ -70,11 +70,18 @@ public class SchemaExtractor {
         boolean requestedClassesWithInstanceCounts = request.getIncludedClasses().stream().anyMatch(c -> SchemaUtil.getLongValueFromString(c.getInstanceCount()) > 0L);
 
         // if the request does not include the list of classes or classes do not have instance count - read from the SPARQL endpoint
-        List<SchemaClass> classes;
+        List<SchemaClass> classes = new ArrayList<>();
         if (isFalse(requestedClassesWithInstanceCounts)) {
-            List<QueryResult> queryResults = sparqlEndpointProcessor.read(request, FIND_CLASSES_WITH_INSTANCE_COUNT);
-            classes = processClassesWithEndpointData(queryResults, request);
-            queryResults.clear();
+            List<String> classificationProperties = (request.getClassificationProperties().isEmpty())
+                    ? Collections.singletonList(RDF_TYPE) : Collections.unmodifiableList(request.getClassificationProperties());
+            for (String classificationProperty : classificationProperties) {
+                String query = FIND_CLASSES_WITH_INSTANCE_COUNT.getSparqlQuery().replace(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, classificationProperty);
+                List<QueryResult> queryResults = sparqlEndpointProcessor.read(request, FIND_CLASSES_WITH_INSTANCE_COUNT.name(), query);
+                List<SchemaClass> resultClasses = processClassesWithEndpointData(queryResults, request, classificationProperty);
+                classes.addAll(resultClasses);
+                queryResults.clear();
+                log.info(request.getCorrelationId() + String.format(" - found total %d classes with classification property %s", resultClasses.size(), classificationProperty));
+            }
             log.info(request.getCorrelationId() + String.format(" - found total %d classes", classes.size()));
         } else {
             classes = processClasses(request.getIncludedClasses(), request);
@@ -107,14 +114,15 @@ public class SchemaExtractor {
         }
     }
 
-    protected List<SchemaClass> processClassesWithEndpointData(@Nonnull List<QueryResult> queryResults, @Nonnull SchemaExtractorRequestDto request) {
+    protected List<SchemaClass> processClassesWithEndpointData(@Nonnull List<QueryResult> queryResults,
+                                                               @Nonnull SchemaExtractorRequestDto request, @Nonnull String classificationProperty) {
         List<SchemaClass> classes = new ArrayList<>();
         Set<String> includedClasses = request.getIncludedClasses().stream().map(SchemaExtractorRequestedClassDto::getClassName).collect(Collectors.toSet());
         for (QueryResult queryResult : queryResults) {
             String className = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS);
             String instancesCountStr = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT);
             if (includedClasses.isEmpty() || includedClasses.contains(className)) {
-                addClass(className, instancesCountStr, classes, request);
+                addClass(className, instancesCountStr, classificationProperty, classes, request);
             }
         }
         return classes;
@@ -122,11 +130,12 @@ public class SchemaExtractor {
 
     protected List<SchemaClass> processClasses(@Nonnull List<SchemaExtractorRequestedClassDto> includedClasses, @Nonnull SchemaExtractorRequestDto request) {
         List<SchemaClass> classes = new ArrayList<>();
-        includedClasses.forEach(c -> addClass(c.getClassName(), c.getInstanceCount(), classes, request));
+        includedClasses.forEach(c -> addClass(c.getClassName(), c.getInstanceCount(), null, classes, request));
         return classes;
     }
 
-    private void addClass(@Nullable String className, @Nullable String instancesCountStr, @Nonnull List<SchemaClass> classes, @Nonnull SchemaExtractorRequestDto request) {
+    private void addClass(@Nullable String className, @Nullable String instancesCountStr, @Nullable String classificationProperty,
+                          @Nonnull List<SchemaClass> classes, @Nonnull SchemaExtractorRequestDto request) {
         if (StringUtils.isNotEmpty(className) && isNotExcludedResource(className, request.getExcludedNamespaces())) {
             SchemaClass classEntry = new SchemaClass();
             setLocalNameAndNamespace(className, classEntry);
@@ -135,6 +144,9 @@ public class SchemaExtractor {
                 classEntry.setPropertiesInSchema(Boolean.FALSE);
             } else {
                 classEntry.setPropertiesInSchema(Boolean.TRUE);
+            }
+            if (!RDF_TYPE.equals(classificationProperty)) {
+                classEntry.setClassificationProperty(classificationProperty);
             }
             classes.add(classEntry);
         }

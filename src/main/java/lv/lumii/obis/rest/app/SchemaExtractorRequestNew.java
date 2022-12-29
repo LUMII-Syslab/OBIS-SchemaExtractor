@@ -41,7 +41,7 @@ public class SchemaExtractorRequestNew {
     @ApiParam(access = "9", value = "Minimal Analyzed Class Size (set 1 if all classes should be analyzed)", defaultValue = "1", required = true)
     private Integer minimalAnalyzedClassSize;
 
-    @ApiParam(access = "91", value = "List of classification properties, default property is rdf:type", allowEmptyValue = true)
+    @ApiParam(access = "91", value = "List of classification properties, default property is http://www.w3.org/1999/02/22-rdf-syntax-ns#type", allowEmptyValue = true)
     private List<String> classificationProperties;
 
     @ApiParam(access = "92", value = "List of excluded namespaces", allowEmptyValue = true)

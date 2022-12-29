@@ -31,6 +31,8 @@ public class SchemaConstants {
     public static final String XSD_NAMESPACE = "http://www.w3.org/2001/XMLSchema#";
     public static final String RDF_NAMESPACE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
     public static final String RDFS_NAMESPACE = "http://www.w3.org/2000/01/rdf-schema#";
+    public static final String RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
+    public static final String RDF_TYPE_SHORT = "rdf:type";
 
     /**
      * Data types constants
@@ -83,5 +85,6 @@ public class SchemaConstants {
     public static final String SPARQL_QUERY_BINDING_NAME_RESOURCE = "resource";
     public static final String SPARQL_QUERY_BINDING_NAME_VALUE = "value";
     public static final String SPARQL_QUERY_BINDING_NAME_LANGUAGE = "language";
+    public static final String SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY = "classificationProperty";
 
 }
