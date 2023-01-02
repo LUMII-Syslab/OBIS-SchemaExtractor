@@ -1539,6 +1539,7 @@ public class SchemaExtractor {
                 newItem.setClassName(linkedClass.getClassName());
                 newItem.setClassTotalTripleCount(schemaClass.getInstanceCount());
                 newItem.setPropertyTripleCount(linkedClass.getTripleCount());
+                newItem.setClassificationProperty(linkedClass.getClassificationProperty());
                 classesForProcessing.add(newItem);
             }
         });
