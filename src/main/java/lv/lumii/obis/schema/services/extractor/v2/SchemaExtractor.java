@@ -472,7 +472,6 @@ public class SchemaExtractor {
                             .replace(SPARQL_QUERY_BINDING_NAME_CLASS, potentialRange.getFullName())
                             .replace(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName())
                             .replace(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, potentialRange.getClassificationProperty());
-                    ;
                     QueryResponse checkRangeQueryResponse = sparqlEndpointProcessor.read(request, CHECK_CLASS_AS_PROPERTY_RANGE.name(), checkRangeQuery, false);
                     if (!checkRangeQueryResponse.hasErrors() && !checkRangeQueryResponse.getResults().isEmpty()) {
                         property.getRangeClasses().add(new SchemaExtractorClassNodeInfo(potentialRange.getFullName(), potentialRange.getClassificationProperty()));
@@ -833,7 +832,7 @@ public class SchemaExtractor {
         property.getDomainClasses().forEach(domainClass -> {
             List<SchemaExtractorDomainRangeInfo> pairsForSpecificDomain = findPairsWithSpecificDomain(property.getDomainRangePairs(), domainClass.getClassName());
             List<SchemaExtractorPropertyLinkedClassInfo> principalPairRanges = determinePrincipalClasses(property,
-                    buildAndSortPropertyPairRanges(pairsForSpecificDomain, classes), classes, graphOfClasses, request, ImportanceIndexValidationType.PAIR_DOMAIN, domainClass.getClassName(), null);
+                    buildAndSortPropertyPairRanges(pairsForSpecificDomain, classes), classes, graphOfClasses, request, ImportanceIndexValidationType.PAIR_DOMAIN, domainClass, null);
             pairsForSpecificDomain.forEach(linkedPair -> {
                 SchemaExtractorPropertyLinkedClassInfo pairWithIndex = principalPairRanges.stream()
                         .filter(pairRange -> pairRange.getClassName().equalsIgnoreCase(linkedPair.getRangeClass())).findFirst().orElse(null);
@@ -844,7 +843,7 @@ public class SchemaExtractor {
         property.getRangeClasses().forEach(rangeClass -> {
             List<SchemaExtractorDomainRangeInfo> pairsForSpecificRange = findPairsWithSpecificRange(property.getDomainRangePairs(), rangeClass.getClassName());
             List<SchemaExtractorPropertyLinkedClassInfo> principalPairDomains = determinePrincipalClasses(property,
-                    buildAndSortPropertyPairDomains(pairsForSpecificRange, classes), classes, graphOfClasses, request, ImportanceIndexValidationType.PAIR_RANGE, null, rangeClass.getClassName());
+                    buildAndSortPropertyPairDomains(pairsForSpecificRange, classes), classes, graphOfClasses, request, ImportanceIndexValidationType.PAIR_RANGE, null, rangeClass);
             pairsForSpecificRange.forEach(linkedPair -> {
                 SchemaExtractorPropertyLinkedClassInfo pairWithIndex = principalPairDomains.stream()
                         .filter(pairRange -> pairRange.getClassName().equalsIgnoreCase(linkedPair.getDomainClass())).findFirst().orElse(null);
@@ -860,8 +859,8 @@ public class SchemaExtractor {
                                                                                      @Nonnull Map<String, SchemaExtractorClassNodeInfo> graphOfClasses,
                                                                                      @Nonnull SchemaExtractorRequestDto request,
                                                                                      @Nonnull ImportanceIndexValidationType importanceIndexValidationType,
-                                                                                     @Nullable String domainClass,
-                                                                                     @Nullable String rangeClass) {
+                                                                                     @Nullable SchemaExtractorClassNodeInfo domainClass,
+                                                                                     @Nullable SchemaExtractorClassNodeInfo rangeClass) {
 
         // set important indexes
         Set<String> importantClasses = new HashSet<>();
@@ -911,19 +910,19 @@ public class SchemaExtractor {
 
                 switch (importanceIndexValidationType) {
                     case DOMAIN:
-                        needToInclude = checkNewPrincipalDomainClass(property.getPropertyName(), currentClass.getClassName(), includedClassesToCheckWith, request);
+                        needToInclude = checkNewPrincipalDomainClass(property.getPropertyName(), currentClass, includedClassesToCheckWith, request);
                         break;
                     case RANGE:
-                        needToInclude = checkNewPrincipalRangeClass(property.getPropertyName(), currentClass.getClassName(), includedClassesToCheckWith, request);
+                        needToInclude = checkNewPrincipalRangeClass(property.getPropertyName(), currentClass, includedClassesToCheckWith, request);
                         break;
                     case PAIR_DOMAIN:
-                        if (StringUtils.isNotEmpty(domainClass)) {
-                            needToInclude = checkNewPrincipalRangeClassForDomain(property.getPropertyName(), domainClass, currentClass.getClassName(), includedClassesToCheckWith, request);
+                        if (domainClass != null && StringUtils.isNotEmpty(domainClass.getClassName())) {
+                            needToInclude = checkNewPrincipalRangeClassForDomain(property.getPropertyName(), domainClass, currentClass, includedClassesToCheckWith, request);
                         }
                         break;
                     case PAIR_RANGE:
-                        if (StringUtils.isNotEmpty(rangeClass)) {
-                            needToInclude = checkNewPrincipalDomainClassForDomain(property.getPropertyName(), rangeClass, currentClass.getClassName(), includedClassesToCheckWith, request);
+                        if (rangeClass != null && StringUtils.isNotEmpty(rangeClass.getClassName())) {
+                            needToInclude = checkNewPrincipalDomainClassForDomain(property.getPropertyName(), rangeClass, currentClass, includedClassesToCheckWith, request);
                         }
                         break;
                     default:
@@ -942,45 +941,72 @@ public class SchemaExtractor {
         return propertyLinkedClassesSorted;
     }
 
-    protected boolean checkNewPrincipalDomainClass(@Nonnull String propertyName, @Nonnull String newDomainClass, @Nonnull List<String> existingClasses, @Nonnull SchemaExtractorRequestDto request) {
-        String query = CHECK_PRINCIPAL_DOMAIN.getSparqlQuery().
-                replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY, propertyName).
-                replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_A, newDomainClass).
-                replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CUSTOM_FILTER, buildCustomFilterToCheckPrincipalClass(existingClasses));
-        QueryResponse queryResponse = sparqlEndpointProcessor.read(request, CHECK_PRINCIPAL_DOMAIN.name(), query, true);
-        return !queryResponse.hasErrors() && !queryResponse.getResults().isEmpty();
+    protected boolean checkNewPrincipalDomainClass(@Nonnull String propertyName, @Nonnull SchemaExtractorPropertyLinkedClassInfo newDomainClass, @Nonnull List<String> existingClasses, @Nonnull SchemaExtractorRequestDto request) {
+        boolean isPrincipalDomain = false;
+        for (String classificationProperty : request.getClassificationProperties()) {
+            String query = CHECK_PRINCIPAL_DOMAIN.getSparqlQuery()
+                    .replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY, propertyName)
+                    .replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_A, newDomainClass.getClassName())
+                    .replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_DOMAIN, newDomainClass.getClassificationProperty())
+                    .replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_OTHER, classificationProperty)
+                    .replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CUSTOM_FILTER, buildCustomFilterToCheckPrincipalClass(existingClasses));
+            QueryResponse queryResponse = sparqlEndpointProcessor.read(request, CHECK_PRINCIPAL_DOMAIN.name(), query, true);
+            isPrincipalDomain = !queryResponse.hasErrors() && !queryResponse.getResults().isEmpty();
+            if (isTrue(isPrincipalDomain)) break;
+        }
+        return isPrincipalDomain;
     }
 
-    protected boolean checkNewPrincipalRangeClass(@Nonnull String propertyName, @Nonnull String newRangeClass, @Nonnull List<String> existingClasses, @Nonnull SchemaExtractorRequestDto request) {
-
-        String query = CHECK_PRINCIPAL_RANGE.getSparqlQuery().
-                replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY, propertyName).
-                replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_A, newRangeClass).
-                replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CUSTOM_FILTER, buildCustomFilterToCheckPrincipalClass(existingClasses));
-        QueryResponse queryResponse = sparqlEndpointProcessor.read(request, CHECK_PRINCIPAL_RANGE.name(), query, true);
-        return !queryResponse.hasErrors() && !queryResponse.getResults().isEmpty();
+    protected boolean checkNewPrincipalRangeClass(@Nonnull String propertyName, @Nonnull SchemaExtractorPropertyLinkedClassInfo newRangeClass, @Nonnull List<String> existingClasses, @Nonnull SchemaExtractorRequestDto request) {
+        boolean isPrincipalRange = false;
+        for (String classificationProperty : request.getClassificationProperties()) {
+            String query = CHECK_PRINCIPAL_RANGE.getSparqlQuery()
+                    .replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY, propertyName)
+                    .replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_A, newRangeClass.getClassName())
+                    .replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_RANGE, newRangeClass.getClassificationProperty())
+                    .replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_OTHER, classificationProperty)
+                    .replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CUSTOM_FILTER, buildCustomFilterToCheckPrincipalClass(existingClasses));
+            QueryResponse queryResponse = sparqlEndpointProcessor.read(request, CHECK_PRINCIPAL_RANGE.name(), query, true);
+            isPrincipalRange = !queryResponse.hasErrors() && !queryResponse.getResults().isEmpty();
+            if (isTrue(isPrincipalRange)) break;
+        }
+        return isPrincipalRange;
     }
 
-    protected boolean checkNewPrincipalRangeClassForDomain(@Nonnull String propertyName, @Nonnull String domainClass, @Nonnull String newRangeClass, @Nonnull List<String> existingClasses, @Nonnull SchemaExtractorRequestDto request) {
-
-        String query = CHECK_PRINCIPAL_RANGE_FOR_DOMAIN.getSparqlQuery().
-                replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY, propertyName).
-                replace(SPARQL_QUERY_BINDING_NAME_CLASS_DOMAIN, domainClass).
-                replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_A, newRangeClass).
-                replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CUSTOM_FILTER, buildCustomFilterToCheckPrincipalClass(existingClasses));
-        QueryResponse queryResponse = sparqlEndpointProcessor.read(request, CHECK_PRINCIPAL_RANGE_FOR_DOMAIN.name(), query, true);
-        return !queryResponse.hasErrors() && !queryResponse.getResults().isEmpty();
+    protected boolean checkNewPrincipalRangeClassForDomain(@Nonnull String propertyName, @Nonnull SchemaExtractorClassNodeInfo domainClass, @Nonnull SchemaExtractorPropertyLinkedClassInfo newRangeClass, @Nonnull List<String> existingClasses, @Nonnull SchemaExtractorRequestDto request) {
+        boolean isPrincipalRange = false;
+        for (String classificationProperty : request.getClassificationProperties()) {
+            String query = CHECK_PRINCIPAL_RANGE_FOR_DOMAIN.getSparqlQuery()
+                    .replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY, propertyName)
+                    .replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_DOMAIN, domainClass.getClassName())
+                    .replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_A, newRangeClass.getClassName())
+                    .replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_DOMAIN, domainClass.getClassificationProperty())
+                    .replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_RANGE, newRangeClass.getClassificationProperty())
+                    .replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_OTHER, classificationProperty)
+                    .replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CUSTOM_FILTER, buildCustomFilterToCheckPrincipalClass(existingClasses));
+            QueryResponse queryResponse = sparqlEndpointProcessor.read(request, CHECK_PRINCIPAL_RANGE_FOR_DOMAIN.name(), query, true);
+            isPrincipalRange = !queryResponse.hasErrors() && !queryResponse.getResults().isEmpty();
+            if (isTrue(isPrincipalRange)) break;
+        }
+        return isPrincipalRange;
     }
 
-    protected boolean checkNewPrincipalDomainClassForDomain(@Nonnull String propertyName, @Nonnull String rangeClass, @Nonnull String newDomainClass, @Nonnull List<String> existingClasses, @Nonnull SchemaExtractorRequestDto request) {
-
-        String query = CHECK_PRINCIPAL_DOMAIN_FOR_RANGE.getSparqlQuery().
-                replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY, propertyName).
-                replace(SPARQL_QUERY_BINDING_NAME_CLASS_RANGE, rangeClass).
-                replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_A, newDomainClass).
-                replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CUSTOM_FILTER, buildCustomFilterToCheckPrincipalClass(existingClasses));
-        QueryResponse queryResponse = sparqlEndpointProcessor.read(request, CHECK_PRINCIPAL_DOMAIN_FOR_RANGE.name(), query, true);
-        return !queryResponse.hasErrors() && !queryResponse.getResults().isEmpty();
+    protected boolean checkNewPrincipalDomainClassForDomain(@Nonnull String propertyName, @Nonnull SchemaExtractorClassNodeInfo rangeClass, @Nonnull SchemaExtractorPropertyLinkedClassInfo newDomainClass, @Nonnull List<String> existingClasses, @Nonnull SchemaExtractorRequestDto request) {
+        boolean isPrincipalDomain = false;
+        for (String classificationProperty : request.getClassificationProperties()) {
+            String query = CHECK_PRINCIPAL_DOMAIN_FOR_RANGE.getSparqlQuery()
+                    .replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY, propertyName)
+                    .replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_RANGE, rangeClass.getClassName())
+                    .replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_A, newDomainClass.getClassName())
+                    .replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_DOMAIN, newDomainClass.getClassificationProperty())
+                    .replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_RANGE, rangeClass.getClassificationProperty())
+                    .replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_OTHER, classificationProperty)
+                    .replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CUSTOM_FILTER, buildCustomFilterToCheckPrincipalClass(existingClasses));
+            QueryResponse queryResponse = sparqlEndpointProcessor.read(request, CHECK_PRINCIPAL_DOMAIN_FOR_RANGE.name(), query, true);
+            isPrincipalDomain = !queryResponse.hasErrors() && !queryResponse.getResults().isEmpty();
+            if (isTrue(isPrincipalDomain)) break;
+        }
+        return isPrincipalDomain;
     }
 
     protected String buildCustomFilterToCheckPrincipalClass(@Nonnull List<String> existingClasses) {
@@ -1539,6 +1565,7 @@ public class SchemaExtractor {
                 newItem.setClassName(linkedPair.getRangeClass());
                 newItem.setClassTotalTripleCount(schemaClass.getInstanceCount());
                 newItem.setPropertyTripleCount(linkedPair.getTripleCount());
+                newItem.setClassificationProperty(linkedPair.getClassificationPropertyForRange());
                 classesForProcessing.add(newItem);
             }
         });
@@ -1556,6 +1583,7 @@ public class SchemaExtractor {
                 newItem.setClassName(linkedPair.getDomainClass());
                 newItem.setClassTotalTripleCount(schemaClass.getInstanceCount());
                 newItem.setPropertyTripleCount(linkedPair.getTripleCount());
+                newItem.setClassificationProperty(linkedPair.getClassificationPropertyForDomain());
                 classesForProcessing.add(newItem);
             }
         });

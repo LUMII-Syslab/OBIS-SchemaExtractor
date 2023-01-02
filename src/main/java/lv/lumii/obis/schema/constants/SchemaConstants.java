@@ -90,5 +90,6 @@ public class SchemaConstants {
     public static final String SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_B = "classificationPropertyB";
     public static final String SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_DOMAIN = "classificationPropertyDomain";
     public static final String SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_RANGE = "classificationPropertyRange";
+    public static final String SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_OTHER = "classificationPropertyOther";
 
 }

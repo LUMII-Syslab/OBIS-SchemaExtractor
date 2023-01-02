@@ -148,16 +148,16 @@ public enum SchemaExtractorQueries {
     ),
 
     CHECK_PRINCIPAL_DOMAIN(
-            "SELECT ?x WHERE { ?x <property> ?y. ?x a <classA>. OPTIONAL {?x a ?cc. FILTER (customFilter)} FILTER (!BOUND(?cc))} LIMIT 1"
+            "SELECT ?x WHERE { ?x <property> ?y. ?x <classificationPropertyDomain> <classA>. OPTIONAL {?x <classificationPropertyOther> ?cc. FILTER (customFilter)} FILTER (!BOUND(?cc))} LIMIT 1"
     ),
     CHECK_PRINCIPAL_RANGE(
-            "SELECT ?x WHERE { ?x <property> ?y. ?y a <classA>. OPTIONAL {?y a ?cc. FILTER (customFilter)} FILTER (!BOUND(?cc))} LIMIT 1"
+            "SELECT ?x WHERE { ?x <property> ?y. ?y <classificationPropertyRange> <classA>. OPTIONAL {?y <classificationPropertyOther> ?cc. FILTER (customFilter)} FILTER (!BOUND(?cc))} LIMIT 1"
     ),
     CHECK_PRINCIPAL_RANGE_FOR_DOMAIN(
-            "SELECT ?x ?y WHERE { ?x a <domainClass>. ?x <property> ?y. ?y a <classA>. OPTIONAL {?y a ?cc. FILTER (customFilter)} FILTER (!BOUND(?cc))} LIMIT 1"
+            "SELECT ?x ?y WHERE { ?x <classificationPropertyDomain> <domainClass>. ?x <property> ?y. ?y <classificationPropertyRange> <classA>. OPTIONAL {?y <classificationPropertyOther> ?cc. FILTER (customFilter)} FILTER (!BOUND(?cc))} LIMIT 1"
     ),
     CHECK_PRINCIPAL_DOMAIN_FOR_RANGE(
-            "SELECT ?x ?y WHERE { ?x a <classA>. ?x <property> ?y. ?y a <rangeClass>. OPTIONAL {?x a ?cc. FILTER (customFilter)} FILTER (!BOUND(?cc))} LIMIT 1"
+            "SELECT ?x ?y WHERE { ?x <classificationPropertyDomain> <classA>. ?x <property> ?y. ?y <classificationPropertyRange> <rangeClass>. OPTIONAL {?x <classificationPropertyOther> ?cc. FILTER (customFilter)} FILTER (!BOUND(?cc))} LIMIT 1"
     ),
 
     FIND_LABEL(

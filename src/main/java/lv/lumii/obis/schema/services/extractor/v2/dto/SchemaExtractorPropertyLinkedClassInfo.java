@@ -14,6 +14,8 @@ public class SchemaExtractorPropertyLinkedClassInfo {
     private Long propertyTripleCount;
     private Integer importanceIndex;
 
+    private String classificationProperty;
+
     @Nonnull
     public Long getClassTotalTripleCount() {
         if (classTotalTripleCount == null) {
