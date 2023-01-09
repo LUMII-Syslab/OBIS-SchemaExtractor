@@ -78,4 +78,9 @@ public class SchemaUtil {
         entity.setNamespace(namespace);
     }
 
+    @Nullable
+    public static String addQuotesToString(@Nullable String str) {
+        return (str == null) ? null : "\"" + str + "\"";
+    }
+
 }

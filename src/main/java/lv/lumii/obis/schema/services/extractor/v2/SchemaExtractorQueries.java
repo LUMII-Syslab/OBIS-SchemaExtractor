@@ -14,17 +14,22 @@ public enum SchemaExtractorQueries {
             "SELECT DISTINCT ?classB WHERE {" + "\n\t"
                     + "?x <classificationPropertyA> ?classA." + "\n\t"
                     + "?x <classificationPropertyB> ?classB." + "\n\t"
-                    + "FILTER (?classA = <domainClass>)" + "\n\t"
+                    + "FILTER (str(?classA) = <domainClass>)" + "\n\t"
                     + "FILTER (?classA != ?classB)" + "\n"
                     + "}"
     ),
 
     CHECK_CLASS_INTERSECTION(
-            "SELECT ?x where {?x <classificationPropertyA> <classA>. ?x <classificationPropertyB> <classB>} LIMIT 1"
+            "SELECT ?x where {" +
+                    "?x <classificationPropertyA> ?class1. " +
+                    "?x <classificationPropertyB> ?class2. " +
+                    "FILTER (str(?class1) = <classA>) " +
+                    "FILTER (str(?class2) = <classB>) " +
+                    "} LIMIT 1"
     ),
 
     CHECK_SUPERCLASS(
-            "SELECT ?x WHERE { ?x <classificationPropertyA> <classA>. OPTIONAL { ?x <classificationPropertyB> ?value. FILTER (?value = <classB>) } FILTER (!BOUND(?value)) } LIMIT 1 "
+            "SELECT ?x WHERE { ?x <classificationPropertyA> ?class1. OPTIONAL { ?x <classificationPropertyB> ?class2. FILTER (str(?class2) = <classB>) } FILTER (str(?class1) = <classA>) FILTER (!BOUND(?class2)) } LIMIT 1 "
     ),
 
     FIND_PROPERTY_DATA_TYPE_WITH_TRIPLE_COUNT(

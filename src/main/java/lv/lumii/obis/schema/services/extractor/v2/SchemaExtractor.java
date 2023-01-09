@@ -25,6 +25,7 @@ import java.util.stream.Collectors;
 
 import static lv.lumii.obis.schema.constants.SchemaConstants.*;
 import static lv.lumii.obis.schema.services.extractor.v2.SchemaExtractorQueries.*;
+import static lv.lumii.obis.schema.services.SchemaUtil.*;
 import static org.apache.commons.lang3.BooleanUtils.*;
 
 @Slf4j
@@ -1200,7 +1201,7 @@ public class SchemaExtractor {
             boolean hasErrors = false;
             for (String classificationProperty : request.getClassificationProperties()) {
                 String query = SchemaExtractorQueries.FIND_INTERSECTION_CLASSES_FOR_KNOWN_CLASS.getSparqlQuery()
-                        .replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_DOMAIN, classA.getFullName())
+                        .replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_DOMAIN_FULL, addQuotesToString(classA.getFullName()) )
                         .replace(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_A, classA.getClassificationProperty())
                         .replace(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_B, classificationProperty);
                 queryResponse = sparqlEndpointProcessor.read(request, FIND_INTERSECTION_CLASSES_FOR_KNOWN_CLASS.name(), query, true);
@@ -1220,8 +1221,8 @@ public class SchemaExtractor {
                             && (isNotFalse(classA.getPropertiesInSchema()) || isNotFalse(classB.getPropertiesInSchema()))
                     ) {
                         String checkQuery = CHECK_CLASS_INTERSECTION.getSparqlQuery()
-                                .replace(SPARQL_QUERY_BINDING_NAME_CLASS_A, classA.getFullName())
-                                .replace(SPARQL_QUERY_BINDING_NAME_CLASS_B, classB.getFullName())
+                                .replace(SPARQL_QUERY_BINDING_NAME_CLASS_A_FULL, addQuotesToString(classA.getFullName()) )
+                                .replace(SPARQL_QUERY_BINDING_NAME_CLASS_B_FULL, addQuotesToString(classB.getFullName()) )
                                 .replace(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_A, classA.getClassificationProperty())
                                 .replace(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_B, classB.getClassificationProperty());
                         QueryResponse checkQueryResponse = sparqlEndpointProcessor.read(request, CHECK_CLASS_INTERSECTION.name(), checkQuery, false);
@@ -1386,8 +1387,8 @@ public class SchemaExtractor {
                 continue;
             }
             String query = SchemaExtractorQueries.CHECK_SUPERCLASS.getSparqlQuery()
-                    .replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_A, currentClass.getFullName())
-                    .replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_B, neighbor)
+                    .replace(SPARQL_QUERY_BINDING_NAME_CLASS_A_FULL, addQuotesToString(currentClass.getFullName()) )
+                    .replace(SPARQL_QUERY_BINDING_NAME_CLASS_B_FULL, addQuotesToString(neighbor))
                     .replace(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_A, currentClass.getClassificationProperty())
                     .replace(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_B, neighborClassInfo.getClassificationProperty());
             List<QueryResult> queryResults = sparqlEndpointProcessor.read(request, SchemaExtractorQueries.CHECK_SUPERCLASS.name(), query);
