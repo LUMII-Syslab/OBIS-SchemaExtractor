@@ -27,6 +27,8 @@ import javax.annotation.Nullable;
 @Service
 public class SparqlEndpointProcessor {
 
+    private static final int RETRY_COUNT = 2;
+
     @Nonnull
     public List<QueryResult> read(@Nonnull SchemaExtractorRequestDto request, @Nonnull SchemaExtractorQueries queryItem) {
         return read(request, queryItem.name(), queryItem.getSparqlQuery());
@@ -56,10 +58,7 @@ public class SparqlEndpointProcessor {
 
     @Nonnull
     private QueryResponse read(@Nonnull SparqlEndpointConfig request, @Nonnull String queryName, @Nonnull String sparqlQuery, boolean withRetry) {
-        List<QueryResult> queryResults = new ArrayList<>();
         QueryResponse response = new QueryResponse();
-        response.setResults(queryResults);
-        response.setHasErrors(false);
 
         Query query;
         try {
@@ -75,60 +74,62 @@ public class SparqlEndpointProcessor {
             log.info(queryName + "\n" + sparqlQuery);
         }
 
-        QueryEngineHTTP qexec = getQueryExecutor(request.getEndpointUrl(), request.getGraphName(), query);
-        ResultSet results = requestData(qexec, withRetry, queryName, sparqlQuery);
-        if (results == null) {
+        List<QueryResult> results = requestData(request, query, queryName, sparqlQuery, 1, withRetry);
+        if (results != null) {
+            response.setHasErrors(false);
+            response.setResults(results);
+        } else {
             response.setHasErrors(true);
-            return response;
+            response.setResults(new ArrayList<>());
         }
-        while (results.hasNext()) {
-            QuerySolution s = results.next();
-            if (s != null) {
-                QueryResult queryResult = new QueryResult();
-                for (String name : results.getResultVars()) {
-                    RDFNode value = s.get(name);
-                    String val = null;
-                    if (value != null) {
-                        val = value.toString().split("\\^\\^")[0];
-                    }
-                    queryResult.add(name, val);
-                }
-                queryResults.add(queryResult);
-            }
-        }
-        qexec.close();
-        response.setHasErrors(false);
+
         return response;
     }
 
     @Nullable
-    private ResultSet requestData(@Nonnull QueryEngineHTTP qexec, boolean withRetry, @Nonnull String queryName, @Nonnull String sparqlQuery) {
-        return requestData(qexec, 0, withRetry, queryName, sparqlQuery);
-    }
-
-    @Nullable
-    private ResultSet requestData(@Nonnull QueryEngineHTTP qexec, int attempt, boolean withRetry, @Nonnull String queryName, @Nonnull String sparqlQuery) {
-        ResultSet resultSet = null;
+    private List<QueryResult> requestData(@Nonnull SparqlEndpointConfig request, @Nonnull Query query, @Nonnull String queryName, @Nonnull String sparqlQuery,
+                                          int attempt, boolean withRetry) {
+        List<QueryResult> queryResults = null;
+        ResultSet resultSet;
+        QueryEngineHTTP queryExecutor = getQueryExecutor(request.getEndpointUrl(), request.getGraphName(), query);
         try {
-            resultSet = qexec.execSelect();
-            if (attempt > 0) {
-                log.error(String.format("SPARQL Endpoint returned a valid response after an attempt number %d", attempt + 1));
+            resultSet = queryExecutor.execSelect();
+            if (attempt > 1) {
+                log.info(String.format("SPARQL Endpoint returned a valid response after an attempt number %d", attempt));
+            }
+            queryResults = new ArrayList<>();
+            if (resultSet != null) {
+                while (resultSet.hasNext()) {
+                    QuerySolution s = resultSet.next();
+                    if (s != null) {
+                        QueryResult queryResult = new QueryResult();
+                        for (String name : resultSet.getResultVars()) {
+                            RDFNode value = s.get(name);
+                            String val = null;
+                            if (value != null) {
+                                val = value.toString().split("\\^\\^")[0];
+                            }
+                            queryResult.add(name, val);
+                        }
+                        queryResults.add(queryResult);
+                    }
+                }
             }
         } catch (Exception e) {
             if (withRetry) {
-                log.error(String.format("SPARQL Endpoint Exception status '%s'. This was attempt number %d for the query %s", e.getMessage(), attempt + 1, queryName));
+                log.error(String.format("SPARQL Endpoint Exception status '%s'. This was attempt number %d for the query %s", e.getMessage(), attempt, queryName));
                 log.error("\n" + sparqlQuery);
-                if (attempt < 1) {
-                    qexec.addParam("timeout", "1200000");
-                    return requestData(qexec, ++attempt, withRetry, queryName, sparqlQuery);
+                if (attempt < RETRY_COUNT) {
+                    return requestData(request, query, queryName, sparqlQuery, ++attempt, withRetry);
                 }
             } else {
                 log.error(String.format("SPARQL Endpoint Exception status '%s' for the query %s", e.getMessage(), queryName));
                 log.error("\n" + sparqlQuery);
             }
-            e.printStackTrace();
+        } finally {
+            queryExecutor.close();
         }
-        return resultSet;
+        return queryResults;
     }
 
     private QueryEngineHTTP getQueryExecutor(@Nonnull String endpointUrl, @Nullable String graphName, @Nonnull Query query) {
@@ -139,6 +140,7 @@ public class SparqlEndpointProcessor {
             qexec = (QueryEngineHTTP) QueryExecutionFactory.sparqlService(endpointUrl, query, graphName);
             qexec.addDefaultGraph(graphName);
         }
+        //qexec.setTimeout(300000L, 100000L);
         return qexec;
     }
 
