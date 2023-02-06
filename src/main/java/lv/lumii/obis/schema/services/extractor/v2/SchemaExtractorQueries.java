@@ -172,6 +172,10 @@ public enum SchemaExtractorQueries {
             "SELECT (STR(?z) as ?value) (LANG(?z) as ?language) WHERE { ?x ?y ?z. FILTER(?x = <resource>) FILTER(?y = <property>) FILTER (customFilter) }"
     ),
 
+    FIND_INSTANCE_NAMESPACES(
+            "SELECT DISTINCT ?x WHERE {?x <classificationProperty> ?class. FILTER (str(?class) = <classA>) } LIMIT 1000"
+    ),
+
     ;
 
 

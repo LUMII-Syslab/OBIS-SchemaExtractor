@@ -6,6 +6,7 @@ import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import lv.lumii.obis.schema.services.common.dto.QueryResponse;
 import lv.lumii.obis.schema.services.common.dto.QueryResult;
+import lv.lumii.obis.schema.services.common.dto.QueryResultObject;
 import lv.lumii.obis.schema.services.common.dto.SparqlEndpointConfig;
 import lv.lumii.obis.schema.services.extractor.v1.SchemaExtractorQueries;
 import lv.lumii.obis.schema.services.extractor.dto.SchemaExtractorRequestDto;
@@ -15,7 +16,9 @@ import org.apache.jena.query.QueryExecutionFactory;
 import org.apache.jena.query.QueryFactory;
 import org.apache.jena.query.QuerySolution;
 import org.apache.jena.query.ResultSet;
+import org.apache.jena.rdf.model.Literal;
 import org.apache.jena.rdf.model.RDFNode;
+import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.sparql.engine.http.QueryEngineHTTP;
 
 import org.springframework.stereotype.Service;
@@ -99,20 +102,9 @@ public class SparqlEndpointProcessor {
             }
             queryResults = new ArrayList<>();
             if (resultSet != null) {
+                List<String> resultVariables = resultSet.getResultVars();
                 while (resultSet.hasNext()) {
-                    QuerySolution s = resultSet.next();
-                    if (s != null) {
-                        QueryResult queryResult = new QueryResult();
-                        for (String name : resultSet.getResultVars()) {
-                            RDFNode value = s.get(name);
-                            String val = null;
-                            if (value != null) {
-                                val = value.toString().split("\\^\\^")[0];
-                            }
-                            queryResult.add(name, val);
-                        }
-                        queryResults.add(queryResult);
-                    }
+                    buildQueryResultObject(queryResults, resultVariables, resultSet.next());
                 }
             }
         } catch (Exception e) {
@@ -130,6 +122,40 @@ public class SparqlEndpointProcessor {
             queryExecutor.close();
         }
         return queryResults;
+    }
+
+    private void buildQueryResultObject(@Nonnull List<QueryResult> queryResults, List<String> resultVariables, QuerySolution resultItem) {
+        if (resultItem == null || resultVariables == null || resultVariables.isEmpty()) {
+            return;
+        }
+        QueryResult queryResult = new QueryResult();
+        for (String key : resultVariables) {
+            RDFNode value = resultItem.get(key);
+            if (value == null) {
+                continue;
+            }
+            QueryResultObject queryResultObject = new QueryResultObject();
+            if (value instanceof Resource) {
+                Resource uriValue = value.asResource();
+                queryResultObject.setValue(uriValue.getURI());
+                queryResultObject.setFullName(uriValue.getURI());
+                queryResultObject.setLocalName(uriValue.getLocalName());
+                queryResultObject.setNamespace(uriValue.getNameSpace());
+            } else if (value instanceof Literal) {
+                Literal literal = value.asLiteral();
+                queryResultObject.setValue(literal.getString());
+                queryResultObject.setFullName(literal.getString());
+                queryResultObject.setLocalName(literal.getString());
+                queryResultObject.setDataType(literal.getDatatypeURI());
+//                if(StringUtils.isNotEmpty(queryResultObject.getDataType())) {
+//                    queryResultObject.setFullName("\"" + queryResultObject.getLocalName() + "\"^^<" + queryResultObject.getDataType() + ">");
+//                }
+            } else {
+                queryResultObject.setValue(value.toString().split("\\^\\^")[0]);
+            }
+            queryResult.addResultObject(key, queryResultObject);
+        }
+        queryResults.add(queryResult);
     }
 
     private QueryEngineHTTP getQueryExecutor(@Nonnull String endpointUrl, @Nullable String graphName, @Nonnull Query query) {

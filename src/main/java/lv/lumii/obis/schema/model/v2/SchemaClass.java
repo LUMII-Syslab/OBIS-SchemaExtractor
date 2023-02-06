@@ -20,6 +20,8 @@ public class SchemaClass extends SchemaElement {
 
 	private Long instanceCount;
 
+	private String dataType;
+
 	private Boolean propertiesInSchema;
 
 	private String classificationProperty;

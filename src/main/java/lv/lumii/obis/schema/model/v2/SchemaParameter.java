@@ -14,6 +14,7 @@ public class SchemaParameter {
     public static final String PARAM_NAME_CALCULATE_DOMAIN_AND_RANGE_PAIRS = "calculateDomainAndRangePairs";
     public static final String PARAM_NAME_CALCULATE_DATA_TYPES = "calculateDataTypes";
     public static final String PARAM_NAME_CALCULATE_CARDINALITIES = "calculateCardinalities";
+    public static final String PARAM_NAME_CHECK_INSTANCE_NAMESPACES = "checkInstanceNamespaces";
     public static final String PARAM_NAME_MIN_CLASS_SIZE = "minimalAnalyzedClassSize";
     public static final String PARAM_NAME_INCLUDED_LABELS = "includedLabels";
     public static final String PARAM_NAME_INCLUDED_CLASSES = "includedClasses";

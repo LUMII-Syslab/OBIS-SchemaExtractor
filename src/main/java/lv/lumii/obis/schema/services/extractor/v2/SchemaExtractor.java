@@ -10,6 +10,7 @@ import lv.lumii.obis.schema.services.SchemaUtil;
 import lv.lumii.obis.schema.services.common.SparqlEndpointProcessor;
 import lv.lumii.obis.schema.services.common.dto.QueryResponse;
 import lv.lumii.obis.schema.services.common.dto.QueryResult;
+import lv.lumii.obis.schema.services.common.dto.QueryResultObject;
 import lv.lumii.obis.schema.services.extractor.dto.*;
 import lv.lumii.obis.schema.services.extractor.v2.dto.*;
 import org.apache.commons.lang3.StringUtils;
@@ -118,10 +119,13 @@ public class SchemaExtractor {
         List<SchemaClass> classes = new ArrayList<>();
         Set<String> includedClasses = request.getIncludedClasses().stream().map(SchemaExtractorRequestedClassDto::getClassName).collect(Collectors.toSet());
         for (QueryResult queryResult : queryResults) {
-            String className = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS);
+            QueryResultObject classNameObject = queryResult.getResultObject(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS);
+            if (classNameObject == null) {
+                continue;
+            }
             String instancesCountStr = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT);
-            if (includedClasses.isEmpty() || includedClasses.contains(className)) {
-                addClass(className, instancesCountStr, classificationProperty, classes, request);
+            if (includedClasses.isEmpty() || includedClasses.contains(classNameObject.getValue())) {
+                addClass(classNameObject, classNameObject.getValue(), instancesCountStr, classificationProperty, classes, request);
             }
         }
         return classes;
@@ -129,15 +133,22 @@ public class SchemaExtractor {
 
     protected List<SchemaClass> processClasses(@Nonnull List<SchemaExtractorRequestedClassDto> includedClasses, @Nonnull SchemaExtractorRequestDto request) {
         List<SchemaClass> classes = new ArrayList<>();
-        includedClasses.forEach(c -> addClass(c.getClassName(), c.getInstanceCount(), null, classes, request));
+        includedClasses.forEach(c -> addClass(null, c.getClassName(), c.getInstanceCount(), null, classes, request));
         return classes;
     }
 
-    private void addClass(@Nullable String className, @Nullable String instancesCountStr, @Nullable String classificationProperty,
+    private void addClass(@Nullable QueryResultObject classNameObject, @Nullable String className, @Nullable String instancesCountStr, @Nullable String classificationProperty,
                           @Nonnull List<SchemaClass> classes, @Nonnull SchemaExtractorRequestDto request) {
         if (StringUtils.isNotEmpty(className) && isNotExcludedResource(className, request.getExcludedNamespaces())) {
             SchemaClass classEntry = new SchemaClass();
-            setLocalNameAndNamespace(className, classEntry);
+            if (classNameObject != null) {
+                classEntry.setLocalName(classNameObject.getLocalName());
+                classEntry.setFullName(classNameObject.getFullName());
+                classEntry.setNamespace(classNameObject.getNamespace());
+                classEntry.setDataType(classNameObject.getDataType());
+            } else {
+                setLocalNameAndNamespace(className, classEntry);
+            }
             classEntry.setInstanceCount(SchemaUtil.getLongValueFromString(instancesCountStr));
             if (classEntry.getInstanceCount() < request.getMinimalAnalyzedClassSize()) {
                 classEntry.setPropertiesInSchema(Boolean.FALSE);
@@ -1087,58 +1098,95 @@ public class SchemaExtractor {
     }
 
     protected void buildNamespaceMap(@Nonnull SchemaExtractorRequestDto request, @Nonnull Schema schema) {
-        // 1. apply namespaces defined in the request
-        if (request.getPredefinedNamespaces() != null && request.getPredefinedNamespaces().getNamespaceItems() != null) {
-            request.getPredefinedNamespaces().getNamespaceItems().forEach(namespaceItem ->
-                    schema.getPrefixes().add(new NamespacePrefixEntry(namespaceItem.getPrefix(), namespaceItem.getNamespace())));
-            return;
-        }
+        // 1. collect all namespaces used in the schema
+        Set<String> orderedSchemaNamespaces = getAllSchemaNamespacesOrderedByUsageCount(request, schema);
 
-        // 2. apply namespaces from the system config file and use only the ones from the current schema
-        Set<String> orderedNamespaces = getAllNamespacesOrderedByUsageCount(schema);
+        // 2. collect namespace-prefix defined in the request and in the global config file; prefixes from the request override the system file
+        Map<String, String> prefixMap = new HashMap<>();
+        if (request.getPredefinedNamespaces() != null && request.getPredefinedNamespaces().getNamespaceItems() != null) {
+            request.getPredefinedNamespaces().getNamespaceItems().forEach(namespaceItem -> prefixMap.put(namespaceItem.getNamespace(), namespaceItem.getPrefix()));
+        }
         try {
             FileInputStream inputStream = new FileInputStream(SchemaConstants.GLOBAL_NAMESPACE_PATH);
-            SchemaExtractorPredefinedNamespaces predefinedNamespaces = jsonSchemaService.getObjectFromJsonStream(inputStream, SchemaExtractorPredefinedNamespaces.class);
-            if (predefinedNamespaces != null && predefinedNamespaces.getNamespaceItems() != null) {
-                predefinedNamespaces.getNamespaceItems().forEach(namespaceItem -> {
-                    if (orderedNamespaces.contains(namespaceItem.getNamespace())) {
-                        schema.getPrefixes().add(new NamespacePrefixEntry(namespaceItem.getPrefix(), namespaceItem.getNamespace()));
+            SchemaExtractorPredefinedNamespaces globalNamespaces = jsonSchemaService.getObjectFromJsonStream(inputStream, SchemaExtractorPredefinedNamespaces.class);
+            if (globalNamespaces != null && globalNamespaces.getNamespaceItems() != null) {
+                globalNamespaces.getNamespaceItems().forEach(namespaceItem -> {
+                    if (!prefixMap.containsKey(namespaceItem.getNamespace())) {
+                        prefixMap.put(namespaceItem.getNamespace(), namespaceItem.getPrefix());
                     }
                 });
             }
-            return;
         } catch (IOException e) {
             log.info("Cannot read namespaces from the system configuration: namespaces.json file was not found or was incorrectly formatted. The namespaces will be auto generated from the given schema");
         }
 
-        // 3. apply namespaces from the analyzed schema with auto generated prefixes
-        int index = 0;
-        for (String namespace : orderedNamespaces) {
-            if (index == 0) {
-                schema.setDefaultNamespace(namespace);
-                schema.getPrefixes().add(new NamespacePrefixEntry(SchemaConstants.DEFAULT_NAMESPACE_PREFIX, namespace));
+        // 3. print all used namespaces in the schema using prefixes from the request or global file
+        int defaultNamespaceIndex = 0;
+        int autoGeneratedIndex = 1;
+        for (String schemaNamespace : orderedSchemaNamespaces) {
+            if (defaultNamespaceIndex == 0) {
+                schema.setDefaultNamespace(schemaNamespace);
+                schema.getPrefixes().add(new NamespacePrefixEntry(SchemaConstants.DEFAULT_NAMESPACE_PREFIX, schemaNamespace));
+                defaultNamespaceIndex++;
             } else {
-                schema.getPrefixes().add(new NamespacePrefixEntry(SchemaConstants.DEFAULT_NAMESPACE_PREFIX_AUTO + index, namespace));
+                if (prefixMap.containsKey(schemaNamespace)) {
+                    schema.getPrefixes().add(new NamespacePrefixEntry(prefixMap.get(schemaNamespace), schemaNamespace));
+                } else {
+                    schema.getPrefixes().add(new NamespacePrefixEntry(SchemaConstants.DEFAULT_NAMESPACE_PREFIX_AUTO + autoGeneratedIndex, schemaNamespace));
+                    autoGeneratedIndex++;
+                }
             }
-            index++;
         }
     }
 
     @Nonnull
-    protected Set<String> getAllNamespacesOrderedByUsageCount(@Nonnull Schema schema) {
+    protected Set<String> getAllSchemaNamespacesOrderedByUsageCount(@Nonnull SchemaExtractorRequestDto request, @Nonnull Schema schema) {
         List<String> namespaces = new ArrayList<>();
+
+        // get all schema class and property namespaces
         for (SchemaClass item : schema.getClasses()) {
-            namespaces.add(item.getNamespace());
+            if (StringUtils.isNotEmpty(item.getNamespace())) {
+                namespaces.add(item.getNamespace());
+            }
         }
         for (SchemaProperty item : schema.getProperties()) {
-            namespaces.add(item.getNamespace());
+            if (StringUtils.isNotEmpty(item.getNamespace())) {
+                namespaces.add(item.getNamespace());
+            }
         }
+
+        // order all class and property namespaces by usage count
         Map<String, Long> namespacesWithCounts = namespaces.stream()
                 .collect(Collectors.groupingBy(e -> e, Collectors.counting()));
         Set<String> orderedNamespaces = new LinkedHashSet<>();
         namespacesWithCounts.entrySet().stream()
                 .sorted(Map.Entry.comparingByValue(Comparator.reverseOrder()))
                 .forEach(entry -> orderedNamespaces.add(entry.getKey()));
+
+        // add all instance namespaces
+        if (request.getCheckInstanceNamespaces()) {
+            for (SchemaClass clazz : schema.getClasses()) {
+                String query = SchemaExtractorQueries.FIND_INSTANCE_NAMESPACES.getSparqlQuery()
+                        .replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_A_FULL, addQuotesToString((StringUtils.isNotEmpty(clazz.getDataType())) ? clazz.getLocalName() : clazz.getFullName()))
+                        .replace(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, clazz.getClassificationProperty());
+                QueryResponse queryResponse = sparqlEndpointProcessor.read(request, FIND_INSTANCE_NAMESPACES.name(), query, false);
+                if (!queryResponse.hasErrors() && !queryResponse.getResults().isEmpty()) {
+                    queryResponse.getResults().forEach(queryResult -> {
+                        String instanceNamespace = queryResult.getValue(SPARQL_QUERY_BINDING_NAME_X);
+                        if (StringUtils.isNotEmpty(instanceNamespace)) {
+                            int namespaceIndex = instanceNamespace.lastIndexOf("#");
+                            if (namespaceIndex == -1) {
+                                namespaceIndex = instanceNamespace.lastIndexOf("/");
+                            }
+                            if (namespaceIndex != -1) {
+                                orderedNamespaces.add(instanceNamespace.substring(0, namespaceIndex + 1));
+                            }
+                        }
+                    });
+                }
+            }
+        }
+
         return orderedNamespaces;
     }
 
@@ -1150,6 +1198,7 @@ public class SchemaExtractor {
         schema.getParameters().add(new SchemaParameter(SchemaParameter.PARAM_NAME_CALCULATE_DOMAIN_AND_RANGE_PAIRS, request.getCalculateDomainAndRangePairs().toString()));
         schema.getParameters().add(new SchemaParameter(SchemaParameter.PARAM_NAME_CALCULATE_DATA_TYPES, request.getCalculateDataTypes().toString()));
         schema.getParameters().add(new SchemaParameter(SchemaParameter.PARAM_NAME_CALCULATE_CARDINALITIES, request.getCalculateCardinalitiesMode().toString()));
+        schema.getParameters().add(new SchemaParameter(SchemaParameter.PARAM_NAME_CHECK_INSTANCE_NAMESPACES, request.getCheckInstanceNamespaces().toString()));
         if (request.getMinimalAnalyzedClassSize() != null) {
             schema.getParameters().add(new SchemaParameter(SchemaParameter.PARAM_NAME_MIN_CLASS_SIZE, request.getMinimalAnalyzedClassSize().toString()));
         }
@@ -1201,7 +1250,7 @@ public class SchemaExtractor {
             boolean hasErrors = false;
             for (String classificationProperty : request.getClassificationProperties()) {
                 String query = SchemaExtractorQueries.FIND_INTERSECTION_CLASSES_FOR_KNOWN_CLASS.getSparqlQuery()
-                        .replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_DOMAIN_FULL, addQuotesToString(classA.getFullName()) )
+                        .replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_DOMAIN_FULL, addQuotesToString((StringUtils.isNotEmpty(classA.getDataType())) ? classA.getLocalName() : classA.getFullName()))
                         .replace(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_A, classA.getClassificationProperty())
                         .replace(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_B, classificationProperty);
                 queryResponse = sparqlEndpointProcessor.read(request, FIND_INTERSECTION_CLASSES_FOR_KNOWN_CLASS.name(), query, true);
@@ -1221,8 +1270,8 @@ public class SchemaExtractor {
                             && (isNotFalse(classA.getPropertiesInSchema()) || isNotFalse(classB.getPropertiesInSchema()))
                     ) {
                         String checkQuery = CHECK_CLASS_INTERSECTION.getSparqlQuery()
-                                .replace(SPARQL_QUERY_BINDING_NAME_CLASS_A_FULL, addQuotesToString(classA.getFullName()) )
-                                .replace(SPARQL_QUERY_BINDING_NAME_CLASS_B_FULL, addQuotesToString(classB.getFullName()) )
+                                .replace(SPARQL_QUERY_BINDING_NAME_CLASS_A_FULL, addQuotesToString((StringUtils.isNotEmpty(classA.getDataType())) ? classA.getLocalName() : classA.getFullName()))
+                                .replace(SPARQL_QUERY_BINDING_NAME_CLASS_B_FULL, addQuotesToString((StringUtils.isNotEmpty(classB.getDataType())) ? classB.getLocalName() : classB.getFullName()))
                                 .replace(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_A, classA.getClassificationProperty())
                                 .replace(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_B, classB.getClassificationProperty());
                         QueryResponse checkQueryResponse = sparqlEndpointProcessor.read(request, CHECK_CLASS_INTERSECTION.name(), checkQuery, false);
@@ -1387,7 +1436,7 @@ public class SchemaExtractor {
                 continue;
             }
             String query = SchemaExtractorQueries.CHECK_SUPERCLASS.getSparqlQuery()
-                    .replace(SPARQL_QUERY_BINDING_NAME_CLASS_A_FULL, addQuotesToString(currentClass.getFullName()) )
+                    .replace(SPARQL_QUERY_BINDING_NAME_CLASS_A_FULL, addQuotesToString((StringUtils.isNotEmpty(currentClass.getDataType())) ? currentClass.getLocalName() : currentClass.getFullName()))
                     .replace(SPARQL_QUERY_BINDING_NAME_CLASS_B_FULL, addQuotesToString(neighbor))
                     .replace(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_A, currentClass.getClassificationProperty())
                     .replace(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_B, neighborClassInfo.getClassificationProperty());
