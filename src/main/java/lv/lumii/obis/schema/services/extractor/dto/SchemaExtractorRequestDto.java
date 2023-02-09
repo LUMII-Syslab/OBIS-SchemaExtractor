@@ -9,7 +9,9 @@ import lv.lumii.obis.schema.services.extractor.v2.dto.SchemaExtractorRequestedPr
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Setter
 @Getter
@@ -48,6 +50,8 @@ public class SchemaExtractorRequestDto {
     private List<String> excludedNamespaces;
     private SchemaExtractorPredefinedNamespaces predefinedNamespaces;
 
+    private Map<String, String> queries;
+
     /**
      * DEPRECATED properties for old services
      */
@@ -83,5 +87,13 @@ public class SchemaExtractorRequestDto {
             includedLabels = new ArrayList<>();
         }
         return includedLabels;
+    }
+
+    @Nonnull
+    public Map<String, String> getQueries() {
+        if (queries == null) {
+            queries = new HashMap<>();
+        }
+        return queries;
     }
 }

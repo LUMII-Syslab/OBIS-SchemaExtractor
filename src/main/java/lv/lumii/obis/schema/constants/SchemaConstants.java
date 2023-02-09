@@ -26,6 +26,8 @@ public class SchemaConstants {
      * Namespaces
      */
     public static final String GLOBAL_NAMESPACE_PATH = "./namespaces.json";
+
+    public static final String GLOBAL_SPARQL_QUERIES_PATH = "./queries.properties";
     public static final String DEFAULT_NAMESPACE_PREFIX = ":";
     public static final String DEFAULT_NAMESPACE_PREFIX_AUTO = "n";
     public static final String XSD_NAMESPACE = "http://www.w3.org/2001/XMLSchema#";

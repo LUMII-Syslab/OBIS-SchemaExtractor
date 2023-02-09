@@ -8,7 +8,6 @@ import lv.lumii.obis.schema.services.common.dto.QueryResponse;
 import lv.lumii.obis.schema.services.common.dto.QueryResult;
 import lv.lumii.obis.schema.services.common.dto.QueryResultObject;
 import lv.lumii.obis.schema.services.common.dto.SparqlEndpointConfig;
-import lv.lumii.obis.schema.services.extractor.v1.SchemaExtractorQueries;
 import lv.lumii.obis.schema.services.extractor.dto.SchemaExtractorRequestDto;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.jena.query.Query;
@@ -32,52 +31,34 @@ public class SparqlEndpointProcessor {
 
     private static final int RETRY_COUNT = 2;
 
+    /**
+     * Actual methods for SchemaExtractor V2
+     */
     @Nonnull
-    public List<QueryResult> read(@Nonnull SchemaExtractorRequestDto request, @Nonnull SchemaExtractorQueries queryItem) {
-        return read(request, queryItem.name(), queryItem.getSparqlQuery());
+    public QueryResponse read(@Nonnull SchemaExtractorRequestDto request, @Nonnull SparqlQueryBuilder queryBuilder) {
+        return read(request, queryBuilder, true);
     }
 
     @Nonnull
-    public List<QueryResult> read(@Nonnull SchemaExtractorRequestDto request, @Nonnull lv.lumii.obis.schema.services.extractor.v2.SchemaExtractorQueries queryItem) {
-        return read(request, queryItem.name(), queryItem.getSparqlQuery());
+    public QueryResponse read(@Nonnull SchemaExtractorRequestDto request, @Nonnull SparqlQueryBuilder queryBuilder, boolean withRetry) {
+        return read(new SparqlEndpointConfig(request.getEndpointUrl(), request.getGraphName(), request.getEnableLogging()), queryBuilder, withRetry);
     }
 
     @Nonnull
-    public List<QueryResult> read(@Nonnull SchemaExtractorRequestDto request, @Nonnull String queryName, @Nonnull String sparqlQuery) {
-        return read(new SparqlEndpointConfig(request.getEndpointUrl(), request.getGraphName(), request.getEnableLogging()),
-                queryName, sparqlQuery);
-    }
-
-    @Nonnull
-    public QueryResponse read(@Nonnull SchemaExtractorRequestDto request, @Nonnull String queryName, @Nonnull String sparqlQuery, boolean withRetry) {
-        return read(new SparqlEndpointConfig(request.getEndpointUrl(), request.getGraphName(), request.getEnableLogging()),
-                queryName, sparqlQuery, withRetry);
-    }
-
-    @Nonnull
-    public List<QueryResult> read(@Nonnull SparqlEndpointConfig request, @Nonnull String queryName, @Nonnull String sparqlQuery) {
-        return read(request, queryName, sparqlQuery, true).getResults();
-    }
-
-    @Nonnull
-    private QueryResponse read(@Nonnull SparqlEndpointConfig request, @Nonnull String queryName, @Nonnull String sparqlQuery, boolean withRetry) {
+    private QueryResponse read(@Nonnull SparqlEndpointConfig request, @Nonnull SparqlQueryBuilder queryBuilder, boolean withRetry) {
         QueryResponse response = new QueryResponse();
 
-        Query query;
-        try {
-            query = QueryFactory.create(sparqlQuery);
-        } catch (Exception e) {
-            log.error(String.format("SPARQL query syntax or formatting exception for the query %s", queryName));
-            log.error("\n" + sparqlQuery);
+        Query query = queryBuilder.build();
+        if (query == null) {
             response.setHasErrors(true);
             return response;
         }
 
         if (request.isEnableLogging()) {
-            log.info(queryName + "\n" + sparqlQuery);
+            log.info(queryBuilder.getQueryName() + "\n" + queryBuilder.getQueryString());
         }
 
-        List<QueryResult> results = requestData(request, query, queryName, sparqlQuery, 1, withRetry);
+        List<QueryResult> results = requestData(request, query, queryBuilder.getQueryName(), queryBuilder.getQueryString(), 1, withRetry);
         if (results != null) {
             response.setHasErrors(false);
             response.setResults(results);
@@ -168,6 +149,56 @@ public class SparqlEndpointProcessor {
         }
         //qexec.setTimeout(300000L, 100000L);
         return qexec;
+    }
+
+    /**
+     * Deprecated methods for SchemaExtractor V1
+     */
+
+    @Nonnull
+    public List<QueryResult> read(@Nonnull SchemaExtractorRequestDto request, @Nonnull lv.lumii.obis.schema.services.extractor.v1.SchemaExtractorQueries queryItem) {
+        return read(request, queryItem.name(), queryItem.getSparqlQuery());
+    }
+
+    @Nonnull
+    public List<QueryResult> read(@Nonnull SchemaExtractorRequestDto request, @Nonnull String queryName, @Nonnull String sparqlQuery) {
+        return read(new SparqlEndpointConfig(request.getEndpointUrl(), request.getGraphName(), request.getEnableLogging()),
+                queryName, sparqlQuery);
+    }
+
+    @Nonnull
+    public List<QueryResult> read(@Nonnull SparqlEndpointConfig request, @Nonnull String queryName, @Nonnull String sparqlQuery) {
+        return read(request, queryName, sparqlQuery, true).getResults();
+    }
+
+    @Nonnull
+    private QueryResponse read(@Nonnull SparqlEndpointConfig request, @Nonnull String queryName, @Nonnull String sparqlQuery, boolean withRetry) {
+        QueryResponse response = new QueryResponse();
+
+        Query query;
+        try {
+            query = QueryFactory.create(sparqlQuery);
+        } catch (Exception e) {
+            log.error(String.format("SPARQL query syntax or formatting exception for the query %s", queryName));
+            log.error("\n" + sparqlQuery);
+            response.setHasErrors(true);
+            return response;
+        }
+
+        if (request.isEnableLogging()) {
+            log.info(queryName + "\n" + sparqlQuery);
+        }
+
+        List<QueryResult> results = requestData(request, query, queryName, sparqlQuery, 1, withRetry);
+        if (results != null) {
+            response.setHasErrors(false);
+            response.setResults(results);
+        } else {
+            response.setHasErrors(true);
+            response.setResults(new ArrayList<>());
+        }
+
+        return response;
     }
 
 }

@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import io.swagger.annotations.*;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import lv.lumii.obis.schema.constants.SchemaConstants;
 import lv.lumii.obis.schema.services.extractor.dto.SchemaExtractorRequestDto;
 import lv.lumii.obis.schema.services.extractor.v2.SchemaExtractor;
 import lv.lumii.obis.schema.services.*;
@@ -18,6 +19,12 @@ import javax.ws.rs.core.MediaType;
 import java.io.*;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Properties;
+import java.util.stream.Collectors;
+
+import static lv.lumii.obis.schema.constants.SchemaConstants.GLOBAL_SPARQL_QUERIES_PATH;
 
 /**
  * REST Controller to process Schema Extractor web requests.
@@ -106,13 +113,16 @@ public class SchemaExtractorControllerV2 {
             log.info(String.format(SCHEMA_READ_PREFIX_FILE_MESSAGE_END, requestDto.getCorrelationId(), namespacePrefixFile.getOriginalFilename()));
         }
 
-        // 5. Build the schema from the endpoint
+        // 5. Load SPARQL queries defined in the system file
+        requestDto.setQueries(initializeSparqlQueries());
+
+        // 6. Build the schema from the endpoint
         lv.lumii.obis.schema.model.v2.Schema schema = schemaExtractor.extractSchema(requestDto);
 
         LocalDateTime endTime = LocalDateTime.now();
         log.info(String.format(SCHEMA_EXTRACT_MESSAGE_END, calculateExecutionTime(startTime, endTime), requestJson));
 
-        // 6. Return the result JSON schema
+        // 7. Return the result JSON schema
         return jsonSchemaService.getJsonSchemaString(schema);
     }
 
@@ -120,6 +130,33 @@ public class SchemaExtractorControllerV2 {
         return Duration.between(startLocalDateTime, endLocalDateTime).toString().substring(2)
                 .replaceAll("(\\d[HMS])", "$1 ")
                 .toLowerCase();
+    }
+
+    @Nonnull
+    protected Map<String, String> initializeSparqlQueries() {
+        FileInputStream inputStream = null;
+        try {
+            inputStream = new FileInputStream(SchemaConstants.GLOBAL_SPARQL_QUERIES_PATH);
+            Properties queries = new Properties();
+            queries.load(inputStream);
+            return queries.entrySet().stream().collect(
+                    Collectors.toMap(
+                            e -> String.valueOf(e.getKey()),
+                            e -> String.valueOf(e.getValue()),
+                            (prev, next) -> next, HashMap::new
+                    ));
+        } catch (IOException e) {
+            log.error(String.format("Cannot read SPARQL queries from the config file %s. System defined queries will be used.", GLOBAL_SPARQL_QUERIES_PATH));
+        } finally {
+            try {
+                if (inputStream != null) {
+                    inputStream.close();
+                }
+            } catch (IOException e) {
+                log.error("Cannot close input stream when reading SPARQL queries from " + GLOBAL_SPARQL_QUERIES_PATH);
+            }
+        }
+        return new HashMap<>();
     }
 
 }
