@@ -73,11 +73,13 @@ public class SchemaConstants {
      * SPARQL query binding parameter names
      */
     public static final String SPARQL_QUERY_BINDING_NAME_CLASS = "class";
-    public static final String SPARQL_QUERY_BINDING_NAME_CLASS_FULL = "<class>";
     public static final String SPARQL_QUERY_BINDING_NAME_CLASS_A = "classA";
     public static final String SPARQL_QUERY_BINDING_NAME_CLASS_A_FULL = "<classA>";
     public static final String SPARQL_QUERY_BINDING_NAME_CLASS_B = "classB";
     public static final String SPARQL_QUERY_BINDING_NAME_CLASS_B_FULL = "<classB>";
+    public static final String SPARQL_QUERY_BINDING_NAME_CLASS1_PARAM_FULL = "<?class1>";
+    public static final String SPARQL_QUERY_BINDING_NAME_CLASS2_PARAM_FULL = "<?class2>";
+    public static final String SPARQL_QUERY_BINDING_NAME_CLASS_A_PARAM_FULL = "<?classA>";
     public static final String SPARQL_QUERY_BINDING_NAME_CLASS_DOMAIN = "domainClass";
     public static final String SPARQL_QUERY_BINDING_NAME_CLASS_DOMAIN_FULL = "<domainClass>";
     public static final String SPARQL_QUERY_BINDING_NAME_CLASS_RANGE = "rangeClass";

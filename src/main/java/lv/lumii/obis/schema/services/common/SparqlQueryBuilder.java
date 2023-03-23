@@ -1,7 +1,9 @@
 package lv.lumii.obis.schema.services.common;
 
 import lombok.extern.slf4j.Slf4j;
+import lv.lumii.obis.schema.services.SchemaUtil;
 import lv.lumii.obis.schema.services.extractor.v2.SchemaExtractorQueries;
+import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.jena.query.Query;
 import org.apache.jena.query.QueryFactory;
@@ -30,6 +32,24 @@ public class SparqlQueryBuilder {
         }
         contextMap.put(key, value);
         return this;
+    }
+
+    public SparqlQueryBuilder withContextParam(@Nonnull String key, @Nullable String value, @Nonnull Boolean isLiteralValue) {
+        String formattedValue;
+        if (BooleanUtils.isTrue(isLiteralValue)) {
+            formattedValue = SchemaUtil.addQuotesToString(value);
+        } else {
+            formattedValue = SchemaUtil.addAngleBracketsToString(value);
+        }
+        return withContextParam(key, formattedValue);
+    }
+
+    public SparqlQueryBuilder withContextParam(@Nonnull String key, @Nonnull Boolean isLiteralKey) {
+        String formattedKey = key.substring(1, key.length() - 1);
+        if (BooleanUtils.isTrue(isLiteralKey)) {
+            formattedKey = SchemaUtil.addStrPrefixToString(formattedKey);
+        }
+        return withContextParam(key, formattedKey);
     }
 
     public String getQueryName() {

@@ -83,4 +83,13 @@ public class SchemaUtil {
         return (str == null) ? null : "\"" + str + "\"";
     }
 
+    @Nullable
+    public static String addAngleBracketsToString(@Nullable String str) {
+        return (str == null) ? null : "<" + str + ">";
+    }
+
+    public static String addStrPrefixToString(@Nullable String str) {
+        return (str == null) ? null : "str(" + str + ")";
+    }
+
 }

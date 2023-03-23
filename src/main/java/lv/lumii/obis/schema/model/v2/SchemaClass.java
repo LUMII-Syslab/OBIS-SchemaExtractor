@@ -22,6 +22,8 @@ public class SchemaClass extends SchemaElement {
 
 	private String dataType;
 
+	private Boolean isLiteral;
+
 	private Boolean propertiesInSchema;
 
 	private String classificationProperty;

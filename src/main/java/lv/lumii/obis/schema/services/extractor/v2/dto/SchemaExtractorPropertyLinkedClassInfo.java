@@ -16,6 +16,8 @@ public class SchemaExtractorPropertyLinkedClassInfo {
 
     private String classificationProperty;
 
+    private Boolean isLiteral;
+
     @Nonnull
     public Long getClassTotalTripleCount() {
         if (classTotalTripleCount == null) {

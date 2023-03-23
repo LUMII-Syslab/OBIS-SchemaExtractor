@@ -122,12 +122,14 @@ public class SparqlEndpointProcessor {
                 queryResultObject.setFullName(uriValue.getURI());
                 queryResultObject.setLocalName(uriValue.getLocalName());
                 queryResultObject.setNamespace(uriValue.getNameSpace());
+                queryResultObject.setIsLiteral(false);
             } else if (value instanceof Literal) {
                 Literal literal = value.asLiteral();
                 queryResultObject.setValue(literal.getString());
                 queryResultObject.setFullName(literal.getString());
                 queryResultObject.setLocalName(literal.getString());
                 queryResultObject.setDataType(literal.getDatatypeURI());
+                queryResultObject.setIsLiteral(true);
 //                if(StringUtils.isNotEmpty(queryResultObject.getDataType())) {
 //                    queryResultObject.setFullName("\"" + queryResultObject.getLocalName() + "\"^^<" + queryResultObject.getDataType() + ">");
 //                }

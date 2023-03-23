@@ -12,5 +12,6 @@ public class QueryResultObject {
     private String localName;
     private String namespace;
     private String dataType;
+    private Boolean isLiteral;
 
 }

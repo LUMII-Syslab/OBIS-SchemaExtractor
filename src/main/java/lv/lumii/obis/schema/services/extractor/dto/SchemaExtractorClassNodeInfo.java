@@ -25,6 +25,7 @@ public class SchemaExtractorClassNodeInfo {
 	private List<SchemaExtractorDataTypeInfo> dataTypes;
 
 	private String classificationProperty;
+	private Boolean isLiteral;
 
 	public SchemaExtractorClassNodeInfo() {
 	}
@@ -33,20 +34,17 @@ public class SchemaExtractorClassNodeInfo {
 		this.className = className;
 	}
 
-	public SchemaExtractorClassNodeInfo(String className, String classificationProperty) {
+	public SchemaExtractorClassNodeInfo(String className, String classificationProperty, Boolean isLiteral) {
 		this.className = className;
 		this.classificationProperty = classificationProperty;
+		this.isLiteral = isLiteral;
 	}
 
-	public SchemaExtractorClassNodeInfo(String className, Long tripleCount) {
-		this.className = className;
-		this.tripleCount = tripleCount;
-	}
-
-	public SchemaExtractorClassNodeInfo(String className, Long tripleCount, String classificationProperty) {
+	public SchemaExtractorClassNodeInfo(String className, Long tripleCount, String classificationProperty, Boolean isLiteral) {
 		this.className = className;
 		this.tripleCount = tripleCount;
 		this.classificationProperty = classificationProperty;
+		this.isLiteral = isLiteral;
 	}
 
 	public List<String> getNeighbors() {
