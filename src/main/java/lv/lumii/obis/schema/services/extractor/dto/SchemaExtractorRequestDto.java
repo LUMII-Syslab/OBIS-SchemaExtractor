@@ -39,6 +39,8 @@ public class SchemaExtractorRequestDto {
     private Boolean calculateSubClassRelations;
     private Boolean calculatePropertyPropertyRelations;
     private Boolean calculateDomainAndRangePairs;
+    private Boolean calculateClosedDomainsAndRanges;
+    private Boolean calculatePrincipalDomainsAndRanges;
     private Boolean calculateDataTypes;
     private CalculateCardinalitiesMode calculateCardinalitiesMode;
     private Boolean checkInstanceNamespaces;

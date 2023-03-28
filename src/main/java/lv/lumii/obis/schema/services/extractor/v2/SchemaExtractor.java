@@ -247,17 +247,19 @@ public class SchemaExtractor {
 
             }
 
-            determinePropertyClosedDomains(property, request);
-            determinePropertyClosedRanges(property, request);
-            determinePropertyClosedRangesOnSourceClassLevel(property, request);
-            determinePropertyClosedDomainsOnTargetClassLevel(property, request);
+            if (isTrue(request.getCalculateClosedDomainsAndRanges())) {
+                determinePropertyClosedDomains(property, request);
+                determinePropertyClosedRanges(property, request);
+                determinePropertyClosedRangesOnSourceClassLevel(property, request);
+                determinePropertyClosedDomainsOnTargetClassLevel(property, request);
+            }
 
             if (isFalse(property.getIsObjectProperty()) && isTrue(request.getCalculateDataTypes())) {
                 determinePropertyDataTypes(property, request);
                 determinePropertyDomainsDataTypes(property, request);
             }
 
-            if (isTrue(request.getCalculateSubClassRelations())) {
+            if (isTrue(request.getCalculatePrincipalDomainsAndRanges())) {
                 determinePrincipalDomainsAndRanges(property, schema.getClasses(), graphOfClasses, request);
             }
 
