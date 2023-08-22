@@ -5,8 +5,6 @@ import lv.lumii.obis.schema.services.SchemaUtil;
 import lv.lumii.obis.schema.services.extractor.v2.SchemaExtractorQueries;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.jena.query.Query;
-import org.apache.jena.query.QueryFactory;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -37,19 +35,11 @@ public class SparqlQueryBuilder {
     public SparqlQueryBuilder withContextParam(@Nonnull String key, @Nullable String value, @Nonnull Boolean isLiteralValue) {
         String formattedValue;
         if (BooleanUtils.isTrue(isLiteralValue)) {
-            formattedValue = SchemaUtil.addQuotesToString(value);
+            formattedValue = value;
         } else {
             formattedValue = SchemaUtil.addAngleBracketsToString(value);
         }
         return withContextParam(key, formattedValue);
-    }
-
-    public SparqlQueryBuilder withContextParam(@Nonnull String key, @Nonnull Boolean isLiteralKey) {
-        String formattedKey = key.substring(1, key.length() - 1);
-        if (BooleanUtils.isTrue(isLiteralKey)) {
-            formattedKey = SchemaUtil.addStrPrefixToString(formattedKey);
-        }
-        return withContextParam(key, formattedKey);
     }
 
     public String getQueryName() {
@@ -68,8 +58,8 @@ public class SparqlQueryBuilder {
     }
 
     @Nullable
-    public Query build() {
-        Query query = buildQuery(this.query);
+    public String build() {
+        String query = buildQuery(this.query);
         if (query == null) {
             log.info("External query is not defined or has errors, using built-in query " + this.backupQuery.name());
             query = buildQuery(this.backupQuery.getSparqlQuery());
@@ -78,7 +68,7 @@ public class SparqlQueryBuilder {
     }
 
     @Nullable
-    private Query buildQuery(@Nullable String queryToBuild) {
+    private String buildQuery(@Nullable String queryToBuild) {
         if (StringUtils.isEmpty(queryToBuild)) {
             return null;
         }
@@ -86,9 +76,8 @@ public class SparqlQueryBuilder {
             for (String param : this.getContextMap().keySet()) {
                 queryToBuild = queryToBuild.replace(param, this.getContextMap().get(param));
             }
-            Query builtQuery = QueryFactory.create(queryToBuild);
             this.resultQuery = queryToBuild;
-            return builtQuery;
+            return this.resultQuery;
         } catch (Exception e) {
             log.error(String.format("SPARQL query syntax or formatting exception for the query %s", this.backupQuery.name()));
             log.error("\n" + queryToBuild);

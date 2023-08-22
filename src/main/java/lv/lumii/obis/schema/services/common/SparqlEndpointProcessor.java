@@ -10,16 +10,13 @@ import lv.lumii.obis.schema.services.common.dto.QueryResultObject;
 import lv.lumii.obis.schema.services.common.dto.SparqlEndpointConfig;
 import lv.lumii.obis.schema.services.extractor.dto.SchemaExtractorRequestDto;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.jena.query.Query;
-import org.apache.jena.query.QueryExecutionFactory;
-import org.apache.jena.query.QueryFactory;
-import org.apache.jena.query.QuerySolution;
-import org.apache.jena.query.ResultSet;
+import org.apache.jena.query.*;
 import org.apache.jena.rdf.model.Literal;
 import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.Resource;
-import org.apache.jena.sparql.engine.http.QueryEngineHTTP;
 
+import org.apache.jena.sparql.exec.http.QueryExecutionHTTP;
+import org.apache.jena.sparql.exec.http.QueryExecutionHTTPBuilder;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Nonnull;
@@ -48,7 +45,7 @@ public class SparqlEndpointProcessor {
     private QueryResponse read(@Nonnull SparqlEndpointConfig request, @Nonnull SparqlQueryBuilder queryBuilder, boolean withRetry) {
         QueryResponse response = new QueryResponse();
 
-        Query query = queryBuilder.build();
+        String query = queryBuilder.build();
         if (query == null) {
             response.setHasErrors(true);
             return response;
@@ -58,7 +55,7 @@ public class SparqlEndpointProcessor {
             log.info(queryBuilder.getQueryName() + "\n" + queryBuilder.getQueryString());
         }
 
-        List<QueryResult> results = requestData(request, query, queryBuilder.getQueryName(), queryBuilder.getQueryString(), 1, withRetry);
+        List<QueryResult> results = requestData(request, queryBuilder.getQueryName(), queryBuilder.getQueryString(), 1, withRetry);
         if (results != null) {
             response.setHasErrors(false);
             response.setResults(results);
@@ -71,11 +68,11 @@ public class SparqlEndpointProcessor {
     }
 
     @Nullable
-    private List<QueryResult> requestData(@Nonnull SparqlEndpointConfig request, @Nonnull Query query, @Nonnull String queryName, @Nonnull String sparqlQuery,
+    private List<QueryResult> requestData(@Nonnull SparqlEndpointConfig request, @Nonnull String queryName, @Nonnull String sparqlQuery,
                                           int attempt, boolean withRetry) {
         List<QueryResult> queryResults = null;
         ResultSet resultSet;
-        QueryEngineHTTP queryExecutor = getQueryExecutor(request.getEndpointUrl(), request.getGraphName(), query);
+        QueryExecutionHTTP queryExecutor = getQueryExecutor(request.getEndpointUrl(), request.getGraphName(), sparqlQuery);
         try {
             resultSet = queryExecutor.execSelect();
             if (attempt > 1) {
@@ -93,7 +90,7 @@ public class SparqlEndpointProcessor {
                 log.error(String.format("SPARQL Endpoint Exception status '%s'. This was attempt number %d for the query %s", e.getMessage(), attempt, queryName));
                 log.error("\n" + sparqlQuery);
                 if (attempt < RETRY_COUNT) {
-                    return requestData(request, query, queryName, sparqlQuery, ++attempt, withRetry);
+                    return requestData(request, queryName, sparqlQuery, ++attempt, withRetry);
                 }
             } else {
                 log.error(String.format("SPARQL Endpoint Exception status '%s' for the query %s", e.getMessage(), queryName));
@@ -130,9 +127,9 @@ public class SparqlEndpointProcessor {
                 queryResultObject.setLocalName(literal.getString());
                 queryResultObject.setDataType(literal.getDatatypeURI());
                 queryResultObject.setIsLiteral(true);
-//                if(StringUtils.isNotEmpty(queryResultObject.getDataType())) {
-//                    queryResultObject.setFullName("\"" + queryResultObject.getLocalName() + "\"^^<" + queryResultObject.getDataType() + ">");
-//                }
+                if (StringUtils.isNotEmpty(queryResultObject.getDataType())) {
+                    queryResultObject.setFullName("\"" + queryResultObject.getLocalName() + "\"^^<" + queryResultObject.getDataType() + ">");
+                }
             } else {
                 queryResultObject.setValue(value.toString().split("\\^\\^")[0]);
             }
@@ -141,16 +138,12 @@ public class SparqlEndpointProcessor {
         queryResults.add(queryResult);
     }
 
-    private QueryEngineHTTP getQueryExecutor(@Nonnull String endpointUrl, @Nullable String graphName, @Nonnull Query query) {
-        QueryEngineHTTP qexec;
-        if (StringUtils.isEmpty(graphName)) {
-            qexec = (QueryEngineHTTP) QueryExecutionFactory.sparqlService(endpointUrl, query);
-        } else {
-            qexec = (QueryEngineHTTP) QueryExecutionFactory.sparqlService(endpointUrl, query, graphName);
-            qexec.addDefaultGraph(graphName);
+    private QueryExecutionHTTP getQueryExecutor(@Nonnull String endpointUrl, @Nullable String graphName, @Nonnull String query) {
+        QueryExecutionHTTPBuilder builder = QueryExecutionHTTP.create().endpoint(endpointUrl).queryString(query);
+        if (StringUtils.isNotEmpty(graphName)) {
+            builder.addDefaultGraphURI(graphName);
         }
-        //qexec.setTimeout(300000L, 100000L);
-        return qexec;
+        return builder.build();
     }
 
     /**
@@ -191,7 +184,7 @@ public class SparqlEndpointProcessor {
             log.info(queryName + "\n" + sparqlQuery);
         }
 
-        List<QueryResult> results = requestData(request, query, queryName, sparqlQuery, 1, withRetry);
+        List<QueryResult> results = requestData(request, queryName, sparqlQuery, 1, withRetry);
         if (results != null) {
             response.setHasErrors(false);
             response.setResults(results);

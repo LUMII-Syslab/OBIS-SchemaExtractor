@@ -123,7 +123,7 @@ public class SchemaExtractor {
             if (classNameObject == null) {
                 continue;
             }
-            String instancesCountStr = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT);
+            String instancesCountStr = queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT);
             if (includedClasses.isEmpty() || includedClasses.contains(classNameObject.getValue())) {
                 addClass(classNameObject, classNameObject.getValue(), instancesCountStr, classificationProperty, classes, request);
             }
@@ -193,8 +193,8 @@ public class SchemaExtractor {
         Set<String> includedProperties = request.getIncludedProperties().stream().map(SchemaExtractorRequestedPropertyDto::getPropertyName).collect(Collectors.toSet());
         for (QueryResult queryResult : queryResults) {
 
-            String propertyName = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY);
-            String instancesCountStr = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT);
+            String propertyName = queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY);
+            String instancesCountStr = queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT);
 
             // process only required properties
             if (includedProperties.isEmpty() || includedProperties.contains(propertyName)) {
@@ -303,7 +303,7 @@ public class SchemaExtractor {
                 .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
         QueryResponse queryResponseForUrlCount = sparqlEndpointProcessor.read(request, queryBuilder);
         if (!queryResponseForUrlCount.hasErrors() && !queryResponseForUrlCount.getResults().isEmpty() && queryResponseForUrlCount.getResults().get(0) != null) {
-            objectTripleCount = SchemaUtil.getLongValueFromString(queryResponseForUrlCount.getResults().get(0).get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
+            objectTripleCount = SchemaUtil.getLongValueFromString(queryResponseForUrlCount.getResults().get(0).getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
         } else {
             queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_PROPERTY_URL_VALUES.name()), CHECK_PROPERTY_URL_VALUES)
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
@@ -324,7 +324,7 @@ public class SchemaExtractor {
                 .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
         QueryResponse queryResponseForLiteralCount = sparqlEndpointProcessor.read(request, queryBuilder);
         if (!queryResponseForLiteralCount.hasErrors() && !queryResponseForLiteralCount.getResults().isEmpty() && queryResponseForLiteralCount.getResults().get(0) != null) {
-            dataTripleCount = SchemaUtil.getLongValueFromString(queryResponseForLiteralCount.getResults().get(0).get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
+            dataTripleCount = SchemaUtil.getLongValueFromString(queryResponseForLiteralCount.getResults().get(0).getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
         } else {
             queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_PROPERTY_LITERAL_VALUES.name()), CHECK_PROPERTY_LITERAL_VALUES)
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
@@ -359,7 +359,7 @@ public class SchemaExtractor {
                 hasErrors = queryResponse.hasErrors();
             }
             for (QueryResult queryResult : queryResponse.getResults()) {
-                String className = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS);
+                String className = queryResult.getValueFullName(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS);
                 if (StringUtils.isNotEmpty(className) && isNotExcludedResource(className, request.getExcludedNamespaces())) {
                     SchemaClass schemaClass = findClass(schema.getClasses(), className);
                     if (schemaClass != null && isNotFalse(schemaClass.getPropertiesInSchema())) {
@@ -373,7 +373,6 @@ public class SchemaExtractor {
             schema.getClasses().forEach(potentialDomain -> {
                 if (isNotFalse(potentialDomain.getPropertiesInSchema())) {
                     SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_CLASS_AS_PROPERTY_DOMAIN.name()), CHECK_CLASS_AS_PROPERTY_DOMAIN)
-                            .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS1_PARAM_FULL, potentialDomain.getIsLiteral())
                             .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_DOMAIN_FULL, potentialDomain.getFullName(), potentialDomain.getIsLiteral())
                             .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, potentialDomain.getClassificationProperty())
                             .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
@@ -390,14 +389,13 @@ public class SchemaExtractor {
         log.info(request.getCorrelationId() + " - determineTripleCountForAllPropertyDomains [" + property.getPropertyName() + "]");
         property.getDomainClasses().forEach(domainClass -> {
             SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_PROPERTY_DOMAINS_TRIPLE_COUNT.name()), FIND_PROPERTY_DOMAINS_TRIPLE_COUNT)
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS1_PARAM_FULL, domainClass.getIsLiteral())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_DOMAIN_FULL, domainClass.getClassName(), domainClass.getIsLiteral())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, domainClass.getClassificationProperty())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
             QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
             for (QueryResult queryResult : queryResponse.getResults()) {
                 if (queryResult != null) {
-                    domainClass.setTripleCount(SchemaUtil.getLongValueFromString(queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT)));
+                    domainClass.setTripleCount(SchemaUtil.getLongValueFromString(queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT)));
                 }
             }
         });
@@ -412,17 +410,15 @@ public class SchemaExtractor {
                 domainClass.setObjectTripleCount(0L);
             } else {
                 SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(COUNT_PROPERTY_URL_VALUES_FOR_DOMAIN.name()), COUNT_PROPERTY_URL_VALUES_FOR_DOMAIN)
-                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS1_PARAM_FULL, domainClass.getIsLiteral())
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_DOMAIN_FULL, domainClass.getClassName(), domainClass.getIsLiteral())
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, domainClass.getClassificationProperty())
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
                 QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
                 if (!queryResponse.hasErrors() && !queryResponse.getResults().isEmpty() && queryResponse.getResults().get(0) != null) {
-                    Long objectTripleCountForDomain = SchemaUtil.getLongValueFromString(queryResponse.getResults().get(0).get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
+                    Long objectTripleCountForDomain = SchemaUtil.getLongValueFromString(queryResponse.getResults().get(0).getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
                     domainClass.setObjectTripleCount(objectTripleCountForDomain);
                 } else {
                     queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_PROPERTY_URL_VALUES_FOR_DOMAIN.name()), CHECK_PROPERTY_URL_VALUES_FOR_DOMAIN)
-                            .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS1_PARAM_FULL, domainClass.getIsLiteral())
                             .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_DOMAIN_FULL, domainClass.getClassName(), domainClass.getIsLiteral())
                             .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, domainClass.getClassificationProperty())
                             .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
@@ -444,17 +440,15 @@ public class SchemaExtractor {
                 domainClass.setDataTripleCount(0L);
             } else {
                 SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(COUNT_PROPERTY_LITERAL_VALUES_FOR_DOMAIN.name()), COUNT_PROPERTY_LITERAL_VALUES_FOR_DOMAIN)
-                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS1_PARAM_FULL, domainClass.getIsLiteral())
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_DOMAIN_FULL, domainClass.getClassName(), domainClass.getIsLiteral())
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, domainClass.getClassificationProperty())
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
                 QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
                 if (!queryResponse.hasErrors() && !queryResponse.getResults().isEmpty() && queryResponse.getResults().get(0) != null) {
-                    Long dataTripleCountForDomain = SchemaUtil.getLongValueFromString(queryResponse.getResults().get(0).get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
+                    Long dataTripleCountForDomain = SchemaUtil.getLongValueFromString(queryResponse.getResults().get(0).getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
                     domainClass.setDataTripleCount(dataTripleCountForDomain);
                 } else {
                     queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_PROPERTY_LITERAL_VALUES_FOR_DOMAIN.name()), CHECK_PROPERTY_LITERAL_VALUES_FOR_DOMAIN)
-                            .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS1_PARAM_FULL, domainClass.getIsLiteral())
                             .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_DOMAIN_FULL, domainClass.getClassName(), domainClass.getIsLiteral())
                             .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, domainClass.getClassificationProperty())
                             .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
@@ -480,7 +474,7 @@ public class SchemaExtractor {
                 hasErrors = queryResponse.hasErrors();
             }
             for (QueryResult queryResult : queryResponse.getResults()) {
-                String className = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS);
+                String className = queryResult.getValueFullName(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS);
                 if (StringUtils.isNotEmpty(className) && isNotExcludedResource(className, request.getExcludedNamespaces())) {
                     SchemaClass schemaClass = findClass(schema.getClasses(), className);
                     if (schemaClass != null && isNotFalse(schemaClass.getPropertiesInSchema())) {
@@ -494,7 +488,6 @@ public class SchemaExtractor {
             schema.getClasses().forEach(potentialRange -> {
                 if (isNotFalse(potentialRange.getPropertiesInSchema())) {
                     SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_CLASS_AS_PROPERTY_RANGE.name()), CHECK_CLASS_AS_PROPERTY_RANGE)
-                            .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS1_PARAM_FULL, potentialRange.getIsLiteral())
                             .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_RANGE_FULL, potentialRange.getFullName(), potentialRange.getIsLiteral())
                             .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, potentialRange.getClassificationProperty())
                             .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
@@ -511,14 +504,13 @@ public class SchemaExtractor {
         log.info(request.getCorrelationId() + " - determineTripleCountForAllPropertyRanges [" + property.getPropertyName() + "]");
         property.getRangeClasses().forEach(rangeClass -> {
             SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_PROPERTY_RANGES_TRIPLE_COUNT.name()), FIND_PROPERTY_RANGES_TRIPLE_COUNT)
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS1_PARAM_FULL, rangeClass.getIsLiteral())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_RANGE_FULL, rangeClass.getClassName(), rangeClass.getIsLiteral())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, rangeClass.getClassificationProperty())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
             QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
             for (QueryResult queryResult : queryResponse.getResults()) {
                 if (queryResult != null) {
-                    rangeClass.setTripleCount(SchemaUtil.getLongValueFromString(queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT)));
+                    rangeClass.setTripleCount(SchemaUtil.getLongValueFromString(queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT)));
                 }
             }
         });
@@ -535,9 +527,9 @@ public class SchemaExtractor {
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
                 QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
                 for (QueryResult queryResult : queryResponse.getResults()) {
-                    String domainClass = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_DOMAIN);
-                    String rangeClass = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_RANGE);
-                    String tripleCountStr = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT);
+                    String domainClass = queryResult.getValueFullName(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_DOMAIN);
+                    String rangeClass = queryResult.getValueFullName(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_RANGE);
+                    String tripleCountStr = queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT);
                     if (StringUtils.isNotEmpty(domainClass) && StringUtils.isNotEmpty(rangeClass)
                             && isNotExcludedResource(domainClass, request.getExcludedNamespaces()) && isNotExcludedResource(rangeClass, request.getExcludedNamespaces())) {
                         SchemaClass domainSchemaClass = findClass(schema.getClasses(), domainClass);
@@ -558,16 +550,14 @@ public class SchemaExtractor {
 
             property.getDomainClasses().forEach(domainClass -> property.getRangeClasses().forEach(rangeClass -> {
                 SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_PROPERTY_DOMAIN_RANGE_PAIRS_FOR_SPECIFIC_CLASSES.name()), FIND_PROPERTY_DOMAIN_RANGE_PAIRS_FOR_SPECIFIC_CLASSES)
-                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS1_PARAM_FULL, domainClass.getIsLiteral())
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_DOMAIN_FULL, domainClass.getClassName(), domainClass.getIsLiteral())
-                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS2_PARAM_FULL, rangeClass.getIsLiteral())
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_RANGE_FULL, rangeClass.getClassName(), rangeClass.getIsLiteral())
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_DOMAIN, domainClass.getClassificationProperty())
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_RANGE, rangeClass.getClassificationProperty())
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
                 QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
                 if (!queryResponse.getResults().isEmpty() && queryResponse.getResults().get(0) != null) {
-                    Long tripleCountForPair = SchemaUtil.getLongValueFromString(queryResponse.getResults().get(0).get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
+                    Long tripleCountForPair = SchemaUtil.getLongValueFromString(queryResponse.getResults().get(0).getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
                     if (tripleCountForPair > 0) {
                         property.getDomainRangePairs().add(new SchemaExtractorDomainRangeInfo(
                                 domainClass.getClassName(), rangeClass.getClassName(), tripleCountForPair, domainClass.getClassificationProperty(), rangeClass.getClassificationProperty()));
@@ -590,7 +580,7 @@ public class SchemaExtractor {
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, classificationProperty)
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
                 QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
-                if (!queryResponse.getResults().isEmpty() && StringUtils.isNotEmpty(queryResponse.getResults().get(0).get(SPARQL_QUERY_BINDING_NAME_X))) {
+                if (!queryResponse.getResults().isEmpty() && StringUtils.isNotEmpty(queryResponse.getResults().get(0).getValue(SPARQL_QUERY_BINDING_NAME_X))) {
                     property.setIsClosedDomain(Boolean.FALSE);
                     break;
                 }
@@ -611,7 +601,7 @@ public class SchemaExtractor {
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, classificationProperty)
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
                 QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
-                if (!queryResponse.getResults().isEmpty() && StringUtils.isNotEmpty(queryResponse.getResults().get(0).get(SPARQL_QUERY_BINDING_NAME_Y))) {
+                if (!queryResponse.getResults().isEmpty() && StringUtils.isNotEmpty(queryResponse.getResults().get(0).getValue(SPARQL_QUERY_BINDING_NAME_Y))) {
                     property.setIsClosedRange(Boolean.FALSE);
                     break;
                 }
@@ -630,13 +620,12 @@ public class SchemaExtractor {
                 domainClass.setIsClosedRange(Boolean.TRUE);
                 for (String classificationProperty : request.getClassificationProperties()) {
                     SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_CLOSED_RANGE_FOR_PROPERTY_AND_CLASS.name()), FIND_CLOSED_RANGE_FOR_PROPERTY_AND_CLASS)
-                            .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS1_PARAM_FULL, domainClass.getIsLiteral())
                             .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_DOMAIN_FULL, domainClass.getClassName(), domainClass.getIsLiteral())
                             .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, domainClass.getClassificationProperty())
                             .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_RANGE, classificationProperty)
                             .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
                     QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
-                    if (!queryResponse.getResults().isEmpty() && StringUtils.isNotEmpty(queryResponse.getResults().get(0).get(SPARQL_QUERY_BINDING_NAME_Y))) {
+                    if (!queryResponse.getResults().isEmpty() && StringUtils.isNotEmpty(queryResponse.getResults().get(0).getValue(SPARQL_QUERY_BINDING_NAME_Y))) {
                         domainClass.setIsClosedRange(Boolean.FALSE);
                         break;
                     }
@@ -656,13 +645,12 @@ public class SchemaExtractor {
                 rangeClass.setIsClosedDomain(Boolean.TRUE);
                 for (String classificationProperty : request.getClassificationProperties()) {
                     SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_CLOSED_DOMAIN_FOR_PROPERTY_AND_CLASS.name()), FIND_CLOSED_DOMAIN_FOR_PROPERTY_AND_CLASS)
-                            .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS1_PARAM_FULL, rangeClass.getIsLiteral())
                             .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_RANGE_FULL, rangeClass.getClassName(), rangeClass.getIsLiteral())
                             .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, rangeClass.getClassificationProperty())
                             .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_DOMAIN, classificationProperty)
                             .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
                     QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
-                    if (!queryResponse.getResults().isEmpty() && StringUtils.isNotEmpty(queryResponse.getResults().get(0).get(SPARQL_QUERY_BINDING_NAME_X))) {
+                    if (!queryResponse.getResults().isEmpty() && StringUtils.isNotEmpty(queryResponse.getResults().get(0).getValue(SPARQL_QUERY_BINDING_NAME_X))) {
                         rangeClass.setIsClosedDomain(Boolean.FALSE);
                         break;
                     }
@@ -678,8 +666,8 @@ public class SchemaExtractor {
                 .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
         QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
         for (QueryResult queryResult : queryResponse.getResults()) {
-            String resultDataType = queryResult.get(SPARQL_QUERY_BINDING_NAME_DATA_TYPE);
-            Long tripleCount = SchemaUtil.getLongValueFromString(queryResult.get(SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
+            String resultDataType = queryResult.getValue(SPARQL_QUERY_BINDING_NAME_DATA_TYPE);
+            Long tripleCount = SchemaUtil.getLongValueFromString(queryResult.getValue(SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
             if (StringUtils.isNotEmpty(resultDataType)) {
                 property.getDataTypes().add(new SchemaExtractorDataTypeInfo(SchemaUtil.parseDataType(resultDataType), tripleCount));
             }
@@ -690,7 +678,7 @@ public class SchemaExtractor {
                 .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
         queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
         if (!queryResponse.getResults().isEmpty()) {
-            Long tripleCount = SchemaUtil.getLongValueFromString(queryResponse.getResults().get(0).get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
+            Long tripleCount = SchemaUtil.getLongValueFromString(queryResponse.getResults().get(0).getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
             if (tripleCount > 0L) {
                 property.getDataTypes().add(new SchemaExtractorDataTypeInfo(DATA_TYPE_RDF_LANG_STRING, tripleCount));
             }
@@ -703,27 +691,25 @@ public class SchemaExtractor {
         property.getDomainClasses().forEach(domainClass -> {
             // find data types
             SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_PROPERTY_DATA_TYPE_WITH_TRIPLE_COUNT_FOR_DOMAIN.name()), FIND_PROPERTY_DATA_TYPE_WITH_TRIPLE_COUNT_FOR_DOMAIN)
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS1_PARAM_FULL, domainClass.getIsLiteral())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_DOMAIN_FULL, domainClass.getClassName(), domainClass.getIsLiteral())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, domainClass.getClassificationProperty())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
             QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
             for (QueryResult queryResult : queryResponse.getResults()) {
                 String resultDataType = queryResult.getValue(SPARQL_QUERY_BINDING_NAME_DATA_TYPE);
-                Long tripleCount = SchemaUtil.getLongValueFromString(queryResult.get(SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
+                Long tripleCount = SchemaUtil.getLongValueFromString(queryResult.getValue(SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
                 if (StringUtils.isNotEmpty(resultDataType)) {
                     domainClass.getDataTypes().add(new SchemaExtractorDataTypeInfo(SchemaUtil.parseDataType(resultDataType), tripleCount));
                 }
             }
             // find language tag
             queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_PROPERTY_DATA_TYPE_LANG_STRING_FOR_DOMAIN.name()), FIND_PROPERTY_DATA_TYPE_LANG_STRING_FOR_DOMAIN)
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS1_PARAM_FULL, domainClass.getIsLiteral())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_DOMAIN_FULL, domainClass.getClassName(), domainClass.getIsLiteral())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, domainClass.getClassificationProperty())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
             queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
             if (!queryResponse.getResults().isEmpty()) {
-                Long tripleCount = SchemaUtil.getLongValueFromString(queryResponse.getResults().get(0).get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
+                Long tripleCount = SchemaUtil.getLongValueFromString(queryResponse.getResults().get(0).getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
                 if (tripleCount > 0L) {
                     domainClass.getDataTypes().add(new SchemaExtractorDataTypeInfo(DATA_TYPE_RDF_LANG_STRING, tripleCount));
                 }
@@ -737,8 +723,8 @@ public class SchemaExtractor {
                 .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
         QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
         for (QueryResult queryResult : queryResponse.getResults()) {
-            String otherProperty = queryResult.get(SPARQL_QUERY_BINDING_NAME_PROPERTY_OTHER);
-            Long tripleCount = SchemaUtil.getLongValueFromString(queryResult.get(SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
+            String otherProperty = queryResult.getValue(SPARQL_QUERY_BINDING_NAME_PROPERTY_OTHER);
+            Long tripleCount = SchemaUtil.getLongValueFromString(queryResult.getValue(SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
             if (StringUtils.isNotEmpty(otherProperty)) {
                 property.getFollowers().add(new SchemaExtractorPropertyRelatedPropertyInfo(otherProperty, tripleCount));
             }
@@ -751,8 +737,8 @@ public class SchemaExtractor {
                 .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
         QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
         for (QueryResult queryResult : queryResponse.getResults()) {
-            String otherProperty = queryResult.get(SPARQL_QUERY_BINDING_NAME_PROPERTY_OTHER);
-            Long tripleCount = SchemaUtil.getLongValueFromString(queryResult.get(SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
+            String otherProperty = queryResult.getValue(SPARQL_QUERY_BINDING_NAME_PROPERTY_OTHER);
+            Long tripleCount = SchemaUtil.getLongValueFromString(queryResult.getValue(SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
             if (StringUtils.isNotEmpty(otherProperty)) {
                 property.getOutgoingProperties().add(new SchemaExtractorPropertyRelatedPropertyInfo(otherProperty, tripleCount));
             }
@@ -765,8 +751,8 @@ public class SchemaExtractor {
                 .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
         QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
         for (QueryResult queryResult : queryResponse.getResults()) {
-            String otherProperty = queryResult.get(SPARQL_QUERY_BINDING_NAME_PROPERTY_OTHER);
-            Long tripleCount = SchemaUtil.getLongValueFromString(queryResult.get(SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
+            String otherProperty = queryResult.getValue(SPARQL_QUERY_BINDING_NAME_PROPERTY_OTHER);
+            Long tripleCount = SchemaUtil.getLongValueFromString(queryResult.getValue(SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
             if (StringUtils.isNotEmpty(otherProperty)) {
                 property.getIncomingProperties().add(new SchemaExtractorPropertyRelatedPropertyInfo(otherProperty, tripleCount));
             }
@@ -777,7 +763,6 @@ public class SchemaExtractor {
         log.info(request.getCorrelationId() + " - determinePropertyDomainsMinCardinality [" + property.getPropertyName() + "]");
         property.getDomainClasses().forEach(domainClass -> {
             SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_PROPERTY_MIN_CARDINALITY.name()), FIND_PROPERTY_MIN_CARDINALITY)
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS1_PARAM_FULL, domainClass.getIsLiteral())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_DOMAIN_FULL, domainClass.getClassName(), domainClass.getIsLiteral())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, domainClass.getClassificationProperty())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
@@ -806,7 +791,6 @@ public class SchemaExtractor {
         log.info(request.getCorrelationId() + " - determinePropertyDomainsMaxCardinality [" + property.getPropertyName() + "]");
         property.getDomainClasses().forEach(domainClass -> {
             SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_PROPERTY_MAX_CARDINALITY_FOR_DOMAIN.name()), FIND_PROPERTY_MAX_CARDINALITY_FOR_DOMAIN)
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS1_PARAM_FULL, domainClass.getIsLiteral())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_DOMAIN_FULL, domainClass.getClassName(), domainClass.getIsLiteral())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, domainClass.getClassificationProperty())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
@@ -835,7 +819,6 @@ public class SchemaExtractor {
         log.info(request.getCorrelationId() + " - determineInverseMaxCardinalityForPropertyRanges [" + property.getPropertyName() + "]");
         property.getRangeClasses().forEach(rangeClass -> {
             SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_INVERSE_PROPERTY_MAX_CARDINALITY_FOR_RANGE.name()), FIND_INVERSE_PROPERTY_MAX_CARDINALITY_FOR_RANGE)
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS1_PARAM_FULL, rangeClass.getIsLiteral())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_RANGE_FULL, rangeClass.getClassName(), rangeClass.getIsLiteral())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, rangeClass.getClassificationProperty())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
@@ -848,7 +831,6 @@ public class SchemaExtractor {
         log.info(request.getCorrelationId() + " - determinePropertyRangesInverseMinCardinality [" + property.getPropertyName() + "]");
         property.getRangeClasses().forEach(rangeClass -> {
             SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_INVERSE_PROPERTY_MIN_CARDINALITY.name()), FIND_INVERSE_PROPERTY_MIN_CARDINALITY)
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS1_PARAM_FULL, rangeClass.getIsLiteral())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_RANGE_FULL, rangeClass.getClassName(), rangeClass.getIsLiteral())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, rangeClass.getClassificationProperty())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
@@ -990,7 +972,6 @@ public class SchemaExtractor {
         boolean isPrincipalDomain = false;
         for (String classificationProperty : request.getClassificationProperties()) {
             SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_PRINCIPAL_DOMAIN.name()), CHECK_PRINCIPAL_DOMAIN)
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS1_PARAM_FULL, newDomainClass.getIsLiteral())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_DOMAIN_FULL, newDomainClass.getClassName(), newDomainClass.getIsLiteral())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_DOMAIN, newDomainClass.getClassificationProperty())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_OTHER, classificationProperty)
@@ -1008,7 +989,6 @@ public class SchemaExtractor {
         boolean isPrincipalRange = false;
         for (String classificationProperty : request.getClassificationProperties()) {
             SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_PRINCIPAL_RANGE.name()), CHECK_PRINCIPAL_RANGE)
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS1_PARAM_FULL, newRangeClass.getIsLiteral())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_RANGE_FULL, newRangeClass.getClassName(), newRangeClass.getIsLiteral())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_RANGE, newRangeClass.getClassificationProperty())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_OTHER, classificationProperty)
@@ -1026,9 +1006,7 @@ public class SchemaExtractor {
         boolean isPrincipalRange = false;
         for (String classificationProperty : request.getClassificationProperties()) {
             SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_PRINCIPAL_RANGE_FOR_DOMAIN.name()), CHECK_PRINCIPAL_RANGE_FOR_DOMAIN)
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS1_PARAM_FULL, domainClass.getIsLiteral())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_DOMAIN_FULL, domainClass.getClassName(), domainClass.getIsLiteral())
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS2_PARAM_FULL, newRangeClass.getIsLiteral())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_RANGE_FULL, newRangeClass.getClassName(), newRangeClass.getIsLiteral())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_DOMAIN, domainClass.getClassificationProperty())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_RANGE, newRangeClass.getClassificationProperty())
@@ -1047,9 +1025,7 @@ public class SchemaExtractor {
         boolean isPrincipalDomain = false;
         for (String classificationProperty : request.getClassificationProperties()) {
             SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_PRINCIPAL_DOMAIN_FOR_RANGE.name()), CHECK_PRINCIPAL_DOMAIN_FOR_RANGE)
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS1_PARAM_FULL, newDomainClass.getIsLiteral())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_DOMAIN_FULL, newDomainClass.getClassName(), newDomainClass.getIsLiteral())
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS2_PARAM_FULL, rangeClass.getIsLiteral())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_RANGE_FULL, rangeClass.getClassName(), rangeClass.getIsLiteral())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_DOMAIN, newDomainClass.getClassificationProperty())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_RANGE, rangeClass.getClassificationProperty())
@@ -1075,7 +1051,7 @@ public class SchemaExtractor {
 
             }
             if (clazz.getIsLiteral()) {
-                customFilter.append("str(?cc)=\"").append(clazz.getFullName()).append("\"");
+                customFilter.append("str(?cc)=\"").append(clazz.getLocalName()).append("\"");
             } else {
                 customFilter.append("?cc=<").append(clazz.getFullName()).append(">");
             }
@@ -1220,7 +1196,6 @@ public class SchemaExtractor {
         if (request.getCheckInstanceNamespaces()) {
             for (SchemaClass clazz : schema.getClasses()) {
                 SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_INSTANCE_NAMESPACES.name()), FIND_INSTANCE_NAMESPACES)
-                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS1_PARAM_FULL, clazz.getIsLiteral())
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_A_FULL, clazz.getFullName(), clazz.getIsLiteral())
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, clazz.getClassificationProperty());
                 QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder, false);
@@ -1304,7 +1279,6 @@ public class SchemaExtractor {
             boolean hasErrors = false;
             for (String classificationProperty : request.getClassificationProperties()) {
                 SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_INTERSECTION_CLASSES_FOR_KNOWN_CLASS.name()), FIND_INTERSECTION_CLASSES_FOR_KNOWN_CLASS)
-                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_A_PARAM_FULL, classA.getIsLiteral())
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_DOMAIN_FULL, classA.getFullName(), classA.getIsLiteral())
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_A, classA.getClassificationProperty())
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_B, classificationProperty);
@@ -1325,9 +1299,7 @@ public class SchemaExtractor {
                             && (isNotFalse(classA.getPropertiesInSchema()) || isNotFalse(classB.getPropertiesInSchema()))
                     ) {
                         SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_CLASS_INTERSECTION.name()), CHECK_CLASS_INTERSECTION)
-                                .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS1_PARAM_FULL, classA.getIsLiteral())
                                 .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_A_FULL, classA.getFullName(), classA.getIsLiteral())
-                                .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS2_PARAM_FULL, classB.getIsLiteral())
                                 .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_B_FULL, classB.getFullName(), classB.getIsLiteral())
                                 .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_A, classA.getClassificationProperty())
                                 .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_B, classB.getClassificationProperty());
@@ -1347,7 +1319,7 @@ public class SchemaExtractor {
                                                      @Nonnull SchemaExtractorRequestDto request) {
         Set<String> includedClasses = request.getIncludedClasses().stream().map(SchemaExtractorRequestedClassDto::getClassName).collect(Collectors.toSet());
         for (QueryResult queryResult : queryResults) {
-            String classB = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_B);
+            String classB = queryResult.getValueFullName(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_B);
             if (StringUtils.isNotEmpty(classB) && isNotExcludedResource(classB, request.getExcludedNamespaces()) && (includedClasses.isEmpty() || includedClasses.contains(classB))) {
                 if (graphOfClasses.containsKey(domainClass)) {
                     graphOfClasses.get(domainClass).getNeighbors().add(classB);
@@ -1493,9 +1465,7 @@ public class SchemaExtractor {
                 continue;
             }
             SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_SUPERCLASS.name()), CHECK_SUPERCLASS)
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS1_PARAM_FULL, currentClass.getIsLiteral())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_A_FULL, currentClass.getFullName(), currentClass.getIsLiteral())
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS2_PARAM_FULL, neighborClassInfo.getIsLiteral())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_B_FULL, neighborClassInfo.getClassName(), neighborClassInfo.getIsLiteral())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_A, currentClass.getClassificationProperty())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_B, neighborClassInfo.getClassificationProperty());
@@ -1731,8 +1701,8 @@ public class SchemaExtractor {
                 queryResponse = sparqlEndpointProcessor.read(request, queryBuilder, false);
             }
             for (QueryResult queryResult : queryResponse.getResults()) {
-                String value = queryResult.get(SPARQL_QUERY_BINDING_NAME_VALUE);
-                String language = queryResult.get(SPARQL_QUERY_BINDING_NAME_LANGUAGE);
+                String value = queryResult.getValue(SPARQL_QUERY_BINDING_NAME_VALUE);
+                String language = queryResult.getValue(SPARQL_QUERY_BINDING_NAME_LANGUAGE);
                 if (StringUtils.isNotEmpty(value)) {
                     if (StringUtils.isNotEmpty(language)) {
                         element.getLabels().add(new Label(label.getLabelProperty(), value, language));
