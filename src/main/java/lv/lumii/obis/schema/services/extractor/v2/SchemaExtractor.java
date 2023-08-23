@@ -662,8 +662,15 @@ public class SchemaExtractor {
     protected void determinePropertyDataTypes(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request) {
         log.info(request.getCorrelationId() + " - determinePropertyDataTypes [" + property.getPropertyName() + "]");
         // find data types
-        SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_PROPERTY_DATA_TYPE_WITH_TRIPLE_COUNT.name()), FIND_PROPERTY_DATA_TYPE_WITH_TRIPLE_COUNT)
-                .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
+        SparqlQueryBuilder queryBuilder;
+        if (request.getDataTypeSampleLimit() == null || request.getDataTypeSampleLimit() <= 0) {
+            queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_PROPERTY_DATA_TYPE_WITH_TRIPLE_COUNT.name()), FIND_PROPERTY_DATA_TYPE_WITH_TRIPLE_COUNT)
+                    .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
+        } else {
+            queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_PROPERTY_DATA_TYPE_WITH_TRIPLE_COUNT_WITH_LIMITS.name()), FIND_PROPERTY_DATA_TYPE_WITH_TRIPLE_COUNT_WITH_LIMITS)
+                    .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName())
+                    .withContextParam(SPARQL_QUERY_BINDING_NAME_LIMIT, request.getDataTypeSampleLimit().toString());
+        }
         QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
         for (QueryResult queryResult : queryResponse.getResults()) {
             String resultDataType = queryResult.getValue(SPARQL_QUERY_BINDING_NAME_DATA_TYPE);
@@ -674,8 +681,14 @@ public class SchemaExtractor {
         }
 
         // find language tag
-        queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_PROPERTY_DATA_TYPE_LANG_STRING.name()), FIND_PROPERTY_DATA_TYPE_LANG_STRING)
-                .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
+        if (request.getDataTypeSampleLimit() == null || request.getDataTypeSampleLimit() <= 0) {
+            queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_PROPERTY_DATA_TYPE_LANG_STRING.name()), FIND_PROPERTY_DATA_TYPE_LANG_STRING)
+                    .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
+        } else {
+            queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_PROPERTY_DATA_TYPE_LANG_STRING_WITH_LIMITS.name()), FIND_PROPERTY_DATA_TYPE_LANG_STRING_WITH_LIMITS)
+                    .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName())
+                    .withContextParam(SPARQL_QUERY_BINDING_NAME_LIMIT, request.getDataTypeSampleLimit().toString());
+        }
         queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
         if (!queryResponse.getResults().isEmpty()) {
             Long tripleCount = SchemaUtil.getLongValueFromString(queryResponse.getResults().get(0).getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
@@ -690,10 +703,19 @@ public class SchemaExtractor {
 
         property.getDomainClasses().forEach(domainClass -> {
             // find data types
-            SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_PROPERTY_DATA_TYPE_WITH_TRIPLE_COUNT_FOR_DOMAIN.name()), FIND_PROPERTY_DATA_TYPE_WITH_TRIPLE_COUNT_FOR_DOMAIN)
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_DOMAIN_FULL, domainClass.getClassName(), domainClass.getIsLiteral())
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, domainClass.getClassificationProperty())
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
+            SparqlQueryBuilder queryBuilder;
+            if (request.getDataTypeSampleLimit() == null || request.getDataTypeSampleLimit() <= 0) {
+                queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_PROPERTY_DATA_TYPE_WITH_TRIPLE_COUNT_FOR_DOMAIN.name()), FIND_PROPERTY_DATA_TYPE_WITH_TRIPLE_COUNT_FOR_DOMAIN)
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_DOMAIN_FULL, domainClass.getClassName(), domainClass.getIsLiteral())
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, domainClass.getClassificationProperty())
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
+            } else {
+                queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_PROPERTY_DATA_TYPE_WITH_TRIPLE_COUNT_FOR_DOMAIN_WITH_LIMITS.name()), FIND_PROPERTY_DATA_TYPE_WITH_TRIPLE_COUNT_FOR_DOMAIN_WITH_LIMITS)
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_DOMAIN_FULL, domainClass.getClassName(), domainClass.getIsLiteral())
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, domainClass.getClassificationProperty())
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName())
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_LIMIT, request.getDataTypeSampleLimit().toString());
+            }
             QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
             for (QueryResult queryResult : queryResponse.getResults()) {
                 String resultDataType = queryResult.getValue(SPARQL_QUERY_BINDING_NAME_DATA_TYPE);
@@ -703,10 +725,18 @@ public class SchemaExtractor {
                 }
             }
             // find language tag
-            queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_PROPERTY_DATA_TYPE_LANG_STRING_FOR_DOMAIN.name()), FIND_PROPERTY_DATA_TYPE_LANG_STRING_FOR_DOMAIN)
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_DOMAIN_FULL, domainClass.getClassName(), domainClass.getIsLiteral())
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, domainClass.getClassificationProperty())
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
+            if (request.getDataTypeSampleLimit() == null || request.getDataTypeSampleLimit() <= 0) {
+                queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_PROPERTY_DATA_TYPE_LANG_STRING_FOR_DOMAIN.name()), FIND_PROPERTY_DATA_TYPE_LANG_STRING_FOR_DOMAIN)
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_DOMAIN_FULL, domainClass.getClassName(), domainClass.getIsLiteral())
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, domainClass.getClassificationProperty())
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
+            } else {
+                queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_PROPERTY_DATA_TYPE_LANG_STRING_FOR_DOMAIN_WITH_LIMITS.name()), FIND_PROPERTY_DATA_TYPE_LANG_STRING_FOR_DOMAIN_WITH_LIMITS)
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_DOMAIN_FULL, domainClass.getClassName(), domainClass.getIsLiteral())
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, domainClass.getClassificationProperty())
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName())
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_LIMIT, request.getDataTypeSampleLimit().toString());
+            }
             queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
             if (!queryResponse.getResults().isEmpty()) {
                 Long tripleCount = SchemaUtil.getLongValueFromString(queryResponse.getResults().get(0).getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
@@ -1226,6 +1256,9 @@ public class SchemaExtractor {
         schema.getParameters().add(new SchemaParameter(SchemaParameter.PARAM_NAME_CALCULATE_PROPERTY_PROPERTY_RELATIONS, request.getCalculatePropertyPropertyRelations().toString()));
         schema.getParameters().add(new SchemaParameter(SchemaParameter.PARAM_NAME_CALCULATE_DOMAIN_AND_RANGE_PAIRS, request.getCalculateDomainAndRangePairs().toString()));
         schema.getParameters().add(new SchemaParameter(SchemaParameter.PARAM_NAME_CALCULATE_DATA_TYPES, request.getCalculateDataTypes().toString()));
+        if (request.getDataTypeSampleLimit() != null) {
+            schema.getParameters().add(new SchemaParameter(SchemaParameter.PARAM_NAME_DATA_TYPES_SAMPLE_LIMIT, request.getDataTypeSampleLimit().toString()));
+        }
         schema.getParameters().add(new SchemaParameter(SchemaParameter.PARAM_NAME_CALCULATE_CARDINALITIES, request.getCalculateCardinalitiesMode().toString()));
         schema.getParameters().add(new SchemaParameter(SchemaParameter.PARAM_NAME_CHECK_INSTANCE_NAMESPACES, request.getCheckInstanceNamespaces().toString()));
         if (request.getMinimalAnalyzedClassSize() != null) {

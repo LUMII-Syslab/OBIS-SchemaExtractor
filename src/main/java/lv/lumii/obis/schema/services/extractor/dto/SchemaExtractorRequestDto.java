@@ -42,6 +42,7 @@ public class SchemaExtractorRequestDto {
     private Boolean calculateClosedDomainsAndRanges;
     private Boolean calculatePrincipalDomainsAndRanges;
     private Boolean calculateDataTypes;
+    private Integer dataTypeSampleLimit;
     private CalculateCardinalitiesMode calculateCardinalitiesMode;
     private Boolean checkInstanceNamespaces;
     private Integer minimalAnalyzedClassSize;

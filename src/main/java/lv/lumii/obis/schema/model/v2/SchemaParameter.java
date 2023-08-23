@@ -13,6 +13,7 @@ public class SchemaParameter {
     public static final String PARAM_NAME_CALCULATE_PROPERTY_PROPERTY_RELATIONS = "calculatePropertyPropertyRelations";
     public static final String PARAM_NAME_CALCULATE_DOMAIN_AND_RANGE_PAIRS = "calculateDomainAndRangePairs";
     public static final String PARAM_NAME_CALCULATE_DATA_TYPES = "calculateDataTypes";
+    public static final String PARAM_NAME_DATA_TYPES_SAMPLE_LIMIT = "dataTypeSampleLimit";
     public static final String PARAM_NAME_CALCULATE_CARDINALITIES = "calculateCardinalities";
     public static final String PARAM_NAME_CHECK_INSTANCE_NAMESPACES = "checkInstanceNamespaces";
     public static final String PARAM_NAME_MIN_CLASS_SIZE = "minimalAnalyzedClassSize";

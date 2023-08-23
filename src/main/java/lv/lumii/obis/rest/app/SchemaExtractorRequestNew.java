@@ -38,25 +38,28 @@ public class SchemaExtractorRequestNew {
     @ApiParam(access = "8", value = "Calculate data types for attributes", defaultValue = "true", required = true)
     private Boolean calculateDataTypes;
 
-    @ApiParam(access = "9", value = "Calculate min and max cardinalities for all properties", defaultValue = "propertyLevelAndClassContext", required = true)
+    @ApiParam(access = "9", value = "Limit of instances to use in data type calculation (no value or 0 means all data will be used)", required = false)
+    private Integer dataTypeSampleLimit;
+
+    @ApiParam(access = "91", value = "Calculate min and max cardinalities for all properties", defaultValue = "propertyLevelAndClassContext", required = true)
     private CalculateCardinalitiesMode calculateCardinalitiesMode;
 
-    @ApiParam(access = "91", value = "Check instance namespace URIs", defaultValue = "false", required = false)
+    @ApiParam(access = "92", value = "Check instance namespace URIs", defaultValue = "false", required = false)
     private Boolean checkInstanceNamespaces;
 
-    @ApiParam(access = "92", value = "Add label information", allowEmptyValue = true)
+    @ApiParam(access = "93", value = "Add label information", allowEmptyValue = true)
     private List<String> addedLabels;
 
-    @ApiParam(access = "93", value = "Minimal Analyzed Class Size (set 1 if all classes should be analyzed)", defaultValue = "1", required = true)
+    @ApiParam(access = "94", value = "Minimal Analyzed Class Size (set 1 if all classes should be analyzed)", defaultValue = "1", required = true)
     private Integer minimalAnalyzedClassSize;
 
-    @ApiParam(access = "94", value = "List of classification properties, default property is http://www.w3.org/1999/02/22-rdf-syntax-ns#type", allowEmptyValue = true)
+    @ApiParam(access = "95", value = "List of classification properties, default property is http://www.w3.org/1999/02/22-rdf-syntax-ns#type", allowEmptyValue = true)
     private List<String> classificationProperties;
 
-    @ApiParam(access = "95", value = "List of excluded namespaces", allowEmptyValue = true)
+    @ApiParam(access = "96", value = "List of excluded namespaces", allowEmptyValue = true)
     private List<String> excludedNamespaces;
 
-    @ApiParam(access = "96", value = "Enable SPARQL Query Logging to the file", defaultValue = "true", required = true)
+    @ApiParam(access = "97", value = "Enable SPARQL Query Logging to the file", defaultValue = "true", required = true)
     private Boolean enableLogging;
 
     public Boolean getCalculateSubClassRelations() {

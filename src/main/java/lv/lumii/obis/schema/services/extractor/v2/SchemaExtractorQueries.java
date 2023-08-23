@@ -30,14 +30,26 @@ public enum SchemaExtractorQueries {
     FIND_PROPERTY_DATA_TYPE_WITH_TRIPLE_COUNT(
             "SELECT ?dataType (COUNT(?value) as ?instances) WHERE { ?x <property> ?value. BIND (datatype(?value) as ?dataType). FILTER (BOUND(?dataType)) } GROUP BY ?dataType"
     ),
+    FIND_PROPERTY_DATA_TYPE_WITH_TRIPLE_COUNT_WITH_LIMITS(
+            "SELECT ?dataType (COUNT(?value) as ?instances) WHERE { SELECT ?x ?value ?dataType WHERE {?x <property> ?value. BIND (datatype(?value) as ?dataType)} LIMIT <limit> } GROUP BY ?dataType"
+    ),
     FIND_PROPERTY_DATA_TYPE_WITH_TRIPLE_COUNT_FOR_DOMAIN(
             "SELECT ?dataType (COUNT(?value) as ?instances) WHERE { ?x <classificationProperty> <domainClass>. ?x <property> ?value. BIND (datatype(?value) as ?dataType). FILTER (BOUND(?dataType)) } GROUP BY ?dataType"
+    ),
+    FIND_PROPERTY_DATA_TYPE_WITH_TRIPLE_COUNT_FOR_DOMAIN_WITH_LIMITS(
+            "SELECT ?dataType (COUNT(?value) as ?instances) WHERE { SELECT ?x ?value ?dataType WHERE {?x <classificationProperty> <domainClass>. ?x <property> ?value. BIND (datatype(?value) as ?dataType)} LIMIT <limit> } GROUP BY ?dataType"
     ),
     FIND_PROPERTY_DATA_TYPE_LANG_STRING(
             "SELECT (COUNT(?value) as ?instances) WHERE { ?x <property> ?value. FILTER (lang(?value) != \"\") }"
     ),
+    FIND_PROPERTY_DATA_TYPE_LANG_STRING_WITH_LIMITS(
+            "SELECT (COUNT(?value) as ?instances) WHERE { { SELECT ?x ?value WHERE {?x <property> ?value.} LIMIT <limit> } FILTER (lang(?value) != \\\"\\\") }"
+    ),
     FIND_PROPERTY_DATA_TYPE_LANG_STRING_FOR_DOMAIN(
             "SELECT (COUNT(?value) as ?instances) WHERE { ?x <classificationProperty> <domainClass>. ?x <property> ?value. FILTER (lang(?value) != \"\") }"
+    ),
+    FIND_PROPERTY_DATA_TYPE_LANG_STRING_FOR_DOMAIN_WITH_LIMITS(
+            "SELECT (COUNT(?value) as ?instances) WHERE { { SELECT ?x ?value WHERE { ?x <classificationProperty> <domainClass>. ?x <property> ?value. } LIMIT <limit> } FILTER (lang(?value) != \"\") }"
     ),
 
     FIND_PROPERTY_MAX_CARDINALITY(

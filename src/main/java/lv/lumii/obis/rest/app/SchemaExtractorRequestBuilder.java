@@ -50,6 +50,7 @@ public class SchemaExtractorRequestBuilder {
         requestDto.setCalculateClosedDomainsAndRanges(request.getCalculateClosedDomainsAndRanges());
         requestDto.setCalculatePrincipalDomainsAndRanges(request.getCalculatePrincipalDomainsAndRanges());
         requestDto.setCalculateDataTypes(request.getCalculateDataTypes());
+        requestDto.setDataTypeSampleLimit(request.getDataTypeSampleLimit());
         requestDto.setCalculateCardinalitiesMode(Enums.getIfPresent(SchemaExtractorRequestDto.CalculateCardinalitiesMode.class, request.getCalculateCardinalitiesMode().name()).orNull());
         requestDto.setCheckInstanceNamespaces(request.getCheckInstanceNamespaces());
         requestDto.setIncludedLabels(applyLabels(request.getAddedLabels()));
