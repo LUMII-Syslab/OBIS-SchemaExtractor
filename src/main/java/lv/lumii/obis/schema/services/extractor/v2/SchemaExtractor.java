@@ -259,9 +259,7 @@ public class SchemaExtractor {
                 determinePropertyDomainsDataTypes(property, request);
             }
 
-            if (isTrue(request.getCalculatePrincipalDomainsAndRanges())) {
-                determinePrincipalDomainsAndRanges(property, schema.getClasses(), graphOfClasses, request);
-            }
+            determinePrincipalDomainsAndRanges(property, schema.getClasses(), graphOfClasses, request);
 
             if (isTrue(request.getCalculatePropertyPropertyRelations())) {
                 determineFollowers(property, request);
@@ -933,7 +931,11 @@ public class SchemaExtractor {
             if (importantClasses.isEmpty()) {
                 importantClasses.add(currentClass.getClassName());
                 currentClass.setImportanceIndex(index++);
-                continue;
+                if (isTrue(request.getCalculateImportanceIndex())) {
+                    continue;
+                } else {
+                    break;
+                }
             }
 
             // check whether processed classes include the current class any subclass or superclass

@@ -40,7 +40,7 @@ public class SchemaExtractorRequestDto {
     private Boolean calculatePropertyPropertyRelations;
     private Boolean calculateDomainAndRangePairs;
     private Boolean calculateClosedDomainsAndRanges;
-    private Boolean calculatePrincipalDomainsAndRanges;
+    private Boolean calculateImportanceIndex;
     private Boolean calculateDataTypes;
     private Integer dataTypeSampleLimit;
     private CalculateCardinalitiesMode calculateCardinalitiesMode;

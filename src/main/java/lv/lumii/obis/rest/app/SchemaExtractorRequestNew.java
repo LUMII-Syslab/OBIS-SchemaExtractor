@@ -32,8 +32,8 @@ public class SchemaExtractorRequestNew {
     @ApiParam(access = "6", value = "Calculate closed domains and closed ranges", defaultValue = "true", required = true)
     private Boolean calculateClosedDomainsAndRanges;
 
-    @ApiParam(access = "7", value = "Calculate principal domains and ranges", defaultValue = "true", required = true)
-    private Boolean calculatePrincipalDomainsAndRanges;
+    @ApiParam(access = "7", value = "Calculate importance indexes", defaultValue = "true", required = true)
+    private Boolean calculateImportanceIndex;
 
     @ApiParam(access = "8", value = "Calculate data types for attributes", defaultValue = "true", required = true)
     private Boolean calculateDataTypes;
@@ -90,11 +90,11 @@ public class SchemaExtractorRequestNew {
         return calculateClosedDomainsAndRanges;
     }
 
-    public Boolean getCalculatePrincipalDomainsAndRanges() {
-        if (calculatePrincipalDomainsAndRanges == null) {
-            calculatePrincipalDomainsAndRanges = Boolean.FALSE;
+    public Boolean getCalculateImportanceIndex() {
+        if (calculateImportanceIndex == null) {
+            calculateImportanceIndex = Boolean.FALSE;
         }
-        return calculatePrincipalDomainsAndRanges;
+        return calculateImportanceIndex;
     }
 
     public Boolean getCalculateDataTypes() {
