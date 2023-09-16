@@ -14,7 +14,7 @@ public enum SchemaExtractorQueries {
             "SELECT DISTINCT ?classB WHERE {" + "\n\t"
                     + "?x <classificationPropertyA> ?classA." + "\n\t"
                     + "?x <classificationPropertyB> ?classB." + "\n\t"
-                    + "FILTER (?classA = <domainClass>)" + "\n\t"
+                    + "FILTER (?classA = <sourceClass>)" + "\n\t"
                     + "FILTER (?classA != ?classB)" + "\n"
                     + "}"
     ),
@@ -33,11 +33,11 @@ public enum SchemaExtractorQueries {
     FIND_PROPERTY_DATA_TYPE_WITH_TRIPLE_COUNT_WITH_LIMITS(
             "SELECT ?dataType (COUNT(?value) as ?instances) WHERE { SELECT ?x ?value ?dataType WHERE {?x <property> ?value. BIND (datatype(?value) as ?dataType)} LIMIT <limit> } GROUP BY ?dataType"
     ),
-    FIND_PROPERTY_DATA_TYPE_WITH_TRIPLE_COUNT_FOR_DOMAIN(
-            "SELECT ?dataType (COUNT(?value) as ?instances) WHERE { ?x <classificationProperty> <domainClass>. ?x <property> ?value. BIND (datatype(?value) as ?dataType). FILTER (BOUND(?dataType)) } GROUP BY ?dataType"
+    FIND_PROPERTY_DATA_TYPE_WITH_TRIPLE_COUNT_FOR_SOURCE(
+            "SELECT ?dataType (COUNT(?value) as ?instances) WHERE { ?x <classificationProperty> <sourceClass>. ?x <property> ?value. BIND (datatype(?value) as ?dataType). FILTER (BOUND(?dataType)) } GROUP BY ?dataType"
     ),
-    FIND_PROPERTY_DATA_TYPE_WITH_TRIPLE_COUNT_FOR_DOMAIN_WITH_LIMITS(
-            "SELECT ?dataType (COUNT(?value) as ?instances) WHERE { SELECT ?x ?value ?dataType WHERE {?x <classificationProperty> <domainClass>. ?x <property> ?value. BIND (datatype(?value) as ?dataType)} LIMIT <limit> } GROUP BY ?dataType"
+    FIND_PROPERTY_DATA_TYPE_WITH_TRIPLE_COUNT_FOR_SOURCE_WITH_LIMITS(
+            "SELECT ?dataType (COUNT(?value) as ?instances) WHERE { SELECT ?x ?value ?dataType WHERE {?x <classificationProperty> <sourceClass>. ?x <property> ?value. BIND (datatype(?value) as ?dataType)} LIMIT <limit> } GROUP BY ?dataType"
     ),
     FIND_PROPERTY_DATA_TYPE_LANG_STRING(
             "SELECT (COUNT(?value) as ?instances) WHERE { ?x <property> ?value. FILTER (lang(?value) != \"\") }"
@@ -45,35 +45,35 @@ public enum SchemaExtractorQueries {
     FIND_PROPERTY_DATA_TYPE_LANG_STRING_WITH_LIMITS(
             "SELECT (COUNT(?value) as ?instances) WHERE { { SELECT ?x ?value WHERE {?x <property> ?value.} LIMIT <limit> } FILTER (lang(?value) != \\\"\\\") }"
     ),
-    FIND_PROPERTY_DATA_TYPE_LANG_STRING_FOR_DOMAIN(
-            "SELECT (COUNT(?value) as ?instances) WHERE { ?x <classificationProperty> <domainClass>. ?x <property> ?value. FILTER (lang(?value) != \"\") }"
+    FIND_PROPERTY_DATA_TYPE_LANG_STRING_FOR_SOURCE(
+            "SELECT (COUNT(?value) as ?instances) WHERE { ?x <classificationProperty> <sourceClass>. ?x <property> ?value. FILTER (lang(?value) != \"\") }"
     ),
-    FIND_PROPERTY_DATA_TYPE_LANG_STRING_FOR_DOMAIN_WITH_LIMITS(
-            "SELECT (COUNT(?value) as ?instances) WHERE { { SELECT ?x ?value WHERE { ?x <classificationProperty> <domainClass>. ?x <property> ?value. } LIMIT <limit> } FILTER (lang(?value) != \"\") }"
+    FIND_PROPERTY_DATA_TYPE_LANG_STRING_FOR_SOURCE_WITH_LIMITS(
+            "SELECT (COUNT(?value) as ?instances) WHERE { { SELECT ?x ?value WHERE { ?x <classificationProperty> <sourceClass>. ?x <property> ?value. } LIMIT <limit> } FILTER (lang(?value) != \"\") }"
     ),
 
     FIND_PROPERTY_MAX_CARDINALITY(
             "SELECT ?x WHERE { ?x <property> ?value1. ?x <property> ?value2. FILTER (?value1 != ?value2) } LIMIT 1"
     ),
 
-    FIND_PROPERTY_MAX_CARDINALITY_FOR_DOMAIN(
-            "SELECT ?x WHERE { ?x <classificationProperty> <domainClass>. ?x <property> ?value1. ?x <property> ?value2. FILTER (?value1 != ?value2) } LIMIT 1"
+    FIND_PROPERTY_MAX_CARDINALITY_FOR_SOURCE(
+            "SELECT ?x WHERE { ?x <classificationProperty> <sourceClass>. ?x <property> ?value1. ?x <property> ?value2. FILTER (?value1 != ?value2) } LIMIT 1"
     ),
 
     FIND_INVERSE_PROPERTY_MAX_CARDINALITY(
             "SELECT ?y WHERE { ?x1 <property> ?y. ?x2 <property> ?y. FILTER (?x1 != ?x2) } LIMIT 1"
     ),
 
-    FIND_INVERSE_PROPERTY_MAX_CARDINALITY_FOR_RANGE(
-            "SELECT ?y WHERE { ?y <classificationProperty> <rangeClass>. ?x1 <property> ?y. ?x2 <property> ?y. FILTER (?x1 != ?x2) } LIMIT 1"
+    FIND_INVERSE_PROPERTY_MAX_CARDINALITY_FOR_TARGET(
+            "SELECT ?y WHERE { ?y <classificationProperty> <targetClass>. ?x1 <property> ?y. ?x2 <property> ?y. FILTER (?x1 != ?x2) } LIMIT 1"
     ),
 
     FIND_PROPERTY_MIN_CARDINALITY(
-            "SELECT ?x WHERE { ?x <classificationProperty> <domainClass>. OPTIONAL { ?x ?prop ?value. FILTER (?prop = <property>) } FILTER (!BOUND(?prop)) } LIMIT 1 "
+            "SELECT ?x WHERE { ?x <classificationProperty> <sourceClass>. OPTIONAL { ?x ?prop ?value. FILTER (?prop = <property>) } FILTER (!BOUND(?prop)) } LIMIT 1 "
     ),
 
     FIND_INVERSE_PROPERTY_MIN_CARDINALITY(
-            "SELECT ?y WHERE { ?y <classificationProperty> <rangeClass>. OPTIONAL { ?x ?prop ?y. FILTER (?prop = <property>) } FILTER (!BOUND(?prop)) } LIMIT 1 "
+            "SELECT ?y WHERE { ?y <classificationProperty> <targetClass>. OPTIONAL { ?x ?prop ?y. FILTER (?prop = <property>) } FILTER (!BOUND(?prop)) } LIMIT 1 "
     ),
 
     FIND_PROPERTY_FOLLOWERS(
@@ -90,35 +90,35 @@ public enum SchemaExtractorQueries {
             "SELECT ?property (COUNT(?x) as ?instances) WHERE {?x ?property ?y} GROUP BY ?property"
     ),
 
-    FIND_PROPERTY_DOMAINS_WITHOUT_TRIPLE_COUNT(
+    FIND_PROPERTY_SOURCES_WITHOUT_TRIPLE_COUNT(
             "SELECT distinct ?class WHERE {?x <property> ?y. ?x <classificationProperty> ?class. }"
     ),
 
-    FIND_PROPERTY_DOMAINS_TRIPLE_COUNT(
-            "SELECT (COUNT(?x) as ?instances) WHERE {?x <property> ?y. ?x <classificationProperty> <domainClass>. }"
+    FIND_PROPERTY_SOURCE_TRIPLE_COUNT(
+            "SELECT (COUNT(?x) as ?instances) WHERE {?x <property> ?y. ?x <classificationProperty> <sourceClass>. }"
     ),
 
-    CHECK_CLASS_AS_PROPERTY_DOMAIN(
-            "SELECT ?x WHERE {?x <property> ?y. ?x <classificationProperty> <domainClass>. } LIMIT 1"
+    CHECK_CLASS_AS_PROPERTY_SOURCE(
+            "SELECT ?x WHERE {?x <property> ?y. ?x <classificationProperty> <sourceClass>. } LIMIT 1"
     ),
 
-    FIND_PROPERTY_RANGES_WITHOUT_TRIPLE_COUNT(
+    FIND_PROPERTY_TARGETS_WITHOUT_TRIPLE_COUNT(
             "SELECT distinct ?class WHERE {?x <property> ?y. OPTIONAL{ ?y <classificationProperty> ?class.} } "
     ),
 
-    FIND_PROPERTY_RANGES_TRIPLE_COUNT(
-            "SELECT (COUNT(?x) as ?instances) WHERE {?x <property> ?y. ?y <classificationProperty> <rangeClass>. }"
+    FIND_PROPERTY_TARGET_TRIPLE_COUNT(
+            "SELECT (COUNT(?x) as ?instances) WHERE {?x <property> ?y. ?y <classificationProperty> <targetClass>. }"
     ),
 
-    CHECK_CLASS_AS_PROPERTY_RANGE(
-            "SELECT ?y WHERE {?x <property> ?y. ?y <classificationProperty> <rangeClass>. } LIMIT 1"
+    CHECK_CLASS_AS_PROPERTY_TARGET(
+            "SELECT ?y WHERE {?x <property> ?y. ?y <classificationProperty> <targetClass>. } LIMIT 1"
     ),
 
-    FIND_PROPERTY_DOMAIN_RANGE_PAIRS(
-            "SELECT ?domainClass ?rangeClass (COUNT(?x) as ?instances) WHERE {?x <property> ?y. ?x <classificationPropertyDomain> ?domainClass. ?y <classificationPropertyRange> ?rangeClass. } GROUP BY ?domainClass ?rangeClass"
+    FIND_PROPERTY_SOURCE_TARGET_PAIRS(
+            "SELECT ?sourceClass ?targetClass (COUNT(?x) as ?instances) WHERE {?x <property> ?y. ?x <classificationPropertySource> ?sourceClass. ?y <classificationPropertyTarget> ?targetClass. } GROUP BY ?sourceClass ?targetClass"
     ),
-    FIND_PROPERTY_DOMAIN_RANGE_PAIRS_FOR_SPECIFIC_CLASSES(
-            "SELECT (COUNT(?x) as ?instances) WHERE {?x <property> ?y. ?x <classificationPropertyDomain> <domainClass>. ?y <classificationPropertyRange> <rangeClass>.}"
+    FIND_PROPERTY_SOURCE_TARGET_PAIRS_FOR_SPECIFIC_CLASSES(
+            "SELECT (COUNT(?x) as ?instances) WHERE {?x <property> ?y. ?x <classificationPropertySource> <sourceClass>. ?y <classificationPropertyTarget> <targetClass>.}"
     ),
 
     COUNT_PROPERTY_URL_VALUES(
@@ -127,11 +127,11 @@ public enum SchemaExtractorQueries {
     CHECK_PROPERTY_URL_VALUES(
             "SELECT ?y where {?x <property> ?y. FILTER(!isLiteral(?y)) } LIMIT 1"
     ),
-    COUNT_PROPERTY_URL_VALUES_FOR_DOMAIN(
-            "SELECT (COUNT(?y) as ?instances) WHERE {?x <classificationProperty> <domainClass>. ?x <property> ?y. FILTER(!isLiteral(?y)) }"
+    COUNT_PROPERTY_URL_VALUES_FOR_SOURCE(
+            "SELECT (COUNT(?y) as ?instances) WHERE {?x <classificationProperty> <sourceClass>. ?x <property> ?y. FILTER(!isLiteral(?y)) }"
     ),
-    CHECK_PROPERTY_URL_VALUES_FOR_DOMAIN(
-            "SELECT ?y WHERE {?x <classificationProperty> <domainClass>. ?x <property> ?y. FILTER(!isLiteral(?y)) } LIMIT 1"
+    CHECK_PROPERTY_URL_VALUES_FOR_SOURCE(
+            "SELECT ?y WHERE {?x <classificationProperty> <sourceClass>. ?x <property> ?y. FILTER(!isLiteral(?y)) } LIMIT 1"
     ),
     COUNT_PROPERTY_LITERAL_VALUES(
             "SELECT (COUNT(?y) as ?instances) WHERE {?x <property> ?y. FILTER(isLiteral(?y)) }"
@@ -139,11 +139,11 @@ public enum SchemaExtractorQueries {
     CHECK_PROPERTY_LITERAL_VALUES(
             "SELECT ?y WHERE {?x <property> ?y. FILTER(isLiteral(?y)) LIMIT 1}"
     ),
-    COUNT_PROPERTY_LITERAL_VALUES_FOR_DOMAIN(
-            "SELECT (COUNT(?y) as ?instances) WHERE {?x <classificationProperty> <domainClass>. ?x <property> ?y. FILTER(isLiteral(?y)) }"
+    COUNT_PROPERTY_LITERAL_VALUES_FOR_SOURCE(
+            "SELECT (COUNT(?y) as ?instances) WHERE {?x <classificationProperty> <sourceClass>. ?x <property> ?y. FILTER(isLiteral(?y)) }"
     ),
-    CHECK_PROPERTY_LITERAL_VALUES_FOR_DOMAIN(
-            "SELECT ?y WHERE {?x <classificationProperty> <domainClass>. ?x <property> ?y. FILTER(isLiteral(?y)) } LIMIT 1"
+    CHECK_PROPERTY_LITERAL_VALUES_FOR_SOURCE(
+            "SELECT ?y WHERE {?x <classificationProperty> <sourceClass>. ?x <property> ?y. FILTER(isLiteral(?y)) } LIMIT 1"
     ),
 
     FIND_CLOSED_RANGE_FOR_PROPERTY(
@@ -153,23 +153,23 @@ public enum SchemaExtractorQueries {
             "SELECT ?x ?y WHERE { ?x <property> ?y. OPTIONAL {?x <classificationProperty> ?c} FILTER(!BOUND(?c)) } LIMIT 1"
     ),
     FIND_CLOSED_RANGE_FOR_PROPERTY_AND_CLASS(
-            "SELECT ?x ?y WHERE { ?x <classificationProperty> <domainClass>. ?x <property> ?y. FILTER(!isLiteral(?y)) OPTIONAL {?y <classificationPropertyRange> ?c} FILTER(!BOUND(?c)) } LIMIT 1"
+            "SELECT ?x ?y WHERE { ?x <classificationProperty> <sourceClass>. ?x <property> ?y. FILTER(!isLiteral(?y)) OPTIONAL {?y <classificationPropertyTarget> ?c} FILTER(!BOUND(?c)) } LIMIT 1"
     ),
     FIND_CLOSED_DOMAIN_FOR_PROPERTY_AND_CLASS(
-            "SELECT ?x ?y WHERE { ?y <classificationProperty> <rangeClass>. ?x <property> ?y. OPTIONAL {?x <classificationPropertyDomain> ?c} FILTER(!BOUND(?c)) } LIMIT 1"
+            "SELECT ?x ?y WHERE { ?y <classificationProperty> <targetClass>. ?x <property> ?y. OPTIONAL {?x <classificationPropertySource> ?c} FILTER(!BOUND(?c)) } LIMIT 1"
     ),
 
-    CHECK_PRINCIPAL_DOMAIN(
-            "SELECT ?x WHERE { ?x <property> ?y. ?x <classificationPropertyDomain> <domainClass>. OPTIONAL {?x <classificationPropertyOther> ?cc. FILTER (customFilter)} FILTER (!BOUND(?cc))} LIMIT 1"
+    CHECK_PRINCIPAL_SOURCE(
+            "SELECT ?x WHERE { ?x <property> ?y. ?x <classificationPropertySource> <sourceClass>. OPTIONAL {?x <classificationPropertyOther> ?cc. FILTER (customFilter)} FILTER (!BOUND(?cc))} LIMIT 1"
     ),
-    CHECK_PRINCIPAL_RANGE(
-            "SELECT ?x WHERE { ?x <property> ?y. ?y <classificationPropertyRange> <rangeClass>. OPTIONAL {?y <classificationPropertyOther> ?cc. FILTER (customFilter)} FILTER (!BOUND(?cc))} LIMIT 1"
+    CHECK_PRINCIPAL_TARGET(
+            "SELECT ?x WHERE { ?x <property> ?y. ?y <classificationPropertyTarget> <targetClass>. OPTIONAL {?y <classificationPropertyOther> ?cc. FILTER (customFilter)} FILTER (!BOUND(?cc))} LIMIT 1"
     ),
-    CHECK_PRINCIPAL_RANGE_FOR_DOMAIN(
-            "SELECT ?x ?y WHERE { ?x <classificationPropertyDomain> <domainClass>. ?x <property> ?y. ?y <classificationPropertyRange> <rangeClass>. OPTIONAL {?y <classificationPropertyOther> ?cc. FILTER (customFilter)} FILTER (!BOUND(?cc))} LIMIT 1"
+    CHECK_PRINCIPAL_TARGET_FOR_SOURCE(
+            "SELECT ?x ?y WHERE { ?x <classificationPropertySource> <sourceClass>. ?x <property> ?y. ?y <classificationPropertyTarget> <targetClass>. OPTIONAL {?y <classificationPropertyOther> ?cc. FILTER (customFilter)} FILTER (!BOUND(?cc))} LIMIT 1"
     ),
-    CHECK_PRINCIPAL_DOMAIN_FOR_RANGE(
-            "SELECT ?x ?y WHERE { ?x <classificationPropertyDomain> <domainClass>. ?x <property> ?y. ?y <classificationPropertyRange> <rangeClass>. OPTIONAL {?x <classificationPropertyOther> ?cc. FILTER (customFilter)} FILTER (!BOUND(?cc))} LIMIT 1"
+    CHECK_PRINCIPAL_SOURCE_FOR_TARGET(
+            "SELECT ?x ?y WHERE { ?x <classificationPropertySource> <sourceClass>. ?x <property> ?y. ?y <classificationPropertyTarget> <targetClass>. OPTIONAL {?x <classificationPropertyOther> ?cc. FILTER (customFilter)} FILTER (!BOUND(?cc))} LIMIT 1"
     ),
 
     FIND_LABEL(

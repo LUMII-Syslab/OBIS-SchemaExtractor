@@ -22,7 +22,7 @@ public enum SchemaExtractorQueries {
             "SELECT DISTINCT ?classB WHERE {" + "\n\t"
                     + "?x a ?classA." + "\n\t"
                     + "?x a ?classB." + "\n\t"
-                    + "FILTER (?classA = <domainClass>)" + "\n\t"
+                    + "FILTER (?classA = <sourceClass>)" + "\n\t"
                     + "FILTER (?classA != ?classB)" + "\n"
                     + "}"
     ),
@@ -44,7 +44,7 @@ public enum SchemaExtractorQueries {
     FIND_ALL_DATATYPE_PROPERTIES_FOR_KNOWN_CLASS(
             "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>" + "\n"
                     + "SELECT DISTINCT ?property (COUNT(?x) as ?instances) WHERE {" + "\n\t"
-                    + "?x a <domainClass>." + "\n\t"
+                    + "?x a <sourceClass>." + "\n\t"
                     + "?x ?property ?value." + "\n\t"
                     + "FILTER (?property != rdf:type)" + "\n\t"
                     + "FILTER (isLiteral(?value))" + "\n"
@@ -55,55 +55,55 @@ public enum SchemaExtractorQueries {
             "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>" + "\n"
                     + "SELECT DISTINCT ?property (COUNT(?x) as ?instances) WHERE {" + "\n\t"
                     + "?x ?property ?value." + "\n\t"
-                    + "OPTIONAL { ?x a ?domainClass. }" + "\n\t"
+                    + "OPTIONAL { ?x a ?sourceClass. }" + "\n\t"
                     + "FILTER (?property != rdf:type)" + "\n\t"
                     + "FILTER (isLiteral(?value))" + "\n\t"
-                    + "FILTER (!BOUND(?domainClass))" + "\n"
+                    + "FILTER (!BOUND(?sourceClass))" + "\n"
                     + "} GROUP BY ?property"
     ),
 
     FIND_OBJECT_PROPERTIES_WITH_DOMAIN_RANGE(
             "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>" + "\n"
-                    + "SELECT DISTINCT ?property ?domainClass ?rangeClass (COUNT(?x) as ?instances) WHERE {" + "\n\t"
+                    + "SELECT DISTINCT ?property ?sourceClass ?targetClass (COUNT(?x) as ?instances) WHERE {" + "\n\t"
                     + "?x ?property ?value." + "\n\t"
-                    + "OPTIONAL { ?x a ?domainClass. }" + "\n\t"
+                    + "OPTIONAL { ?x a ?sourceClass. }" + "\n\t"
                     + "FILTER (?property != rdf:type)" + "\n\t"
                     + "FILTER (!isLiteral(?value))" + "\n\t"
-                    + "OPTIONAL { ?value a ?rangeClass. }" + "\n"
-                    + "} GROUP BY ?property ?domainClass ?rangeClass"
+                    + "OPTIONAL { ?value a ?targetClass. }" + "\n"
+                    + "} GROUP BY ?property ?sourceClass ?targetClass"
     ),
 
     FIND_OBJECT_PROPERTIES_WITH_DOMAIN_RANGE_FOR_KNOWN_CLASS(
             "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>" + "\n"
-                    + "SELECT DISTINCT ?property ?rangeClass (COUNT(?x) as ?instances) WHERE {" + "\n\t"
-                    + "?x a <domainClass>." + "\n\t"
+                    + "SELECT DISTINCT ?property ?targetClass (COUNT(?x) as ?instances) WHERE {" + "\n\t"
+                    + "?x a <sourceClass>." + "\n\t"
                     + "?x ?property ?value." + "\n\t"
                     + "FILTER (?property != rdf:type)" + "\n\t"
                     + "FILTER (!isLiteral(?value))" + "\n\t"
-                    + "?value a ?rangeClass." + "\n"
-                    + "} GROUP BY ?property ?rangeClass"
+                    + "?value a ?targetClass." + "\n"
+                    + "} GROUP BY ?property ?targetClass"
     ),
     FIND_OBJECT_PROPERTIES_WITHOUT_DOMAIN(
             "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>" + "\n"
-                    + "SELECT DISTINCT ?property ?rangeClass (COUNT(?x) as ?instances) WHERE {" + "\n\t"
+                    + "SELECT DISTINCT ?property ?targetClass (COUNT(?x) as ?instances) WHERE {" + "\n\t"
                     + "?x ?property ?value." + "\n\t"
                     + "FILTER (?property != rdf:type)" + "\n\t"
                     + "FILTER (!isLiteral(?value))" + "\n\t"
-                    + "OPTIONAL { ?value a ?rangeClass. }" + "\n"
-                    + "OPTIONAL { ?x a ?domainClass. }" + "\n\t"
-                    + "FILTER (!BOUND(?domainClass))" + "\n"
-                    + "} GROUP BY ?property ?rangeClass"
+                    + "OPTIONAL { ?value a ?targetClass. }" + "\n"
+                    + "OPTIONAL { ?x a ?sourceClass. }" + "\n\t"
+                    + "FILTER (!BOUND(?sourceClass))" + "\n"
+                    + "} GROUP BY ?property ?targetClass"
     ),
     FIND_OBJECT_PROPERTIES_WITHOUT_RANGE(
             "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>" + "\n"
-                    + "SELECT DISTINCT ?property ?domainClass (COUNT(?x) as ?instances) WHERE {" + "\n\t"
+                    + "SELECT DISTINCT ?property ?sourceClass (COUNT(?x) as ?instances) WHERE {" + "\n\t"
                     + "?x ?property ?value." + "\n\t"
                     + "FILTER (?property != rdf:type)" + "\n\t"
                     + "FILTER (!isLiteral(?value))" + "\n\t"
-                    + "OPTIONAL { ?value a ?rangeClass. }" + "\n"
-                    + "OPTIONAL { ?x a ?domainClass. }" + "\n\t"
-                    + "FILTER (!BOUND(?rangeClass))" + "\n"
-                    + "} GROUP BY ?property ?domainClass"
+                    + "OPTIONAL { ?value a ?targetClass. }" + "\n"
+                    + "OPTIONAL { ?x a ?sourceClass. }" + "\n\t"
+                    + "FILTER (!BOUND(?targetClass))" + "\n"
+                    + "} GROUP BY ?property ?sourceClass"
     ),
 
     FIND_PROPERTY_DATA_TYPE(
@@ -135,7 +135,7 @@ public enum SchemaExtractorQueries {
     ),
 
     FIND_INVERSE_PROPERTY_MAX_CARDINALITY_FOR_RANGE(
-            "SELECT ?y WHERE { ?y a <rangeClass>. ?x1 <property> ?y. ?x2 <property> ?y. FILTER (?x1 != ?x2) } LIMIT 1"
+            "SELECT ?y WHERE { ?y a <targetClass>. ?x1 <property> ?y. ?x2 <property> ?y. FILTER (?x1 != ?x2) } LIMIT 1"
     ),
 
     FIND_PROPERTY_MIN_CARDINALITY(
@@ -165,7 +165,7 @@ public enum SchemaExtractorQueries {
     ),
 
     FIND_PROPERTY_DOMAINS_TRIPLE_COUNT(
-            "SELECT (COUNT(?x) as ?instances) WHERE {?x <property> ?y. ?x a <domainClass>. }"
+            "SELECT (COUNT(?x) as ?instances) WHERE {?x <property> ?y. ?x a <sourceClass>. }"
     ),
 
     FIND_PROPERTY_RANGES_WITHOUT_TRIPLE_COUNT(
@@ -173,27 +173,27 @@ public enum SchemaExtractorQueries {
     ),
 
     FIND_PROPERTY_RANGES_TRIPLE_COUNT(
-            "SELECT (COUNT(?x) as ?instances) WHERE {?x <property> ?y. ?y a <rangeClass>. }"
+            "SELECT (COUNT(?x) as ?instances) WHERE {?x <property> ?y. ?y a <targetClass>. }"
     ),
 
     FIND_PROPERTY_DOMAIN_RANGE_PAIRS(
-            "SELECT ?domainClass ?rangeClass (COUNT(?x) as ?instances) WHERE {?x <property> ?y. ?x a ?domainClass. ?y a ?rangeClass. } GROUP BY ?domainClass ?rangeClass"
+            "SELECT ?sourceClass ?targetClass (COUNT(?x) as ?instances) WHERE {?x <property> ?y. ?x a ?sourceClass. ?y a ?targetClass. } GROUP BY ?sourceClass ?targetClass"
     ),
     FIND_PROPERTY_DOMAIN_RANGE_PAIRS_FOR_SPECIFIC_CLASSES(
-            "SELECT (COUNT(?x) as ?instances) WHERE {?x <property> ?y. ?x a <domainClass>. ?y a <rangeClass>.}"
+            "SELECT (COUNT(?x) as ?instances) WHERE {?x <property> ?y. ?x a <sourceClass>. ?y a <targetClass>.}"
     ),
 
     COUNT_PROPERTY_URL_VALUES(
             "SELECT (COUNT(?y) as ?instances) WHERE {?x <property> ?y. FILTER(!isLiteral(?y)) }"
     ),
     COUNT_PROPERTY_URL_VALUES_FOR_DOMAIN(
-            "SELECT (COUNT(?y) as ?instances) WHERE {?x a <domainClass>. ?x <property> ?y. FILTER(!isLiteral(?y)) }"
+            "SELECT (COUNT(?y) as ?instances) WHERE {?x a <sourceClass>. ?x <property> ?y. FILTER(!isLiteral(?y)) }"
     ),
     COUNT_PROPERTY_LITERAL_VALUES(
             "SELECT (COUNT(?y) as ?instances) WHERE {?x <property> ?y. FILTER(isLiteral(?y)) }"
     ),
     COUNT_PROPERTY_LITERAL_VALUES_FOR_DOMAIN(
-        "SELECT (COUNT(?y) as ?instances) WHERE {?x a <domainClass>. ?x <property> ?y. FILTER(isLiteral(?y)) }"
+            "SELECT (COUNT(?y) as ?instances) WHERE {?x a <sourceClass>. ?x <property> ?y. FILTER(isLiteral(?y)) }"
     ),
     FIND_CLOSED_RANGE_FOR_PROPERTY(
             "SELECT ?x ?y WHERE { ?x <property> ?y. FILTER(!isLiteral(?y)) OPTIONAL {?y a ?c} FILTER(!BOUND(?c)) } LIMIT 1"

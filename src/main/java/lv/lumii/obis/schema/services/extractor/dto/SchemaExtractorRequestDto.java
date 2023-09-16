@@ -1,5 +1,6 @@
 package lv.lumii.obis.schema.services.extractor.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 import lombok.Setter;
 import lv.lumii.obis.schema.services.extractor.v2.dto.SchemaExtractorPredefinedNamespaces;
@@ -31,16 +32,16 @@ public class SchemaExtractorRequestDto {
     public enum CalculateCardinalitiesMode {none, propertyLevelOnly, propertyLevelAndClassContext}
 
     private String correlationId;
-    private Boolean enableLogging;
 
     private String endpointUrl;
     private String graphName;
 
     private Boolean calculateSubClassRelations;
     private Boolean calculatePropertyPropertyRelations;
-    private Boolean calculateDomainAndRangePairs;
-    private Boolean calculateClosedDomainsAndRanges;
-    private Boolean calculateImportanceIndex;
+    private Boolean calculateSourceAndTargetPairs;
+    private Boolean calculateDomainsAndRanges;
+    private Boolean calculateImportanceIndexes;
+    private Boolean calculateClosedClassSets;
     private Boolean calculateDataTypes;
     private Integer dataTypeSampleLimit;
     private CalculateCardinalitiesMode calculateCardinalitiesMode;
@@ -53,6 +54,9 @@ public class SchemaExtractorRequestDto {
     private List<String> excludedNamespaces;
     private SchemaExtractorPredefinedNamespaces predefinedNamespaces;
 
+    private Boolean enableLogging;
+
+    @JsonIgnore
     private Map<String, String> queries;
 
     /**

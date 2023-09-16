@@ -25,6 +25,8 @@ public class SchemaPropertyLinkedClassDetails {
 
     private Boolean closedRange;
 
+    private Boolean isPrincipal;
+
     private Integer importanceIndex;
 
     private Integer minCardinality;
@@ -40,7 +42,7 @@ public class SchemaPropertyLinkedClassDetails {
 
     public SchemaPropertyLinkedClassDetails(String classFullName,
                                             Long tripleCount, Long dataTripleCount, Long objectTripleCount,
-                                            Boolean closedDomain, Boolean closedRange,
+                                            Boolean closedDomain, Boolean closedRange, Boolean isPrincipal,
                                             Integer minCardinality, Integer maxCardinality,
                                             Integer minInverseCardinality, Integer maxInverseCardinality,
                                             Integer importanceIndex, List<SchemaExtractorDataTypeInfo> dataTypes) {
@@ -50,6 +52,7 @@ public class SchemaPropertyLinkedClassDetails {
         this.objectTripleCount = objectTripleCount;
         this.closedDomain = closedDomain;
         this.closedRange = closedRange;
+        this.isPrincipal = isPrincipal;
         this.minCardinality = minCardinality;
         this.maxCardinality = maxCardinality;
         this.minInverseCardinality = minInverseCardinality;

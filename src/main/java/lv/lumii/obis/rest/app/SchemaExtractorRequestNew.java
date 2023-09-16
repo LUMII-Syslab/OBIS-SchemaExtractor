@@ -26,40 +26,43 @@ public class SchemaExtractorRequestNew {
     @ApiParam(access = "4", value = "Calculate property-property relations", defaultValue = "true", required = true)
     private Boolean calculatePropertyPropertyRelations;
 
-    @ApiParam(access = "5", value = "Calculate domain and range pairs", defaultValue = "true", required = true)
-    private Boolean calculateDomainAndRangePairs;
+    @ApiParam(access = "5", value = "Calculate source and target pairs", defaultValue = "true", required = true)
+    private Boolean calculateSourceAndTargetPairs;
 
-    @ApiParam(access = "6", value = "Calculate closed domains and closed ranges", defaultValue = "true", required = true)
-    private Boolean calculateClosedDomainsAndRanges;
+    @ApiParam(access = "6", value = "Calculate domains and ranges", defaultValue = "true", required = true)
+    private Boolean calculateDomainsAndRanges;
 
     @ApiParam(access = "7", value = "Calculate importance indexes", defaultValue = "true", required = true)
-    private Boolean calculateImportanceIndex;
+    private Boolean calculateImportanceIndexes;
 
-    @ApiParam(access = "8", value = "Calculate data types for attributes", defaultValue = "true", required = true)
+    @ApiParam(access = "8", value = "Calculate closed class sets", defaultValue = "false", required = true)
+    private Boolean calculateClosedClassSets;
+
+    @ApiParam(access = "9", value = "Calculate data types for attributes", defaultValue = "true", required = true)
     private Boolean calculateDataTypes;
 
-    @ApiParam(access = "9", value = "Limit of instances to use in data type calculation (no value or 0 means all data will be used)", required = false)
+    @ApiParam(access = "91", value = "Limit of instances to use in data type calculation (no value or 0 means all data will be used)", required = false)
     private Integer dataTypeSampleLimit;
 
-    @ApiParam(access = "91", value = "Calculate min and max cardinalities for all properties", defaultValue = "propertyLevelAndClassContext", required = true)
+    @ApiParam(access = "92", value = "Calculate min and max cardinalities for all properties", defaultValue = "propertyLevelAndClassContext", required = true)
     private CalculateCardinalitiesMode calculateCardinalitiesMode;
 
-    @ApiParam(access = "92", value = "Check instance namespace URIs", defaultValue = "false", required = false)
+    @ApiParam(access = "93", value = "Check instance namespace URIs", defaultValue = "false", required = false)
     private Boolean checkInstanceNamespaces;
 
-    @ApiParam(access = "93", value = "Add label information", allowEmptyValue = true)
+    @ApiParam(access = "94", value = "Add label information", allowEmptyValue = true)
     private List<String> addedLabels;
 
-    @ApiParam(access = "94", value = "Minimal Analyzed Class Size (set 1 if all classes should be analyzed)", defaultValue = "1", required = true)
+    @ApiParam(access = "95", value = "Minimal Analyzed Class Size (set 1 if all classes should be analyzed)", defaultValue = "1", required = true)
     private Integer minimalAnalyzedClassSize;
 
-    @ApiParam(access = "95", value = "List of classification properties, default property is http://www.w3.org/1999/02/22-rdf-syntax-ns#type", allowEmptyValue = true)
+    @ApiParam(access = "96", value = "List of classification properties, default property is http://www.w3.org/1999/02/22-rdf-syntax-ns#type", allowEmptyValue = true)
     private List<String> classificationProperties;
 
-    @ApiParam(access = "96", value = "List of excluded namespaces", allowEmptyValue = true)
+    @ApiParam(access = "97", value = "List of excluded namespaces", allowEmptyValue = true)
     private List<String> excludedNamespaces;
 
-    @ApiParam(access = "97", value = "Enable SPARQL Query Logging to the file", defaultValue = "true", required = true)
+    @ApiParam(access = "98", value = "Enable SPARQL Query Logging to the file", defaultValue = "true", required = true)
     private Boolean enableLogging;
 
     public Boolean getCalculateSubClassRelations() {
@@ -76,25 +79,32 @@ public class SchemaExtractorRequestNew {
         return calculatePropertyPropertyRelations;
     }
 
-    public Boolean getCalculateDomainAndRangePairs() {
-        if (calculateDomainAndRangePairs == null) {
-            calculateDomainAndRangePairs = Boolean.FALSE;
+    public Boolean getCalculateSourceAndTargetPairs() {
+        if (calculateSourceAndTargetPairs == null) {
+            calculateSourceAndTargetPairs = Boolean.FALSE;
         }
-        return calculateDomainAndRangePairs;
+        return calculateSourceAndTargetPairs;
     }
 
-    public Boolean getCalculateClosedDomainsAndRanges() {
-        if (calculateClosedDomainsAndRanges == null) {
-            calculateClosedDomainsAndRanges = Boolean.FALSE;
+    public Boolean getCalculateDomainsAndRanges() {
+        if (calculateDomainsAndRanges == null) {
+            calculateDomainsAndRanges = Boolean.FALSE;
         }
-        return calculateClosedDomainsAndRanges;
+        return calculateDomainsAndRanges;
     }
 
-    public Boolean getCalculateImportanceIndex() {
-        if (calculateImportanceIndex == null) {
-            calculateImportanceIndex = Boolean.FALSE;
+    public Boolean getCalculateClosedClassSets() {
+        if (calculateClosedClassSets == null) {
+            calculateClosedClassSets = Boolean.FALSE;
         }
-        return calculateImportanceIndex;
+        return calculateClosedClassSets;
+    }
+
+    public Boolean getCalculateImportanceIndexes() {
+        if (calculateImportanceIndexes == null) {
+            calculateImportanceIndexes = Boolean.FALSE;
+        }
+        return calculateImportanceIndexes;
     }
 
     public Boolean getCalculateDataTypes() {

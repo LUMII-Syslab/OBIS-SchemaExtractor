@@ -22,36 +22,36 @@ public class SchemaExtractorPropertyNodeInfo {
     private Long objectTripleCount;
     private Boolean isClosedDomain;
     private Boolean isClosedRange;
-    private List<SchemaExtractorDomainRangeInfo> domainRangePairs;
-    private List<SchemaExtractorClassNodeInfo> domainClasses;
-    private List<SchemaExtractorClassNodeInfo> rangeClasses;
+    private List<SchemaExtractorSourceTargetInfo> sourceAndTargetPairs;
+    private List<SchemaExtractorClassNodeInfo> sourceClasses;
+    private List<SchemaExtractorClassNodeInfo> targetClasses;
     private List<SchemaExtractorDataTypeInfo> dataTypes;
     private List<SchemaExtractorPropertyRelatedPropertyInfo> followers;
     private List<SchemaExtractorPropertyRelatedPropertyInfo> outgoingProperties;
     private List<SchemaExtractorPropertyRelatedPropertyInfo> incomingProperties;
 
     @Nonnull
-    public List<SchemaExtractorDomainRangeInfo> getDomainRangePairs() {
-        if (domainRangePairs == null) {
-            domainRangePairs = new ArrayList<>();
+    public List<SchemaExtractorSourceTargetInfo> getSourceAndTargetPairs() {
+        if (sourceAndTargetPairs == null) {
+            sourceAndTargetPairs = new ArrayList<>();
         }
-        return domainRangePairs;
+        return sourceAndTargetPairs;
     }
 
     @Nonnull
-    public List<SchemaExtractorClassNodeInfo> getDomainClasses() {
-        if (domainClasses == null) {
-            domainClasses = new ArrayList<>();
+    public List<SchemaExtractorClassNodeInfo> getSourceClasses() {
+        if (sourceClasses == null) {
+            sourceClasses = new ArrayList<>();
         }
-        return domainClasses;
+        return sourceClasses;
     }
 
     @Nonnull
-    public List<SchemaExtractorClassNodeInfo> getRangeClasses() {
-        if (rangeClasses == null) {
-            rangeClasses = new ArrayList<>();
+    public List<SchemaExtractorClassNodeInfo> getTargetClasses() {
+        if (targetClasses == null) {
+            targetClasses = new ArrayList<>();
         }
-        return rangeClasses;
+        return targetClasses;
     }
 
     @Nonnull

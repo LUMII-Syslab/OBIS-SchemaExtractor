@@ -77,10 +77,10 @@ public class SchemaConstants {
     public static final String SPARQL_QUERY_BINDING_NAME_CLASS_A_FULL = "<classA>";
     public static final String SPARQL_QUERY_BINDING_NAME_CLASS_B = "classB";
     public static final String SPARQL_QUERY_BINDING_NAME_CLASS_B_FULL = "<classB>";
-    public static final String SPARQL_QUERY_BINDING_NAME_CLASS_DOMAIN = "domainClass";
-    public static final String SPARQL_QUERY_BINDING_NAME_CLASS_DOMAIN_FULL = "<domainClass>";
-    public static final String SPARQL_QUERY_BINDING_NAME_CLASS_RANGE = "rangeClass";
-    public static final String SPARQL_QUERY_BINDING_NAME_CLASS_RANGE_FULL = "<rangeClass>";
+    public static final String SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE = "sourceClass";
+    public static final String SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL = "<sourceClass>";
+    public static final String SPARQL_QUERY_BINDING_NAME_CLASS_TARGET = "targetClass";
+    public static final String SPARQL_QUERY_BINDING_NAME_CLASS_TARGET_FULL = "<targetClass>";
     public static final String SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT = "instances";
     public static final String SPARQL_QUERY_BINDING_NAME_PROPERTY = "property";
     public static final String SPARQL_QUERY_BINDING_NAME_DATA_TYPE = "dataType";
@@ -96,8 +96,8 @@ public class SchemaConstants {
     public static final String SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY = "classificationProperty";
     public static final String SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_A = "classificationPropertyA";
     public static final String SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_B = "classificationPropertyB";
-    public static final String SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_DOMAIN = "classificationPropertyDomain";
-    public static final String SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_RANGE = "classificationPropertyRange";
+    public static final String SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_SOURCE = "classificationPropertySource";
+    public static final String SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_TARGET = "classificationPropertyTarget";
     public static final String SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_OTHER = "classificationPropertyOther";
 
 }

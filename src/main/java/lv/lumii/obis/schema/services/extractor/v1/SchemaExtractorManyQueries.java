@@ -28,7 +28,7 @@ public class SchemaExtractorManyQueries extends SchemaExtractor {
 		List<QueryResult> queryResults;
 		for(SchemaClass classA: classes){
             String query = SchemaExtractorQueries.FIND_INTERSECTION_CLASSES_FOR_KNOWN_CLASS.getSparqlQuery();
-            query = query.replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_DOMAIN, classA.getFullName());
+            query = query.replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE, classA.getFullName());
             queryResults = sparqlEndpointProcessor.read(request, FIND_INTERSECTION_CLASSES_FOR_KNOWN_CLASS.name(), query);
             updateGraphOfClassesWithNeighbors(classA.getFullName(), queryResults, graphOfClasses, request);
             queryResults.clear();
@@ -41,7 +41,7 @@ public class SchemaExtractorManyQueries extends SchemaExtractor {
 		List<QueryResult> queryResults;
 		for(SchemaClass domainClass: classes){
 			String query = SchemaExtractorQueries.FIND_ALL_DATATYPE_PROPERTIES_FOR_KNOWN_CLASS.getSparqlQuery();
-			query = query.replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_DOMAIN, domainClass.getFullName());
+			query = query.replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE, domainClass.getFullName());
 			queryResults = sparqlEndpointProcessor.read(request, FIND_ALL_DATATYPE_PROPERTIES_FOR_KNOWN_CLASS.name(), query);
 			processAllDataTypeProperties(domainClass.getFullName(), properties, queryResults);
 			queryResults.clear();
@@ -61,7 +61,7 @@ public class SchemaExtractorManyQueries extends SchemaExtractor {
 		List<QueryResult> queryResults;
 		for(SchemaClass domainClass: classes){
 			String query = SchemaExtractorQueries.FIND_OBJECT_PROPERTIES_WITH_DOMAIN_RANGE_FOR_KNOWN_CLASS.getSparqlQuery();
-			query = query.replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_DOMAIN, domainClass.getFullName());
+			query = query.replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE, domainClass.getFullName());
 			queryResults = sparqlEndpointProcessor.read(request, FIND_OBJECT_PROPERTIES_WITH_DOMAIN_RANGE_FOR_KNOWN_CLASS.name(), query);
 			processAllObjectTypePropertiesWithKnownDomain(domainClass.getFullName(), queryResults, properties, request);
 			queryResults.clear();
@@ -104,7 +104,7 @@ public class SchemaExtractorManyQueries extends SchemaExtractor {
 			SchemaExtractorClassNodeInfo classInfo = new SchemaExtractorClassNodeInfo();
 			classInfo.setClassName(domainClass);
 			classInfo.setTripleCount(Long.valueOf(instances));
-			property.getDomainClasses().add(classInfo);
+			property.getSourceClasses().add(classInfo);
 		}
 	}
 
@@ -113,7 +113,7 @@ public class SchemaExtractorManyQueries extends SchemaExtractor {
 															   @Nonnull SchemaExtractorRequestDto request){
 		for(QueryResult queryResult: queryResults){
 			String propertyName = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY);
-			String rangeClass = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_RANGE);
+			String rangeClass = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_TARGET);
 			String instances = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT);
 
 			if(StringUtils.isEmpty(propertyName)){
@@ -132,7 +132,7 @@ public class SchemaExtractorManyQueries extends SchemaExtractor {
 															 @Nonnull SchemaExtractorRequestDto request){
 		for(QueryResult queryResult: queryResults){
 			String propertyName = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY);
-			String domainClass = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_DOMAIN);
+			String domainClass = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE);
 			String instances = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT);
 
 			if(StringUtils.isEmpty(propertyName)){
