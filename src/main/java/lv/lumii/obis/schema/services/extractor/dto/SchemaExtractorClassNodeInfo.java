@@ -17,6 +17,8 @@ public class SchemaExtractorClassNodeInfo {
 	private Boolean isClosedDomain;
 	private Boolean isClosedRange;
 	private Boolean isPrincipal;
+	private Boolean hasDomainInClassPair;
+	private Boolean hasRangeInClassPair;
 	private Integer minCardinality;
 	private Integer maxCardinality;
 	private Integer minInverseCardinality;

@@ -22,6 +22,8 @@ public class SchemaExtractorPropertyNodeInfo {
     private Long objectTripleCount;
     private Boolean isClosedDomain;
     private Boolean isClosedRange;
+    private Boolean hasDomain;
+    private Boolean hasRange;
     private List<SchemaExtractorSourceTargetInfo> sourceAndTargetPairs;
     private List<SchemaExtractorClassNodeInfo> sourceClasses;
     private List<SchemaExtractorClassNodeInfo> targetClasses;

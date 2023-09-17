@@ -35,7 +35,7 @@ public class SchemaExtractor {
 
     private static final Comparator<String> nullSafeStringComparator = Comparator.nullsLast(String::compareToIgnoreCase);
 
-    private enum ImportanceIndexValidationType {SOURCE, TARGET, PAIR_SOURCE, PAIR_TARGET}
+    private enum LinkedClassType {SOURCE, TARGET, PAIR_SOURCE, PAIR_TARGET}
 
     @Autowired
     @Setter
@@ -259,7 +259,14 @@ public class SchemaExtractor {
                 determinePropertySourceDataTypes(property, request);
             }
 
-            determineImportanceIndexes(property, schema.getClasses(), graphOfClasses, request);
+            if (isTrue(request.getCalculateDomainsAndRanges())) {
+                determineDomainsAndRanges(property, schema.getClasses(), graphOfClasses, request);
+            }
+
+            if (isTrue(request.getCalculateImportanceIndexes())) {
+                determineImportanceIndexes(property, schema.getClasses(), graphOfClasses, request);
+            }
+
 
             if (isTrue(request.getCalculatePropertyPropertyRelations())) {
                 determineFollowers(property, request);
@@ -867,43 +874,229 @@ public class SchemaExtractor {
         });
     }
 
+    protected void determineDomainsAndRanges(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull List<SchemaClass> classes,
+                                             @Nonnull Map<String, SchemaExtractorClassNodeInfo> graphOfClasses,
+                                             @Nonnull SchemaExtractorRequestDto request) {
+
+        log.info(request.getCorrelationId() + " - determineDomainForProperty [" + property.getPropertyName() + "]");
+        SchemaExtractorPropertyLinkedClassInfo domainClass = determinePropertyDomainOrRange(property,
+                buildAndSortPropertyLinkedClasses(property.getSourceClasses(), classes), request, LinkedClassType.SOURCE, null, null);
+        if (domainClass != null) {
+            property.setHasDomain(true);
+            mapDomainOrRangeClass(property.getSourceClasses(), domainClass);
+        } else {
+            property.setHasDomain(false);
+            property.getSourceClasses().forEach(linkedClass -> linkedClass.setIsPrincipal(false));
+        }
+
+        log.info(request.getCorrelationId() + " - determineRangeForProperty [" + property.getPropertyName() + "]");
+        SchemaExtractorPropertyLinkedClassInfo rangeClass = determinePropertyDomainOrRange(property,
+                buildAndSortPropertyLinkedClasses(property.getSourceClasses(), classes), request, LinkedClassType.TARGET, null, null);
+        if (rangeClass != null) {
+            property.setHasRange(true);
+            mapDomainOrRangeClass(property.getTargetClasses(), rangeClass);
+        } else {
+            property.setHasRange(false);
+            property.getTargetClasses().forEach(linkedClass -> linkedClass.setIsPrincipal(false));
+        }
+
+        log.info(request.getCorrelationId() + " - determineRangeForClassPairSource [" + property.getPropertyName() + "]");
+        property.getSourceClasses().forEach(sourceClass -> {
+            List<SchemaExtractorSourceTargetInfo> pairsForSpecificSource = findPairsWithSpecificSource(property.getSourceAndTargetPairs(), sourceClass.getClassName());
+            SchemaExtractorPropertyLinkedClassInfo pairRange = determinePropertyDomainOrRange(property,
+                    buildAndSortPropertyPairTargets(pairsForSpecificSource, classes), request, LinkedClassType.PAIR_SOURCE, sourceClass, null);
+            if (pairRange != null) {
+                sourceClass.setHasRangeInClassPair(true);
+                pairsForSpecificSource.forEach(linkedPair -> {
+                    if (pairRange.getClassName().equalsIgnoreCase(linkedPair.getTargetClass())) {
+                        linkedPair.setIsPrincipalTarget(true);
+                        linkedPair.setTargetImportanceIndex(1);
+                    } else {
+                        linkedPair.setIsPrincipalTarget(false);
+                        linkedPair.setTargetImportanceIndex(0);
+                    }
+                });
+            } else {
+                sourceClass.setHasRangeInClassPair(false);
+                pairsForSpecificSource.forEach(linkedPair -> linkedPair.setIsPrincipalTarget(false));
+            }
+        });
+
+        log.info(request.getCorrelationId() + " - determineDomainForClassPairTarget [" + property.getPropertyName() + "]");
+        property.getTargetClasses().forEach(targetClass -> {
+            List<SchemaExtractorSourceTargetInfo> pairsForSpecificTarget = findPairsWithSpecificTarget(property.getSourceAndTargetPairs(), targetClass.getClassName());
+            SchemaExtractorPropertyLinkedClassInfo pairDomain = determinePropertyDomainOrRange(property,
+                    buildAndSortPropertyPairSources(pairsForSpecificTarget, classes), request, LinkedClassType.PAIR_TARGET, null, targetClass);
+            if (pairDomain != null) {
+                targetClass.setHasDomainInClassPair(true);
+                pairsForSpecificTarget.forEach(linkedPair -> {
+                    if (pairDomain.getClassName().equalsIgnoreCase(linkedPair.getTargetClass())) {
+                        linkedPair.setIsPrincipalSource(true);
+                        linkedPair.setSourceImportanceIndex(1);
+                    } else {
+                        linkedPair.setIsPrincipalSource(false);
+                        linkedPair.setSourceImportanceIndex(0);
+                    }
+                });
+            } else {
+                targetClass.setHasDomainInClassPair(false);
+                pairsForSpecificTarget.forEach(linkedPair -> linkedPair.setIsPrincipalSource(false));
+            }
+        });
+    }
+
+    protected void mapDomainOrRangeClass(@Nonnull List<SchemaExtractorClassNodeInfo> propertyLinkedClasses, @Nonnull SchemaExtractorPropertyLinkedClassInfo clazz) {
+        propertyLinkedClasses.forEach(linkedClass -> {
+            if (linkedClass.getClassName().equalsIgnoreCase(clazz.getClassName())) {
+                linkedClass.setIsPrincipal(true);
+                linkedClass.setImportanceIndex(1);
+            } else {
+                linkedClass.setIsPrincipal(false);
+                linkedClass.setImportanceIndex(0);
+            }
+        });
+    }
+
+
+    @Nullable
+    protected SchemaExtractorPropertyLinkedClassInfo determinePropertyDomainOrRange(@Nonnull SchemaExtractorPropertyNodeInfo property,
+                                                                                    @Nonnull List<SchemaExtractorPropertyLinkedClassInfo> propertyLinkedClassesSorted,
+                                                                                    @Nonnull SchemaExtractorRequestDto request,
+                                                                                    @Nonnull LinkedClassType linkedClassType,
+                                                                                    @Nullable SchemaExtractorClassNodeInfo sourceClass,
+                                                                                    @Nullable SchemaExtractorClassNodeInfo targetClass) {
+        for (SchemaExtractorPropertyLinkedClassInfo currentClass : propertyLinkedClassesSorted) {
+
+            // skip owl:Thing and rdf:Resource
+            if (OWL_RDF_TOP_LEVEL_RESOURCES.contains(currentClass.getClassName())) {
+                continue;
+            }
+
+            boolean isApplicable = false;
+
+            switch (linkedClassType) {
+                case SOURCE:
+                    isApplicable = checkDomainClass(property.getPropertyName(), currentClass, request);
+                    break;
+                case TARGET:
+                    isApplicable = checkRangeClass(property.getPropertyName(), currentClass, request);
+                    break;
+                case PAIR_SOURCE:
+                    if (sourceClass != null && StringUtils.isNotEmpty(sourceClass.getClassName())) {
+                        isApplicable = checkRangeForSource(property.getPropertyName(), sourceClass, currentClass, request);
+                    }
+                    break;
+                case PAIR_TARGET:
+                    if (targetClass != null && StringUtils.isNotEmpty(targetClass.getClassName())) {
+                        isApplicable = checkDomainForTarget(property.getPropertyName(), targetClass, currentClass, request);
+                    }
+                    break;
+                default:
+                    break;
+            }
+            if (isApplicable) {
+                return currentClass;
+            }
+        }
+        return null;
+    }
+
+    protected boolean checkDomainClass(@Nonnull String propertyName, @Nonnull SchemaExtractorPropertyLinkedClassInfo potentialDomain,
+                                       @Nonnull SchemaExtractorRequestDto request) {
+        boolean isDomainClass;
+        SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_DOMAIN_FOR_PROPERTY.name()), CHECK_DOMAIN_FOR_PROPERTY)
+                .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL, potentialDomain.getClassName(), potentialDomain.getIsLiteral())
+                .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, potentialDomain.getClassificationProperty())
+                .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, propertyName);
+        QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
+        isDomainClass = !queryResponse.hasErrors() && queryResponse.getResults().isEmpty();
+        return isDomainClass;
+    }
+
+    protected boolean checkRangeClass(@Nonnull String propertyName, @Nonnull SchemaExtractorPropertyLinkedClassInfo potentialRange,
+                                      @Nonnull SchemaExtractorRequestDto request) {
+        boolean isRangeClass;
+        SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_RANGE_FOR_PROPERTY.name()), CHECK_RANGE_FOR_PROPERTY)
+                .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_TARGET_FULL, potentialRange.getClassName(), potentialRange.getIsLiteral())
+                .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, potentialRange.getClassificationProperty())
+                .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, propertyName);
+        QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
+        isRangeClass = !queryResponse.hasErrors() && queryResponse.getResults().isEmpty();
+        return isRangeClass;
+    }
+
+    protected boolean checkRangeForSource(@Nonnull String propertyName, @Nonnull SchemaExtractorClassNodeInfo sourceClass, @Nonnull SchemaExtractorPropertyLinkedClassInfo potentialRange, @Nonnull SchemaExtractorRequestDto request) {
+        boolean isRangeClass;
+        SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_RANGE_FOR_PAIR_SOURCE.name()), CHECK_RANGE_FOR_PAIR_SOURCE)
+                .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL, sourceClass.getClassName(), sourceClass.getIsLiteral())
+                .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_TARGET_FULL, potentialRange.getClassName(), potentialRange.getIsLiteral())
+                .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_SOURCE, sourceClass.getClassificationProperty())
+                .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_TARGET, potentialRange.getClassificationProperty())
+                .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, propertyName);
+        QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
+        isRangeClass = !queryResponse.hasErrors() && queryResponse.getResults().isEmpty();
+        return isRangeClass;
+    }
+
+    protected boolean checkDomainForTarget(@Nonnull String propertyName, @Nonnull SchemaExtractorClassNodeInfo targetClass, @Nonnull SchemaExtractorPropertyLinkedClassInfo potentialDomain, @Nonnull SchemaExtractorRequestDto request) {
+        boolean isDomainClass;
+        SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_DOMAIN_FOR_PAIR_TARGET.name()), CHECK_DOMAIN_FOR_PAIR_TARGET)
+                .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL, potentialDomain.getClassName(), potentialDomain.getIsLiteral())
+                .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_TARGET_FULL, targetClass.getClassName(), targetClass.getIsLiteral())
+                .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_SOURCE, potentialDomain.getClassificationProperty())
+                .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_TARGET, targetClass.getClassificationProperty())
+                .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, propertyName);
+        QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
+        isDomainClass = !queryResponse.hasErrors() && queryResponse.getResults().isEmpty();
+        return isDomainClass;
+    }
+
     protected void determineImportanceIndexes(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull List<SchemaClass> classes,
                                               @Nonnull Map<String, SchemaExtractorClassNodeInfo> graphOfClasses,
                                               @Nonnull SchemaExtractorRequestDto request) {
 
-        log.info(request.getCorrelationId() + " - determineImportanceIndexesForSourceClasses [" + property.getPropertyName() + "]");
-        List<SchemaExtractorPropertyLinkedClassInfo> principalSourceClasses = determinePrincipalClasses(property,
-                buildAndSortPropertyLinkedClasses(property.getSourceClasses(), classes), classes, graphOfClasses, request, ImportanceIndexValidationType.SOURCE, null, null);
-        mapPrincipalClasses(property.getSourceClasses(), principalSourceClasses);
+        if (isNotTrue(property.getHasDomain())) {
+            log.info(request.getCorrelationId() + " - determineImportanceIndexesForSourceClasses [" + property.getPropertyName() + "]");
+            List<SchemaExtractorPropertyLinkedClassInfo> principalSourceClasses = determinePrincipalClasses(property,
+                    buildAndSortPropertyLinkedClasses(property.getSourceClasses(), classes), classes, graphOfClasses, request, LinkedClassType.SOURCE, null, null);
+            mapPrincipalClasses(property.getSourceClasses(), principalSourceClasses);
+        }
 
-        log.info(request.getCorrelationId() + " - determineImportanceIndexesForTargetClasses [" + property.getPropertyName() + "]");
-        List<SchemaExtractorPropertyLinkedClassInfo> principalTargetClasses = determinePrincipalClasses(property,
-                buildAndSortPropertyLinkedClasses(property.getTargetClasses(), classes), classes, graphOfClasses, request, ImportanceIndexValidationType.TARGET, null, null);
-        mapPrincipalClasses(property.getTargetClasses(), principalTargetClasses);
+        if (isNotTrue(property.getHasRange())) {
+            log.info(request.getCorrelationId() + " - determineImportanceIndexesForTargetClasses [" + property.getPropertyName() + "]");
+            List<SchemaExtractorPropertyLinkedClassInfo> principalTargetClasses = determinePrincipalClasses(property,
+                    buildAndSortPropertyLinkedClasses(property.getTargetClasses(), classes), classes, graphOfClasses, request, LinkedClassType.TARGET, null, null);
+            mapPrincipalClasses(property.getTargetClasses(), principalTargetClasses);
+        }
 
         log.info(request.getCorrelationId() + " - determineImportanceIndexesForClassPairSource [" + property.getPropertyName() + "]");
         // set pair target important indexes
         property.getSourceClasses().forEach(sourceClass -> {
-            List<SchemaExtractorSourceTargetInfo> pairsForSpecificSource = findPairsWithSpecificSource(property.getSourceAndTargetPairs(), sourceClass.getClassName());
-            List<SchemaExtractorPropertyLinkedClassInfo> principalPairTargets = determinePrincipalClasses(property,
-                    buildAndSortPropertyPairTargets(pairsForSpecificSource, classes), classes, graphOfClasses, request, ImportanceIndexValidationType.PAIR_SOURCE, sourceClass, null);
-            pairsForSpecificSource.forEach(linkedPair -> {
-                SchemaExtractorPropertyLinkedClassInfo pairWithIndex = principalPairTargets.stream()
-                        .filter(pairTarget -> pairTarget.getClassName().equalsIgnoreCase(linkedPair.getTargetClass())).findFirst().orElse(null);
-                linkedPair.setTargetImportanceIndex((pairWithIndex != null) ? pairWithIndex.getImportanceIndex() : 0);
-            });
+            if (isNotTrue(sourceClass.getHasRangeInClassPair())) {
+                List<SchemaExtractorSourceTargetInfo> pairsForSpecificSource = findPairsWithSpecificSource(property.getSourceAndTargetPairs(), sourceClass.getClassName());
+                List<SchemaExtractorPropertyLinkedClassInfo> principalPairTargets = determinePrincipalClasses(property,
+                        buildAndSortPropertyPairTargets(pairsForSpecificSource, classes), classes, graphOfClasses, request, LinkedClassType.PAIR_SOURCE, sourceClass, null);
+                pairsForSpecificSource.forEach(linkedPair -> {
+                    SchemaExtractorPropertyLinkedClassInfo pairWithIndex = principalPairTargets.stream()
+                            .filter(pairTarget -> pairTarget.getClassName().equalsIgnoreCase(linkedPair.getTargetClass())).findFirst().orElse(null);
+                    linkedPair.setTargetImportanceIndex((pairWithIndex != null) ? pairWithIndex.getImportanceIndex() : 0);
+                });
+            }
+
         });
         log.info(request.getCorrelationId() + " - determineImportanceIndexesForClassPairTarget [" + property.getPropertyName() + "]");
-        // set pair target important indexes
+        // set pair source important indexes
         property.getTargetClasses().forEach(targetClass -> {
-            List<SchemaExtractorSourceTargetInfo> pairsForSpecificTarget = findPairsWithSpecificTarget(property.getSourceAndTargetPairs(), targetClass.getClassName());
-            List<SchemaExtractorPropertyLinkedClassInfo> principalPairSources = determinePrincipalClasses(property,
-                    buildAndSortPropertyPairSources(pairsForSpecificTarget, classes), classes, graphOfClasses, request, ImportanceIndexValidationType.PAIR_TARGET, null, targetClass);
-            pairsForSpecificTarget.forEach(linkedPair -> {
-                SchemaExtractorPropertyLinkedClassInfo pairWithIndex = principalPairSources.stream()
-                        .filter(pairTarget -> pairTarget.getClassName().equalsIgnoreCase(linkedPair.getSourceClass())).findFirst().orElse(null);
-                linkedPair.setSourceImportanceIndex((pairWithIndex != null) ? pairWithIndex.getImportanceIndex() : 0);
-            });
+            if (isNotTrue(targetClass.getHasDomainInClassPair())) {
+                List<SchemaExtractorSourceTargetInfo> pairsForSpecificTarget = findPairsWithSpecificTarget(property.getSourceAndTargetPairs(), targetClass.getClassName());
+                List<SchemaExtractorPropertyLinkedClassInfo> principalPairSources = determinePrincipalClasses(property,
+                        buildAndSortPropertyPairSources(pairsForSpecificTarget, classes), classes, graphOfClasses, request, LinkedClassType.PAIR_TARGET, null, targetClass);
+                pairsForSpecificTarget.forEach(linkedPair -> {
+                    SchemaExtractorPropertyLinkedClassInfo pairWithIndex = principalPairSources.stream()
+                            .filter(pairTarget -> pairTarget.getClassName().equalsIgnoreCase(linkedPair.getSourceClass())).findFirst().orElse(null);
+                    linkedPair.setSourceImportanceIndex((pairWithIndex != null) ? pairWithIndex.getImportanceIndex() : 0);
+                });
+            }
         });
     }
 
@@ -913,7 +1106,7 @@ public class SchemaExtractor {
                                                                                      @Nonnull List<SchemaClass> classes,
                                                                                      @Nonnull Map<String, SchemaExtractorClassNodeInfo> graphOfClasses,
                                                                                      @Nonnull SchemaExtractorRequestDto request,
-                                                                                     @Nonnull ImportanceIndexValidationType importanceIndexValidationType,
+                                                                                     @Nonnull LinkedClassType linkedClassType,
                                                                                      @Nullable SchemaExtractorClassNodeInfo sourceClass,
                                                                                      @Nullable SchemaExtractorClassNodeInfo targetClass) {
 
@@ -967,7 +1160,7 @@ public class SchemaExtractor {
 
                 boolean needToInclude = false;
 
-                switch (importanceIndexValidationType) {
+                switch (linkedClassType) {
                     case SOURCE:
                         needToInclude = checkNewPrincipalSourceClass(property.getPropertyName(), currentClass, includedClassesToCheckWith, classes, request);
                         break;
