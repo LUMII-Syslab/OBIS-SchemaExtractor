@@ -891,7 +891,7 @@ public class SchemaExtractor {
 
         log.info(request.getCorrelationId() + " - determineRangeForProperty [" + property.getPropertyName() + "]");
         SchemaExtractorPropertyLinkedClassInfo rangeClass = determinePropertyDomainOrRange(property,
-                buildAndSortPropertyLinkedClasses(property.getSourceClasses(), classes), request, LinkedClassType.TARGET, null, null);
+                buildAndSortPropertyLinkedClasses(property.getTargetClasses(), classes), request, LinkedClassType.TARGET, null, null);
         if (rangeClass != null) {
             property.setHasRange(true);
             mapDomainOrRangeClass(property.getTargetClasses(), rangeClass);
