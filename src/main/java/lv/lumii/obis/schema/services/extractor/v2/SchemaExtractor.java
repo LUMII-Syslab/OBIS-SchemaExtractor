@@ -260,7 +260,7 @@ public class SchemaExtractor {
             }
 
             if (isTrue(request.getCalculateDomainsAndRanges())) {
-                determineDomainsAndRanges(property, schema.getClasses(), graphOfClasses, request);
+                determineDomainsAndRanges(property, schema.getClasses(), request);
             }
 
             if (isTrue(request.getCalculateImportanceIndexes())) {
@@ -875,7 +875,6 @@ public class SchemaExtractor {
     }
 
     protected void determineDomainsAndRanges(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull List<SchemaClass> classes,
-                                             @Nonnull Map<String, SchemaExtractorClassNodeInfo> graphOfClasses,
                                              @Nonnull SchemaExtractorRequestDto request) {
 
         log.info(request.getCorrelationId() + " - determineDomainForProperty [" + property.getPropertyName() + "]");
@@ -930,7 +929,7 @@ public class SchemaExtractor {
             if (pairDomain != null) {
                 targetClass.setHasDomainInClassPair(true);
                 pairsForSpecificTarget.forEach(linkedPair -> {
-                    if (pairDomain.getClassName().equalsIgnoreCase(linkedPair.getTargetClass())) {
+                    if (pairDomain.getClassName().equalsIgnoreCase(linkedPair.getSourceClass())) {
                         linkedPair.setIsPrincipalSource(true);
                         linkedPair.setSourceImportanceIndex(1);
                     } else {
