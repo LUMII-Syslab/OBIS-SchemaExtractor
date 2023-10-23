@@ -38,6 +38,7 @@ public class SchemaExtractorControllerV2 {
 
     private static final String SCHEMA_EXTRACT_MESSAGE_START = "Starting to read schema from the endpoint with parameters %s";
     private static final String SCHEMA_EXTRACT_MESSAGE_END = "Completed JSON schema extraction in %s from the specified endpoint with parameters %s";
+    private static final String SCHEMA_EXTRACT_MESSAGE_SAVED_FILE = "JSON schema saved in the file %s";
 
     private static final String SCHEMA_READ_INCLUDED_CLASSES_MESSAGE_START = "Request %s - Starting to read included classes from the CSV file [%s]";
     private static final String SCHEMA_READ_INCLUDED_CLASSES_MESSAGE_END = "Request %s - Completed to read included classes from the CSV file [%s]";
@@ -66,17 +67,17 @@ public class SchemaExtractorControllerV2 {
     )
     @SuppressWarnings("unused")
     public String buildFullSchemaFromEndpointV2(@Validated @ModelAttribute @Nonnull SchemaExtractorRequestNew request,
-                                                @RequestParam(value ="includedClassesFile", required=false)
+                                                @RequestParam(value = "includedClassesFile", required = false)
                                                 @ApiParam(access = "93", value = "Valid CSV file with the list of included classes (if not specified - all classes will be analyzed)") MultipartFile includedClassesCsvFile,
-                                                @RequestParam(value ="includedPropertiesFile", required=false)
+                                                @RequestParam(value = "includedPropertiesFile", required = false)
                                                 @ApiParam(access = "94", value = "Valid CSV file with the list of included properties (if not specified - all properties will be analyzed)") MultipartFile includedPropertiesCsvFile,
-                                                @RequestParam(value ="namespacePrefixFile", required=false)
+                                                @RequestParam(value = "namespacePrefixFile", required = false)
                                                 @ApiParam(access = "95", value = "Valid JSON file with predefined namespaces") MultipartFile namespacePrefixFile) {
 
         // 1. Create the request object
         SchemaExtractorRequestDto requestDto = requestBuilder.buildRequest(request);
 
-        String requestJson = new Gson().toJson(request);
+        String requestJson = new Gson().toJson(requestDto);
         log.info(String.format(SCHEMA_EXTRACT_MESSAGE_START, requestJson));
         LocalDateTime startTime = LocalDateTime.now();
 
@@ -122,14 +123,41 @@ public class SchemaExtractorControllerV2 {
         LocalDateTime endTime = LocalDateTime.now();
         log.info(String.format(SCHEMA_EXTRACT_MESSAGE_END, calculateExecutionTime(startTime, endTime), requestJson));
 
-        // 7. Return the result JSON schema
-        return jsonSchemaService.getJsonSchemaString(schema);
+        String resultSchema = jsonSchemaService.getJsonSchemaString(schema);
+
+        // 7. Save the result JSON schema in file
+        if (resultSchema != null) {
+            String fileName = requestDto.getCorrelationId() + ".json";
+            writeResultFile(fileName, resultSchema);
+            log.info(String.format(SCHEMA_EXTRACT_MESSAGE_SAVED_FILE, fileName));
+        }
+
+        // 8. Return the result JSON schema
+        return resultSchema;
     }
 
     private String calculateExecutionTime(@Nonnull LocalDateTime startLocalDateTime, @Nonnull LocalDateTime endLocalDateTime) {
         return Duration.between(startLocalDateTime, endLocalDateTime).toString().substring(2)
                 .replaceAll("(\\d[HMS])", "$1 ")
                 .toLowerCase();
+    }
+
+    private void writeResultFile(@Nonnull String fileName, @Nonnull String resultSchema) {
+        BufferedWriter writer = null;
+        try {
+            writer = new BufferedWriter(new FileWriter(fileName));
+            writer.write(resultSchema);
+        } catch (IOException e) {
+            log.error("Cannot write the result schema in the file " + fileName);
+        } finally {
+            if (writer != null) {
+                try {
+                    writer.close();
+                } catch (IOException e) {
+                    log.error("Cannot close output stream while writing the result schema in the file" + fileName);
+                }
+            }
+        }
     }
 
     @Nonnull
