@@ -29,6 +29,7 @@
 		<maven.compiler.version>3.7.0</maven.compiler.version>
 		<glassfish.jersey.version>2.26</glassfish.jersey.version>
 		<opencsv.version>5.5.2</opencsv.version>
+		<commons.codec>1.16.0</commons.codec>
 	</properties>
 
 	<dependencies>
@@ -100,6 +101,13 @@
 			<groupId>com.opencsv</groupId>
 			<artifactId>opencsv</artifactId>
 			<version>${opencsv.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>commons-codec</groupId>
+			<artifactId>commons-codec</artifactId>
+			<version>${commons.codec}</version>
+			<scope>runtime</scope>
 		</dependency>
 
 	</dependencies>
