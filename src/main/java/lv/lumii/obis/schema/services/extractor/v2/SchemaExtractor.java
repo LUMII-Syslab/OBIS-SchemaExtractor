@@ -879,7 +879,7 @@ public class SchemaExtractor {
 
         log.info(request.getCorrelationId() + " - determineDomainForProperty [" + property.getPropertyName() + "]");
         SchemaExtractorPropertyLinkedClassInfo domainClass = determinePropertyDomainOrRange(property,
-                buildAndSortPropertyLinkedClasses(property.getSourceClasses(), classes), request, LinkedClassType.SOURCE, null, null);
+                getTheFirstMainClass(buildAndSortPropertyLinkedClasses(property.getSourceClasses(), classes)), request, LinkedClassType.SOURCE, null, null);
         if (domainClass != null) {
             property.setHasDomain(true);
             mapDomainOrRangeClass(property.getSourceClasses(), domainClass);
@@ -890,7 +890,7 @@ public class SchemaExtractor {
 
         log.info(request.getCorrelationId() + " - determineRangeForProperty [" + property.getPropertyName() + "]");
         SchemaExtractorPropertyLinkedClassInfo rangeClass = determinePropertyDomainOrRange(property,
-                buildAndSortPropertyLinkedClasses(property.getTargetClasses(), classes), request, LinkedClassType.TARGET, null, null);
+                getTheFirstMainClass(buildAndSortPropertyLinkedClasses(property.getTargetClasses(), classes)), request, LinkedClassType.TARGET, null, null);
         if (rangeClass != null) {
             property.setHasRange(true);
             mapDomainOrRangeClass(property.getTargetClasses(), rangeClass);
@@ -903,7 +903,7 @@ public class SchemaExtractor {
         property.getSourceClasses().forEach(sourceClass -> {
             List<SchemaExtractorSourceTargetInfo> pairsForSpecificSource = findPairsWithSpecificSource(property.getSourceAndTargetPairs(), sourceClass.getClassName());
             SchemaExtractorPropertyLinkedClassInfo pairRange = determinePropertyDomainOrRange(property,
-                    buildAndSortPropertyPairTargets(pairsForSpecificSource, classes), request, LinkedClassType.PAIR_SOURCE, sourceClass, null);
+                    getTheFirstMainClass(buildAndSortPropertyPairTargets(pairsForSpecificSource, classes)), request, LinkedClassType.PAIR_SOURCE, sourceClass, null);
             if (pairRange != null) {
                 sourceClass.setHasRangeInClassPair(true);
                 pairsForSpecificSource.forEach(linkedPair -> {
@@ -925,7 +925,7 @@ public class SchemaExtractor {
         property.getTargetClasses().forEach(targetClass -> {
             List<SchemaExtractorSourceTargetInfo> pairsForSpecificTarget = findPairsWithSpecificTarget(property.getSourceAndTargetPairs(), targetClass.getClassName());
             SchemaExtractorPropertyLinkedClassInfo pairDomain = determinePropertyDomainOrRange(property,
-                    buildAndSortPropertyPairSources(pairsForSpecificTarget, classes), request, LinkedClassType.PAIR_TARGET, null, targetClass);
+                    getTheFirstMainClass(buildAndSortPropertyPairSources(pairsForSpecificTarget, classes)), request, LinkedClassType.PAIR_TARGET, null, targetClass);
             if (pairDomain != null) {
                 targetClass.setHasDomainInClassPair(true);
                 pairsForSpecificTarget.forEach(linkedPair -> {
@@ -944,6 +944,13 @@ public class SchemaExtractor {
         });
     }
 
+    @Nullable
+    protected SchemaExtractorPropertyLinkedClassInfo getTheFirstMainClass(List<SchemaExtractorPropertyLinkedClassInfo> classes) {
+        return classes.stream()
+                .filter(currentClass -> !OWL_RDF_TOP_LEVEL_RESOURCES.contains(currentClass.getClassName()))
+                .findFirst().orElse(null);
+    }
+
     protected void mapDomainOrRangeClass(@Nonnull List<SchemaExtractorClassNodeInfo> propertyLinkedClasses, @Nonnull SchemaExtractorPropertyLinkedClassInfo clazz) {
         propertyLinkedClasses.forEach(linkedClass -> {
             if (linkedClass.getClassName().equalsIgnoreCase(clazz.getClassName())) {
@@ -959,43 +966,38 @@ public class SchemaExtractor {
 
     @Nullable
     protected SchemaExtractorPropertyLinkedClassInfo determinePropertyDomainOrRange(@Nonnull SchemaExtractorPropertyNodeInfo property,
-                                                                                    @Nonnull List<SchemaExtractorPropertyLinkedClassInfo> propertyLinkedClassesSorted,
+                                                                                    @Nullable SchemaExtractorPropertyLinkedClassInfo currentClass,
                                                                                     @Nonnull SchemaExtractorRequestDto request,
                                                                                     @Nonnull LinkedClassType linkedClassType,
                                                                                     @Nullable SchemaExtractorClassNodeInfo sourceClass,
                                                                                     @Nullable SchemaExtractorClassNodeInfo targetClass) {
-        for (SchemaExtractorPropertyLinkedClassInfo currentClass : propertyLinkedClassesSorted) {
+        if (currentClass == null) {
+            return null;
+        }
+        boolean isApplicable = false;
 
-            // skip owl:Thing and rdf:Resource
-            if (OWL_RDF_TOP_LEVEL_RESOURCES.contains(currentClass.getClassName())) {
-                continue;
-            }
-
-            boolean isApplicable = false;
-
-            switch (linkedClassType) {
-                case SOURCE:
-                    isApplicable = checkDomainClass(property.getPropertyName(), currentClass, request);
-                    break;
-                case TARGET:
-                    isApplicable = checkRangeClass(property.getPropertyName(), currentClass, request);
-                    break;
-                case PAIR_SOURCE:
-                    if (sourceClass != null && StringUtils.isNotEmpty(sourceClass.getClassName())) {
-                        isApplicable = checkRangeForSource(property.getPropertyName(), sourceClass, currentClass, request);
-                    }
-                    break;
-                case PAIR_TARGET:
-                    if (targetClass != null && StringUtils.isNotEmpty(targetClass.getClassName())) {
-                        isApplicable = checkDomainForTarget(property.getPropertyName(), targetClass, currentClass, request);
-                    }
-                    break;
-                default:
-                    break;
-            }
-            if (isApplicable) {
-                return currentClass;
-            }
+        switch (linkedClassType) {
+            case SOURCE:
+                isApplicable = checkDomainClass(property.getPropertyName(), currentClass, request);
+                break;
+            case TARGET:
+                isApplicable = checkRangeClass(property.getPropertyName(), currentClass, request);
+                break;
+            case PAIR_SOURCE:
+                if (sourceClass != null && StringUtils.isNotEmpty(sourceClass.getClassName())) {
+                    isApplicable = checkRangeForSource(property.getPropertyName(), sourceClass, currentClass, request);
+                }
+                break;
+            case PAIR_TARGET:
+                if (targetClass != null && StringUtils.isNotEmpty(targetClass.getClassName())) {
+                    isApplicable = checkDomainForTarget(property.getPropertyName(), targetClass, currentClass, request);
+                }
+                break;
+            default:
+                break;
+        }
+        if (isApplicable) {
+            return currentClass;
         }
         return null;
     }
