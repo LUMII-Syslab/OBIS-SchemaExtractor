@@ -1,0 +1,34 @@
+endpointUrl: "http://localhost:8890/sparql"
+graphName: "MiniUniv"
+calculateSubClassRelations: true
+calculatePropertyPropertyRelations: false
+calculateSourceAndTargetPairs: true
+calculateDomainsAndRanges: true
+calculateImportanceIndexes: false
+calculateClosedClassSets: false
+calculateDataTypes: true
+dataTypeSampleLimit: 0
+calculateCardinalitiesMode: "propertyLevelAndClassContext"
+checkInstanceNamespaces: false
+minimalAnalyzedClassSize: 1
+classificationProperties:
+- "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
+includedLabels:
+- labelProperty: "http://www.w3.org/2000/01/rdf-schema#label"
+  languages:
+  - "en"
+includedClasses:
+- className: "http://lumii.lv/ontologies/UnivExample_hasMark.owl#AcademicProgram"
+  instanceCount: null
+includedProperties:
+- propertyName: "http://lumii.lv/ontologies/UnivExample_hasMark.owl#programName"
+  instanceCount: null
+excludedNamespaces:
+- "http://www.openlinksw.com/schemas/virtrdf"
+predefinedNamespaces:
+  Prefixes:
+  - prefix: ":"
+    namespace: "http://lumii.lv/ontologies/UnivExample_hasMark.owl#"
+  - prefix: "rdfs:"
+    namespace: "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+enableLogging: true
