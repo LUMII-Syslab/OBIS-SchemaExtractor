@@ -41,29 +41,26 @@ public class SchemaExtractorRequestNew {
     @ApiParam(access = "9", value = "Calculate data types for attributes", defaultValue = "true", required = true)
     private Boolean calculateDataTypes;
 
-    @ApiParam(access = "91", value = "Limit of instances to use in data type calculation (no value or 0 means all data will be used)", required = false)
+    @ApiParam(access = "10", value = "Limit of instances to use in data type calculation (no value or 0 means all data will be used)", required = false)
     private Integer dataTypeSampleLimit;
 
-    @ApiParam(access = "92", value = "Calculate min and max cardinalities for all properties", defaultValue = "propertyLevelAndClassContext", required = true)
+    @ApiParam(access = "11", value = "Calculate min and max cardinalities for all properties", defaultValue = "propertyLevelAndClassContext", required = true)
     private CalculateCardinalitiesMode calculateCardinalitiesMode;
 
-    @ApiParam(access = "93", value = "Check instance namespace URIs", defaultValue = "false", required = false)
+    @ApiParam(access = "12", value = "Check instance namespace URIs", defaultValue = "false", required = false)
     private Boolean checkInstanceNamespaces;
 
-    @ApiParam(access = "94", value = "Add label information", allowEmptyValue = true)
+    @ApiParam(access = "13", value = "Add label information", allowEmptyValue = true)
     private List<String> addedLabels;
 
-    @ApiParam(access = "95", value = "Minimal Analyzed Class Size (set 1 if all classes should be analyzed)", defaultValue = "1", required = true)
+    @ApiParam(access = "14", value = "Minimal Analyzed Class Size (set 1 if all classes should be analyzed)", defaultValue = "1", required = true)
     private Integer minimalAnalyzedClassSize;
 
-    @ApiParam(access = "96", value = "List of classification properties, default property is http://www.w3.org/1999/02/22-rdf-syntax-ns#type", allowEmptyValue = true)
+    @ApiParam(access = "15", value = "List of classification properties, default property is http://www.w3.org/1999/02/22-rdf-syntax-ns#type", allowEmptyValue = true)
     private List<String> classificationProperties;
 
-    @ApiParam(access = "97", value = "List of excluded namespaces", allowEmptyValue = true)
+    @ApiParam(access = "16", value = "List of excluded namespaces", allowEmptyValue = true)
     private List<String> excludedNamespaces;
-
-    @ApiParam(access = "98", value = "Enable SPARQL Query Logging to the file", defaultValue = "true", required = true)
-    private Boolean enableLogging;
 
     public Boolean getCalculateSubClassRelations() {
         if (calculateSubClassRelations == null) {
@@ -126,13 +123,6 @@ public class SchemaExtractorRequestNew {
             checkInstanceNamespaces = Boolean.FALSE;
         }
         return checkInstanceNamespaces;
-    }
-
-    public Boolean getEnableLogging() {
-        if (enableLogging == null) {
-            enableLogging = Boolean.FALSE;
-        }
-        return enableLogging;
     }
 
     @Nonnull

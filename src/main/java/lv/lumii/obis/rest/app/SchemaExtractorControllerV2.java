@@ -5,16 +5,21 @@ import io.swagger.annotations.*;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import lv.lumii.obis.schema.constants.SchemaConstants;
+import lv.lumii.obis.schema.model.v2.Schema;
 import lv.lumii.obis.schema.services.extractor.dto.SchemaExtractorRequestDto;
 import lv.lumii.obis.schema.services.extractor.v2.SchemaExtractor;
 import lv.lumii.obis.schema.services.*;
+import org.apache.commons.lang3.BooleanUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Nonnull;
 
+import javax.annotation.Nullable;
 import javax.ws.rs.core.MediaType;
 import java.io.*;
 import java.time.Duration;
@@ -40,6 +45,7 @@ public class SchemaExtractorControllerV2 {
     private static final String SCHEMA_EXTRACT_MESSAGE_END = "Completed JSON schema extraction in %s from the specified endpoint with parameters %s";
     private static final String SCHEMA_EXTRACT_MESSAGE_SAVED_FILE = "JSON schema saved in the file %s";
 
+    private static final String SCHEMA_BUILD_PARAMETERS = "Request %s - Starting to build request parameters";
     private static final String SCHEMA_READ_INCLUDED_CLASSES_MESSAGE_START = "Request %s - Starting to read included classes from the CSV file [%s]";
     private static final String SCHEMA_READ_INCLUDED_CLASSES_MESSAGE_END = "Request %s - Completed to read included classes from the CSV file [%s]";
     private static final String SCHEMA_READ_INCLUDED_CLASSES_MESSAGE_ERROR = "Request %s - Cannot read included classes from the CSV file [%s]";
@@ -53,7 +59,7 @@ public class SchemaExtractorControllerV2 {
     @Autowired
     private SchemaExtractor schemaExtractor;
     @Autowired
-    private JsonSchemaService jsonSchemaService;
+    private ObjectConversionService objectConversionService;
     @Autowired
     private SchemaExtractorRequestBuilder requestBuilder;
 
@@ -68,18 +74,20 @@ public class SchemaExtractorControllerV2 {
     @SuppressWarnings("unused")
     public String buildFullSchemaFromEndpointV2(@Validated @ModelAttribute @Nonnull SchemaExtractorRequestNew request,
                                                 @RequestParam(value = "includedClassesFile", required = false)
-                                                @ApiParam(access = "93", value = "Valid CSV file with the list of included classes (if not specified - all classes will be analyzed)") MultipartFile includedClassesCsvFile,
+                                                @ApiParam(access = "91", value = "Valid CSV file with the list of included classes (if not specified - all classes will be analyzed)") MultipartFile includedClassesCsvFile,
                                                 @RequestParam(value = "includedPropertiesFile", required = false)
-                                                @ApiParam(access = "94", value = "Valid CSV file with the list of included properties (if not specified - all properties will be analyzed)") MultipartFile includedPropertiesCsvFile,
+                                                @ApiParam(access = "92", value = "Valid CSV file with the list of included properties (if not specified - all properties will be analyzed)") MultipartFile includedPropertiesCsvFile,
                                                 @RequestParam(value = "namespacePrefixFile", required = false)
-                                                @ApiParam(access = "95", value = "Valid JSON file with predefined namespaces") MultipartFile namespacePrefixFile) {
+                                                @ApiParam(access = "93", value = "Valid JSON file with predefined namespaces") MultipartFile namespacePrefixFile,
+                                                @RequestParam(value = "enableLogging", required = false, defaultValue = "true")
+                                                @ApiParam(access = "94", value = "Enable SPARQL Query Logging to the file") Boolean enableLogging,
+                                                @RequestParam(value = "saveThisConfig", required = false, defaultValue = "true")
+                                                @ApiParam(access = "95", value = "Save this configuration to file") Boolean saveConfig) {
 
         // 1. Create the request object
         SchemaExtractorRequestDto requestDto = requestBuilder.buildRequest(request);
-
-        String requestJson = new Gson().toJson(requestDto);
-        log.info(String.format(SCHEMA_EXTRACT_MESSAGE_START, requestJson));
-        LocalDateTime startTime = LocalDateTime.now();
+        requestDto.setEnableLogging(enableLogging);
+        log.info(String.format(SCHEMA_BUILD_PARAMETERS, requestDto.getCorrelationId()));
 
         // 2. Read included classes from the external CSV file
         if (includedClassesCsvFile != null && !includedClassesCsvFile.isEmpty()) {
@@ -117,22 +125,75 @@ public class SchemaExtractorControllerV2 {
         // 5. Load SPARQL queries defined in the system file
         requestDto.setQueries(initializeSparqlQueries());
 
-        // 6. Build the schema from the endpoint
-        lv.lumii.obis.schema.model.v2.Schema schema = schemaExtractor.extractSchema(requestDto);
+        // 6. Build the schema from the endpoint and Save the result JSON schema in file
+        String resultSchema = extractSchema(requestDto);
 
-        LocalDateTime endTime = LocalDateTime.now();
-        log.info(String.format(SCHEMA_EXTRACT_MESSAGE_END, calculateExecutionTime(startTime, endTime), requestJson));
-
-        String resultSchema = jsonSchemaService.getJsonSchemaString(schema);
-
-        // 7. Save the result JSON schema in file
-        if (resultSchema != null) {
-            String fileName = requestDto.getCorrelationId() + ".json";
-            writeResultFile(fileName, resultSchema);
-            log.info(String.format(SCHEMA_EXTRACT_MESSAGE_SAVED_FILE, fileName));
+        // 7. Save this specific configuration to file
+        if (BooleanUtils.isTrue(saveConfig)) {
+            writeDataToFile(requestDto.getCorrelationId() + "-config.yml", objectConversionService.getYamlFromObject(requestDto));
         }
 
         // 8. Return the result JSON schema
+        return resultSchema;
+    }
+
+    @RequestMapping(value = "/endpoint/buildFullSchemaFromConfigFile", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON)
+    @ApiOperation(
+            value = "Extract and analyze data from SPARQL endpoint and build full schema model (version 2) using configuration file",
+            consumes = MediaType.MULTIPART_FORM_DATA,
+            produces = MediaType.APPLICATION_JSON,
+            response = lv.lumii.obis.schema.model.v2.Schema.class
+    )
+    @SuppressWarnings("unused")
+    public String buildFullSchemaFromEndpointV2FromConfigFile(
+            @RequestParam(value = "configurationFile")
+            @ApiParam(access = "1", value = "Configuration YAML file") MultipartFile configurationFile) {
+
+        // 1. Read request parameters from the configuration YAML file
+        String correlationId = SchemaExtractorRequestBuilder.generateCorrelationId();
+        log.info(String.format(SCHEMA_BUILD_PARAMETERS, correlationId));
+        if (configurationFile == null) {
+            return objectConversionService.getJsonFromObject(new ApiError(HttpStatus.BAD_REQUEST, "Valid configuration file is not provided"));
+        }
+        SchemaExtractorRequestDto requestDto;
+        try {
+            requestDto = objectConversionService.getObjectFromYamlStream(configurationFile.getInputStream(), SchemaExtractorRequestDto.class);
+        } catch (Exception e) {
+            return objectConversionService.getJsonFromObject(new ApiError(HttpStatus.BAD_REQUEST, "Valid configuration file is not provided", e));
+        }
+
+        // 2. Validate the main request parameters
+        requestDto.setCorrelationId(correlationId);
+        if (StringUtils.isEmpty(requestDto.getEndpointUrl())) {
+            return objectConversionService.getJsonFromObject(new ApiError(HttpStatus.BAD_REQUEST, "Valid configuration file is not provided, endpoint URL is empty"));
+        }
+
+        // 3. Load SPARQL queries defined in the system file
+        requestDto.setQueries(initializeSparqlQueries());
+
+        // 4. Build the schema from the endpoint and Save the result JSON schema in file
+        String resultSchema = extractSchema(requestDto);
+
+        // 5. Return the result JSON schema
+        return resultSchema;
+    }
+
+    private String extractSchema(@Nonnull SchemaExtractorRequestDto requestDto) {
+        log.info(String.format(SCHEMA_EXTRACT_MESSAGE_START, requestDto.printMainParameters()));
+        LocalDateTime startTime = LocalDateTime.now();
+
+        Schema schema = schemaExtractor.extractSchema(requestDto);
+
+        LocalDateTime endTime = LocalDateTime.now();
+        log.info(String.format(SCHEMA_EXTRACT_MESSAGE_END, calculateExecutionTime(startTime, endTime), requestDto.printMainParameters()));
+
+        String resultSchema = objectConversionService.getJsonFromObject(schema);
+        if (resultSchema != null) {
+            String fileName = requestDto.getCorrelationId() + ".json";
+            writeDataToFile(fileName, resultSchema);
+            log.info(String.format(SCHEMA_EXTRACT_MESSAGE_SAVED_FILE, fileName));
+        }
+
         return resultSchema;
     }
 
@@ -142,19 +203,22 @@ public class SchemaExtractorControllerV2 {
                 .toLowerCase();
     }
 
-    private void writeResultFile(@Nonnull String fileName, @Nonnull String resultSchema) {
+    private void writeDataToFile(@Nonnull String fileName, @Nullable String fileContent) {
+        if (StringUtils.isEmpty(fileContent)) {
+            return;
+        }
         BufferedWriter writer = null;
         try {
             writer = new BufferedWriter(new FileWriter(fileName));
-            writer.write(resultSchema);
+            writer.write(fileContent);
         } catch (IOException e) {
-            log.error("Cannot write the result schema in the file " + fileName);
+            log.error("Cannot write the data to the file " + fileName);
         } finally {
             if (writer != null) {
                 try {
                     writer.close();
                 } catch (IOException e) {
-                    log.error("Cannot close output stream while writing the result schema in the file" + fileName);
+                    log.error("Cannot close output stream while writing the data in the file" + fileName);
                 }
             }
         }

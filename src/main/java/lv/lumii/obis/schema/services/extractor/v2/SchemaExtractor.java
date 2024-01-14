@@ -5,7 +5,7 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import lv.lumii.obis.schema.constants.SchemaConstants;
 import lv.lumii.obis.schema.model.v2.*;
-import lv.lumii.obis.schema.services.JsonSchemaService;
+import lv.lumii.obis.schema.services.ObjectConversionService;
 import lv.lumii.obis.schema.services.SchemaUtil;
 import lv.lumii.obis.schema.services.common.SparqlEndpointProcessor;
 import lv.lumii.obis.schema.services.common.SparqlQueryBuilder;
@@ -45,7 +45,7 @@ public class SchemaExtractor {
     @Autowired
     @Setter
     @Getter
-    private JsonSchemaService jsonSchemaService;
+    private ObjectConversionService objectConversionService;
 
     @Nonnull
     public Schema extractSchema(@Nonnull SchemaExtractorRequestDto request) {
@@ -1357,7 +1357,7 @@ public class SchemaExtractor {
         FileInputStream inputStream = null;
         try {
             inputStream = new FileInputStream(SchemaConstants.GLOBAL_NAMESPACE_PATH);
-            SchemaExtractorPredefinedNamespaces globalNamespaces = jsonSchemaService.getObjectFromJsonStream(inputStream, SchemaExtractorPredefinedNamespaces.class);
+            SchemaExtractorPredefinedNamespaces globalNamespaces = objectConversionService.getObjectFromJsonStream(inputStream, SchemaExtractorPredefinedNamespaces.class);
             if (globalNamespaces != null && globalNamespaces.getNamespaceItems() != null) {
                 globalNamespaces.getNamespaceItems().forEach(namespaceItem -> {
                     if (!prefixMap.containsKey(namespaceItem.getNamespace())) {

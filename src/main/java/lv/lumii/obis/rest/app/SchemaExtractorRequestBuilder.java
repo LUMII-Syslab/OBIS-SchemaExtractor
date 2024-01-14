@@ -3,7 +3,7 @@ package lv.lumii.obis.rest.app;
 import com.google.common.base.Enums;
 import lv.lumii.obis.schema.constants.SchemaConstants;
 import lv.lumii.obis.schema.services.CsvFileReaderUtil;
-import lv.lumii.obis.schema.services.JsonSchemaService;
+import lv.lumii.obis.schema.services.ObjectConversionService;
 import lv.lumii.obis.schema.services.extractor.dto.SchemaExtractorRequestDto;
 import lv.lumii.obis.schema.services.extractor.v2.dto.SchemaExtractorPredefinedNamespaces;
 import lv.lumii.obis.schema.services.extractor.v2.dto.SchemaExtractorRequestedClassDto;
@@ -32,11 +32,11 @@ public class SchemaExtractorRequestBuilder {
 
     private static volatile SecureRandom secureRandom;
 
-    private final JsonSchemaService jsonSchemaService;
+    private final ObjectConversionService objectConversionService;
     private final CsvFileReaderUtil csvFileReaderUtil;
 
-    public SchemaExtractorRequestBuilder(JsonSchemaService jsonSchemaService, CsvFileReaderUtil csvFileReaderUtil) {
-        this.jsonSchemaService = jsonSchemaService;
+    public SchemaExtractorRequestBuilder(ObjectConversionService objectConversionService, CsvFileReaderUtil csvFileReaderUtil) {
+        this.objectConversionService = objectConversionService;
         this.csvFileReaderUtil = csvFileReaderUtil;
     }
 
@@ -48,8 +48,8 @@ public class SchemaExtractorRequestBuilder {
         requestDto.setCalculatePropertyPropertyRelations(request.getCalculatePropertyPropertyRelations());
         requestDto.setCalculateSourceAndTargetPairs(request.getCalculateSourceAndTargetPairs());
         requestDto.setCalculateDomainsAndRanges(request.getCalculateDomainsAndRanges());
-        requestDto.setCalculateClosedClassSets(request.getCalculateClosedClassSets());
         requestDto.setCalculateImportanceIndexes(request.getCalculateImportanceIndexes());
+        requestDto.setCalculateClosedClassSets(request.getCalculateClosedClassSets());
         requestDto.setCalculateDataTypes(request.getCalculateDataTypes());
         requestDto.setDataTypeSampleLimit(request.getDataTypeSampleLimit());
         requestDto.setCalculateCardinalitiesMode(Enums.getIfPresent(SchemaExtractorRequestDto.CalculateCardinalitiesMode.class, request.getCalculateCardinalitiesMode().name()).orNull());
@@ -58,7 +58,6 @@ public class SchemaExtractorRequestBuilder {
         requestDto.setMinimalAnalyzedClassSize(request.getMinimalAnalyzedClassSize());
         requestDto.setClassificationProperties(applyClassificationProperties(request.getClassificationProperties()));
         requestDto.setExcludedNamespaces(request.getExcludedNamespaces());
-        requestDto.setEnableLogging(request.getEnableLogging());
         return requestDto;
     }
 
@@ -91,7 +90,7 @@ public class SchemaExtractorRequestBuilder {
     public void applyPredefinedNamespaces(@Nonnull SchemaExtractorRequestDto requestDto, @Nullable InputStream inputStream) {
         requestDto.setPredefinedNamespaces(null);
         if (inputStream != null) {
-            SchemaExtractorPredefinedNamespaces predefinedNamespaces = jsonSchemaService.getObjectFromJsonStream(inputStream, SchemaExtractorPredefinedNamespaces.class);
+            SchemaExtractorPredefinedNamespaces predefinedNamespaces = objectConversionService.getObjectFromJsonStream(inputStream, SchemaExtractorPredefinedNamespaces.class);
             if (predefinedNamespaces != null && predefinedNamespaces.getNamespaceItems() != null) {
                 requestDto.setPredefinedNamespaces(predefinedNamespaces);
             }
@@ -111,7 +110,7 @@ public class SchemaExtractorRequestBuilder {
         return requestDto;
     }
 
-    public String generateCorrelationId() {
+    public static String generateCorrelationId() {
         try {
             if (secureRandom == null) {
                 secureRandom = SecureRandom.getInstance(RNG_ALGORITHM);

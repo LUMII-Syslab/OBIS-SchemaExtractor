@@ -59,7 +59,7 @@ public class SchemaExtractorControllerV1 {
     @Autowired
     private OWLOntologyEnhancer owlOntologyEnhancer;
     @Autowired
-    private JsonSchemaService jsonSchemaService;
+    private ObjectConversionService objectConversionService;
     @Autowired
     private SchemaExtractorRequestBuilder requestBuilder;
 
@@ -90,7 +90,7 @@ public class SchemaExtractorControllerV1 {
 
         log.info(String.format(SCHEMA_EXTRACT_MESSAGE_END, calculateExecutionTime(startTime, endTime), requestJson));
 
-        return jsonSchemaService.getJsonSchemaString(schema);
+        return objectConversionService.getJsonSchemaString(schema);
     }
 
     @RequestMapping(value = "/owlFile/buildFullSchema", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON)
@@ -133,7 +133,7 @@ public class SchemaExtractorControllerV1 {
             log.info(String.format(SCHEMA_ENHANCE_MESSAGE_END, correlationId, enhancerRequest.getEndpointUrl(), calculateExecutionTime(startTime, endTime)));
         }
 
-        return jsonSchemaService.getJsonSchemaString(schema);
+        return objectConversionService.getJsonSchemaString(schema);
     }
 
     private String calculateExecutionTime(@Nonnull LocalDateTime startLocalDateTime, @Nonnull LocalDateTime endLocalDateTime) {

@@ -1,6 +1,8 @@
 package lv.lumii.obis.schema.services.extractor.v2.dto;
 
+import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import javax.annotation.Nonnull;
@@ -9,6 +11,8 @@ import java.util.List;
 
 @Setter
 @Getter
+@AllArgsConstructor
+@NoArgsConstructor
 public class SchemaExtractorRequestedLabelDto {
 
     private String labelProperty;
@@ -16,11 +20,6 @@ public class SchemaExtractorRequestedLabelDto {
 
     public SchemaExtractorRequestedLabelDto(String labelProperty) {
         this.labelProperty = labelProperty;
-    }
-
-    public SchemaExtractorRequestedLabelDto(String labelProperty, List<String> languages) {
-        this.labelProperty = labelProperty;
-        this.languages = languages;
     }
 
     @Nonnull

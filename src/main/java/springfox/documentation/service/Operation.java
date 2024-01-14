@@ -185,8 +185,7 @@ public class Operation {
         return new Comparator<Parameter>() {
             @Override
             public int compare(Parameter first, Parameter second) {
-                //return first.getName().compareTo(second.getName());
-                return first.getParamAccess().compareTo(second.getParamAccess());
+                return Integer.valueOf(first.getParamAccess()).compareTo(Integer.valueOf(second.getParamAccess()));
             }
         };
     }
