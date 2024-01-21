@@ -9,38 +9,50 @@ import javax.annotation.Nonnull;
 import java.util.HashSet;
 import java.util.Set;
 
-@Setter @Getter
+@Setter
+@Getter
 public class SchemaClass extends SchemaElement {
-	
-	@JsonProperty("SuperClasses")
-	private Set<String> superClasses;
 
-	@JsonIgnore
-	private Set<String> subClasses;
+    @JsonProperty("SuperClasses")
+    private Set<String> superClasses;
 
-	private Long instanceCount;
+    @JsonProperty("IntersectionClasses")
+    private Set<String> intersectionClasses;
 
-	private String dataType;
+    @JsonIgnore
+    private Set<String> subClasses;
 
-	private Boolean isLiteral;
+    private Long instanceCount;
 
-	private Boolean propertiesInSchema;
+    private String dataType;
 
-	private String classificationProperty;
+    private Boolean isLiteral;
 
-	@Nonnull
-	public Set<String> getSuperClasses() {
-		if(superClasses == null){
-			superClasses = new HashSet<>();
-		}
-		return superClasses;
-	}
+    private Boolean propertiesInSchema;
 
-	@Nonnull
-	public Set<String> getSubClasses() {
-		if(subClasses == null){
-			subClasses = new HashSet<>();
-		}
-		return subClasses;
-	}
+    private String classificationProperty;
+
+    @Nonnull
+    public Set<String> getSuperClasses() {
+        if (superClasses == null) {
+            superClasses = new HashSet<>();
+        }
+        return superClasses;
+    }
+
+    @Nonnull
+    public Set<String> getSubClasses() {
+        if (subClasses == null) {
+            subClasses = new HashSet<>();
+        }
+        return subClasses;
+    }
+
+    @Nonnull
+    public Set<String> getIntersectionClasses() {
+        if (intersectionClasses == null) {
+            intersectionClasses = new HashSet<>();
+        }
+        return intersectionClasses;
+    }
 }

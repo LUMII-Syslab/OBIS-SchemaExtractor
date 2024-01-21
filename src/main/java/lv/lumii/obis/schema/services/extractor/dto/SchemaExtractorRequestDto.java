@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lv.lumii.obis.rest.app.SchemaExtractorRequestNew;
 import lv.lumii.obis.schema.services.extractor.v2.dto.SchemaExtractorPredefinedNamespaces;
 import lv.lumii.obis.schema.services.extractor.v2.dto.SchemaExtractorRequestedClassDto;
 import lv.lumii.obis.schema.services.extractor.v2.dto.SchemaExtractorRequestedLabelDto;
@@ -33,6 +34,7 @@ public class SchemaExtractorRequestDto {
      */
 
     public enum CalculateCardinalitiesMode {none, propertyLevelOnly, propertyLevelAndClassContext}
+    public enum ShowIntersectionClassesMode {yes, no, auto}
 
     private String correlationId;
 
@@ -51,6 +53,7 @@ public class SchemaExtractorRequestDto {
     private Boolean checkInstanceNamespaces;
     private Integer minimalAnalyzedClassSize;
     private List<String> classificationProperties;
+    private ShowIntersectionClassesMode addIntersectionClasses;
     private List<SchemaExtractorRequestedLabelDto> includedLabels;
     private List<SchemaExtractorRequestedClassDto> includedClasses;
     private List<SchemaExtractorRequestedPropertyDto> includedProperties;
@@ -112,6 +115,7 @@ public class SchemaExtractorRequestDto {
         return queries;
     }
 
+    @Nonnull
     public Boolean getCalculateSubClassRelations() {
         if (calculateSubClassRelations == null) {
             return Boolean.TRUE;
@@ -119,6 +123,7 @@ public class SchemaExtractorRequestDto {
         return calculateSubClassRelations;
     }
 
+    @Nonnull
     public Boolean getCalculatePropertyPropertyRelations() {
         if (calculatePropertyPropertyRelations == null) {
             return Boolean.TRUE;
@@ -126,6 +131,7 @@ public class SchemaExtractorRequestDto {
         return calculatePropertyPropertyRelations;
     }
 
+    @Nonnull
     public Boolean getCalculateSourceAndTargetPairs() {
         if (calculateSourceAndTargetPairs == null) {
             return Boolean.TRUE;
@@ -133,6 +139,7 @@ public class SchemaExtractorRequestDto {
         return calculateSourceAndTargetPairs;
     }
 
+    @Nonnull
     public Boolean getCalculateDomainsAndRanges() {
         if (calculateDomainsAndRanges == null) {
             return Boolean.TRUE;
@@ -140,6 +147,7 @@ public class SchemaExtractorRequestDto {
         return calculateDomainsAndRanges;
     }
 
+    @Nonnull
     public Boolean getCalculateImportanceIndexes() {
         if (calculateImportanceIndexes == null) {
             return Boolean.TRUE;
@@ -147,6 +155,7 @@ public class SchemaExtractorRequestDto {
         return calculateImportanceIndexes;
     }
 
+    @Nonnull
     public Boolean getCalculateClosedClassSets() {
         if (calculateClosedClassSets == null) {
             return Boolean.FALSE;
@@ -154,6 +163,7 @@ public class SchemaExtractorRequestDto {
         return calculateClosedClassSets;
     }
 
+    @Nonnull
     public Boolean getCalculateDataTypes() {
         if (calculateDataTypes == null) {
             return Boolean.TRUE;
@@ -161,6 +171,7 @@ public class SchemaExtractorRequestDto {
         return calculateDataTypes;
     }
 
+    @Nonnull
     public CalculateCardinalitiesMode getCalculateCardinalitiesMode() {
         if (calculateCardinalitiesMode == null) {
             return CalculateCardinalitiesMode.propertyLevelAndClassContext;
@@ -168,6 +179,7 @@ public class SchemaExtractorRequestDto {
         return calculateCardinalitiesMode;
     }
 
+    @Nonnull
     public Boolean getCheckInstanceNamespaces() {
         if (checkInstanceNamespaces == null) {
             return Boolean.FALSE;
@@ -175,6 +187,7 @@ public class SchemaExtractorRequestDto {
         return checkInstanceNamespaces;
     }
 
+    @Nonnull
     public Integer getMinimalAnalyzedClassSize() {
         if (minimalAnalyzedClassSize == null) {
             return 1;
@@ -182,6 +195,7 @@ public class SchemaExtractorRequestDto {
         return minimalAnalyzedClassSize;
     }
 
+    @Nonnull
     public List<String> getClassificationProperties() {
         if (classificationProperties == null) {
             classificationProperties = Collections.singletonList(RDF_TYPE);
@@ -189,6 +203,7 @@ public class SchemaExtractorRequestDto {
         return classificationProperties;
     }
 
+    @Nonnull
     public List<String> getExcludedNamespaces() {
         if (excludedNamespaces == null) {
             excludedNamespaces = new ArrayList<>();
@@ -196,11 +211,20 @@ public class SchemaExtractorRequestDto {
         return excludedNamespaces;
     }
 
+    @Nonnull
     public Boolean getEnableLogging() {
         if (enableLogging == null) {
             enableLogging = Boolean.TRUE;
         }
         return enableLogging;
+    }
+
+    @Nonnull
+    public ShowIntersectionClassesMode getAddIntersectionClasses() {
+        if (addIntersectionClasses == null) {
+            addIntersectionClasses = ShowIntersectionClassesMode.auto;
+        }
+        return addIntersectionClasses;
     }
 
     @Nonnull

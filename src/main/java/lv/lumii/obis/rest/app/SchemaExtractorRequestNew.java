@@ -14,6 +14,8 @@ public class SchemaExtractorRequestNew {
 
     public enum CalculateCardinalitiesMode {none, propertyLevelOnly, propertyLevelAndClassContext}
 
+    public enum ShowIntersectionClassesMode {yes, no, auto}
+
     @ApiParam(access = "1", value = "SPARQL Endpoint URL, for example, http://localhost:8890/sparql", required = true)
     private String endpointUrl;
 
@@ -56,10 +58,13 @@ public class SchemaExtractorRequestNew {
     @ApiParam(access = "14", value = "Minimal Analyzed Class Size (set 1 if all classes should be analyzed)", defaultValue = "1", required = true)
     private Integer minimalAnalyzedClassSize;
 
-    @ApiParam(access = "15", value = "List of classification properties, default property is http://www.w3.org/1999/02/22-rdf-syntax-ns#type", allowEmptyValue = true)
+    @ApiParam(access = "15", value = "Add intersection classes to the result schema (yes, no, auto - add only if intersection classes count <= 200 )", defaultValue = "auto", required = true)
+    private ShowIntersectionClassesMode addIntersectionClasses;
+
+    @ApiParam(access = "16", value = "List of classification properties, default property is http://www.w3.org/1999/02/22-rdf-syntax-ns#type", allowEmptyValue = true)
     private List<String> classificationProperties;
 
-    @ApiParam(access = "16", value = "List of excluded namespaces", allowEmptyValue = true)
+    @ApiParam(access = "17", value = "List of excluded namespaces", allowEmptyValue = true)
     private List<String> excludedNamespaces;
 
     public Boolean getCalculateSubClassRelations() {
@@ -147,5 +152,13 @@ public class SchemaExtractorRequestNew {
             addedLabels = new ArrayList<>();
         }
         return addedLabels;
+    }
+
+    @Nonnull
+    public ShowIntersectionClassesMode getAddIntersectionClasses() {
+        if (addIntersectionClasses == null) {
+            addIntersectionClasses = ShowIntersectionClassesMode.auto;
+        }
+        return addIntersectionClasses;
     }
 }

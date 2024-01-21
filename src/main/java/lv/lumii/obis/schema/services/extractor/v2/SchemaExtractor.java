@@ -111,6 +111,17 @@ public class SchemaExtractor {
             // validate and update classes for multiple inheritance cases
             log.info(request.getCorrelationId() + " - updateMultipleInheritanceSuperclasses");
             updateMultipleInheritanceSuperclasses(graphOfClasses, classes, request);
+
+            // add intersection classes to the result schema
+            if (SchemaExtractorRequestDto.ShowIntersectionClassesMode.yes.equals(request.getAddIntersectionClasses())
+                    || SchemaExtractorRequestDto.ShowIntersectionClassesMode.auto.equals(request.getAddIntersectionClasses())) {
+                for (SchemaClass clazz : classes) {
+                    List<String> intersectionClasses = graphOfClasses.get(clazz.getFullName()).getNeighbors();
+                    if (SchemaExtractorRequestDto.ShowIntersectionClassesMode.yes.equals(request.getAddIntersectionClasses())
+                            || intersectionClasses.size() <= 200)
+                        clazz.getIntersectionClasses().addAll(intersectionClasses);
+                }
+            }
         }
     }
 

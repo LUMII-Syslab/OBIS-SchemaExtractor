@@ -11,6 +11,7 @@ dataTypeSampleLimit: 0
 calculateCardinalitiesMode: "propertyLevelAndClassContext"
 checkInstanceNamespaces: false
 minimalAnalyzedClassSize: 1
+addIntersectionClasses: "auto"
 classificationProperties:
 - "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
 includedLabels:

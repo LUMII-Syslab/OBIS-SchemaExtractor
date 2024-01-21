@@ -1,6 +1,5 @@
 package lv.lumii.obis.rest.app;
 
-import com.google.gson.Gson;
 import io.swagger.annotations.*;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -161,6 +160,9 @@ public class SchemaExtractorControllerV2 {
         } catch (Exception e) {
             return objectConversionService.getJsonFromObject(new ApiError(HttpStatus.BAD_REQUEST, "Valid configuration file is not provided", e));
         }
+        if (requestDto == null) {
+            return objectConversionService.getJsonFromObject(new ApiError(HttpStatus.BAD_REQUEST, "Valid configuration file is not provided"));
+        }
 
         // 2. Validate the main request parameters
         requestDto.setCorrelationId(correlationId);
@@ -172,10 +174,8 @@ public class SchemaExtractorControllerV2 {
         requestDto.setQueries(initializeSparqlQueries());
 
         // 4. Build the schema from the endpoint and Save the result JSON schema in file
-        String resultSchema = extractSchema(requestDto);
-
         // 5. Return the result JSON schema
-        return resultSchema;
+        return extractSchema(requestDto);
     }
 
     private String extractSchema(@Nonnull SchemaExtractorRequestDto requestDto) {
