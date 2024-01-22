@@ -24,6 +24,8 @@ public class SchemaClass extends SchemaElement {
 
     private Long instanceCount;
 
+    private Long incomingTripleCount;
+
     private String dataType;
 
     private Boolean isLiteral;

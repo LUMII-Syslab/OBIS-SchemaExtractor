@@ -194,6 +194,9 @@ public class SchemaExtractor {
         // fill properties with additional data
         enrichProperties(properties, schema, graphOfClasses, request);
 
+        // update classes with incoming triple count
+        updateClassesWithIncomingTripleCount(properties, schema);
+
         // fill schema object with attributes and roles
         formatProperties(properties, schema);
     }
@@ -1295,6 +1298,24 @@ public class SchemaExtractor {
             }
         }
         return customFilter.toString();
+    }
+
+    protected void updateClassesWithIncomingTripleCount(@Nonnull Map<String, SchemaExtractorPropertyNodeInfo> properties, @Nonnull Schema schema) {
+        Map<String, Long> targetClassTripleCounts = new HashMap<>();
+        properties.values().forEach(property -> {
+            property.getTargetClasses().forEach(targetClass -> {
+                Long targetClassTripleCount = 0L;
+                if (targetClassTripleCounts.containsKey(targetClass.getClassName())) {
+                    targetClassTripleCount = targetClassTripleCounts.get(targetClass.getClassName());
+                }
+                targetClassTripleCounts.put(targetClass.getClassName(), targetClassTripleCount + targetClass.getTripleCount());
+            });
+        });
+        schema.getClasses().forEach(clazz -> {
+            if (targetClassTripleCounts.containsKey(clazz.getFullName())) {
+                clazz.setIncomingTripleCount(targetClassTripleCounts.get(clazz.getFullName()));
+            }
+        });
     }
 
     protected void formatProperties(@Nonnull Map<String, SchemaExtractorPropertyNodeInfo> properties, @Nonnull Schema schema) {
