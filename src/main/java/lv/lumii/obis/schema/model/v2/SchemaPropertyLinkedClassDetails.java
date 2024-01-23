@@ -59,7 +59,7 @@ public class SchemaPropertyLinkedClassDetails {
         this.maxInverseCardinality = maxInverseCardinality;
         this.importanceIndex = importanceIndex;
         if(!CollectionUtils.isEmpty(dataTypes)) {
-            this.dataTypes = dataTypes.stream().map(d -> new DataType(d.getDataType(), d.getTripleCount())).collect(Collectors.toList());
+            this.dataTypes = dataTypes.stream().map(d -> new DataType(d.getDataType(), d.getTripleCount(), d.getTripleCountBase())).collect(Collectors.toList());
         } else {
             this.dataTypes = null;
         }

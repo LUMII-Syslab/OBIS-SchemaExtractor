@@ -9,9 +9,11 @@ public class DataType {
 
     private String dataType;
     private Long tripleCount;
+    private Long tripleCountBase;
 
-    public DataType(String dataType, Long tripleCount) {
+    public DataType(String dataType, Long tripleCount, Long tripleCountBase) {
         this.dataType = dataType;
         this.tripleCount = tripleCount;
+        this.tripleCountBase = tripleCountBase;
     }
 }

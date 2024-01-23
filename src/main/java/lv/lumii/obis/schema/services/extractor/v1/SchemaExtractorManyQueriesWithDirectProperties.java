@@ -286,7 +286,7 @@ public class SchemaExtractorManyQueriesWithDirectProperties extends SchemaExtrac
             String resultDataType = queryResult.get(SPARQL_QUERY_BINDING_NAME_DATA_TYPE);
             Long tripleCount = SchemaUtil.getLongValueFromString(queryResult.get(SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
             if (StringUtils.isNotEmpty(resultDataType)) {
-                property.getDataTypes().add(new SchemaExtractorDataTypeInfo(SchemaUtil.parseDataType(resultDataType), tripleCount));
+                property.getDataTypes().add(new SchemaExtractorDataTypeInfo(SchemaUtil.parseDataType(resultDataType), tripleCount, null));
             }
         }
 
@@ -296,7 +296,7 @@ public class SchemaExtractorManyQueriesWithDirectProperties extends SchemaExtrac
         if (!queryResults.isEmpty()) {
             Long tripleCount = SchemaUtil.getLongValueFromString(queryResults.get(0).get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
             if (tripleCount > 0L) {
-                property.getDataTypes().add(new SchemaExtractorDataTypeInfo(DATA_TYPE_RDF_LANG_STRING, tripleCount));
+                property.getDataTypes().add(new SchemaExtractorDataTypeInfo(DATA_TYPE_RDF_LANG_STRING, tripleCount, null));
             }
         }
     }

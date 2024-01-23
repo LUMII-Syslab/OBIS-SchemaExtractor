@@ -47,7 +47,7 @@ public class SchemaExtractorRequestDto {
     private Boolean calculateImportanceIndexes;
     private Boolean calculateClosedClassSets;
     private Boolean calculateDataTypes;
-    private Integer dataTypeSampleLimit;
+    private Long dataTypeSampleLimit;
     private CalculateCardinalitiesMode calculateCardinalitiesMode;
     private Boolean checkInstanceNamespaces;
     private Integer minimalAnalyzedClassSize;

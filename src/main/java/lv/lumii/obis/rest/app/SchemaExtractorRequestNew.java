@@ -44,7 +44,7 @@ public class SchemaExtractorRequestNew {
     private Boolean calculateDataTypes;
 
     @ApiParam(access = "10", value = "Limit of instances to use in data type calculation (no value or 0 means all data will be used)", required = false)
-    private Integer dataTypeSampleLimit;
+    private Long dataTypeSampleLimit;
 
     @ApiParam(access = "11", value = "Calculate min and max cardinalities for all properties", defaultValue = "propertyLevelAndClassContext", required = true)
     private CalculateCardinalitiesMode calculateCardinalitiesMode;
