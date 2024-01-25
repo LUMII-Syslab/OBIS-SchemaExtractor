@@ -9,9 +9,11 @@ public class SchemaPropertyLinkedPropertyDetails {
 
     private String propertyName;
     private Long tripleCount;
+    private Long tripleCountBase;
 
-    public SchemaPropertyLinkedPropertyDetails(String propertyName, Long tripleCount) {
+    public SchemaPropertyLinkedPropertyDetails(String propertyName, Long tripleCount, Long tripleCountBase) {
         this.propertyName = propertyName;
         this.tripleCount = tripleCount;
+        this.tripleCountBase = tripleCountBase;
     }
 }

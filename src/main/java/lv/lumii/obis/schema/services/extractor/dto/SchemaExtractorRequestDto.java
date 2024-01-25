@@ -46,9 +46,11 @@ public class SchemaExtractorRequestDto {
     private Boolean calculateDomainsAndRanges;
     private Boolean calculateImportanceIndexes;
     private Boolean calculateClosedClassSets;
-    private Boolean calculateDataTypes;
-    private Long dataTypeSampleLimit;
     private CalculateCardinalitiesMode calculateCardinalitiesMode;
+    private Boolean calculateDataTypes;
+    private Long sampleLimitForDataTypeCalculation;
+    private Long sampleLimitForPropertyClassRelationCalculation;
+    private Long sampleLimitForPropertyToPropertyRelationCalculation;
     private Boolean checkInstanceNamespaces;
     private Integer minimalAnalyzedClassSize;
     private List<String> classificationProperties;

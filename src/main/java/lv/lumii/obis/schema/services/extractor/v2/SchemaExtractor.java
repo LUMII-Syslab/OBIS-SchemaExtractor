@@ -37,6 +37,8 @@ public class SchemaExtractor {
 
     private enum LinkedClassType {SOURCE, TARGET, PAIR_SOURCE, PAIR_TARGET}
 
+    private static final List<Long> sampleLimits = Collections.unmodifiableList(Arrays.asList(1000000L, 10000L, 1000L));
+
     @Autowired
     @Setter
     @Getter
@@ -406,18 +408,41 @@ public class SchemaExtractor {
 
     protected void determinePropertySourceTripleCount(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request) {
         log.info(request.getCorrelationId() + " - determineTripleCountForAllPropertySources[" + property.getPropertyName() + "]");
-        property.getSourceClasses().forEach(sourceClass -> {
-            SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_PROPERTY_SOURCE_TRIPLE_COUNT.name()), FIND_PROPERTY_SOURCE_TRIPLE_COUNT)
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL, sourceClass.getClassName(), sourceClass.getIsLiteral())
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, sourceClass.getClassificationProperty())
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
-            QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
-            for (QueryResult queryResult : queryResponse.getResults()) {
-                if (queryResult != null) {
-                    sourceClass.setTripleCount(SchemaUtil.getLongValueFromString(queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT)));
+        Long tripleCountBase = null;
+        if (request.getSampleLimitForPropertyClassRelationCalculation() != null && request.getSampleLimitForPropertyClassRelationCalculation() > 0) {
+            tripleCountBase = request.getSampleLimitForPropertyClassRelationCalculation();
+        }
+        if (tripleCountBase == null) {
+            property.getSourceClasses().forEach(sourceClass -> {
+                SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_PROPERTY_SOURCE_TRIPLE_COUNT.name()), FIND_PROPERTY_SOURCE_TRIPLE_COUNT)
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL, sourceClass.getClassName(), sourceClass.getIsLiteral())
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, sourceClass.getClassificationProperty())
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
+                QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
+                for (QueryResult queryResult : queryResponse.getResults()) {
+                    if (queryResult != null) {
+                        sourceClass.setTripleCount(SchemaUtil.getLongValueFromString(queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT)));
+                        sourceClass.setTripleCountBase(null);
+                    }
                 }
-            }
-        });
+            });
+        } else {
+            Long finalTripleCountBase = tripleCountBase;
+            property.getSourceClasses().forEach(sourceClass -> {
+                SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_PROPERTY_SOURCE_TRIPLE_COUNT_WITH_LIMITS.name()), FIND_PROPERTY_SOURCE_TRIPLE_COUNT_WITH_LIMITS)
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL, sourceClass.getClassName(), sourceClass.getIsLiteral())
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, sourceClass.getClassificationProperty())
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName())
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_LIMIT, finalTripleCountBase.toString());
+                QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
+                for (QueryResult queryResult : queryResponse.getResults()) {
+                    if (queryResult != null) {
+                        sourceClass.setTripleCount(SchemaUtil.getLongValueFromString(queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT)));
+                        sourceClass.setTripleCountBase(finalTripleCountBase);
+                    }
+                }
+            });
+        }
     }
 
     protected void determinePropertySourceObjectTripleCount(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request) {
@@ -521,18 +546,44 @@ public class SchemaExtractor {
 
     protected void determinePropertyTargetTripleCount(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request) {
         log.info(request.getCorrelationId() + " - determineTripleCountForAllPropertyTargets [" + property.getPropertyName() + "]");
-        property.getTargetClasses().forEach(targetClass -> {
-            SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_PROPERTY_TARGET_TRIPLE_COUNT.name()), FIND_PROPERTY_TARGET_TRIPLE_COUNT)
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_TARGET_FULL, targetClass.getClassName(), targetClass.getIsLiteral())
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, targetClass.getClassificationProperty())
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
-            QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
-            for (QueryResult queryResult : queryResponse.getResults()) {
-                if (queryResult != null) {
-                    targetClass.setTripleCount(SchemaUtil.getLongValueFromString(queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT)));
-                }
+        Long tripleCountBase = null;
+        if (request.getSampleLimitForPropertyClassRelationCalculation() != null && request.getSampleLimitForPropertyClassRelationCalculation() > 0) {
+            tripleCountBase = request.getSampleLimitForPropertyClassRelationCalculation();
+            if (property.getObjectTripleCount() != null && property.getObjectTripleCount() < request.getSampleLimitForPropertyClassRelationCalculation()) {
+                tripleCountBase = property.getObjectTripleCount();
             }
-        });
+        }
+        if (tripleCountBase == null) {
+            property.getTargetClasses().forEach(targetClass -> {
+                SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_PROPERTY_TARGET_TRIPLE_COUNT.name()), FIND_PROPERTY_TARGET_TRIPLE_COUNT)
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_TARGET_FULL, targetClass.getClassName(), targetClass.getIsLiteral())
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, targetClass.getClassificationProperty())
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
+                QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
+                for (QueryResult queryResult : queryResponse.getResults()) {
+                    if (queryResult != null) {
+                        targetClass.setTripleCount(SchemaUtil.getLongValueFromString(queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT)));
+                        targetClass.setTripleCountBase(null);
+                    }
+                }
+            });
+        } else {
+            Long finalTripleCountBase = tripleCountBase;
+            property.getTargetClasses().forEach(targetClass -> {
+                SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_PROPERTY_TARGET_TRIPLE_COUNT_WITH_LIMITS.name()), FIND_PROPERTY_TARGET_TRIPLE_COUNT_WITH_LIMITS)
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_TARGET_FULL, targetClass.getClassName(), targetClass.getIsLiteral())
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, targetClass.getClassificationProperty())
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName())
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_LIMIT, finalTripleCountBase.toString());
+                QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
+                for (QueryResult queryResult : queryResponse.getResults()) {
+                    if (queryResult != null) {
+                        targetClass.setTripleCount(SchemaUtil.getLongValueFromString(queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT)));
+                        targetClass.setTripleCountBase(finalTripleCountBase);
+                    }
+                }
+            });
+        }
     }
 
     protected void determinePropertySourceTargetPairs(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull Schema schema, @Nonnull SchemaExtractorRequestDto request) {
@@ -681,9 +732,9 @@ public class SchemaExtractor {
     protected void determinePropertyDataTypes(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request) {
         log.info(request.getCorrelationId() + " - determinePropertyDataTypes [" + property.getPropertyName() + "]");
         Long tripleCountBase = null;
-        if (request.getDataTypeSampleLimit() != null && request.getDataTypeSampleLimit() > 0) {
-            tripleCountBase = request.getDataTypeSampleLimit();
-            if (property.getDataTripleCount() != null && property.getDataTripleCount() < request.getDataTypeSampleLimit()) {
+        if (request.getSampleLimitForDataTypeCalculation() != null && request.getSampleLimitForDataTypeCalculation() > 0) {
+            tripleCountBase = request.getSampleLimitForDataTypeCalculation();
+            if (property.getDataTripleCount() != null && property.getDataTripleCount() < request.getSampleLimitForDataTypeCalculation()) {
                 tripleCountBase = property.getDataTripleCount();
             }
         }
@@ -728,9 +779,9 @@ public class SchemaExtractor {
         log.info(request.getCorrelationId() + " - determinePropertySourceDataTypes [" + property.getPropertyName() + "]");
 
         Long tripleCountBase = null;
-        if (request.getDataTypeSampleLimit() != null && request.getDataTypeSampleLimit() > 0) {
-            tripleCountBase = request.getDataTypeSampleLimit();
-            if (property.getDataTripleCount() != null && property.getDataTripleCount() < request.getDataTypeSampleLimit()) {
+        if (request.getSampleLimitForDataTypeCalculation() != null && request.getSampleLimitForDataTypeCalculation() > 0) {
+            tripleCountBase = request.getSampleLimitForDataTypeCalculation();
+            if (property.getDataTripleCount() != null && property.getDataTripleCount() < request.getSampleLimitForDataTypeCalculation()) {
                 tripleCountBase = property.getDataTripleCount();
             }
         }
@@ -784,42 +835,63 @@ public class SchemaExtractor {
 
     protected void determineFollowers(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request) {
         log.info(request.getCorrelationId() + " - determinePropertyFollowers [" + property.getPropertyName() + "]");
-        SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_PROPERTY_FOLLOWERS.name()), FIND_PROPERTY_FOLLOWERS)
-                .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
-        QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
-        for (QueryResult queryResult : queryResponse.getResults()) {
-            String otherProperty = queryResult.getValue(SPARQL_QUERY_BINDING_NAME_PROPERTY_OTHER);
-            Long tripleCount = SchemaUtil.getLongValueFromString(queryResult.getValue(SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
-            if (StringUtils.isNotEmpty(otherProperty)) {
-                property.getFollowers().add(new SchemaExtractorPropertyRelatedPropertyInfo(otherProperty, tripleCount));
-            }
-        }
+        executePropertyRelationsQueries(property, request, FIND_PROPERTY_FOLLOWERS, FIND_PROPERTY_FOLLOWERS_WITH_LIMITS, property.getFollowers());
     }
 
     protected void determineOutgoingProperties(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request) {
         log.info(request.getCorrelationId() + " - determinePropertyOutgoingProperties [" + property.getPropertyName() + "]");
-        SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_PROPERTY_OUTGOING_PROPERTIES.name()), FIND_PROPERTY_OUTGOING_PROPERTIES)
-                .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
-        QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
-        for (QueryResult queryResult : queryResponse.getResults()) {
-            String otherProperty = queryResult.getValue(SPARQL_QUERY_BINDING_NAME_PROPERTY_OTHER);
-            Long tripleCount = SchemaUtil.getLongValueFromString(queryResult.getValue(SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
-            if (StringUtils.isNotEmpty(otherProperty)) {
-                property.getOutgoingProperties().add(new SchemaExtractorPropertyRelatedPropertyInfo(otherProperty, tripleCount));
-            }
-        }
+        executePropertyRelationsQueries(property, request, FIND_PROPERTY_OUTGOING_PROPERTIES, FIND_PROPERTY_OUTGOING_PROPERTIES_WITH_LIMITS, property.getOutgoingProperties());
     }
 
     protected void determineIncomingProperties(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request) {
         log.info(request.getCorrelationId() + " - determinePropertyIncomingProperties [" + property.getPropertyName() + "]");
-        SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_PROPERTY_INCOMING_PROPERTIES.name()), FIND_PROPERTY_INCOMING_PROPERTIES)
-                .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
-        QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
-        for (QueryResult queryResult : queryResponse.getResults()) {
-            String otherProperty = queryResult.getValue(SPARQL_QUERY_BINDING_NAME_PROPERTY_OTHER);
-            Long tripleCount = SchemaUtil.getLongValueFromString(queryResult.getValue(SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
-            if (StringUtils.isNotEmpty(otherProperty)) {
-                property.getIncomingProperties().add(new SchemaExtractorPropertyRelatedPropertyInfo(otherProperty, tripleCount));
+        executePropertyRelationsQueries(property, request, FIND_PROPERTY_INCOMING_PROPERTIES, FIND_PROPERTY_INCOMING_PROPERTIES_WITH_LIMITS, property.getIncomingProperties());
+    }
+
+    protected void executePropertyRelationsQueries(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request,
+                                                   @Nonnull SchemaExtractorQueries queryWithoutLimit, @Nonnull SchemaExtractorQueries queryWithLimit,
+                                                   @Nonnull List<SchemaExtractorPropertyRelatedPropertyInfo> relatedProperties) {
+        Long tripleCountBase = null;
+        if (request.getSampleLimitForPropertyToPropertyRelationCalculation() != null && request.getSampleLimitForPropertyToPropertyRelationCalculation() > 0) {
+            tripleCountBase = request.getSampleLimitForPropertyToPropertyRelationCalculation();
+            if (property.getTripleCount() != null && property.getTripleCount() < request.getSampleLimitForPropertyClassRelationCalculation()) {
+                tripleCountBase = property.getTripleCount();
+            }
+        }
+        SparqlQueryBuilder queryBuilder;
+        if (tripleCountBase == null) {
+            queryBuilder = new SparqlQueryBuilder(request.getQueries().get(queryWithoutLimit.name()), queryWithoutLimit)
+                    .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
+        } else {
+            queryBuilder = new SparqlQueryBuilder(request.getQueries().get(queryWithLimit.name()), queryWithLimit)
+                    .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName())
+                    .withContextParam(SPARQL_QUERY_BINDING_NAME_LIMIT, tripleCountBase.toString());
+        }
+        boolean retry = true;
+        QueryResponse queryResponse;
+        while (isTrue(retry)) {
+            queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
+            if (isTrue(queryResponse.hasErrors())) {
+                retry = true;
+                Long finalTripleCountBase = tripleCountBase;
+                Long newLimit = sampleLimits.stream().filter(limit -> finalTripleCountBase == null || limit < finalTripleCountBase).findFirst().orElse(null);
+                if (newLimit != null) {
+                    tripleCountBase = newLimit;
+                    queryBuilder = new SparqlQueryBuilder(request.getQueries().get(queryWithLimit.name()), queryWithLimit)
+                            .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName())
+                            .withContextParam(SPARQL_QUERY_BINDING_NAME_LIMIT, tripleCountBase.toString());
+                } else {
+                    retry = false;
+                }
+            } else {
+                retry = false;
+                for (QueryResult queryResult : queryResponse.getResults()) {
+                    String otherProperty = queryResult.getValue(SPARQL_QUERY_BINDING_NAME_PROPERTY_OTHER);
+                    Long tripleCount = SchemaUtil.getLongValueFromString(queryResult.getValue(SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
+                    if (StringUtils.isNotEmpty(otherProperty)) {
+                        relatedProperties.add(new SchemaExtractorPropertyRelatedPropertyInfo(otherProperty, tripleCount, tripleCountBase));
+                    }
+                }
             }
         }
     }
@@ -1371,7 +1443,7 @@ public class SchemaExtractor {
                 internalDtos.stream()
                         .map(internalDto -> new SchemaPropertyLinkedClassDetails(
                                 internalDto.getClassName(),
-                                internalDto.getTripleCount(), internalDto.getDataTripleCount(), internalDto.getObjectTripleCount(),
+                                internalDto.getTripleCount(), internalDto.getTripleCountBase(), internalDto.getDataTripleCount(), internalDto.getObjectTripleCount(),
                                 internalDto.getIsClosedDomain(), internalDto.getIsClosedRange(), internalDto.getIsPrincipal(),
                                 internalDto.getMinCardinality(), internalDto.getMaxCardinality(),
                                 internalDto.getMinInverseCardinality(), internalDto.getMaxInverseCardinality(),
@@ -1389,7 +1461,7 @@ public class SchemaExtractor {
     protected List<SchemaPropertyLinkedPropertyDetails> convertInternalLinkedPropertyToApiDto(@Nonnull List<SchemaExtractorPropertyRelatedPropertyInfo> internalDtos) {
         return sortPropertyLinkedPropertiesByTripleCount(internalDtos).stream()
                 .map(internalDto -> new SchemaPropertyLinkedPropertyDetails(
-                        internalDto.getPropertyName(), internalDto.getTripleCount())).
+                        internalDto.getPropertyName(), internalDto.getTripleCount(), internalDto.getTripleCountBase())).
                 collect(Collectors.toList());
     }
 

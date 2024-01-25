@@ -40,31 +40,37 @@ public class SchemaExtractorRequestNew {
     @ApiParam(access = "8", value = "Calculate closed class sets", defaultValue = "false", required = true)
     private Boolean calculateClosedClassSets;
 
-    @ApiParam(access = "9", value = "Calculate data types for attributes", defaultValue = "true", required = true)
-    private Boolean calculateDataTypes;
-
-    @ApiParam(access = "10", value = "Limit of instances to use in data type calculation (no value or 0 means all data will be used)", required = false)
-    private Long dataTypeSampleLimit;
-
-    @ApiParam(access = "11", value = "Calculate min and max cardinalities for all properties", defaultValue = "propertyLevelAndClassContext", required = true)
+    @ApiParam(access = "9", value = "Calculate min and max cardinalities for all properties", defaultValue = "propertyLevelAndClassContext", required = true)
     private CalculateCardinalitiesMode calculateCardinalitiesMode;
 
-    @ApiParam(access = "12", value = "Check instance namespace URIs", defaultValue = "false", required = false)
+    @ApiParam(access = "10", value = "Calculate data types for attributes", defaultValue = "true", required = true)
+    private Boolean calculateDataTypes;
+
+    @ApiParam(access = "11", value = "Limit of instances to use in data type calculation (no value or 0 means all data will be used)", required = false)
+    private Long sampleLimitForDataTypeCalculation;
+
+    @ApiParam(access = "12", value = "Limit of instances to use in property-class relation calculation (no value or 0 means all data will be used)", required = false)
+    private Long sampleLimitForPropertyClassRelationCalculation;
+
+    @ApiParam(access = "13", value = "Limit of instances to use in property-property relation calculation (no value or 0 means all data will be used)", required = false)
+    private Long sampleLimitForPropertyToPropertyRelationCalculation;
+
+    @ApiParam(access = "14", value = "Check instance namespace URIs", defaultValue = "false", required = false)
     private Boolean checkInstanceNamespaces;
 
-    @ApiParam(access = "13", value = "Add label information", allowEmptyValue = true)
+    @ApiParam(access = "15", value = "Add label information", allowEmptyValue = true)
     private List<String> addedLabels;
 
-    @ApiParam(access = "14", value = "Minimal Analyzed Class Size (set 1 if all classes should be analyzed)", defaultValue = "1", required = true)
+    @ApiParam(access = "16", value = "Minimal Analyzed Class Size (set 1 if all classes should be analyzed)", defaultValue = "1", required = true)
     private Integer minimalAnalyzedClassSize;
 
-    @ApiParam(access = "15", value = "Add intersection classes to the result schema (yes, no, auto - add only if intersection classes count <= 200 )", defaultValue = "auto", required = true)
+    @ApiParam(access = "17", value = "Add intersection classes to the result schema (yes, no, auto - add only if intersection classes count <= 200 )", defaultValue = "auto", required = true)
     private ShowIntersectionClassesMode addIntersectionClasses;
 
-    @ApiParam(access = "16", value = "List of classification properties, default property is http://www.w3.org/1999/02/22-rdf-syntax-ns#type", allowEmptyValue = true)
+    @ApiParam(access = "18", value = "List of classification properties, default property is http://www.w3.org/1999/02/22-rdf-syntax-ns#type", allowEmptyValue = true)
     private List<String> classificationProperties;
 
-    @ApiParam(access = "17", value = "List of excluded namespaces", allowEmptyValue = true)
+    @ApiParam(access = "19", value = "List of excluded namespaces", allowEmptyValue = true)
     private List<String> excludedNamespaces;
 
     public Boolean getCalculateSubClassRelations() {

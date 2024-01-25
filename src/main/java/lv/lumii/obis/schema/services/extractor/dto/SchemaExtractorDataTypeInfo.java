@@ -9,7 +9,6 @@ public class SchemaExtractorDataTypeInfo {
 
     private String dataType;
     private Long tripleCount;
-
     private Long tripleCountBase;
 
     public SchemaExtractorDataTypeInfo(String dataType, Long tripleCount, Long tripleCountBase) {

@@ -7,8 +7,10 @@ calculateDomainsAndRanges: true
 calculateImportanceIndexes: false
 calculateClosedClassSets: false
 calculateDataTypes: true
-dataTypeSampleLimit: 0
 calculateCardinalitiesMode: "propertyLevelAndClassContext"
+sampleLimitForDataTypeCalculation: 0
+sampleLimitForPropertyClassRelationCalculation: 0
+sampleLimitForPropertyToPropertyRelationCalculation: 0
 checkInstanceNamespaces: false
 minimalAnalyzedClassSize: 1
 addIntersectionClasses: "auto"

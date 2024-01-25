@@ -79,11 +79,20 @@ public enum SchemaExtractorQueries {
     FIND_PROPERTY_FOLLOWERS(
             "SELECT ?p2 (COUNT(?x) as ?instances) WHERE { { SELECT DISTINCT ?x where { [] <property> ?x } } ?x ?p2 [] } GROUP BY ?p2"
     ),
+    FIND_PROPERTY_FOLLOWERS_WITH_LIMITS(
+            "SELECT ?p2 (COUNT(?x) as ?instances) WHERE { { SELECT DISTINCT ?x where { [] <property> ?x } LIMIT <limit> } ?x ?p2 [] } GROUP BY ?p2"
+    ),
     FIND_PROPERTY_OUTGOING_PROPERTIES(
             "SELECT ?p2 (COUNT(?x) as ?instances) WHERE { { SELECT DISTINCT ?x WHERE { ?x <property> [] } } ?x ?p2 [] } GROUP BY ?p2"
     ),
+    FIND_PROPERTY_OUTGOING_PROPERTIES_WITH_LIMITS(
+            "SELECT ?p2 (COUNT(?x) as ?instances) WHERE { { SELECT DISTINCT ?x WHERE { ?x <property> [] } LIMIT <limit> } ?x ?p2 [] } GROUP BY ?p2"
+    ),
     FIND_PROPERTY_INCOMING_PROPERTIES(
             "SELECT ?p2 (COUNT(?x) as ?instances) WHERE { { SELECT DISTINCT ?x WHERE { [] <property> ?x . FILTER(!isLiteral(?x))} } [] ?p2 ?x } GROUP BY ?p2"
+    ),
+    FIND_PROPERTY_INCOMING_PROPERTIES_WITH_LIMITS(
+            "SELECT ?p2 (COUNT(?x) as ?instances) WHERE { { SELECT DISTINCT ?x WHERE { [] <property> ?x . FILTER(!isLiteral(?x))} LIMIT <limit> } [] ?p2 ?x } GROUP BY ?p2"
     ),
 
     FIND_ALL_PROPERTIES(
@@ -97,6 +106,9 @@ public enum SchemaExtractorQueries {
     FIND_PROPERTY_SOURCE_TRIPLE_COUNT(
             "SELECT (COUNT(?x) as ?instances) WHERE {?x <property> ?y. ?x <classificationProperty> <sourceClass>. }"
     ),
+    FIND_PROPERTY_SOURCE_TRIPLE_COUNT_WITH_LIMITS(
+            "SELECT (COUNT(?x) as ?instances) WHERE { SELECT ?x WHERE {?x <property> ?y. ?x <classificationProperty> <sourceClass>. } LIMIT <limit> }"
+    ),
 
     CHECK_CLASS_AS_PROPERTY_SOURCE(
             "SELECT ?x WHERE {?x <property> ?y. ?x <classificationProperty> <sourceClass>. } LIMIT 1"
@@ -108,6 +120,9 @@ public enum SchemaExtractorQueries {
 
     FIND_PROPERTY_TARGET_TRIPLE_COUNT(
             "SELECT (COUNT(?x) as ?instances) WHERE {?x <property> ?y. ?y <classificationProperty> <targetClass>. }"
+    ),
+    FIND_PROPERTY_TARGET_TRIPLE_COUNT_WITH_LIMITS(
+            "SELECT (COUNT(?x) as ?instances) WHERE { SELECT ?x WHERE {?x <property> ?y. ?y <classificationProperty> <targetClass>. } LIMIT <limit> }"
     ),
 
     CHECK_CLASS_AS_PROPERTY_TARGET(
