@@ -60,6 +60,7 @@ public class SchemaExtractorRequestBuilder {
         requestDto.setMinimalAnalyzedClassSize(request.getMinimalAnalyzedClassSize());
         requestDto.setAddIntersectionClasses(Enums.getIfPresent(SchemaExtractorRequestDto.ShowIntersectionClassesMode.class, request.getAddIntersectionClasses().name()).orNull());
         requestDto.setClassificationProperties(applyClassificationProperties(request.getClassificationProperties()));
+        requestDto.setExactCountCalculations(Enums.getIfPresent(SchemaExtractorRequestDto.DistinctQueryMode.class, request.getExactCountCalculations().name()).orNull());
         requestDto.setExcludedNamespaces(request.getExcludedNamespaces());
         return requestDto;
     }

@@ -15,6 +15,7 @@ public class SchemaExtractorRequestNew {
     public enum CalculateCardinalitiesMode {none, propertyLevelOnly, propertyLevelAndClassContext}
 
     public enum ShowIntersectionClassesMode {yes, no, auto}
+    public enum DistinctQueryMode {yes, no, auto}
 
     @ApiParam(access = "1", value = "SPARQL Endpoint URL, for example, http://localhost:8890/sparql", required = true)
     private String endpointUrl;
@@ -70,7 +71,10 @@ public class SchemaExtractorRequestNew {
     @ApiParam(access = "18", value = "List of classification properties, default property is http://www.w3.org/1999/02/22-rdf-syntax-ns#type", allowEmptyValue = true)
     private List<String> classificationProperties;
 
-    @ApiParam(access = "19", value = "List of excluded namespaces", allowEmptyValue = true)
+    @ApiParam(access = "19", value = "Add DISTINCT in queries (yes, no, auto - add distinct only if total instances count < 10M)", defaultValue = "auto", required = true)
+    private DistinctQueryMode exactCountCalculations;
+
+    @ApiParam(access = "20", value = "List of excluded namespaces", allowEmptyValue = true)
     private List<String> excludedNamespaces;
 
     public Boolean getCalculateSubClassRelations() {
@@ -166,5 +170,13 @@ public class SchemaExtractorRequestNew {
             addIntersectionClasses = ShowIntersectionClassesMode.auto;
         }
         return addIntersectionClasses;
+    }
+
+    @Nonnull
+    public DistinctQueryMode getExactCountCalculations() {
+        if (exactCountCalculations == null) {
+            exactCountCalculations = DistinctQueryMode.auto;
+        }
+        return exactCountCalculations;
     }
 }

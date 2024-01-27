@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lv.lumii.obis.rest.app.SchemaExtractorRequestNew;
 import lv.lumii.obis.schema.services.extractor.v2.dto.SchemaExtractorPredefinedNamespaces;
 import lv.lumii.obis.schema.services.extractor.v2.dto.SchemaExtractorRequestedClassDto;
 import lv.lumii.obis.schema.services.extractor.v2.dto.SchemaExtractorRequestedLabelDto;
@@ -34,6 +35,7 @@ public class SchemaExtractorRequestDto {
 
     public enum CalculateCardinalitiesMode {none, propertyLevelOnly, propertyLevelAndClassContext}
     public enum ShowIntersectionClassesMode {yes, no, auto}
+    public enum DistinctQueryMode {yes, no, auto}
 
     private String correlationId;
 
@@ -55,6 +57,7 @@ public class SchemaExtractorRequestDto {
     private Integer minimalAnalyzedClassSize;
     private List<String> classificationProperties;
     private ShowIntersectionClassesMode addIntersectionClasses;
+    private DistinctQueryMode exactCountCalculations;
     private List<SchemaExtractorRequestedLabelDto> includedLabels;
     private List<SchemaExtractorRequestedClassDto> includedClasses;
     private List<SchemaExtractorRequestedPropertyDto> includedProperties;
@@ -226,6 +229,14 @@ public class SchemaExtractorRequestDto {
             addIntersectionClasses = ShowIntersectionClassesMode.auto;
         }
         return addIntersectionClasses;
+    }
+
+    @Nonnull
+    public DistinctQueryMode getExactCountCalculations() {
+        if (exactCountCalculations == null) {
+            exactCountCalculations = DistinctQueryMode.auto;
+        }
+        return exactCountCalculations;
     }
 
     @Nonnull
