@@ -1673,11 +1673,15 @@ public class SchemaExtractor {
         // sort class neighbors by triple count (ascending)
         return neighbors.stream()
                 .sorted((o1, o2) -> {
-                    Long neighborInstances1 = classesGraph.get(o1).getTripleCount();
-                    Long neighborInstances2 = classesGraph.get(o2).getTripleCount();
+                    SchemaExtractorClassNodeInfo class1 = classesGraph.get(o1);
+                    if (class1 == null || class1.getTripleCount() == null) return -1;
+                    SchemaExtractorClassNodeInfo class2 = classesGraph.get(o2);
+                    if (class2 == null || class2.getTripleCount() == null) return 1;
+                    Long neighborInstances1 = class1.getTripleCount();
+                    Long neighborInstances2 = class2.getTripleCount();
                     int compareResult = neighborInstances1.compareTo(neighborInstances2);
                     if (compareResult == 0) {
-                        return nullSafeStringComparator.compare(classesGraph.get(o1).getClassName(), classesGraph.get(o2).getClassName());
+                        return nullSafeStringComparator.compare(class1.getClassName(), class2.getClassName());
                     } else {
                         return compareResult;
                     }
@@ -1690,8 +1694,12 @@ public class SchemaExtractor {
         // sort classes by triple count (descending)
         return classes.stream()
                 .sorted((o1, o2) -> {
-                    Long neighborInstances1 = classesGraph.get(o1.getFullName()).getTripleCount();
-                    Long neighborInstances2 = classesGraph.get(o2.getFullName()).getTripleCount();
+                    SchemaExtractorClassNodeInfo class1 = classesGraph.get(o1.getFullName());
+                    if (class1 == null || class1.getTripleCount() == null) return -1;
+                    SchemaExtractorClassNodeInfo class2 = classesGraph.get(o2.getFullName());
+                    if (class2 == null || class2.getTripleCount() == null) return 1;
+                    Long neighborInstances1 = class1.getTripleCount();
+                    Long neighborInstances2 = class2.getTripleCount();
                     int compareResult = neighborInstances2.compareTo(neighborInstances1);
                     if (compareResult == 0) {
                         return nullSafeStringComparator.compare(o2.getFullName(), o1.getFullName());
@@ -1779,6 +1787,10 @@ public class SchemaExtractor {
 
         for (String neighbor : neighbors) {
             SchemaExtractorClassNodeInfo neighborClassInfo = classesGraph.get(neighbor);
+            if (neighborClassInfo == null) {
+                log.error("The Neighbor [" + neighbor + "] of the class [ " + currentClassInfo.getClassName() + " ] cannot be found in the classes list.");
+                continue;
+            }
             Long neighborInstances = neighborClassInfo.getTripleCount();
             if (neighborInstances < currentClassInfo.getTripleCount() || neighborInstances < request.getMinimalAnalyzedClassSize()) {
                 continue;
@@ -1874,7 +1886,7 @@ public class SchemaExtractor {
             // 2. one of the neighbors is THING, so no need to perform additional validation
             // because correct assignment was selected in processSuperclasses method
             SchemaExtractorClassNodeInfo classInfo = classesGraph.get(currentClass.getFullName());
-            if (classInfo.getNeighbors().size() <= 2) {
+            if (classInfo == null || classInfo.getNeighbors().size() <= 2) {
                 continue;
             }
 
