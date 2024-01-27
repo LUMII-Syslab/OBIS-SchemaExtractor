@@ -18,9 +18,13 @@ exactCountCalculations: "auto"
 classificationProperties:
 - "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
 includedLabels:
-- labelProperty: "http://www.w3.org/2000/01/rdf-schema#label"
+- labelPropertyFullOrPrefix: "rdfs:label"
   languages:
   - "en"
+- labelPropertyFullOrPrefix: "skos:prefLabel"
+  languages: []
+- labelPropertyFullOrPrefix: "http://www.w3.org/2004/02/skos/core#altLabel"
+  languages: []
 includedClasses:
 - className: "http://lumii.lv/ontologies/UnivExample_hasMark.owl#AcademicProgram"
   instanceCount: null

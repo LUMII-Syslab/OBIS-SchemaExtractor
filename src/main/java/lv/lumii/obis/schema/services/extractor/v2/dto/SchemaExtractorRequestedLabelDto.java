@@ -1,5 +1,6 @@
 package lv.lumii.obis.schema.services.extractor.v2.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -15,11 +16,18 @@ import java.util.List;
 @NoArgsConstructor
 public class SchemaExtractorRequestedLabelDto {
 
+    @JsonIgnore
     private String labelProperty;
+    private String labelPropertyFullOrPrefix;
     private List<String> languages;
 
-    public SchemaExtractorRequestedLabelDto(String labelProperty) {
-        this.labelProperty = labelProperty;
+    public SchemaExtractorRequestedLabelDto(String labelPropertyFullOrPrefix) {
+        this.labelPropertyFullOrPrefix = labelPropertyFullOrPrefix;
+    }
+
+    public SchemaExtractorRequestedLabelDto(String labelPropertyFullOrPrefix, List<String> languages) {
+        this.labelPropertyFullOrPrefix = labelPropertyFullOrPrefix;
+        this.languages = languages;
     }
 
     @Nonnull
@@ -32,6 +40,6 @@ public class SchemaExtractorRequestedLabelDto {
 
     @Override
     public String toString() {
-        return "{" + labelProperty + "@" + languages + "}";
+        return "{" + labelPropertyFullOrPrefix + "@" + getLanguages() + "}";
     }
 }
