@@ -80,7 +80,7 @@ public class SchemaExtractor {
         // if the request does not include the list of classes or classes do not have instance count - read from the SPARQL endpoint
         List<SchemaClass> classes = new ArrayList<>();
         if (isFalse(requestedClassesWithInstanceCounts)) {
-            for (String classificationProperty : request.getClassificationProperties()) {
+            for (String classificationProperty : request.getAllClassificationProperties()) {
                 SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_CLASSES_WITH_INSTANCE_COUNT.name()), FIND_CLASSES_WITH_INSTANCE_COUNT)
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, classificationProperty);
                 QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
@@ -375,7 +375,7 @@ public class SchemaExtractor {
         log.info(request.getCorrelationId() + " - determinePropertySource [" + property.getPropertyName() + "]");
 
         boolean hasErrors = false;
-        for (String classificationProperty : request.getClassificationProperties()) {
+        for (String classificationProperty : request.getMainClassificationProperties()) {
             SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_PROPERTY_SOURCES_WITHOUT_TRIPLE_COUNT.name()), FIND_PROPERTY_SOURCES_WITHOUT_TRIPLE_COUNT)
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, classificationProperty)
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
@@ -513,7 +513,7 @@ public class SchemaExtractor {
         log.info(request.getCorrelationId() + " - determinePropertyTargets [" + property.getPropertyName() + "]");
 
         boolean hasErrors = false;
-        for (String classificationProperty : request.getClassificationProperties()) {
+        for (String classificationProperty : request.getMainClassificationProperties()) {
             SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_PROPERTY_TARGETS_WITHOUT_TRIPLE_COUNT.name()), FIND_PROPERTY_TARGETS_WITHOUT_TRIPLE_COUNT)
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, classificationProperty)
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
@@ -593,8 +593,8 @@ public class SchemaExtractor {
     protected void determinePropertySourceTargetPairs(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull Schema schema, @Nonnull SchemaExtractorRequestDto request) {
         log.info(request.getCorrelationId() + " - determinePropertySourceTargetPairs [" + property.getPropertyName() + "]");
 
-        for (String classificationPropertySource : request.getClassificationProperties()) {
-            for (String classificationPropertyTarget : request.getClassificationProperties()) {
+        for (String classificationPropertySource : request.getMainClassificationProperties()) {
+            for (String classificationPropertyTarget : request.getMainClassificationProperties()) {
                 SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_PROPERTY_SOURCE_TARGET_PAIRS.name()), FIND_PROPERTY_SOURCE_TARGET_PAIRS)
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_SOURCE, classificationPropertySource)
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_TARGET, classificationPropertyTarget)
@@ -649,7 +649,7 @@ public class SchemaExtractor {
             property.setIsClosedDomain((property.getTripleCount() > 0) ? Boolean.FALSE : null);
         } else {
             property.setIsClosedDomain(Boolean.TRUE);
-            for (String classificationProperty : request.getClassificationProperties()) {
+            for (String classificationProperty : request.getMainClassificationProperties()) {
                 SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_CLOSED_DOMAIN_FOR_PROPERTY.name()), FIND_CLOSED_DOMAIN_FOR_PROPERTY)
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, classificationProperty)
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
@@ -670,7 +670,7 @@ public class SchemaExtractor {
             property.setIsClosedRange((property.getObjectTripleCount() > 0) ? Boolean.FALSE : null);
         } else {
             property.setIsClosedRange(Boolean.TRUE);
-            for (String classificationProperty : request.getClassificationProperties()) {
+            for (String classificationProperty : request.getMainClassificationProperties()) {
                 SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_CLOSED_RANGE_FOR_PROPERTY.name()), FIND_CLOSED_RANGE_FOR_PROPERTY)
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, classificationProperty)
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
@@ -692,7 +692,7 @@ public class SchemaExtractor {
         } else if (isTrue(request.getCalculateSourceAndTargetPairs())) {
             property.getSourceClasses().forEach(sourceClass -> {
                 sourceClass.setIsClosedRange(Boolean.TRUE);
-                for (String classificationProperty : request.getClassificationProperties()) {
+                for (String classificationProperty : request.getMainClassificationProperties()) {
                     SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_CLOSED_RANGE_FOR_PROPERTY_AND_CLASS.name()), FIND_CLOSED_RANGE_FOR_PROPERTY_AND_CLASS)
                             .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL, sourceClass.getClassName(), sourceClass.getIsLiteral())
                             .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, sourceClass.getClassificationProperty())
@@ -717,7 +717,7 @@ public class SchemaExtractor {
         } else if (isTrue(request.getCalculateSourceAndTargetPairs())) {
             property.getTargetClasses().forEach(targetClass -> {
                 targetClass.setIsClosedDomain(Boolean.TRUE);
-                for (String classificationProperty : request.getClassificationProperties()) {
+                for (String classificationProperty : request.getMainClassificationProperties()) {
                     SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_CLOSED_DOMAIN_FOR_PROPERTY_AND_CLASS.name()), FIND_CLOSED_DOMAIN_FOR_PROPERTY_AND_CLASS)
                             .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_TARGET_FULL, targetClass.getClassName(), targetClass.getIsLiteral())
                             .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, targetClass.getClassificationProperty())
@@ -1303,7 +1303,7 @@ public class SchemaExtractor {
     protected boolean checkNewPrincipalSourceClass(@Nonnull String propertyName, @Nonnull SchemaExtractorPropertyLinkedClassInfo newSourceClass, @Nonnull List<String> existingClasses,
                                                    @Nonnull List<SchemaClass> classes, @Nonnull SchemaExtractorRequestDto request) {
         boolean isPrincipalSource = false;
-        for (String classificationProperty : request.getClassificationProperties()) {
+        for (String classificationProperty : request.getMainClassificationProperties()) {
             SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_PRINCIPAL_SOURCE.name()), CHECK_PRINCIPAL_SOURCE)
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL, newSourceClass.getClassName(), newSourceClass.getIsLiteral())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_SOURCE, newSourceClass.getClassificationProperty())
@@ -1320,7 +1320,7 @@ public class SchemaExtractor {
     protected boolean checkNewPrincipalTargetClass(@Nonnull String propertyName, @Nonnull SchemaExtractorPropertyLinkedClassInfo newTargetClass, @Nonnull List<String> existingClasses,
                                                    @Nonnull List<SchemaClass> classes, @Nonnull SchemaExtractorRequestDto request) {
         boolean isPrincipalTarget = false;
-        for (String classificationProperty : request.getClassificationProperties()) {
+        for (String classificationProperty : request.getMainClassificationProperties()) {
             SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_PRINCIPAL_TARGET.name()), CHECK_PRINCIPAL_TARGET)
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_TARGET_FULL, newTargetClass.getClassName(), newTargetClass.getIsLiteral())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_TARGET, newTargetClass.getClassificationProperty())
@@ -1337,7 +1337,7 @@ public class SchemaExtractor {
     protected boolean checkNewPrincipalTargetClassForSource(@Nonnull String propertyName, @Nonnull SchemaExtractorClassNodeInfo sourceClass, @Nonnull SchemaExtractorPropertyLinkedClassInfo newTargetClass,
                                                             @Nonnull List<String> existingClasses, @Nonnull List<SchemaClass> classes, @Nonnull SchemaExtractorRequestDto request) {
         boolean isPrincipalTarget = false;
-        for (String classificationProperty : request.getClassificationProperties()) {
+        for (String classificationProperty : request.getMainClassificationProperties()) {
             SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_PRINCIPAL_TARGET_FOR_SOURCE.name()), CHECK_PRINCIPAL_TARGET_FOR_SOURCE)
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL, sourceClass.getClassName(), sourceClass.getIsLiteral())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_TARGET_FULL, newTargetClass.getClassName(), newTargetClass.getIsLiteral())
@@ -1356,7 +1356,7 @@ public class SchemaExtractor {
     protected boolean checkNewPrincipalSourceClassForTarget(@Nonnull String propertyName, @Nonnull SchemaExtractorClassNodeInfo targetClass, @Nonnull SchemaExtractorPropertyLinkedClassInfo newSourceClass,
                                                             @Nonnull List<String> existingClasses, @Nonnull List<SchemaClass> classes, @Nonnull SchemaExtractorRequestDto request) {
         boolean isPrincipalSource = false;
-        for (String classificationProperty : request.getClassificationProperties()) {
+        for (String classificationProperty : request.getMainClassificationProperties()) {
             SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_PRINCIPAL_SOURCE_FOR_TARGET.name()), CHECK_PRINCIPAL_SOURCE_FOR_TARGET)
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL, newSourceClass.getClassName(), newSourceClass.getIsLiteral())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_TARGET_FULL, targetClass.getClassName(), targetClass.getIsLiteral())
@@ -1601,7 +1601,7 @@ public class SchemaExtractor {
         QueryResponse queryResponse;
         for (SchemaClass classA : classes) {
             boolean hasErrors = false;
-            for (String classificationProperty : request.getClassificationProperties()) {
+            for (String classificationProperty : request.getPrincipalClassificationProperties()) {
                 SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_INTERSECTION_CLASSES_FOR_KNOWN_CLASS.name()), FIND_INTERSECTION_CLASSES_FOR_KNOWN_CLASS)
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL, classA.getFullName(), classA.getIsLiteral())
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_A, classA.getClassificationProperty())

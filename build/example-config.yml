@@ -15,7 +15,11 @@ checkInstanceNamespaces: false
 minimalAnalyzedClassSize: 1
 addIntersectionClasses: "auto"
 exactCountCalculations: "auto"
-classificationProperties:
+principalClassificationProperties:
+- "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
+classificationPropertiesWithDomainAndRange:
+- "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
+extraClassificationProperties:
 - "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
 includedLabels:
 - labelPropertyFullOrPrefix: "rdfs:label"

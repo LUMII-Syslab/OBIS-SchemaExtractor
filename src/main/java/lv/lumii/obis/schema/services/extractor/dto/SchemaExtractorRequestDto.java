@@ -9,9 +9,12 @@ import lv.lumii.obis.schema.services.extractor.v2.dto.SchemaExtractorPredefinedN
 import lv.lumii.obis.schema.services.extractor.v2.dto.SchemaExtractorRequestedClassDto;
 import lv.lumii.obis.schema.services.extractor.v2.dto.SchemaExtractorRequestedLabelDto;
 import lv.lumii.obis.schema.services.extractor.v2.dto.SchemaExtractorRequestedPropertyDto;
+import org.apache.commons.collections.list.UnmodifiableList;
 
 import javax.annotation.Nonnull;
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static lv.lumii.obis.schema.constants.SchemaConstants.RDF_TYPE;
 
@@ -33,7 +36,9 @@ public class SchemaExtractorRequestDto {
      */
 
     public enum CalculateCardinalitiesMode {none, propertyLevelOnly, propertyLevelAndClassContext}
+
     public enum ShowIntersectionClassesMode {yes, no, auto}
+
     public enum DistinctQueryMode {yes, no, auto}
 
     private String correlationId;
@@ -54,7 +59,9 @@ public class SchemaExtractorRequestDto {
     private Long sampleLimitForPropertyToPropertyRelationCalculation;
     private Boolean checkInstanceNamespaces;
     private Integer minimalAnalyzedClassSize;
-    private List<String> classificationProperties;
+    private List<String> principalClassificationProperties;
+    private List<String> classificationPropertiesWithDomainAndRange;
+    private List<String> extraClassificationProperties;
     private ShowIntersectionClassesMode addIntersectionClasses;
     private DistinctQueryMode exactCountCalculations;
     private List<SchemaExtractorRequestedLabelDto> includedLabels;
@@ -67,6 +74,11 @@ public class SchemaExtractorRequestDto {
 
     @JsonIgnore
     private Map<String, String> queries;
+
+    @JsonIgnore
+    private Set<String> allClassificationProperties;
+    @JsonIgnore
+    private Set<String> mainClassificationProperties;
 
     /**
      * DEPRECATED properties for old services
@@ -199,11 +211,27 @@ public class SchemaExtractorRequestDto {
     }
 
     @Nonnull
-    public List<String> getClassificationProperties() {
-        if (classificationProperties == null) {
-            classificationProperties = Collections.singletonList(RDF_TYPE);
+    public List<String> getPrincipalClassificationProperties() {
+        if (principalClassificationProperties == null) {
+            principalClassificationProperties = Collections.singletonList(RDF_TYPE);
         }
-        return classificationProperties;
+        return principalClassificationProperties;
+    }
+
+    @Nonnull
+    public List<String> getClassificationPropertiesWithDomainAndRange() {
+        if (classificationPropertiesWithDomainAndRange == null) {
+            classificationPropertiesWithDomainAndRange = Collections.singletonList(RDF_TYPE);
+        }
+        return classificationPropertiesWithDomainAndRange;
+    }
+
+    @Nonnull
+    public List<String> getExtraClassificationProperties() {
+        if (extraClassificationProperties == null) {
+            extraClassificationProperties = Collections.singletonList(RDF_TYPE);
+        }
+        return extraClassificationProperties;
     }
 
     @Nonnull
@@ -236,6 +264,28 @@ public class SchemaExtractorRequestDto {
             exactCountCalculations = DistinctQueryMode.auto;
         }
         return exactCountCalculations;
+    }
+
+    @Nonnull
+    public Set<String> getAllClassificationProperties() {
+        if (allClassificationProperties == null) {
+            allClassificationProperties =
+                    Stream.of(getPrincipalClassificationProperties(), getClassificationPropertiesWithDomainAndRange(), getExtraClassificationProperties())
+                            .flatMap(Collection::stream)
+                            .collect(Collectors.toSet());
+        }
+        return allClassificationProperties;
+    }
+
+    @Nonnull
+    public Set<String> getMainClassificationProperties() {
+        if (mainClassificationProperties == null) {
+            mainClassificationProperties =
+                    Stream.of(getPrincipalClassificationProperties(), getClassificationPropertiesWithDomainAndRange())
+                            .flatMap(Collection::stream)
+                            .collect(Collectors.toSet());
+        }
+        return mainClassificationProperties;
     }
 
     @Nonnull

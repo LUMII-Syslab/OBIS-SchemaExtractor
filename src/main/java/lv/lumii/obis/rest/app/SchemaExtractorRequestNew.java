@@ -15,6 +15,7 @@ public class SchemaExtractorRequestNew {
     public enum CalculateCardinalitiesMode {none, propertyLevelOnly, propertyLevelAndClassContext}
 
     public enum ShowIntersectionClassesMode {yes, no, auto}
+
     public enum DistinctQueryMode {yes, no, auto}
 
     @ApiParam(access = "1", value = "SPARQL Endpoint URL, for example, http://localhost:8890/sparql", required = true)
@@ -68,13 +69,19 @@ public class SchemaExtractorRequestNew {
     @ApiParam(access = "17", value = "Add intersection classes to the result schema (yes, no, auto - add only if intersection classes count <= 200 )", defaultValue = "auto", required = true)
     private ShowIntersectionClassesMode addIntersectionClasses;
 
-    @ApiParam(access = "18", value = "List of classification properties, default property is http://www.w3.org/1999/02/22-rdf-syntax-ns#type", allowEmptyValue = true)
-    private List<String> classificationProperties;
+    @ApiParam(access = "18", value = "List of principal classification properties, default property is http://www.w3.org/1999/02/22-rdf-syntax-ns#type", allowEmptyValue = true)
+    private List<String> principalClassificationProperties;
 
-    @ApiParam(access = "19", value = "Add DISTINCT in queries (yes, no, auto - add distinct only if total instances count < 10M)", defaultValue = "auto", required = true)
+    @ApiParam(access = "19", value = "List of additional classification properties for domain and range calculation, default property is http://www.w3.org/1999/02/22-rdf-syntax-ns#type", allowEmptyValue = true)
+    private List<String> classificationPropertiesWithDomainAndRange;
+
+    @ApiParam(access = "20", value = "List of extra classification properties, default property is http://www.w3.org/1999/02/22-rdf-syntax-ns#type", allowEmptyValue = true)
+    private List<String> extraClassificationProperties;
+
+    @ApiParam(access = "21", value = "Add DISTINCT in queries (yes, no, auto - add distinct only if total instances count < 10M)", defaultValue = "auto", required = true)
     private DistinctQueryMode exactCountCalculations;
 
-    @ApiParam(access = "20", value = "List of excluded namespaces", allowEmptyValue = true)
+    @ApiParam(access = "22", value = "List of excluded namespaces", allowEmptyValue = true)
     private List<String> excludedNamespaces;
 
     public Boolean getCalculateSubClassRelations() {
@@ -141,11 +148,27 @@ public class SchemaExtractorRequestNew {
     }
 
     @Nonnull
-    public List<String> getClassificationProperties() {
-        if (classificationProperties == null) {
-            classificationProperties = new ArrayList<>();
+    public List<String> getPrincipalClassificationProperties() {
+        if (principalClassificationProperties == null) {
+            principalClassificationProperties = new ArrayList<>();
         }
-        return classificationProperties;
+        return principalClassificationProperties;
+    }
+
+    @Nonnull
+    public List<String> getClassificationPropertiesWithDomainAndRange() {
+        if (classificationPropertiesWithDomainAndRange == null) {
+            classificationPropertiesWithDomainAndRange = new ArrayList<>();
+        }
+        return classificationPropertiesWithDomainAndRange;
+    }
+
+    @Nonnull
+    public List<String> getExtraClassificationProperties() {
+        if (extraClassificationProperties == null) {
+            extraClassificationProperties = new ArrayList<>();
+        }
+        return extraClassificationProperties;
     }
 
     @Nonnull
