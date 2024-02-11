@@ -69,14 +69,14 @@ public class SchemaExtractorRequestNew {
     @ApiParam(access = "17", value = "Add intersection classes to the result schema (yes, no, auto - add only if intersection classes count <= 200 )", defaultValue = "auto", required = true)
     private ShowIntersectionClassesMode addIntersectionClasses;
 
-    @ApiParam(access = "18", value = "List of principal classification properties, default property is http://www.w3.org/1999/02/22-rdf-syntax-ns#type", allowEmptyValue = true)
+    @ApiParam(access = "18", value = "List of properties defining the class structure; the classifier values (objects of these property triples) can be superclasses of other classes/classifiers and are checked for being sources and targets for other properties (default property is rdf:type)", allowEmptyValue = true)
     private List<String> principalClassificationProperties;
 
-    @ApiParam(access = "19", value = "List of additional classification properties for domain and range calculation, default property is http://www.w3.org/1999/02/22-rdf-syntax-ns#type", allowEmptyValue = true)
-    private List<String> classificationPropertiesWithDomainAndRange;
+    @ApiParam(access = "19", value = "List of properties defining the classifiers whose values can define subsets of principal property classifiers (classes) and that are checked for being sources and targets for other properties", allowEmptyValue = true)
+    private List<String> classificationPropertiesWithConnectionsOnly;
 
-    @ApiParam(access = "20", value = "List of extra classification properties, default property is http://www.w3.org/1999/02/22-rdf-syntax-ns#type", allowEmptyValue = true)
-    private List<String> extraClassificationProperties;
+    @ApiParam(access = "20", value = "List of properties defining simple classifiers (their values can define subsets of principal classifiers (classes)), not checked for being sources and targets for other properties", allowEmptyValue = true)
+    private List<String> simpleClassificationProperties;
 
     @ApiParam(access = "21", value = "Add DISTINCT in queries (yes, no, auto - add distinct only if total instances count < 10M)", defaultValue = "yes", required = true)
     private DistinctQueryMode exactCountCalculations;
@@ -159,19 +159,19 @@ public class SchemaExtractorRequestNew {
     }
 
     @Nonnull
-    public List<String> getClassificationPropertiesWithDomainAndRange() {
-        if (classificationPropertiesWithDomainAndRange == null) {
-            classificationPropertiesWithDomainAndRange = new ArrayList<>();
+    public List<String> getClassificationPropertiesWithConnectionsOnly() {
+        if (classificationPropertiesWithConnectionsOnly == null) {
+            classificationPropertiesWithConnectionsOnly = new ArrayList<>();
         }
-        return classificationPropertiesWithDomainAndRange;
+        return classificationPropertiesWithConnectionsOnly;
     }
 
     @Nonnull
-    public List<String> getExtraClassificationProperties() {
-        if (extraClassificationProperties == null) {
-            extraClassificationProperties = new ArrayList<>();
+    public List<String> getSimpleClassificationProperties() {
+        if (simpleClassificationProperties == null) {
+            simpleClassificationProperties = new ArrayList<>();
         }
-        return extraClassificationProperties;
+        return simpleClassificationProperties;
     }
 
     @Nonnull

@@ -18,9 +18,9 @@ exactCountCalculations: "yes"
 maxInstanceLimitForExactCount: 1000000
 principalClassificationProperties:
 - "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
-classificationPropertiesWithDomainAndRange:
+classificationPropertiesWithConnectionsOnly:
 - "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
-extraClassificationProperties:
+simpleClassificationProperties:
 - "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
 includedLabels:
 - labelPropertyFullOrPrefix: "rdfs:label"

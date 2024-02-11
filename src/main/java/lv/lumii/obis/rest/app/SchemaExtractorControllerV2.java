@@ -43,6 +43,7 @@ public class SchemaExtractorControllerV2 {
     private static final String SCHEMA_EXTRACT_MESSAGE_START = "Starting to read schema from the endpoint with parameters %s";
     private static final String SCHEMA_EXTRACT_MESSAGE_END = "Completed JSON schema extraction in %s from the specified endpoint with parameters %s";
     private static final String SCHEMA_EXTRACT_MESSAGE_SAVED_FILE = "JSON schema saved in the file %s";
+    private static final String SCHEMA_EXTRACT_MESSAGE_FULL_PARAMETERS = "Schema extraction parameters %s";
 
     private static final String SCHEMA_BUILD_PARAMETERS = "Request %s - Starting to build request parameters";
     private static final String SCHEMA_READ_INCLUDED_CLASSES_MESSAGE_START = "Request %s - Starting to read included classes from the CSV file [%s]";
@@ -186,6 +187,7 @@ public class SchemaExtractorControllerV2 {
 
         LocalDateTime endTime = LocalDateTime.now();
         log.info(String.format(SCHEMA_EXTRACT_MESSAGE_END, calculateExecutionTime(startTime, endTime), requestDto.printMainParameters()));
+        log.info(String.format(SCHEMA_EXTRACT_MESSAGE_FULL_PARAMETERS, objectConversionService.getJsonFromObject(requestDto)));
 
         String resultSchema = objectConversionService.getJsonFromObject(schema);
         if (resultSchema != null) {

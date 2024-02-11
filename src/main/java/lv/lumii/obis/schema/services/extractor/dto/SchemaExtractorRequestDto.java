@@ -9,7 +9,6 @@ import lv.lumii.obis.schema.services.extractor.v2.dto.SchemaExtractorPredefinedN
 import lv.lumii.obis.schema.services.extractor.v2.dto.SchemaExtractorRequestedClassDto;
 import lv.lumii.obis.schema.services.extractor.v2.dto.SchemaExtractorRequestedLabelDto;
 import lv.lumii.obis.schema.services.extractor.v2.dto.SchemaExtractorRequestedPropertyDto;
-import org.apache.commons.collections.list.UnmodifiableList;
 
 import javax.annotation.Nonnull;
 import java.util.*;
@@ -60,8 +59,8 @@ public class SchemaExtractorRequestDto {
     private Boolean checkInstanceNamespaces;
     private Integer minimalAnalyzedClassSize;
     private List<String> principalClassificationProperties;
-    private List<String> classificationPropertiesWithDomainAndRange;
-    private List<String> extraClassificationProperties;
+    private List<String> classificationPropertiesWithConnectionsOnly;
+    private List<String> simpleClassificationProperties;
     private ShowIntersectionClassesMode addIntersectionClasses;
     private DistinctQueryMode exactCountCalculations;
     private Long maxInstanceLimitForExactCount;
@@ -220,19 +219,19 @@ public class SchemaExtractorRequestDto {
     }
 
     @Nonnull
-    public List<String> getClassificationPropertiesWithDomainAndRange() {
-        if (classificationPropertiesWithDomainAndRange == null) {
-            classificationPropertiesWithDomainAndRange = Collections.singletonList(RDF_TYPE);
+    public List<String> getClassificationPropertiesWithConnectionsOnly() {
+        if (classificationPropertiesWithConnectionsOnly == null) {
+            classificationPropertiesWithConnectionsOnly = new ArrayList<>();
         }
-        return classificationPropertiesWithDomainAndRange;
+        return classificationPropertiesWithConnectionsOnly;
     }
 
     @Nonnull
-    public List<String> getExtraClassificationProperties() {
-        if (extraClassificationProperties == null) {
-            extraClassificationProperties = Collections.singletonList(RDF_TYPE);
+    public List<String> getSimpleClassificationProperties() {
+        if (simpleClassificationProperties == null) {
+            simpleClassificationProperties = new ArrayList<>();
         }
-        return extraClassificationProperties;
+        return simpleClassificationProperties;
     }
 
     @Nonnull
@@ -271,7 +270,7 @@ public class SchemaExtractorRequestDto {
     public Set<String> getAllClassificationProperties() {
         if (allClassificationProperties == null) {
             allClassificationProperties =
-                    Stream.of(getPrincipalClassificationProperties(), getClassificationPropertiesWithDomainAndRange(), getExtraClassificationProperties())
+                    Stream.of(getPrincipalClassificationProperties(), getClassificationPropertiesWithConnectionsOnly(), getSimpleClassificationProperties())
                             .flatMap(Collection::stream)
                             .collect(Collectors.toSet());
         }
@@ -282,7 +281,7 @@ public class SchemaExtractorRequestDto {
     public Set<String> getMainClassificationProperties() {
         if (mainClassificationProperties == null) {
             mainClassificationProperties =
-                    Stream.of(getPrincipalClassificationProperties(), getClassificationPropertiesWithDomainAndRange())
+                    Stream.of(getPrincipalClassificationProperties(), getClassificationPropertiesWithConnectionsOnly())
                             .flatMap(Collection::stream)
                             .collect(Collectors.toSet());
         }

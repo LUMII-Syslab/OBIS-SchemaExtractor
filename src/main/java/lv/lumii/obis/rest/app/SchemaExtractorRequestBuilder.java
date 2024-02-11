@@ -9,6 +9,7 @@ import lv.lumii.obis.schema.services.extractor.v2.dto.SchemaExtractorPredefinedN
 import lv.lumii.obis.schema.services.extractor.v2.dto.SchemaExtractorRequestedClassDto;
 import lv.lumii.obis.schema.services.extractor.v2.dto.SchemaExtractorRequestedLabelDto;
 import lv.lumii.obis.schema.services.extractor.v2.dto.SchemaExtractorRequestedPropertyDto;
+import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
@@ -59,9 +60,9 @@ public class SchemaExtractorRequestBuilder {
         requestDto.setIncludedLabels(applyLabels(request.getAddedLabels()));
         requestDto.setMinimalAnalyzedClassSize(request.getMinimalAnalyzedClassSize());
         requestDto.setAddIntersectionClasses(Enums.getIfPresent(SchemaExtractorRequestDto.ShowIntersectionClassesMode.class, request.getAddIntersectionClasses().name()).orNull());
-        requestDto.setPrincipalClassificationProperties(applyClassificationProperties(request.getPrincipalClassificationProperties()));
-        requestDto.setClassificationPropertiesWithDomainAndRange(applyClassificationProperties(request.getClassificationPropertiesWithDomainAndRange()));
-        requestDto.setExtraClassificationProperties(applyClassificationProperties(request.getExtraClassificationProperties()));
+        requestDto.setPrincipalClassificationProperties(applyClassificationProperties(request.getPrincipalClassificationProperties(), true));
+        requestDto.setClassificationPropertiesWithConnectionsOnly(applyClassificationProperties(request.getClassificationPropertiesWithConnectionsOnly(), false));
+        requestDto.setSimpleClassificationProperties(applyClassificationProperties(request.getSimpleClassificationProperties(), false));
         requestDto.setExactCountCalculations(Enums.getIfPresent(SchemaExtractorRequestDto.DistinctQueryMode.class, request.getExactCountCalculations().name()).orNull());
         requestDto.setMaxInstanceLimitForExactCount(request.getMaxInstanceLimitForExactCount());
         requestDto.setExcludedNamespaces(request.getExcludedNamespaces());
@@ -156,7 +157,7 @@ public class SchemaExtractorRequestBuilder {
     }
 
     @Nonnull
-    private List<String> applyClassificationProperties(@Nonnull List<String> classificationProperties) {
+    private List<String> applyClassificationProperties(@Nonnull List<String> classificationProperties, boolean addDefault) {
         List<String> formattedClassificationProperties = new ArrayList<>();
         for (String classificationProperty : classificationProperties) {
             if (classificationProperty != null && SchemaConstants.RDF_TYPE_SHORT.equalsIgnoreCase(classificationProperty.trim())) {
@@ -165,8 +166,11 @@ public class SchemaExtractorRequestBuilder {
                 formattedClassificationProperties.add(classificationProperty);
             }
         }
+        if (formattedClassificationProperties.isEmpty() && BooleanUtils.isTrue(addDefault)) {
+            return Collections.singletonList(RDF_TYPE);
+        }
         return (formattedClassificationProperties.isEmpty())
-                ? Collections.singletonList(RDF_TYPE) : Collections.unmodifiableList(formattedClassificationProperties);
+                ? formattedClassificationProperties : Collections.unmodifiableList(formattedClassificationProperties);
     }
 
 }
