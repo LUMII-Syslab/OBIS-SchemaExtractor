@@ -14,7 +14,8 @@ sampleLimitForPropertyToPropertyRelationCalculation: 0
 checkInstanceNamespaces: false
 minimalAnalyzedClassSize: 1
 addIntersectionClasses: "auto"
-exactCountCalculations: "auto"
+exactCountCalculations: "yes"
+maxInstanceLimitForExactCount: 1000000
 principalClassificationProperties:
 - "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
 classificationPropertiesWithDomainAndRange:

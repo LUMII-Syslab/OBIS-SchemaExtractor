@@ -2,6 +2,7 @@ package lv.lumii.obis.schema.services.common;
 
 import lombok.extern.slf4j.Slf4j;
 import lv.lumii.obis.schema.services.SchemaUtil;
+import lv.lumii.obis.schema.services.extractor.dto.SchemaExtractorRequestDto;
 import lv.lumii.obis.schema.services.extractor.v2.SchemaExtractorQueries;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -10,6 +11,10 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.Map;
+
+import static lv.lumii.obis.schema.constants.SchemaConstants.SPARQL_QUERY_BINDING_NAME_DISTINCT;
+import static lv.lumii.obis.schema.constants.SchemaConstants.SPARQL_QUERY_BINDING_NAME_DISTINCT_FULL;
+import static lv.lumii.obis.schema.services.extractor.dto.SchemaExtractorRequestDto.DistinctQueryMode;
 
 @Slf4j
 public class SparqlQueryBuilder {
@@ -40,6 +45,17 @@ public class SparqlQueryBuilder {
             formattedValue = SchemaUtil.addAngleBracketsToString(value);
         }
         return withContextParam(key, formattedValue);
+    }
+
+    public SparqlQueryBuilder withDistinct(@Nullable DistinctQueryMode distinctMode, @Nullable Long maxInstanceCountLimit, @Nullable Integer instanceCount) {
+        if (DistinctQueryMode.yes.equals(distinctMode) ||
+                (DistinctQueryMode.auto.equals(distinctMode) && instanceCount == null) ||
+                (DistinctQueryMode.auto.equals(distinctMode) && maxInstanceCountLimit != null && instanceCount <= maxInstanceCountLimit)) {
+            withContextParam(SPARQL_QUERY_BINDING_NAME_DISTINCT_FULL, SPARQL_QUERY_BINDING_NAME_DISTINCT);
+        } else {
+            withContextParam(SPARQL_QUERY_BINDING_NAME_DISTINCT_FULL, StringUtils.EMPTY);
+        }
+        return this;
     }
 
     public String getQueryName() {

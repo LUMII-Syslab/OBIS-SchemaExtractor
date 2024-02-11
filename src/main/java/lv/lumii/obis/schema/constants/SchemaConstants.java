@@ -85,6 +85,8 @@ public class SchemaConstants {
     public static final String SPARQL_QUERY_BINDING_NAME_PROPERTY = "property";
     public static final String SPARQL_QUERY_BINDING_NAME_DATA_TYPE = "dataType";
 
+    public static final String SPARQL_QUERY_BINDING_NAME_DISTINCT_FULL = "<DISTINCT>";
+    public static final String SPARQL_QUERY_BINDING_NAME_DISTINCT = "DISTINCT";
     public static final String SPARQL_QUERY_BINDING_NAME_LIMIT = "<limit>";
     public static final String SPARQL_QUERY_BINDING_NAME_X = "x";
     public static final String SPARQL_QUERY_BINDING_NAME_Y = "y";

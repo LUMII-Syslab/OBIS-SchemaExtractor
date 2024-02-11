@@ -64,6 +64,7 @@ public class SchemaExtractorRequestDto {
     private List<String> extraClassificationProperties;
     private ShowIntersectionClassesMode addIntersectionClasses;
     private DistinctQueryMode exactCountCalculations;
+    private Long maxInstanceLimitForExactCount;
     private List<SchemaExtractorRequestedLabelDto> includedLabels;
     private List<SchemaExtractorRequestedClassDto> includedClasses;
     private List<SchemaExtractorRequestedPropertyDto> includedProperties;
@@ -261,7 +262,7 @@ public class SchemaExtractorRequestDto {
     @Nonnull
     public DistinctQueryMode getExactCountCalculations() {
         if (exactCountCalculations == null) {
-            exactCountCalculations = DistinctQueryMode.auto;
+            exactCountCalculations = DistinctQueryMode.yes;
         }
         return exactCountCalculations;
     }

@@ -78,10 +78,13 @@ public class SchemaExtractorRequestNew {
     @ApiParam(access = "20", value = "List of extra classification properties, default property is http://www.w3.org/1999/02/22-rdf-syntax-ns#type", allowEmptyValue = true)
     private List<String> extraClassificationProperties;
 
-    @ApiParam(access = "21", value = "Add DISTINCT in queries (yes, no, auto - add distinct only if total instances count < 10M)", defaultValue = "auto", required = true)
+    @ApiParam(access = "21", value = "Add DISTINCT in queries (yes, no, auto - add distinct only if total instances count < 10M)", defaultValue = "yes", required = true)
     private DistinctQueryMode exactCountCalculations;
 
-    @ApiParam(access = "22", value = "List of excluded namespaces", allowEmptyValue = true)
+    @ApiParam(access = "22", value = "Total instance count limit for exact count calculations", defaultValue = "10000000", required = false)
+    private Long maxInstanceLimitForExactCount;
+
+    @ApiParam(access = "23", value = "List of excluded namespaces", allowEmptyValue = true)
     private List<String> excludedNamespaces;
 
     public Boolean getCalculateSubClassRelations() {
@@ -198,7 +201,7 @@ public class SchemaExtractorRequestNew {
     @Nonnull
     public DistinctQueryMode getExactCountCalculations() {
         if (exactCountCalculations == null) {
-            exactCountCalculations = DistinctQueryMode.auto;
+            exactCountCalculations = DistinctQueryMode.yes;
         }
         return exactCountCalculations;
     }

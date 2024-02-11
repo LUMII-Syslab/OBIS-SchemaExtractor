@@ -7,7 +7,7 @@ import javax.annotation.Nonnull;
 public enum SchemaExtractorQueries {
 
     FIND_CLASSES_WITH_INSTANCE_COUNT(
-            "SELECT ?class (COUNT(?x) as ?instances) WHERE { ?x <classificationProperty> ?class. } GROUP BY ?class"
+            "SELECT ?class (COUNT(<DISTINCT> ?x) as ?instances) WHERE { ?x <classificationProperty> ?class. } GROUP BY ?class"
     ),
 
     FIND_INTERSECTION_CLASSES_FOR_KNOWN_CLASS(
@@ -28,28 +28,28 @@ public enum SchemaExtractorQueries {
     ),
 
     FIND_PROPERTY_DATA_TYPE_WITH_TRIPLE_COUNT(
-            "SELECT ?dataType (COUNT(?value) as ?instances) WHERE { ?x <property> ?value. BIND (datatype(?value) as ?dataType). FILTER (BOUND(?dataType)) } GROUP BY ?dataType"
+            "SELECT ?dataType (COUNT(<DISTINCT> ?value) as ?instances) WHERE { ?x <property> ?value. BIND (datatype(?value) as ?dataType). FILTER (BOUND(?dataType)) } GROUP BY ?dataType"
     ),
     FIND_PROPERTY_DATA_TYPE_WITH_TRIPLE_COUNT_WITH_LIMITS(
-            "SELECT ?dataType (COUNT(?value) as ?instances) WHERE { SELECT ?x ?value ?dataType WHERE {?x <property> ?value. BIND (datatype(?value) as ?dataType)} LIMIT <limit> } GROUP BY ?dataType"
+            "SELECT ?dataType (COUNT(<DISTINCT> ?value) as ?instances) WHERE { SELECT ?x ?value ?dataType WHERE {?x <property> ?value. BIND (datatype(?value) as ?dataType)} LIMIT <limit> } GROUP BY ?dataType"
     ),
     FIND_PROPERTY_DATA_TYPE_WITH_TRIPLE_COUNT_FOR_SOURCE(
-            "SELECT ?dataType (COUNT(?value) as ?instances) WHERE { ?x <classificationProperty> <sourceClass>. ?x <property> ?value. BIND (datatype(?value) as ?dataType). FILTER (BOUND(?dataType)) } GROUP BY ?dataType"
+            "SELECT ?dataType (COUNT(<DISTINCT> ?value) as ?instances) WHERE { ?x <classificationProperty> <sourceClass>. ?x <property> ?value. BIND (datatype(?value) as ?dataType). FILTER (BOUND(?dataType)) } GROUP BY ?dataType"
     ),
     FIND_PROPERTY_DATA_TYPE_WITH_TRIPLE_COUNT_FOR_SOURCE_WITH_LIMITS(
-            "SELECT ?dataType (COUNT(?value) as ?instances) WHERE { SELECT ?x ?value ?dataType WHERE {?x <classificationProperty> <sourceClass>. ?x <property> ?value. BIND (datatype(?value) as ?dataType)} LIMIT <limit> } GROUP BY ?dataType"
+            "SELECT ?dataType (COUNT(<DISTINCT> ?value) as ?instances) WHERE { SELECT ?x ?value ?dataType WHERE {?x <classificationProperty> <sourceClass>. ?x <property> ?value. BIND (datatype(?value) as ?dataType)} LIMIT <limit> } GROUP BY ?dataType"
     ),
     FIND_PROPERTY_DATA_TYPE_LANG_STRING(
-            "SELECT (COUNT(?value) as ?instances) WHERE { ?x <property> ?value. FILTER (lang(?value) != \"\") }"
+            "SELECT (COUNT(<DISTINCT> ?value) as ?instances) WHERE { ?x <property> ?value. FILTER (lang(?value) != \"\") }"
     ),
     FIND_PROPERTY_DATA_TYPE_LANG_STRING_WITH_LIMITS(
-            "SELECT (COUNT(?value) as ?instances) WHERE { { SELECT ?x ?value WHERE {?x <property> ?value.} LIMIT <limit> } FILTER (lang(?value) != \\\"\\\") }"
+            "SELECT (COUNT(<DISTINCT> ?value) as ?instances) WHERE { { SELECT ?x ?value WHERE {?x <property> ?value.} LIMIT <limit> } FILTER (lang(?value) != \\\"\\\") }"
     ),
     FIND_PROPERTY_DATA_TYPE_LANG_STRING_FOR_SOURCE(
-            "SELECT (COUNT(?value) as ?instances) WHERE { ?x <classificationProperty> <sourceClass>. ?x <property> ?value. FILTER (lang(?value) != \"\") }"
+            "SELECT (COUNT(<DISTINCT> ?value) as ?instances) WHERE { ?x <classificationProperty> <sourceClass>. ?x <property> ?value. FILTER (lang(?value) != \"\") }"
     ),
     FIND_PROPERTY_DATA_TYPE_LANG_STRING_FOR_SOURCE_WITH_LIMITS(
-            "SELECT (COUNT(?value) as ?instances) WHERE { { SELECT ?x ?value WHERE { ?x <classificationProperty> <sourceClass>. ?x <property> ?value. } LIMIT <limit> } FILTER (lang(?value) != \"\") }"
+            "SELECT (COUNT(<DISTINCT> ?value) as ?instances) WHERE { { SELECT ?x ?value WHERE { ?x <classificationProperty> <sourceClass>. ?x <property> ?value. } LIMIT <limit> } FILTER (lang(?value) != \"\") }"
     ),
 
     FIND_PROPERTY_MAX_CARDINALITY(
@@ -96,18 +96,18 @@ public enum SchemaExtractorQueries {
     ),
 
     FIND_ALL_PROPERTIES(
-            "SELECT ?property (COUNT(?x) as ?instances) WHERE {?x ?property ?y} GROUP BY ?property"
+            "SELECT ?property (COUNT(<DISTINCT> ?x) as ?instances) WHERE {?x ?property ?y} GROUP BY ?property"
     ),
 
     FIND_PROPERTY_SOURCES_WITHOUT_TRIPLE_COUNT(
-            "SELECT distinct ?class WHERE {?x <property> ?y. ?x <classificationProperty> ?class. }"
+            "SELECT DISTINCT ?class WHERE {?x <property> ?y. ?x <classificationProperty> ?class. }"
     ),
 
     FIND_PROPERTY_SOURCE_TRIPLE_COUNT(
-            "SELECT (COUNT(?x) as ?instances) WHERE {?x <property> ?y. ?x <classificationProperty> <sourceClass>. }"
+            "SELECT (COUNT(<DISTINCT> ?x) as ?instances) WHERE {?x <property> ?y. ?x <classificationProperty> <sourceClass>. }"
     ),
     FIND_PROPERTY_SOURCE_TRIPLE_COUNT_WITH_LIMITS(
-            "SELECT (COUNT(?x) as ?instances) WHERE { SELECT ?x WHERE {?x <property> ?y. ?x <classificationProperty> <sourceClass>. } LIMIT <limit> }"
+            "SELECT (COUNT(<DISTINCT> ?x) as ?instances) WHERE { SELECT ?x WHERE {?x <property> ?y. ?x <classificationProperty> <sourceClass>. } LIMIT <limit> }"
     ),
 
     CHECK_CLASS_AS_PROPERTY_SOURCE(
@@ -115,14 +115,14 @@ public enum SchemaExtractorQueries {
     ),
 
     FIND_PROPERTY_TARGETS_WITHOUT_TRIPLE_COUNT(
-            "SELECT distinct ?class WHERE {?x <property> ?y. OPTIONAL{ ?y <classificationProperty> ?class.} } "
+            "SELECT DISTINCT ?class WHERE {?x <property> ?y. OPTIONAL{ ?y <classificationProperty> ?class.} } "
     ),
 
     FIND_PROPERTY_TARGET_TRIPLE_COUNT(
-            "SELECT (COUNT(?x) as ?instances) WHERE {?x <property> ?y. ?y <classificationProperty> <targetClass>. }"
+            "SELECT (COUNT(<DISTINCT> ?x) as ?instances) WHERE {?x <property> ?y. ?y <classificationProperty> <targetClass>. }"
     ),
     FIND_PROPERTY_TARGET_TRIPLE_COUNT_WITH_LIMITS(
-            "SELECT (COUNT(?x) as ?instances) WHERE { SELECT ?x WHERE {?x <property> ?y. ?y <classificationProperty> <targetClass>. } LIMIT <limit> }"
+            "SELECT (COUNT(<DISTINCT> ?x) as ?instances) WHERE { SELECT ?x WHERE {?x <property> ?y. ?y <classificationProperty> <targetClass>. } LIMIT <limit> }"
     ),
 
     CHECK_CLASS_AS_PROPERTY_TARGET(
@@ -137,25 +137,25 @@ public enum SchemaExtractorQueries {
     ),
 
     COUNT_PROPERTY_URL_VALUES(
-            "SELECT (COUNT(?y) as ?instances) WHERE {?x <property> ?y. FILTER(!isLiteral(?y)) }"
+            "SELECT (COUNT(<DISTINCT> ?y) as ?instances) WHERE {?x <property> ?y. FILTER(!isLiteral(?y)) }"
     ),
     CHECK_PROPERTY_URL_VALUES(
             "SELECT ?y where {?x <property> ?y. FILTER(!isLiteral(?y)) } LIMIT 1"
     ),
     COUNT_PROPERTY_URL_VALUES_FOR_SOURCE(
-            "SELECT (COUNT(?y) as ?instances) WHERE {?x <classificationProperty> <sourceClass>. ?x <property> ?y. FILTER(!isLiteral(?y)) }"
+            "SELECT (COUNT(<DISTINCT> ?y) as ?instances) WHERE {?x <classificationProperty> <sourceClass>. ?x <property> ?y. FILTER(!isLiteral(?y)) }"
     ),
     CHECK_PROPERTY_URL_VALUES_FOR_SOURCE(
             "SELECT ?y WHERE {?x <classificationProperty> <sourceClass>. ?x <property> ?y. FILTER(!isLiteral(?y)) } LIMIT 1"
     ),
     COUNT_PROPERTY_LITERAL_VALUES(
-            "SELECT (COUNT(?y) as ?instances) WHERE {?x <property> ?y. FILTER(isLiteral(?y)) }"
+            "SELECT (COUNT(<DISTINCT> ?y) as ?instances) WHERE {?x <property> ?y. FILTER(isLiteral(?y)) }"
     ),
     CHECK_PROPERTY_LITERAL_VALUES(
             "SELECT ?y WHERE {?x <property> ?y. FILTER(isLiteral(?y)) LIMIT 1}"
     ),
     COUNT_PROPERTY_LITERAL_VALUES_FOR_SOURCE(
-            "SELECT (COUNT(?y) as ?instances) WHERE {?x <classificationProperty> <sourceClass>. ?x <property> ?y. FILTER(isLiteral(?y)) }"
+            "SELECT (COUNT(<DISTINCT> ?y) as ?instances) WHERE {?x <classificationProperty> <sourceClass>. ?x <property> ?y. FILTER(isLiteral(?y)) }"
     ),
     CHECK_PROPERTY_LITERAL_VALUES_FOR_SOURCE(
             "SELECT ?y WHERE {?x <classificationProperty> <sourceClass>. ?x <property> ?y. FILTER(isLiteral(?y)) } LIMIT 1"
