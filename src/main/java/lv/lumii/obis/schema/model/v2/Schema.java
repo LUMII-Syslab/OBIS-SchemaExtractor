@@ -31,6 +31,9 @@ public class Schema {
     @JsonProperty("Parameters")
     private SchemaExtractorRequestDto executionParameters;
 
+    @JsonProperty("HasErrors")
+    private Boolean hasErrors;
+
     @Nonnull
     public List<SchemaClass> getClasses() {
         if (classes == null) {
@@ -55,4 +58,11 @@ public class Schema {
         return prefixes;
     }
 
+    @Nonnull
+    public Boolean getHasErrors() {
+        if (hasErrors == null) {
+            return Boolean.FALSE;
+        }
+        return hasErrors;
+    }
 }
