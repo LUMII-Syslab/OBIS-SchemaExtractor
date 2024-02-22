@@ -5,6 +5,7 @@ import lv.lumii.obis.schema.constants.SchemaConstants;
 import lv.lumii.obis.schema.model.v1.SchemaClass;
 import lv.lumii.obis.schema.services.common.dto.QueryResult;
 import lv.lumii.obis.schema.services.extractor.dto.*;
+import lv.lumii.obis.schema.services.extractor.v2.dto.SchemaExtractorIntersectionClassDto;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
@@ -83,7 +84,7 @@ public class SchemaExtractorManyQueries extends SchemaExtractor {
 			String classB = queryResult.get(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_B);
 			if(classB != null && !isExcludedResource(classB, request.getExcludeSystemClasses(), request.getExcludeMetaDomainClasses())){
 				if(graphOfClasses.containsKey(domainClass)){
-					graphOfClasses.get(domainClass).getNeighbors().add(classB);
+					graphOfClasses.get(domainClass).getNeighbors().add(new SchemaExtractorIntersectionClassDto(classB));
 				}
 			}
 		}

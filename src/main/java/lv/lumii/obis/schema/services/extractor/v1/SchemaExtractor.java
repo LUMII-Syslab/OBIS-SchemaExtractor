@@ -13,6 +13,7 @@ import lv.lumii.obis.schema.services.SchemaUtil;
 import lv.lumii.obis.schema.services.common.dto.QueryResult;
 import lv.lumii.obis.schema.services.common.SparqlEndpointProcessor;
 import lv.lumii.obis.schema.services.extractor.dto.*;
+import lv.lumii.obis.schema.services.extractor.v2.dto.SchemaExtractorIntersectionClassDto;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -246,7 +247,7 @@ public abstract class SchemaExtractor {
                     && !isExcludedResource(classA, request.getExcludeSystemClasses(), request.getExcludeMetaDomainClasses())
                     && !isExcludedResource(classB, request.getExcludeSystemClasses(), request.getExcludeMetaDomainClasses())) {
                 if (graphOfClasses.containsKey(classA)) {
-                    graphOfClasses.get(classA).getNeighbors().add(classB);
+                    graphOfClasses.get(classA).getNeighbors().add(new SchemaExtractorIntersectionClassDto(classB));
                 }
             }
         }
@@ -275,11 +276,11 @@ public abstract class SchemaExtractor {
 
     // sort class neighbors by instance count (ascending)
     @Nonnull
-    protected List<String> sortNeighborsByInstances(@Nonnull List<String> neighbors, @Nonnull Map<String, SchemaExtractorClassNodeInfo> classesGraph) {
+    protected List<SchemaExtractorIntersectionClassDto> sortNeighborsByInstances(@Nonnull List<SchemaExtractorIntersectionClassDto> neighbors, @Nonnull Map<String, SchemaExtractorClassNodeInfo> classesGraph) {
         return neighbors.stream()
                 .sorted((o1, o2) -> {
-                    Long neighborInstances1 = classesGraph.get(o1).getTripleCount();
-                    Long neighborInstances2 = classesGraph.get(o2).getTripleCount();
+                    Long neighborInstances1 = classesGraph.get(o1.getClassName()).getTripleCount();
+                    Long neighborInstances2 = classesGraph.get(o2.getClassName()).getTripleCount();
                     int compareResult = neighborInstances1.compareTo(neighborInstances2);
                     if (compareResult == 0) {
                         return nullSafeStringComparator.compare(classesGraph.get(o1).getClassName(), classesGraph.get(o2).getClassName());
@@ -324,7 +325,7 @@ public abstract class SchemaExtractor {
             }
 
             // sort neighbor list by instance count (ascending)
-            List<String> neighbors = sortNeighborsByInstances(entry.getValue().getNeighbors(), classesGraph);
+            List<SchemaExtractorIntersectionClassDto> neighbors = sortNeighborsByInstances(entry.getValue().getNeighbors(), classesGraph);
 
             // find the class with the smallest number of instances but including all current instances
             SchemaExtractorClassNodeInfo currentClassInfo = entry.getValue();
@@ -381,46 +382,46 @@ public abstract class SchemaExtractor {
     protected boolean validateAllNeighbors(@Nonnull SchemaClass currentClass, @Nonnull SchemaExtractorClassNodeInfo currentClassInfo, @Nonnull List<SchemaClass> classes,
                                            @Nonnull Map<String, SchemaExtractorClassNodeInfo> classesGraph, @Nonnull SchemaExtractorRequestDto request) {
         boolean accessible = true;
-        List<String> notAccessibleNeighbors = new ArrayList<>();
-        for (String neighbor : currentClassInfo.getNeighbors()) {
-            SchemaClass neighborClass = findClass(classes, neighbor);
+        List<SchemaExtractorIntersectionClassDto> notAccessibleNeighbors = new ArrayList<>();
+        for (SchemaExtractorIntersectionClassDto neighbor : currentClassInfo.getNeighbors()) {
+            SchemaClass neighborClass = findClass(classes, neighbor.getClassName());
             if (THING_NAME.equals(neighborClass.getLocalName())) {
                 continue;
             }
-            boolean isAccessibleSuperClass = isClassAccessibleFromSuperclasses(currentClass.getFullName(), neighbor, classes);
-            boolean isAccessibleSubClass = isClassAccessibleFromSubclasses(currentClass.getFullName(), neighbor, classes);
+            boolean isAccessibleSuperClass = isClassAccessibleFromSuperclasses(currentClass.getFullName(), neighbor.getClassName(), classes);
+            boolean isAccessibleSubClass = isClassAccessibleFromSubclasses(currentClass.getFullName(), neighbor.getClassName(), classes);
             if (!isAccessibleSuperClass && !isAccessibleSubClass) {
                 accessible = false;
                 notAccessibleNeighbors.add(neighbor);
             }
         }
         if (!accessible) {
-            List<String> sortedNeighbors = sortNeighborsByInstances(notAccessibleNeighbors, classesGraph);
+            List<SchemaExtractorIntersectionClassDto> sortedNeighbors = sortNeighborsByInstances(notAccessibleNeighbors, classesGraph);
             updateClass(currentClass, currentClassInfo, sortedNeighbors, classesGraph, classes, request);
         }
 
         return accessible;
     }
 
-    protected void updateClass(@Nonnull SchemaClass currentClass, @Nonnull SchemaExtractorClassNodeInfo currentClassInfo, @Nonnull List<String> neighbors,
+    protected void updateClass(@Nonnull SchemaClass currentClass, @Nonnull SchemaExtractorClassNodeInfo currentClassInfo, @Nonnull List<SchemaExtractorIntersectionClassDto> neighbors,
                                @Nonnull Map<String, SchemaExtractorClassNodeInfo> classesGraph, List<SchemaClass> classes,
                                @Nonnull SchemaExtractorRequestDto request) {
 
-        for (String neighbor : neighbors) {
-            Long neighborInstances = classesGraph.get(neighbor).getTripleCount();
+        for (SchemaExtractorIntersectionClassDto neighbor : neighbors) {
+            Long neighborInstances = classesGraph.get(neighbor.getClassName()).getTripleCount();
             if (neighborInstances < currentClassInfo.getTripleCount()) {
                 continue;
             }
             String query = SchemaExtractorQueries.CHECK_SUPERCLASS.getSparqlQuery();
             query = query.replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_A, currentClass.getFullName());
-            query = query.replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_B, neighbor);
+            query = query.replace(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_B, neighbor.getClassName());
             List<QueryResult> queryResults = sparqlEndpointProcessor.read(request, SchemaExtractorQueries.CHECK_SUPERCLASS.name(), query);
             if (!queryResults.isEmpty()) {
                 continue;
             }
-            SchemaClass superClass = findClass(classes, neighbor);
+            SchemaClass superClass = findClass(classes, neighbor.getClassName());
             if (!hasCyclicDependency(currentClass, superClass, classes)) {
-                currentClass.getSuperClasses().add(neighbor);
+                currentClass.getSuperClasses().add(neighbor.getClassName());
                 if (superClass != null) {
                     superClass.getSubClasses().add(currentClass.getFullName());
                 }

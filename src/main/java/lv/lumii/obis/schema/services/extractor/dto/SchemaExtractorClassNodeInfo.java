@@ -2,6 +2,7 @@ package lv.lumii.obis.schema.services.extractor.dto;
 
 import lombok.Getter;
 import lombok.Setter;
+import lv.lumii.obis.schema.services.extractor.v2.dto.SchemaExtractorIntersectionClassDto;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
@@ -24,7 +25,7 @@ public class SchemaExtractorClassNodeInfo {
 	private Integer maxCardinality;
 	private Integer minInverseCardinality;
 	private Integer maxInverseCardinality;
-	private List<String> neighbors;
+	private List<SchemaExtractorIntersectionClassDto> neighbors;
 	private Integer importanceIndex;
 	private List<SchemaExtractorDataTypeInfo> dataTypes;
 
@@ -51,7 +52,7 @@ public class SchemaExtractorClassNodeInfo {
 		this.isLiteral = isLiteral;
 	}
 
-	public List<String> getNeighbors() {
+	public List<SchemaExtractorIntersectionClassDto> getNeighbors() {
 		if(neighbors == null){
 			neighbors = new ArrayList<>();
 		}
