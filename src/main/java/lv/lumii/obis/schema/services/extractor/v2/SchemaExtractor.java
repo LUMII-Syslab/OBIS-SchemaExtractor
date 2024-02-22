@@ -119,8 +119,10 @@ public class SchemaExtractor {
             processSuperclasses(schema, graphOfClasses, classes, request);
 
             // validate and update classes for multiple inheritance cases
-            log.info(request.getCorrelationId() + " - updateMultipleInheritanceSuperclasses");
-            updateMultipleInheritanceSuperclasses(schema, graphOfClasses, classes, request);
+            if (isTrue(request.getCalculateMultipleInheritanceSuperclasses())) {
+                log.info(request.getCorrelationId() + " - updateMultipleInheritanceSuperclasses");
+                updateMultipleInheritanceSuperclasses(schema, graphOfClasses, classes, request);
+            }
 
             // add intersection classes to the result schema
             if (SchemaExtractorRequestDto.ShowIntersectionClassesMode.yes.equals(request.getAddIntersectionClasses())

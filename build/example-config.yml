@@ -1,6 +1,7 @@
 endpointUrl: "http://localhost:8890/sparql"
 graphName: "MiniUniv"
 calculateSubClassRelations: true
+calculateMultipleInheritanceSuperclasses: true
 calculatePropertyPropertyRelations: false
 calculateSourceAndTargetPairs: true
 calculateDomainsAndRanges: true

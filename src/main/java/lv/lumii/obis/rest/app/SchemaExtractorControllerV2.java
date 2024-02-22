@@ -75,15 +75,15 @@ public class SchemaExtractorControllerV2 {
     @SuppressWarnings("unused")
     public String buildFullSchemaFromEndpointV2(@Validated @ModelAttribute @Nonnull SchemaExtractorRequestNew request,
                                                 @RequestParam(value = "includedClassesFile", required = false)
-                                                @ApiParam(access = "91", value = "Valid CSV file with the list of included classes (if not specified - all classes will be analyzed)") MultipartFile includedClassesCsvFile,
+                                                @ApiParam(access = "240", value = "Valid CSV file with the list of included classes (if not specified - all classes will be analyzed)") MultipartFile includedClassesCsvFile,
                                                 @RequestParam(value = "includedPropertiesFile", required = false)
-                                                @ApiParam(access = "92", value = "Valid CSV file with the list of included properties (if not specified - all properties will be analyzed)") MultipartFile includedPropertiesCsvFile,
+                                                @ApiParam(access = "250", value = "Valid CSV file with the list of included properties (if not specified - all properties will be analyzed)") MultipartFile includedPropertiesCsvFile,
                                                 @RequestParam(value = "namespacePrefixFile", required = false)
-                                                @ApiParam(access = "93", value = "Valid JSON file with predefined namespaces") MultipartFile namespacePrefixFile,
+                                                @ApiParam(access = "260", value = "Valid JSON file with predefined namespaces") MultipartFile namespacePrefixFile,
                                                 @RequestParam(value = "enableLogging", required = false, defaultValue = "true")
-                                                @ApiParam(access = "94", value = "Enable SPARQL Query Logging to the file") Boolean enableLogging,
+                                                @ApiParam(access = "270", value = "Enable SPARQL Query Logging to the file") Boolean enableLogging,
                                                 @RequestParam(value = "saveThisConfig", required = false, defaultValue = "true")
-                                                @ApiParam(access = "95", value = "Save this configuration to file") Boolean saveConfig) {
+                                                @ApiParam(access = "280", value = "Save this configuration to file") Boolean saveConfig) {
 
         // 1. Create the request object
         SchemaExtractorRequestDto requestDto = requestBuilder.buildRequest(request);
