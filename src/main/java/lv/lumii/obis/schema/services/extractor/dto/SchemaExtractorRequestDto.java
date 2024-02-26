@@ -34,7 +34,7 @@ public class SchemaExtractorRequestDto {
      * Actual properties for new services
      */
 
-    public enum CalculateCardinalitiesMode {none, propertyLevelOnly, propertyLevelAndClassContext}
+    public enum CalculatePropertyFeatureMode {none, propertyLevelOnly, propertyLevelAndClassContext}
 
     public enum ShowIntersectionClassesMode {yes, no, auto}
 
@@ -52,8 +52,8 @@ public class SchemaExtractorRequestDto {
     private Boolean calculateDomainsAndRanges;
     private Boolean calculateImportanceIndexes;
     private Boolean calculateClosedClassSets;
-    private CalculateCardinalitiesMode calculateCardinalitiesMode;
-    private Boolean calculateDataTypes;
+    private CalculatePropertyFeatureMode calculateCardinalitiesMode;
+    private CalculatePropertyFeatureMode calculateDataTypes;
     private Long sampleLimitForDataTypeCalculation;
     private Long sampleLimitForPropertyClassRelationCalculation;
     private Long sampleLimitForPropertyToPropertyRelationCalculation;
@@ -188,17 +188,17 @@ public class SchemaExtractorRequestDto {
     }
 
     @Nonnull
-    public Boolean getCalculateDataTypes() {
+    public CalculatePropertyFeatureMode getCalculateDataTypes() {
         if (calculateDataTypes == null) {
-            return Boolean.TRUE;
+            return CalculatePropertyFeatureMode.propertyLevelAndClassContext;
         }
         return calculateDataTypes;
     }
 
     @Nonnull
-    public CalculateCardinalitiesMode getCalculateCardinalitiesMode() {
+    public CalculatePropertyFeatureMode getCalculateCardinalitiesMode() {
         if (calculateCardinalitiesMode == null) {
-            return CalculateCardinalitiesMode.propertyLevelAndClassContext;
+            return CalculatePropertyFeatureMode.propertyLevelAndClassContext;
         }
         return calculateCardinalitiesMode;
     }

@@ -285,9 +285,21 @@ public class SchemaExtractor {
                 determinePropertyClosedDomainsOnTargetClassLevel(schema, property, request, totalCountOfProperties);
             }
 
-            if (isFalse(property.getIsObjectProperty()) && isTrue(request.getCalculateDataTypes())) {
-                determinePropertyDataTypes(schema, property, request, totalCountOfProperties);
-                determinePropertySourceDataTypes(schema, property, request, totalCountOfProperties);
+            if (isFalse(property.getIsObjectProperty())) {
+                switch (request.getCalculateDataTypes()) {
+                    case propertyLevelOnly:
+                        determinePropertyDataTypes(schema, property, request, totalCountOfProperties);
+                        break;
+                    case propertyLevelAndClassContext:
+                        determinePropertyDataTypes(schema, property, request, totalCountOfProperties);
+                        determinePropertySourceDataTypes(schema, property, request, totalCountOfProperties);
+                        break;
+                    case none:
+                        // do not calculate data types
+                    default:
+                        break;
+                }
+
             }
 
             if (isTrue(request.getCalculateDomainsAndRanges())) {

@@ -12,7 +12,7 @@ import java.util.List;
 @Getter
 public class SchemaExtractorRequestNew {
 
-    public enum CalculateCardinalitiesMode {none, propertyLevelOnly, propertyLevelAndClassContext}
+    public enum CalculatePropertyFeatureMode {none, propertyLevelOnly, propertyLevelAndClassContext}
 
     public enum ShowIntersectionClassesMode {yes, no, auto}
 
@@ -46,10 +46,10 @@ public class SchemaExtractorRequestNew {
     private Boolean calculateClosedClassSets;
 
     @ApiParam(access = "90", value = "Calculate min and max cardinalities for all properties", defaultValue = "propertyLevelAndClassContext", required = true)
-    private CalculateCardinalitiesMode calculateCardinalitiesMode;
+    private CalculatePropertyFeatureMode calculateCardinalitiesMode;
 
-    @ApiParam(access = "100", value = "Calculate data types for attributes", defaultValue = "true", required = true)
-    private Boolean calculateDataTypes;
+    @ApiParam(access = "100", value = "Calculate data types for attributes", defaultValue = "propertyLevelAndClassContext", required = true)
+    private CalculatePropertyFeatureMode calculateDataTypes;
 
     @ApiParam(access = "110", value = "Limit of instances to use in data type calculation (no value or 0 means all data will be used)", required = false)
     private Long sampleLimitForDataTypeCalculation;
@@ -139,16 +139,16 @@ public class SchemaExtractorRequestNew {
         return calculateImportanceIndexes;
     }
 
-    public Boolean getCalculateDataTypes() {
+    public CalculatePropertyFeatureMode getCalculateDataTypes() {
         if (calculateDataTypes == null) {
-            calculateDataTypes = Boolean.FALSE;
+            calculateDataTypes = CalculatePropertyFeatureMode.propertyLevelAndClassContext;
         }
         return calculateDataTypes;
     }
 
-    public CalculateCardinalitiesMode getCalculateCardinalitiesMode() {
+    public CalculatePropertyFeatureMode getCalculateCardinalitiesMode() {
         if (calculateCardinalitiesMode == null) {
-            calculateCardinalitiesMode = CalculateCardinalitiesMode.none;
+            calculateCardinalitiesMode = CalculatePropertyFeatureMode.propertyLevelAndClassContext;
         }
         return calculateCardinalitiesMode;
     }

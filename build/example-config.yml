@@ -7,7 +7,7 @@ calculateSourceAndTargetPairs: true
 calculateDomainsAndRanges: true
 calculateImportanceIndexes: false
 calculateClosedClassSets: false
-calculateDataTypes: true
+calculateDataTypes: "propertyLevelAndClassContext"
 calculateCardinalitiesMode: "propertyLevelAndClassContext"
 sampleLimitForDataTypeCalculation: 0
 sampleLimitForPropertyClassRelationCalculation: 0
