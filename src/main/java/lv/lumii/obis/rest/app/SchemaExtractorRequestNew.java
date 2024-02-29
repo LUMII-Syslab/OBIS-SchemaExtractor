@@ -63,7 +63,7 @@ public class SchemaExtractorRequestNew {
     @ApiParam(access = "140", value = "Check instance namespace URIs", defaultValue = "false", required = false)
     private Boolean checkInstanceNamespaces;
 
-    @ApiParam(access = "150", value = "Add label information", allowEmptyValue = true)
+    @ApiParam(access = "150", value = "Properties for class and property labels. rdfs:label and skos:prefLabel assumed by default. For labels in specific languages use @{en,de} notation after the label property iri or short form. To exclude a default labeling property, use property@{-} notation.", allowEmptyValue = true)
     private List<String> addedLabels;
 
     @ApiParam(access = "160", value = "Minimal Analyzed Class Size (set 1 if all classes should be analyzed)", defaultValue = "1", required = true)

@@ -35,6 +35,8 @@ public class SchemaConstants {
     public static final String RDFS_NAMESPACE = "http://www.w3.org/2000/01/rdf-schema#";
     public static final String RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
     public static final String RDF_TYPE_SHORT = "rdf:type";
+    public static final String RDFS_LABEL_SHORT = "rdfs:label";
+    public static final String SKOS_LABEL_SHORT = "skos:prefLabel";
 
     /**
      * Data types constants

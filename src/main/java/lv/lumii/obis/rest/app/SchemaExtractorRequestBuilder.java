@@ -18,10 +18,7 @@ import javax.annotation.Nullable;
 import java.io.InputStream;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static lv.lumii.obis.schema.constants.SchemaConstants.RDF_TYPE;
@@ -133,10 +130,16 @@ public class SchemaExtractorRequestBuilder {
     private List<SchemaExtractorRequestedLabelDto> applyLabels(@Nonnull List<String> includedLabels) {
         List<SchemaExtractorRequestedLabelDto> requestedLabelDtos = new ArrayList<>();
 
+        boolean includedDefaultRdfsLabel = false;
+        boolean excludedDefaultRdfsLabel = false;
+        boolean includedDefaultSkosLabel = false;
+        boolean excludedDefaultSkosLabel = false;
+
         // Expected label format: <label>@{<list of languages>}
         // Example 1: http://www.w3.org/2000/01/rdf-schema#label
         // Example 2: http://www.w3.org/2000/01/rdf-schema#label@{en}
         // Example 3: http://www.w3.org/2000/01/rdf-schema#label@{en;es;lv}
+        // Example 4: rdfs:label@{-} exclude default label
         for (String label : includedLabels) {
             if (StringUtils.isEmpty(label)) continue;
 
@@ -145,13 +148,40 @@ public class SchemaExtractorRequestBuilder {
             if (parts[0].trim().length() == 0) continue;
 
             if (parts.length == 1 || parts[1].trim().length() < 3) {
+                if (parts[0].equalsIgnoreCase(SchemaConstants.RDFS_LABEL_SHORT)) {
+                    includedDefaultRdfsLabel = true;
+                }
+                if (parts[0].equalsIgnoreCase(SchemaConstants.SKOS_LABEL_SHORT)) {
+                    includedDefaultSkosLabel = true;
+                }
                 requestedLabelDtos.add(new SchemaExtractorRequestedLabelDto(parts[0]));
                 continue;
             }
 
             String[] languages = parts[1].substring(1, parts[1].length() - 1).split("\\s*;\\s*");
-            requestedLabelDtos.add(
-                    new SchemaExtractorRequestedLabelDto(parts[0], Arrays.stream(languages).collect(Collectors.toList())));
+            if (languages.length == 1 && languages[0].equalsIgnoreCase("-")) {
+                if (parts[0].equalsIgnoreCase(SchemaConstants.RDFS_LABEL_SHORT)) {
+                    excludedDefaultRdfsLabel = true;
+                } else if (parts[0].equalsIgnoreCase(SchemaConstants.SKOS_LABEL_SHORT)) {
+                    excludedDefaultSkosLabel = true;
+                }
+            } else {
+                if (parts[0].equalsIgnoreCase(SchemaConstants.RDFS_LABEL_SHORT)) {
+                    includedDefaultRdfsLabel = true;
+                }
+                if (parts[0].equalsIgnoreCase(SchemaConstants.SKOS_LABEL_SHORT)) {
+                    includedDefaultSkosLabel = true;
+                }
+                requestedLabelDtos.add(
+                        new SchemaExtractorRequestedLabelDto(parts[0], Arrays.stream(languages).collect(Collectors.toList())));
+            }
+        }
+
+        if (!includedDefaultRdfsLabel && !excludedDefaultRdfsLabel) {
+            requestedLabelDtos.add(new SchemaExtractorRequestedLabelDto(SchemaConstants.RDFS_LABEL_SHORT));
+        }
+        if (!includedDefaultSkosLabel && !excludedDefaultSkosLabel) {
+            requestedLabelDtos.add(new SchemaExtractorRequestedLabelDto(SchemaConstants.SKOS_LABEL_SHORT));
         }
 
         return requestedLabelDtos;
