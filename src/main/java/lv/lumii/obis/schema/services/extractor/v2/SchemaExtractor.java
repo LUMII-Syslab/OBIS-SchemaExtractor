@@ -188,12 +188,9 @@ public class SchemaExtractor {
         // find all properties with triple count
         log.info(request.getCorrelationId() + " - findAllPropertiesWithTripleCount");
 
-        // validate whether the request includes the list of properties with instance counts
-        boolean requestedPropertiesWithInstanceCounts = request.getIncludedProperties().stream().anyMatch(p -> SchemaUtil.getLongValueFromString(p.getInstanceCount()) > 0L);
-
-        // if the request does not include the list of properties or properties do not have instance count - read from the SPARQL endpoint
+        // if the request does not include the list of properties - read from the SPARQL endpoint
         Map<String, SchemaExtractorPropertyNodeInfo> properties;
-        if (isFalse(requestedPropertiesWithInstanceCounts)) {
+        if (isTrue(request.getIncludedProperties().isEmpty())) {
             SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_ALL_PROPERTIES.name()), FIND_ALL_PROPERTIES)
                     .withDistinct(request.getExactCountCalculations(), request.getMaxInstanceLimitForExactCount(), null);
             QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
