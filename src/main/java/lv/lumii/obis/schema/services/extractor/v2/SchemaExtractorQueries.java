@@ -16,11 +16,11 @@ public enum SchemaExtractorQueries {
                     + "?x <classificationPropertyB> ?classB." + "\n\t"
                     + "FILTER (?classA = <sourceClass>)" + "\n\t"
                     + "FILTER (?classA != ?classB)" + "\n"
-                    + "}"
+                    + "} GROUP BY ?classB"
     ),
 
     CHECK_CLASS_INTERSECTION(
-            "SELECT (COUNT(DISTINCT ?x) as ?instances) where {?x <classificationPropertyA> <classA>. ?x <classificationPropertyB> <classB>}"
+            "SELECT (COUNT(?x) as ?instances) where {?x <classificationPropertyA> <classA>. ?x <classificationPropertyB> <classB>}"
     ),
 
     CHECK_SUPERCLASS(
