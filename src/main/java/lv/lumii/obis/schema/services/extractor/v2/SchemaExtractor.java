@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
 import static lv.lumii.obis.schema.constants.SchemaConstants.*;
 import static lv.lumii.obis.schema.services.extractor.v2.SchemaExtractorQueries.*;
 import static org.apache.commons.lang3.BooleanUtils.*;
+import static lv.lumii.obis.schema.services.extractor.dto.SchemaExtractorError.ErrorLevel.*;
 
 @Slf4j
 @Service
@@ -86,7 +87,7 @@ public class SchemaExtractor {
                         .withDistinct(request.getExactCountCalculations(), request.getMaxInstanceLimitForExactCount(), null);
                 QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
                 if (queryResponse.hasErrors() && queryResponse.getResults().isEmpty()) {
-                    schema.setHasErrors(Boolean.TRUE);
+                    schema.getErrors().add(new SchemaExtractorError(ERROR, "allClasses", FIND_CLASSES_WITH_INSTANCE_COUNT.name(), queryBuilder.getQueryString()));
                 }
                 List<SchemaClass> resultClasses = processClassesWithEndpointData(queryResponse.getResults(), request, classificationProperty);
                 classes.addAll(resultClasses);
@@ -195,7 +196,7 @@ public class SchemaExtractor {
                     .withDistinct(request.getExactCountCalculations(), request.getMaxInstanceLimitForExactCount(), null);
             QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
             if (queryResponse.hasErrors() && queryResponse.getResults().isEmpty()) {
-                schema.setHasErrors(Boolean.TRUE);
+                schema.getErrors().add(new SchemaExtractorError(ERROR, "allProperties", FIND_ALL_PROPERTIES.name(), queryBuilder.getQueryString()));
             }
             properties = processPropertiesWithEndpointData(queryResponse.getResults(), request);
             log.info(request.getCorrelationId() + String.format(" - found %d properties", properties.size()));
@@ -358,7 +359,7 @@ public class SchemaExtractor {
             if (!checkQueryResponseForUrlCount.hasErrors() && !checkQueryResponseForUrlCount.getResults().isEmpty() && checkQueryResponseForUrlCount.getResults().get(0) != null) {
                 objectTripleCount = -1L;
             } else if (checkQueryResponseForUrlCount.hasErrors()) {
-                schema.setHasErrors(Boolean.TRUE);
+                schema.getErrors().add(new SchemaExtractorError(ERROR, property.getPropertyName(), CHECK_PROPERTY_URL_VALUES.name(), queryBuilder.getQueryString()));
             }
         }
         property.setObjectTripleCount(objectTripleCount);
@@ -384,7 +385,7 @@ public class SchemaExtractor {
                 dataTripleCount = -1L;
             }
             if (checkQueryResponseForLiteralCount.hasErrors()) {
-                schema.setHasErrors(Boolean.TRUE);
+                schema.getErrors().add(new SchemaExtractorError(ERROR, property.getPropertyName(), CHECK_PROPERTY_LITERAL_VALUES.name(), queryBuilder.getQueryString()));
             }
         }
         property.setDataTripleCount(dataTripleCount);
@@ -436,7 +437,7 @@ public class SchemaExtractor {
                     if (!checkSourceQueryResponse.hasErrors() && !checkSourceQueryResponse.getResults().isEmpty()) {
                         property.getSourceClasses().add(new SchemaExtractorClassNodeInfo(potentialSource.getFullName(), potentialSource.getClassificationProperty(), potentialSource.getIsLiteral()));
                     } else if (checkSourceQueryResponse.hasErrors()) {
-                        schema.setHasErrors(Boolean.TRUE);
+                        schema.getErrors().add(new SchemaExtractorError(ERROR, property.getPropertyName(), CHECK_CLASS_AS_PROPERTY_SOURCE.name(), queryBuilder.getQueryString()));
                     }
                 }
             });
@@ -458,7 +459,7 @@ public class SchemaExtractor {
                         .withDistinct(request.getExactCountCalculations(), request.getMaxInstanceLimitForExactCount(), totalCountOfProperties);
                 QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
                 if (queryResponse.hasErrors()) {
-                    schema.setHasErrors(Boolean.TRUE);
+                    schema.getErrors().add(new SchemaExtractorError(WARNING, property.getPropertyName(), FIND_PROPERTY_SOURCE_TRIPLE_COUNT.name(), queryBuilder.getQueryString()));
                 }
                 for (QueryResult queryResult : queryResponse.getResults()) {
                     if (queryResult != null) {
@@ -478,7 +479,7 @@ public class SchemaExtractor {
                         .withDistinct(request.getExactCountCalculations(), request.getMaxInstanceLimitForExactCount(), totalCountOfProperties);
                 QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
                 if (queryResponse.hasErrors()) {
-                    schema.setHasErrors(Boolean.TRUE);
+                    schema.getErrors().add(new SchemaExtractorError(WARNING, property.getPropertyName(), FIND_PROPERTY_SOURCE_TRIPLE_COUNT_WITH_LIMITS.name(), queryBuilder.getQueryString()));
                 }
                 for (QueryResult queryResult : queryResponse.getResults()) {
                     if (queryResult != null) {
@@ -517,7 +518,7 @@ public class SchemaExtractor {
                     if (!checkQueryResponse.hasErrors() && !checkQueryResponse.getResults().isEmpty()) {
                         sourceClass.setObjectTripleCount(-1L);
                     } else if (checkQueryResponse.hasErrors()) {
-                        schema.setHasErrors(Boolean.TRUE);
+                        schema.getErrors().add(new SchemaExtractorError(WARNING, property.getPropertyName(), CHECK_PROPERTY_URL_VALUES_FOR_SOURCE.name(), queryBuilder.getQueryString()));
                     }
                 }
             }
@@ -551,7 +552,7 @@ public class SchemaExtractor {
                     if (!checkQueryResponse.hasErrors() && !checkQueryResponse.getResults().isEmpty()) {
                         sourceClass.setDataTripleCount(-1L);
                     } else if (checkQueryResponse.hasErrors()) {
-                        schema.setHasErrors(Boolean.TRUE);
+                        schema.getErrors().add(new SchemaExtractorError(WARNING, property.getPropertyName(), CHECK_PROPERTY_LITERAL_VALUES_FOR_SOURCE.name(), queryBuilder.getQueryString()));
                     }
                 }
             }
@@ -594,7 +595,7 @@ public class SchemaExtractor {
                     if (!checkTargetQueryResponse.hasErrors() && !checkTargetQueryResponse.getResults().isEmpty()) {
                         property.getTargetClasses().add(new SchemaExtractorClassNodeInfo(potentialTarget.getFullName(), potentialTarget.getClassificationProperty(), potentialTarget.getIsLiteral()));
                     } else if (checkTargetQueryResponse.hasErrors()) {
-                        schema.setHasErrors(Boolean.TRUE);
+                        schema.getErrors().add(new SchemaExtractorError(ERROR, property.getPropertyName(), CHECK_CLASS_AS_PROPERTY_TARGET.name(), queryBuilder.getQueryString()));
                     }
                 }
             });
@@ -619,7 +620,7 @@ public class SchemaExtractor {
                         .withDistinct(request.getExactCountCalculations(), request.getMaxInstanceLimitForExactCount(), totalCountOfProperties);
                 QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
                 if (queryResponse.hasErrors()) {
-                    schema.setHasErrors(Boolean.TRUE);
+                    schema.getErrors().add(new SchemaExtractorError(ERROR, property.getPropertyName(), FIND_PROPERTY_TARGET_TRIPLE_COUNT.name(), queryBuilder.getQueryString()));
                 }
                 for (QueryResult queryResult : queryResponse.getResults()) {
                     if (queryResult != null) {
@@ -639,7 +640,7 @@ public class SchemaExtractor {
                         .withDistinct(request.getExactCountCalculations(), request.getMaxInstanceLimitForExactCount(), totalCountOfProperties);
                 QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
                 if (queryResponse.hasErrors()) {
-                    schema.setHasErrors(Boolean.TRUE);
+                    schema.getErrors().add(new SchemaExtractorError(ERROR, property.getPropertyName(), FIND_PROPERTY_TARGET_TRIPLE_COUNT_WITH_LIMITS.name(), queryBuilder.getQueryString()));
                 }
                 for (QueryResult queryResult : queryResponse.getResults()) {
                     if (queryResult != null) {
@@ -700,7 +701,7 @@ public class SchemaExtractor {
                                 sourceClass.getClassName(), targetClass.getClassName(), tripleCountForPair, sourceClass.getClassificationProperty(), targetClass.getClassificationProperty()));
                     }
                 } else if (queryResponse.hasErrors()) {
-                    schema.setHasErrors(Boolean.TRUE);
+                    schema.getErrors().add(new SchemaExtractorError(WARNING, property.getPropertyName(), FIND_PROPERTY_SOURCE_TARGET_PAIRS_FOR_SPECIFIC_CLASSES.name(), queryBuilder.getQueryString()));
                 }
             }));
         }
@@ -724,7 +725,7 @@ public class SchemaExtractor {
                     property.setIsClosedDomain(Boolean.FALSE);
                     break;
                 } else if (queryResponse.hasErrors()) {
-                    schema.setHasErrors(Boolean.TRUE);
+                    schema.getErrors().add(new SchemaExtractorError(INFO, property.getPropertyName(), FIND_CLOSED_DOMAIN_FOR_PROPERTY.name(), queryBuilder.getQueryString()));
                 }
             }
         }
@@ -748,7 +749,7 @@ public class SchemaExtractor {
                     property.setIsClosedRange(Boolean.FALSE);
                     break;
                 } else if (queryResponse.hasErrors()) {
-                    schema.setHasErrors(Boolean.TRUE);
+                    schema.getErrors().add(new SchemaExtractorError(INFO, property.getPropertyName(), FIND_CLOSED_RANGE_FOR_PROPERTY.name(), queryBuilder.getQueryString()));
                 }
             }
         }
@@ -775,7 +776,7 @@ public class SchemaExtractor {
                         sourceClass.setIsClosedRange(Boolean.FALSE);
                         break;
                     } else if (queryResponse.hasErrors()) {
-                        schema.setHasErrors(Boolean.TRUE);
+                        schema.getErrors().add(new SchemaExtractorError(INFO, property.getPropertyName(), FIND_CLOSED_RANGE_FOR_PROPERTY_AND_CLASS.name(), queryBuilder.getQueryString()));
                     }
                 }
             });
@@ -803,7 +804,7 @@ public class SchemaExtractor {
                         targetClass.setIsClosedDomain(Boolean.FALSE);
                         break;
                     } else if (queryResponse.hasErrors()) {
-                        schema.setHasErrors(Boolean.TRUE);
+                        schema.getErrors().add(new SchemaExtractorError(INFO, property.getPropertyName(), FIND_CLOSED_DOMAIN_FOR_PROPERTY_AND_CLASS.name(), queryBuilder.getQueryString()));
                     }
                 }
             });
@@ -833,7 +834,7 @@ public class SchemaExtractor {
         }
         QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
         if (queryResponse.hasErrors()) {
-            schema.setHasErrors(Boolean.TRUE);
+            schema.getErrors().add(new SchemaExtractorError(WARNING, property.getPropertyName(), FIND_PROPERTY_DATA_TYPE_WITH_TRIPLE_COUNT.name(), queryBuilder.getQueryString()));
         }
         for (QueryResult queryResult : queryResponse.getResults()) {
             String resultDataType = queryResult.getValue(SPARQL_QUERY_BINDING_NAME_DATA_TYPE);
@@ -856,7 +857,7 @@ public class SchemaExtractor {
         }
         queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
         if (queryResponse.hasErrors()) {
-            schema.setHasErrors(Boolean.TRUE);
+            schema.getErrors().add(new SchemaExtractorError(WARNING, property.getPropertyName(), FIND_PROPERTY_DATA_TYPE_LANG_STRING.name(), queryBuilder.getQueryString()));
         }
         if (!queryResponse.getResults().isEmpty()) {
             Long tripleCount = SchemaUtil.getLongValueFromString(queryResponse.getResults().get(0).getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
@@ -897,7 +898,7 @@ public class SchemaExtractor {
             }
             QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
             if (queryResponse.hasErrors()) {
-                schema.setHasErrors(Boolean.TRUE);
+                schema.getErrors().add(new SchemaExtractorError(WARNING, property.getPropertyName(), FIND_PROPERTY_DATA_TYPE_WITH_TRIPLE_COUNT_FOR_SOURCE.name(), queryBuilder.getQueryString()));
             }
             for (QueryResult queryResult : queryResponse.getResults()) {
                 String resultDataType = queryResult.getValue(SPARQL_QUERY_BINDING_NAME_DATA_TYPE);
@@ -928,7 +929,7 @@ public class SchemaExtractor {
                     sourceClass.getDataTypes().add(new SchemaExtractorDataTypeInfo(DATA_TYPE_RDF_LANG_STRING, tripleCount, finalTripleCountBase));
                 }
             } else if (queryResponse.hasErrors()) {
-                schema.setHasErrors(Boolean.TRUE);
+                schema.getErrors().add(new SchemaExtractorError(WARNING, property.getPropertyName(), FIND_PROPERTY_DATA_TYPE_LANG_STRING_FOR_SOURCE.name(), queryBuilder.getQueryString()));
             }
         });
     }
@@ -986,7 +987,7 @@ public class SchemaExtractor {
                 } else {
                     retry = false;
                     if (queryResponse.hasErrors()) {
-                        schema.setHasErrors(Boolean.TRUE);
+                        schema.getErrors().add(new SchemaExtractorError(ERROR, property.getPropertyName(), queryWithoutLimit.name(), queryBuilder.getQueryString()));
                     }
                 }
             } else {
@@ -1017,7 +1018,7 @@ public class SchemaExtractor {
                 sourceClass.setMinCardinality(1);
             }
             if (queryResponse.hasErrors()) {
-                schema.setHasErrors(Boolean.TRUE);
+                schema.getErrors().add(new SchemaExtractorError(INFO, property.getPropertyName(), FIND_PROPERTY_MIN_CARDINALITY.name(), queryBuilder.getQueryString()));
             }
         });
     }
@@ -1034,7 +1035,7 @@ public class SchemaExtractor {
         }
         property.setMaxCardinality(DEFAULT_MAX_CARDINALITY);
         if (queryResponse.hasErrors()) {
-            schema.setHasErrors(Boolean.TRUE);
+            schema.getErrors().add(new SchemaExtractorError(INFO, property.getPropertyName(), FIND_PROPERTY_MAX_CARDINALITY.name(), queryBuilder.getQueryString()));
         }
     }
 
@@ -1052,7 +1053,7 @@ public class SchemaExtractor {
             } else {
                 sourceClass.setMaxCardinality(DEFAULT_MAX_CARDINALITY);
                 if (queryResponse.hasErrors()) {
-                    schema.setHasErrors(Boolean.TRUE);
+                    schema.getErrors().add(new SchemaExtractorError(INFO, property.getPropertyName(), FIND_PROPERTY_MAX_CARDINALITY_FOR_SOURCE.name(), queryBuilder.getQueryString()));
                 }
             }
         });
@@ -1070,7 +1071,7 @@ public class SchemaExtractor {
         }
         property.setMaxInverseCardinality(DEFAULT_MAX_CARDINALITY);
         if (queryResponse.hasErrors()) {
-            schema.setHasErrors(Boolean.TRUE);
+            schema.getErrors().add(new SchemaExtractorError(INFO, property.getPropertyName(), FIND_INVERSE_PROPERTY_MAX_CARDINALITY.name(), queryBuilder.getQueryString()));
         }
     }
 
@@ -1084,7 +1085,7 @@ public class SchemaExtractor {
                     .withDistinct(request.getExactCountCalculations(), request.getMaxInstanceLimitForExactCount(), totalCountOfProperties);
             QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
             if (queryResponse.hasErrors()) {
-                schema.setHasErrors(Boolean.TRUE);
+                schema.getErrors().add(new SchemaExtractorError(INFO, property.getPropertyName(), FIND_INVERSE_PROPERTY_MAX_CARDINALITY_FOR_TARGET.name(), queryBuilder.getQueryString()));
             }
             targetClass.setMaxInverseCardinality(queryResponse.getResults().isEmpty() ? 1 : DEFAULT_MAX_CARDINALITY);
         });
@@ -1100,7 +1101,7 @@ public class SchemaExtractor {
                     .withDistinct(request.getExactCountCalculations(), request.getMaxInstanceLimitForExactCount(), totalCountOfProperties);
             QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
             if (queryResponse.hasErrors()) {
-                schema.setHasErrors(Boolean.TRUE);
+                schema.getErrors().add(new SchemaExtractorError(INFO, property.getPropertyName(), FIND_INVERSE_PROPERTY_MIN_CARDINALITY.name(), queryBuilder.getQueryString()));
             }
             targetClass.setMinInverseCardinality(!queryResponse.getResults().isEmpty() ? DEFAULT_MIN_CARDINALITY : 1);
         });
@@ -1250,7 +1251,7 @@ public class SchemaExtractor {
                 .withDistinct(request.getExactCountCalculations(), request.getMaxInstanceLimitForExactCount(), totalCountOfProperties);
         QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
         if (queryResponse.hasErrors()) {
-            schema.setHasErrors(Boolean.TRUE);
+            schema.getErrors().add(new SchemaExtractorError(ERROR, propertyName, CHECK_DOMAIN_FOR_PROPERTY.name(), queryBuilder.getQueryString()));
         }
         isDomainClass = !queryResponse.hasErrors() && queryResponse.getResults().isEmpty();
         return isDomainClass;
@@ -1266,7 +1267,7 @@ public class SchemaExtractor {
                 .withDistinct(request.getExactCountCalculations(), request.getMaxInstanceLimitForExactCount(), totalCountOfProperties);
         QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
         if (queryResponse.hasErrors()) {
-            schema.setHasErrors(Boolean.TRUE);
+            schema.getErrors().add(new SchemaExtractorError(ERROR, propertyName, CHECK_RANGE_FOR_PROPERTY.name(), queryBuilder.getQueryString()));
         }
         isRangeClass = !queryResponse.hasErrors() && queryResponse.getResults().isEmpty();
         return isRangeClass;
@@ -1284,7 +1285,7 @@ public class SchemaExtractor {
                 .withDistinct(request.getExactCountCalculations(), request.getMaxInstanceLimitForExactCount(), totalCountOfProperties);
         QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
         if (queryResponse.hasErrors()) {
-            schema.setHasErrors(Boolean.TRUE);
+            schema.getErrors().add(new SchemaExtractorError(WARNING, propertyName, CHECK_RANGE_FOR_PAIR_SOURCE.name(), queryBuilder.getQueryString()));
         }
         isRangeClass = !queryResponse.hasErrors() && queryResponse.getResults().isEmpty();
         return isRangeClass;
@@ -1302,7 +1303,7 @@ public class SchemaExtractor {
                 .withDistinct(request.getExactCountCalculations(), request.getMaxInstanceLimitForExactCount(), totalCountOfProperties);
         QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
         if (queryResponse.hasErrors()) {
-            schema.setHasErrors(Boolean.TRUE);
+            schema.getErrors().add(new SchemaExtractorError(WARNING, propertyName, CHECK_DOMAIN_FOR_PAIR_TARGET.name(), queryBuilder.getQueryString()));
         }
         isDomainClass = !queryResponse.hasErrors() && queryResponse.getResults().isEmpty();
         return isDomainClass;
@@ -1470,7 +1471,7 @@ public class SchemaExtractor {
                     .withDistinct(request.getExactCountCalculations(), request.getMaxInstanceLimitForExactCount(), totalCountOfProperties);
             QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
             if (queryResponse.hasErrors()) {
-                schema.setHasErrors(Boolean.TRUE);
+                schema.getErrors().add(new SchemaExtractorError(WARNING, propertyName, CHECK_PRINCIPAL_SOURCE.name(), queryBuilder.getQueryString()));
             }
             isPrincipalSource = !queryResponse.hasErrors() && !queryResponse.getResults().isEmpty();
             if (isTrue(isPrincipalSource)) break;
@@ -1491,7 +1492,7 @@ public class SchemaExtractor {
                     .withDistinct(request.getExactCountCalculations(), request.getMaxInstanceLimitForExactCount(), totalCountOfProperties);
             QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
             if (queryResponse.hasErrors()) {
-                schema.setHasErrors(Boolean.TRUE);
+                schema.getErrors().add(new SchemaExtractorError(WARNING, propertyName, CHECK_PRINCIPAL_TARGET.name(), queryBuilder.getQueryString()));
             }
             isPrincipalTarget = !queryResponse.hasErrors() && !queryResponse.getResults().isEmpty();
             if (isTrue(isPrincipalTarget)) break;
@@ -1515,7 +1516,7 @@ public class SchemaExtractor {
                     .withDistinct(request.getExactCountCalculations(), request.getMaxInstanceLimitForExactCount(), totalCountOfProperties);
             QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
             if (queryResponse.hasErrors()) {
-                schema.setHasErrors(Boolean.TRUE);
+                schema.getErrors().add(new SchemaExtractorError(WARNING, propertyName, CHECK_PRINCIPAL_TARGET_FOR_SOURCE.name(), queryBuilder.getQueryString()));
             }
             isPrincipalTarget = !queryResponse.hasErrors() && !queryResponse.getResults().isEmpty();
             if (isTrue(isPrincipalTarget)) break;
@@ -1539,7 +1540,7 @@ public class SchemaExtractor {
                     .withDistinct(request.getExactCountCalculations(), request.getMaxInstanceLimitForExactCount(), totalCountOfProperties);
             QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
             if (queryResponse.hasErrors()) {
-                schema.setHasErrors(Boolean.TRUE);
+                schema.getErrors().add(new SchemaExtractorError(WARNING, propertyName, CHECK_PRINCIPAL_SOURCE_FOR_TARGET.name(), queryBuilder.getQueryString()));
             }
             isPrincipalSource = !queryResponse.hasErrors() && !queryResponse.getResults().isEmpty();
             if (isTrue(isPrincipalSource)) break;
@@ -1811,7 +1812,7 @@ public class SchemaExtractor {
                                 graphOfClasses.get(classA.getFullName()).getNeighbors().add(new SchemaExtractorIntersectionClassDto(classB.getFullName(), intersectionCount));
                             }
                         } else if (checkQueryResponse.hasErrors()) {
-                            schema.setHasErrors(Boolean.TRUE);
+                            schema.getErrors().add(new SchemaExtractorError(ERROR, classA.getFullName(), CHECK_CLASS_INTERSECTION.name(), queryBuilder.getQueryString()));
                         }
                     }
                 });
@@ -1990,7 +1991,7 @@ public class SchemaExtractor {
                     .withDistinct(request.getExactCountCalculations(), request.getMaxInstanceLimitForExactCount(), classes.size());
             QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
             if (queryResponse.hasErrors()) {
-                schema.setHasErrors(Boolean.TRUE);
+                schema.getErrors().add(new SchemaExtractorError(WARNING, currentClass.getFullName(), CHECK_SUPERCLASS.name(), queryBuilder.getQueryString()));
             }
             if (!queryResponse.getResults().isEmpty()) {
                 continue;

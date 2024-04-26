@@ -27,6 +27,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static lv.lumii.obis.schema.constants.SchemaConstants.GLOBAL_SPARQL_QUERIES_PATH;
 
@@ -42,7 +43,7 @@ public class SchemaExtractorControllerV2 {
 
     private static final String SCHEMA_EXTRACT_MESSAGE_START = "Starting to read schema from the endpoint with parameters %s";
     private static final String SCHEMA_EXTRACT_MESSAGE_END = "Completed JSON schema extraction in %s from the specified endpoint with parameters %s";
-    private static final String SCHEMA_EXTRACT_MESSAGE_ERROR = "The schema extraction process encountered errors/warnings, please check the log file";
+    private static final String SCHEMA_EXTRACT_MESSAGE_ERROR = "The schema extraction process encountered errors/warnings/notes, please check the errors log file";
     private static final String SCHEMA_EXTRACT_MESSAGE_SAVED_FILE = "JSON schema saved in the file %s";
     private static final String SCHEMA_EXTRACT_MESSAGE_FULL_PARAMETERS = "Schema extraction parameters %s";
 
@@ -188,7 +189,7 @@ public class SchemaExtractorControllerV2 {
 
         LocalDateTime endTime = LocalDateTime.now();
         log.info(String.format(SCHEMA_EXTRACT_MESSAGE_END, calculateExecutionTime(startTime, endTime), requestDto.printMainParameters()));
-        if (schema.getHasErrors()) {
+        if (schema.getHasErrors() || schema.getHasWarnings() || schema.getHasNotes()) {
             log.error(SCHEMA_EXTRACT_MESSAGE_ERROR);
         }
         log.info(String.format(SCHEMA_EXTRACT_MESSAGE_FULL_PARAMETERS, objectConversionService.getJsonFromObject(requestDto)));
@@ -198,6 +199,14 @@ public class SchemaExtractorControllerV2 {
             String fileName = requestDto.getCorrelationId() + ".json";
             writeDataToFile(fileName, resultSchema);
             log.info(String.format(SCHEMA_EXTRACT_MESSAGE_SAVED_FILE, fileName));
+        }
+
+        if(!schema.getErrors().isEmpty()) {
+            StringBuilder errors = new StringBuilder("");
+            schema.getErrors().forEach(error -> {
+                errors.append(error.toString()).append(System.lineSeparator());
+            });
+            writeDataToFile(requestDto.getCorrelationId() + "-errors.log", errors.toString());
         }
 
         return resultSchema;
