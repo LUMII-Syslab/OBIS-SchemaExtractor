@@ -1279,7 +1279,7 @@ public class SchemaExtractor {
                 .withDistinct(request.getExactCountCalculations(), request.getMaxInstanceLimitForExactCount(), totalCountOfProperties);
         QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
         if (queryResponse.hasErrors()) {
-            schema.getErrors().add(new SchemaExtractorError(ERROR, propertyName, CHECK_DOMAIN_FOR_PROPERTY.name(), queryBuilder.getQueryString()));
+            schema.getErrors().add(new SchemaExtractorError(WARNING, propertyName, CHECK_DOMAIN_FOR_PROPERTY.name(), queryBuilder.getQueryString()));
         }
         isDomainClass = !queryResponse.hasErrors() && queryResponse.getResults().isEmpty();
         return isDomainClass;
@@ -1295,7 +1295,7 @@ public class SchemaExtractor {
                 .withDistinct(request.getExactCountCalculations(), request.getMaxInstanceLimitForExactCount(), totalCountOfProperties);
         QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
         if (queryResponse.hasErrors()) {
-            schema.getErrors().add(new SchemaExtractorError(ERROR, propertyName, CHECK_RANGE_FOR_PROPERTY.name(), queryBuilder.getQueryString()));
+            schema.getErrors().add(new SchemaExtractorError(WARNING, propertyName, CHECK_RANGE_FOR_PROPERTY.name(), queryBuilder.getQueryString()));
         }
         isRangeClass = !queryResponse.hasErrors() && queryResponse.getResults().isEmpty();
         return isRangeClass;
