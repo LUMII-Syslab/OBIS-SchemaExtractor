@@ -156,7 +156,7 @@ public enum SchemaExtractorQueries {
             "SELECT (COUNT(<DISTINCT> ?y) as ?instances) WHERE {?x <property> ?y. FILTER(isLiteral(?y)) }"
     ),
     CHECK_PROPERTY_LITERAL_VALUES(
-            "SELECT ?y WHERE {?x <property> ?y. FILTER(isLiteral(?y)) LIMIT 1}"
+            "SELECT ?y WHERE {?x <property> ?y. FILTER(isLiteral(?y))} LIMIT 1"
     ),
     COUNT_PROPERTY_LITERAL_VALUES_FOR_SOURCE(
             "SELECT (COUNT(<DISTINCT> ?y) as ?instances) WHERE {?x <classificationProperty> <sourceClass>. ?x <property> ?y. FILTER(isLiteral(?y)) }"
