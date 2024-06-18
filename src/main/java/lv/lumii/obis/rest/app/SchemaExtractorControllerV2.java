@@ -27,7 +27,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static lv.lumii.obis.schema.constants.SchemaConstants.GLOBAL_SPARQL_QUERIES_PATH;
 

@@ -99,10 +99,12 @@ public enum SchemaExtractorQueries {
             "SELECT ?property (COUNT(<DISTINCT> ?x) as ?instances) WHERE {?x ?property ?y} GROUP BY ?property"
     ),
 
+    FIND_PROPERTY_SOURCES_WITH_TRIPLE_COUNT(
+            "SELECT ?class (COUNT(<DISTINCT> ?x as ?instances) WHERE {?x <property> ?y. ?x <classificationProperty> ?class. } GROUP BY ?class"
+    ),
     FIND_PROPERTY_SOURCES_WITHOUT_TRIPLE_COUNT(
             "SELECT DISTINCT ?class WHERE {?x <property> ?y. ?x <classificationProperty> ?class. }"
     ),
-
     FIND_PROPERTY_SOURCE_TRIPLE_COUNT(
             "SELECT (COUNT(<DISTINCT> ?x) as ?instances) WHERE {?x <property> ?y. ?x <classificationProperty> <sourceClass>. }"
     ),
@@ -114,10 +116,12 @@ public enum SchemaExtractorQueries {
             "SELECT ?x WHERE {?x <property> ?y. ?x <classificationProperty> <sourceClass>. } LIMIT 1"
     ),
 
+    FIND_PROPERTY_TARGETS_WITH_TRIPLE_COUNT(
+            "SELECT ?class (COUNT(<DISTINCT> ?x as ?instances) WHERE {?y <property> ?x. ?x <classificationProperty> ?class. } GROUP BY ?class"
+    ),
     FIND_PROPERTY_TARGETS_WITHOUT_TRIPLE_COUNT(
             "SELECT DISTINCT ?class WHERE {?x <property> ?y. ?y <classificationProperty> ?class. } "
     ),
-
     FIND_PROPERTY_TARGET_TRIPLE_COUNT(
             "SELECT (COUNT(<DISTINCT> ?x) as ?instances) WHERE {?x <property> ?y. ?y <classificationProperty> <targetClass>. }"
     ),

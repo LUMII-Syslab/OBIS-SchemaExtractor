@@ -401,6 +401,34 @@ public class SchemaExtractor {
         }
     }
 
+    protected void determinePropertySourceWithTripleCount(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties) {
+        log.info(request.getCorrelationId() + " - determinePropertySourceWithTripleCount [" + property.getPropertyName() + "]");
+
+        boolean hasErrors = false;
+        for (String classificationProperty : request.getMainClassificationProperties()) {
+            SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_PROPERTY_SOURCES_WITH_TRIPLE_COUNT.name()), FIND_PROPERTY_SOURCES_WITH_TRIPLE_COUNT)
+                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, classificationProperty)
+                    .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName())
+                    .withDistinct(request.getExactCountCalculations(), request.getMaxInstanceLimitForExactCount(), totalCountOfProperties);
+            QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
+            if (isFalse(hasErrors)) {
+                hasErrors = queryResponse.hasErrors();
+            }
+            for (QueryResult queryResult : queryResponse.getResults()) {
+                String className = queryResult.getValueFullName(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS);
+                if (StringUtils.isNotEmpty(className) && isNotExcludedResource(className, request.getExcludedNamespaces())) {
+                    SchemaClass schemaClass = findClass(schema.getClasses(), className);
+                    if (schemaClass != null && isNotFalse(schemaClass.getPropertiesInSchema())) {
+                        SchemaExtractorClassNodeInfo sourceClass = new SchemaExtractorClassNodeInfo(className, classificationProperty, schemaClass.getIsLiteral());
+                        sourceClass.setTripleCount(SchemaUtil.getLongValueFromString(queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT)));
+                        sourceClass.setTripleCountBase(null);
+                        property.getSourceClasses().add(sourceClass);
+                    }
+                }
+            }
+        }
+    }
+
     protected void determinePropertySource(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties) {
         log.info(request.getCorrelationId() + " - determinePropertySource [" + property.getPropertyName() + "]");
 
