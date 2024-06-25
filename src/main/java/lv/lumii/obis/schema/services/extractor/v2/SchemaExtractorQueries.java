@@ -109,7 +109,7 @@ public enum SchemaExtractorQueries {
             "SELECT (COUNT(<DISTINCT> ?x) as ?instances) WHERE {?x <property> ?y. ?x <classificationProperty> <sourceClass>. }"
     ),
     FIND_PROPERTY_SOURCE_TRIPLE_COUNT_WITH_LIMITS(
-            "SELECT (COUNT(<DISTINCT> ?x) as ?instances) WHERE { SELECT ?x WHERE {?x <property> ?y. ?x <classificationProperty> <sourceClass>. } LIMIT <limit> }"
+            "SELECT (COUNT(<DISTINCT> ?x) as ?instances) WHERE { SELECT ?x WHERE {?x <classificationProperty> <sourceClass>. LIMIT <limit> } ?x <property> ?y. }"
     ),
 
     CHECK_CLASS_AS_PROPERTY_SOURCE(

@@ -54,12 +54,6 @@ public class SchemaExtractorRequestNew {
     @ApiParam(access = "110", value = "Limit of instances to use in data type calculation (no value or 0 means all data will be used)", required = false)
     private Long sampleLimitForDataTypeCalculation;
 
-    @ApiParam(access = "120", value = "Limit of instances to use in property-class relation calculation (no value or 0 means all data will be used)", required = false)
-    private Long sampleLimitForPropertyClassRelationCalculation;
-
-    @ApiParam(access = "130", value = "Limit of instances to use in property-property relation calculation (no value or 0 means all data will be used)", required = false)
-    private Long sampleLimitForPropertyToPropertyRelationCalculation;
-
     @ApiParam(access = "140", value = "Check instance namespace URIs", defaultValue = "false", required = false)
     private Boolean checkInstanceNamespaces;
 

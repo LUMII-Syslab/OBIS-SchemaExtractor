@@ -55,8 +55,12 @@ public class SchemaExtractorRequestDto {
     private CalculatePropertyFeatureMode calculateCardinalitiesMode;
     private CalculatePropertyFeatureMode calculateDataTypes;
     private Long sampleLimitForDataTypeCalculation;
+
+    @JsonIgnore
     private Long sampleLimitForPropertyClassRelationCalculation;
+    @JsonIgnore
     private Long sampleLimitForPropertyToPropertyRelationCalculation;
+
     private Boolean checkInstanceNamespaces;
     private Integer minimalAnalyzedClassSize;
     private List<String> principalClassificationProperties;

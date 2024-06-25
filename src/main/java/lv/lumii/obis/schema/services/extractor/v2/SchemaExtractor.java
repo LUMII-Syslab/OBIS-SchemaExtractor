@@ -983,7 +983,7 @@ public class SchemaExtractor {
         Long tripleCountBase = null;
         if (request.getSampleLimitForPropertyToPropertyRelationCalculation() != null && request.getSampleLimitForPropertyToPropertyRelationCalculation() > 0) {
             tripleCountBase = request.getSampleLimitForPropertyToPropertyRelationCalculation();
-            if (property.getTripleCount() != null && property.getTripleCount() < request.getSampleLimitForPropertyClassRelationCalculation()) {
+            if (property.getTripleCount() != null && property.getTripleCount() < request.getSampleLimitForPropertyToPropertyRelationCalculation()) {
                 tripleCountBase = property.getTripleCount();
             }
         }
