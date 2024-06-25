@@ -21,6 +21,9 @@ public class SchemaProperty extends SchemaElement {
     private Long objectTripleCount;
     private Boolean closedDomain;
     private Boolean closedRange;
+    private Boolean hasOutgoingPropertiesOK;
+    private Boolean hasIncomingPropertiesOK;
+    private Boolean hasFollowersOK;
 
     @JsonProperty("DataTypes")
     private List<DataType> dataTypes;
