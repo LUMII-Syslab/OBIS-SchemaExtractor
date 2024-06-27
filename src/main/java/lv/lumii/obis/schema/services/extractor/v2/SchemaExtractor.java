@@ -75,12 +75,9 @@ public class SchemaExtractor {
     protected void buildClasses(@Nonnull SchemaExtractorRequestDto request, @Nonnull Schema schema, @Nonnull Map<String, SchemaExtractorClassNodeInfo> graphOfClasses) {
         log.info(request.getCorrelationId() + " - findAllClassesWithInstanceCount");
 
-        // validate whether the request includes the list of classes with instance counts
-        boolean requestedClassesWithInstanceCounts = request.getIncludedClasses().stream().anyMatch(c -> SchemaUtil.getLongValueFromString(c.getInstanceCount()) > 0L);
-
         // if the request does not include the list of classes or classes do not have instance count - read from the SPARQL endpoint
         List<SchemaClass> classes = new ArrayList<>();
-        if (isFalse(requestedClassesWithInstanceCounts)) {
+        if (isTrue(request.getIncludedClasses().isEmpty())) {
             for (String classificationProperty : request.getAllClassificationProperties()) {
                 SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_CLASSES_WITH_INSTANCE_COUNT.name()), FIND_CLASSES_WITH_INSTANCE_COUNT)
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, classificationProperty)
@@ -95,8 +92,29 @@ public class SchemaExtractor {
             }
             log.info(request.getCorrelationId() + String.format(" - found total %d classes", classes.size()));
         } else {
-            classes = processClasses(request.getIncludedClasses(), request);
-            log.info(request.getCorrelationId() + String.format(" - found total %d classes from the request input", classes.size()));
+            for (SchemaExtractorRequestedClassDto includedClass : request.getIncludedClasses()) {
+                if (SchemaUtil.getLongValueFromString(includedClass.getInstanceCount()) > 0L) {
+                    addClass(null, includedClass.getClassName(), includedClass.getInstanceCount(), null, classes, request);
+                } else {
+                    for (String classificationProperty : request.getAllClassificationProperties()) {
+                        SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_INSTANCE_COUNT_FOR_CLASS.name()), FIND_INSTANCE_COUNT_FOR_CLASS)
+                                .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, classificationProperty)
+                                .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_A_FULL, includedClass.getClassName(), false)
+                                .withDistinct(request.getExactCountCalculations(), request.getMaxInstanceLimitForExactCount(), null);
+                        QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
+                        if (!queryResponse.hasErrors() && !queryResponse.getResults().isEmpty() && queryResponse.getResults().get(0) != null) {
+                            String instancesCountStr = queryResponse.getResults().get(0).getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT);
+                            if (SchemaUtil.getLongValueFromString(instancesCountStr) > 0L) {
+                                addClass(null, includedClass.getClassName(), instancesCountStr, classificationProperty, classes, request);
+                                break;
+                            }
+                        } else {
+                            schema.getErrors().add(new SchemaExtractorError(ERROR, "findInstanceCountForClass", FIND_INSTANCE_COUNT_FOR_CLASS.name(), queryBuilder.getQueryString()));
+                        }
+                    }
+                }
+            }
+            log.info(request.getCorrelationId() + String.format(" - processed %d classes from the request input", classes.size()));
         }
 
         schema.setClasses(classes);
@@ -141,23 +159,14 @@ public class SchemaExtractor {
     protected List<SchemaClass> processClassesWithEndpointData(@Nonnull List<QueryResult> queryResults,
                                                                @Nonnull SchemaExtractorRequestDto request, @Nonnull String classificationProperty) {
         List<SchemaClass> classes = new ArrayList<>();
-        Set<String> includedClasses = request.getIncludedClasses().stream().map(SchemaExtractorRequestedClassDto::getClassName).collect(Collectors.toSet());
         for (QueryResult queryResult : queryResults) {
             QueryResultObject classNameObject = queryResult.getResultObject(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS);
             if (classNameObject == null) {
                 continue;
             }
             String instancesCountStr = queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT);
-            if (includedClasses.isEmpty() || includedClasses.contains(classNameObject.getValue())) {
-                addClass(classNameObject, classNameObject.getValue(), instancesCountStr, classificationProperty, classes, request);
-            }
+            addClass(classNameObject, classNameObject.getValue(), instancesCountStr, classificationProperty, classes, request);
         }
-        return classes;
-    }
-
-    protected List<SchemaClass> processClasses(@Nonnull List<SchemaExtractorRequestedClassDto> includedClasses, @Nonnull SchemaExtractorRequestDto request) {
-        List<SchemaClass> classes = new ArrayList<>();
-        includedClasses.forEach(c -> addClass(null, c.getClassName(), c.getInstanceCount(), null, classes, request));
         return classes;
     }
 
@@ -173,6 +182,7 @@ public class SchemaExtractor {
                 classEntry.setIsLiteral(classNameObject.getIsLiteral());
             } else {
                 setLocalNameAndNamespace(className, classEntry);
+                classEntry.setIsLiteral(false);
             }
             classEntry.setInstanceCount(SchemaUtil.getLongValueFromString(instancesCountStr));
             if (classEntry.getInstanceCount() < request.getMinimalAnalyzedClassSize()) {
@@ -190,7 +200,7 @@ public class SchemaExtractor {
         log.info(request.getCorrelationId() + " - findAllPropertiesWithTripleCount");
 
         // if the request does not include the list of properties - read from the SPARQL endpoint
-        Map<String, SchemaExtractorPropertyNodeInfo> properties;
+        Map<String, SchemaExtractorPropertyNodeInfo> properties = new HashMap<>();
         if (isTrue(request.getIncludedProperties().isEmpty())) {
             SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_ALL_PROPERTIES.name()), FIND_ALL_PROPERTIES)
                     .withDistinct(request.getExactCountCalculations(), request.getMaxInstanceLimitForExactCount(), null);
@@ -201,8 +211,25 @@ public class SchemaExtractor {
             properties = processPropertiesWithEndpointData(queryResponse.getResults(), request);
             log.info(request.getCorrelationId() + String.format(" - found %d properties", properties.size()));
         } else {
-            properties = processProperties(request.getIncludedProperties(), request);
-            log.info(request.getCorrelationId() + String.format(" - found %d properties from the request input", properties.size()));
+            for (SchemaExtractorRequestedPropertyDto includedProperty : request.getIncludedProperties()) {
+                if (SchemaUtil.getLongValueFromString(includedProperty.getInstanceCount()) > 0L) {
+                    addProperty(includedProperty.getPropertyName(), includedProperty.getInstanceCount(), properties, request);
+                } else {
+                    SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_INSTANCE_COUNT_FOR_PROPERTY.name()), FIND_INSTANCE_COUNT_FOR_PROPERTY)
+                            .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, includedProperty.getPropertyName())
+                            .withDistinct(request.getExactCountCalculations(), request.getMaxInstanceLimitForExactCount(), null);
+                    QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
+                    if (!queryResponse.hasErrors() && !queryResponse.getResults().isEmpty() && queryResponse.getResults().get(0) != null) {
+                        String instancesCountStr = queryResponse.getResults().get(0).getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT);
+                        if (SchemaUtil.getLongValueFromString(instancesCountStr) > 0L) {
+                            addProperty(includedProperty.getPropertyName(), instancesCountStr, properties, request);
+                        }
+                    } else {
+                        schema.getErrors().add(new SchemaExtractorError(ERROR, "findInstanceCountForProperty", FIND_INSTANCE_COUNT_FOR_PROPERTY.name(), queryBuilder.getQueryString()));
+                    }
+                }
+            }
+            log.info(request.getCorrelationId() + String.format(" - processed %d properties from the request input", properties.size()));
         }
 
         // fill properties with additional data
@@ -218,24 +245,11 @@ public class SchemaExtractor {
     @Nonnull
     protected Map<String, SchemaExtractorPropertyNodeInfo> processPropertiesWithEndpointData(@Nonnull List<QueryResult> queryResults, @Nonnull SchemaExtractorRequestDto request) {
         Map<String, SchemaExtractorPropertyNodeInfo> properties = new HashMap<>();
-        Set<String> includedProperties = request.getIncludedProperties().stream().map(SchemaExtractorRequestedPropertyDto::getPropertyName).collect(Collectors.toSet());
         for (QueryResult queryResult : queryResults) {
-
             String propertyName = queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY);
             String instancesCountStr = queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT);
-
-            // process only required properties
-            if (includedProperties.isEmpty() || includedProperties.contains(propertyName)) {
-                addProperty(propertyName, instancesCountStr, properties, request);
-            }
+            addProperty(propertyName, instancesCountStr, properties, request);
         }
-        return properties;
-    }
-
-    @Nonnull
-    protected Map<String, SchemaExtractorPropertyNodeInfo> processProperties(@Nonnull List<SchemaExtractorRequestedPropertyDto> includedProperties, @Nonnull SchemaExtractorRequestDto request) {
-        Map<String, SchemaExtractorPropertyNodeInfo> properties = new HashMap<>();
-        includedProperties.forEach(p -> addProperty(p.getPropertyName(), p.getInstanceCount(), properties, request));
         return properties;
     }
 
@@ -981,8 +995,8 @@ public class SchemaExtractor {
     }
 
     protected boolean executePropertyRelationsQueries(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request,
-                                                   @Nonnull SchemaExtractorQueries queryWithoutLimit, @Nonnull SchemaExtractorQueries queryWithLimit,
-                                                   @Nonnull List<SchemaExtractorPropertyRelatedPropertyInfo> relatedProperties, int totalCountOfProperties) {
+                                                      @Nonnull SchemaExtractorQueries queryWithoutLimit, @Nonnull SchemaExtractorQueries queryWithLimit,
+                                                      @Nonnull List<SchemaExtractorPropertyRelatedPropertyInfo> relatedProperties, int totalCountOfProperties) {
         boolean isOK = true;
         Long tripleCountBase = null;
         if (request.getSampleLimitForPropertyToPropertyRelationCalculation() != null && request.getSampleLimitForPropertyToPropertyRelationCalculation() > 0) {

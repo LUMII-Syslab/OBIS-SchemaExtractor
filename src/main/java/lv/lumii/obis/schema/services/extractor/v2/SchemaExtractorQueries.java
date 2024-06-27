@@ -9,6 +9,9 @@ public enum SchemaExtractorQueries {
     FIND_CLASSES_WITH_INSTANCE_COUNT(
             "SELECT ?class (COUNT(<DISTINCT> ?x) as ?instances) WHERE { ?x <classificationProperty> ?class. } GROUP BY ?class"
     ),
+    FIND_INSTANCE_COUNT_FOR_CLASS(
+            "SELECT (COUNT(<DISTINCT> ?x) as ?instances) WHERE { ?x <classificationProperty> <classA>. }"
+    ),
 
     FIND_INTERSECTION_CLASSES_FOR_KNOWN_CLASS(
             "SELECT DISTINCT ?classB (count(?x) as ?instances) WHERE {" + "\n\t"
@@ -25,6 +28,10 @@ public enum SchemaExtractorQueries {
 
     CHECK_SUPERCLASS(
             "SELECT ?x WHERE { ?x <classificationPropertyA> <classA>. OPTIONAL { ?x <classificationPropertyB> ?value. FILTER (?value = <classB>) } FILTER (!BOUND(?value)) } LIMIT 1 "
+    ),
+
+    FIND_INSTANCE_COUNT_FOR_PROPERTY(
+            "SELECT (COUNT(<DISTINCT> ?x) as ?instances) WHERE { ?x <property> ?y. }"
     ),
 
     FIND_PROPERTY_DATA_TYPE_WITH_TRIPLE_COUNT(
