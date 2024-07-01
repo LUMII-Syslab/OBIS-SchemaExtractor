@@ -415,8 +415,8 @@ public class SchemaExtractor {
         }
     }
 
-    protected void determinePropertySourceWithTripleCount(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties) {
-        log.info(request.getCorrelationId() + " - determinePropertySourceWithTripleCount [" + property.getPropertyName() + "]");
+    protected void determinePropertySourcesWithTripleCount(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties) {
+        log.info(request.getCorrelationId() + " - determinePropertySourcesWithTripleCount [" + property.getPropertyName() + "]");
 
         boolean hasErrors = false;
         for (String classificationProperty : request.getMainClassificationProperties()) {

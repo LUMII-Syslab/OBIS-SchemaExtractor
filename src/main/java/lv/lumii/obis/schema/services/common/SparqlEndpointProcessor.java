@@ -1,7 +1,10 @@
 package lv.lumii.obis.schema.services.common;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import lombok.extern.slf4j.Slf4j;
 import lv.lumii.obis.schema.services.common.dto.QueryResponse;
@@ -22,11 +25,15 @@ import org.springframework.stereotype.Service;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import static lv.lumii.obis.schema.services.extractor.v2.SchemaExtractorQueries.*;
+
 @Slf4j
 @Service
 public class SparqlEndpointProcessor {
 
     private static final int RETRY_COUNT = 2;
+
+    private static final List<Long> healtCheckWaitingTime = Collections.unmodifiableList(Arrays.asList(60 * 1000L, 15 * 60 * 1000L, 60 * 60 * 1000L));
 
     /**
      * Actual methods for SchemaExtractor V2
@@ -39,6 +46,35 @@ public class SparqlEndpointProcessor {
     @Nonnull
     public QueryResponse read(@Nonnull SchemaExtractorRequestDto request, @Nonnull SparqlQueryBuilder queryBuilder, boolean withRetry) {
         return read(new SparqlEndpointConfig(request.getEndpointUrl(), request.getGraphName(), request.getEnableLogging()), queryBuilder, withRetry);
+    }
+
+    public boolean isEndpointHealthy(@Nonnull SchemaExtractorRequestDto request) {
+        log.warn(String.format("It seems the endpoint [%s] is not available - running validation queries", request.getEndpointUrl()));
+        AtomicBoolean isEndpointHealthy = new AtomicBoolean(checkEndpointHealthQuery(request));
+        if (!isEndpointHealthy.get()) {
+            for (Long sleepTime : healtCheckWaitingTime) {
+                log.error(String.format("Endpoint is not healthy - [%s]. Stopping the execution and will retry after %d minutes.", request.getEndpointUrl(), sleepTime / 1000 / 60));
+                try {
+                    Thread.sleep(sleepTime);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                }
+                isEndpointHealthy.set(checkEndpointHealthQuery(request));
+                if (isEndpointHealthy.get()) break;
+            }
+        }
+        if (isEndpointHealthy.get()) {
+            log.info(String.format("The endpoint [%s] is again available - schema extractor execution is resumed", request.getEndpointUrl()));
+        } else {
+            log.error(String.format("The endpoint [%s] is not available after all validation queries. Stopping the schema extractor", request.getEndpointUrl()));
+        }
+        return isEndpointHealthy.get();
+    }
+
+    private boolean checkEndpointHealthQuery(@Nonnull SchemaExtractorRequestDto request) {
+        SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(ENDPOINT_HEALTH_CHECK.name()), ENDPOINT_HEALTH_CHECK);
+        QueryResponse response = read(new SparqlEndpointConfig(request.getEndpointUrl(), request.getGraphName(), request.getEnableLogging()), queryBuilder, false);
+        return !response.hasErrors() && !response.getResults().isEmpty();
     }
 
     @Nonnull

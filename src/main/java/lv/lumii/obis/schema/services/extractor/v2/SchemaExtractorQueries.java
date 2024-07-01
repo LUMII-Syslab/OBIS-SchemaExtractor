@@ -222,6 +222,10 @@ public enum SchemaExtractorQueries {
             "SELECT DISTINCT ?x WHERE {?x <classificationProperty> <classA>. } LIMIT 1000"
     ),
 
+    ENDPOINT_HEALTH_CHECK(
+           "SELECT * WHERE {?a ?b ?c} LIMIT 1"
+    ),
+
     ;
 
 
