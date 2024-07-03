@@ -48,7 +48,7 @@ public class SparqlEndpointProcessor {
         return read(new SparqlEndpointConfig(request.getEndpointUrl(), request.getGraphName(), request.getEnableLogging()), queryBuilder, withRetry);
     }
 
-    public boolean isEndpointHealthy(@Nonnull SchemaExtractorRequestDto request) {
+    public void checkEndpointHealthAndStopExecutionOnError(@Nonnull SparqlEndpointConfig request) {
         log.warn(String.format("It seems the endpoint [%s] is not available - running validation queries", request.getEndpointUrl()));
         AtomicBoolean isEndpointHealthy = new AtomicBoolean(checkEndpointHealthQuery(request));
         if (!isEndpointHealthy.get()) {
@@ -67,13 +67,13 @@ public class SparqlEndpointProcessor {
             log.info(String.format("The endpoint [%s] is again available - schema extractor execution is resumed", request.getEndpointUrl()));
         } else {
             log.error(String.format("The endpoint [%s] is not available after all validation queries. Stopping the schema extractor", request.getEndpointUrl()));
+            throw new RuntimeException("The endpoint is not available, stopping the schema extractor");
         }
-        return isEndpointHealthy.get();
     }
 
-    private boolean checkEndpointHealthQuery(@Nonnull SchemaExtractorRequestDto request) {
-        SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(ENDPOINT_HEALTH_CHECK.name()), ENDPOINT_HEALTH_CHECK);
-        QueryResponse response = read(new SparqlEndpointConfig(request.getEndpointUrl(), request.getGraphName(), request.getEnableLogging()), queryBuilder, false);
+    private boolean checkEndpointHealthQuery(@Nonnull SparqlEndpointConfig request) {
+        SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(ENDPOINT_HEALTH_CHECK.getSparqlQuery(), ENDPOINT_HEALTH_CHECK);
+        QueryResponse response = read(new SparqlEndpointConfig(request.getEndpointUrl(), request.getGraphName(), request.isEnableLogging()), queryBuilder, false);
         return !response.hasErrors() && !response.getResults().isEmpty();
     }
 
@@ -126,6 +126,7 @@ public class SparqlEndpointProcessor {
                 log.error(String.format("SPARQL Endpoint Exception status '%s'. This was attempt number %d for the query %s", e.getMessage(), attempt, queryName));
                 log.error("\n" + sparqlQuery);
                 if (attempt < RETRY_COUNT) {
+                    checkEndpointHealthAndStopExecutionOnError(request);
                     return requestData(request, queryName, sparqlQuery, ++attempt, withRetry);
                 }
             } else {

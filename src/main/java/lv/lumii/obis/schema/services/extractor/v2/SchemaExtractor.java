@@ -86,13 +86,18 @@ public class SchemaExtractor {
                 if (queryResponse.hasErrors() && queryResponse.getResults().isEmpty()) {
                     schema.getErrors().add(new SchemaExtractorError(ERROR, "allClasses", FIND_CLASSES_WITH_INSTANCE_COUNT.name(), queryBuilder.getQueryString()));
                 }
-                List<SchemaClass> resultClasses = processClassesWithEndpointData(queryResponse.getResults(), request, classificationProperty);
+                List<SchemaClass> resultClasses = processClassesWithEndpointData(queryResponse.getResults(), request, classificationProperty, schema);
                 classes.addAll(resultClasses);
                 log.info(request.getCorrelationId() + String.format(" - found total %d classes with classification property %s", resultClasses.size(), classificationProperty));
             }
             log.info(request.getCorrelationId() + String.format(" - found total %d classes", classes.size()));
         } else {
             for (SchemaExtractorRequestedClassDto includedClass : request.getIncludedClasses()) {
+                if (!SchemaUtil.isValidURL(includedClass.getClassName())) {
+                    log.error(request.getCorrelationId() + " - invalid class URI will not be processed - " + includedClass.getClassName());
+                    schema.getErrors().add(new SchemaExtractorError(ERROR, "invalidURI", includedClass.getClassName(), ""));
+                    continue;
+                }
                 if (SchemaUtil.getLongValueFromString(includedClass.getInstanceCount()) > 0L) {
                     addClass(null, includedClass.getClassName(), includedClass.getInstanceCount(), null, classes, request);
                 } else {
@@ -156,12 +161,17 @@ public class SchemaExtractor {
         }
     }
 
-    protected List<SchemaClass> processClassesWithEndpointData(@Nonnull List<QueryResult> queryResults,
-                                                               @Nonnull SchemaExtractorRequestDto request, @Nonnull String classificationProperty) {
+    protected List<SchemaClass> processClassesWithEndpointData(@Nonnull List<QueryResult> queryResults, @Nonnull SchemaExtractorRequestDto request,
+                                                               @Nonnull String classificationProperty, @Nonnull Schema schema) {
         List<SchemaClass> classes = new ArrayList<>();
         for (QueryResult queryResult : queryResults) {
             QueryResultObject classNameObject = queryResult.getResultObject(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS);
             if (classNameObject == null) {
+                continue;
+            }
+            if (!SchemaUtil.isValidURL(classNameObject.getValue())) {
+                log.error(request.getCorrelationId() + " - invalid class URI will not be processed - " + classNameObject.getValue());
+                schema.getErrors().add(new SchemaExtractorError(ERROR, "invalidURI", classNameObject.getValue(), ""));
                 continue;
             }
             String instancesCountStr = queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT);
@@ -208,10 +218,15 @@ public class SchemaExtractor {
             if (queryResponse.hasErrors() && queryResponse.getResults().isEmpty()) {
                 schema.getErrors().add(new SchemaExtractorError(ERROR, "allProperties", FIND_ALL_PROPERTIES.name(), queryBuilder.getQueryString()));
             }
-            properties = processPropertiesWithEndpointData(queryResponse.getResults(), request);
+            properties = processPropertiesWithEndpointData(queryResponse.getResults(), request, schema);
             log.info(request.getCorrelationId() + String.format(" - found %d properties", properties.size()));
         } else {
             for (SchemaExtractorRequestedPropertyDto includedProperty : request.getIncludedProperties()) {
+                if (!SchemaUtil.isValidURL(includedProperty.getPropertyName())) {
+                    log.error(request.getCorrelationId() + " - invalid property URI will not be processed - " + includedProperty.getPropertyName());
+                    schema.getErrors().add(new SchemaExtractorError(ERROR, "invalidURI", includedProperty.getPropertyName(), ""));
+                    continue;
+                }
                 if (SchemaUtil.getLongValueFromString(includedProperty.getInstanceCount()) > 0L) {
                     addProperty(includedProperty.getPropertyName(), includedProperty.getInstanceCount(), properties, request);
                 } else {
@@ -243,10 +258,16 @@ public class SchemaExtractor {
     }
 
     @Nonnull
-    protected Map<String, SchemaExtractorPropertyNodeInfo> processPropertiesWithEndpointData(@Nonnull List<QueryResult> queryResults, @Nonnull SchemaExtractorRequestDto request) {
+    protected Map<String, SchemaExtractorPropertyNodeInfo> processPropertiesWithEndpointData(@Nonnull List<QueryResult> queryResults, @Nonnull SchemaExtractorRequestDto request,
+                                                                                             @Nonnull Schema schema) {
         Map<String, SchemaExtractorPropertyNodeInfo> properties = new HashMap<>();
         for (QueryResult queryResult : queryResults) {
             String propertyName = queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY);
+            if (!SchemaUtil.isValidURL(propertyName)) {
+                log.error(request.getCorrelationId() + " - invalid property URI will not be processed - " + propertyName);
+                schema.getErrors().add(new SchemaExtractorError(ERROR, "invalidURI", propertyName, ""));
+                continue;
+            }
             String instancesCountStr = queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT);
             addProperty(propertyName, instancesCountStr, properties, request);
         }
@@ -276,8 +297,11 @@ public class SchemaExtractor {
             determinePropertyDataTripleCount(schema, property, request, totalCountOfProperties);
             determinePropertyType(property, request);
 
-            determinePropertySource(schema, property, request, totalCountOfProperties);
-            determinePropertySourceTripleCount(schema, property, request, totalCountOfProperties);
+            boolean foundSources = determinePropertySourcesWithTripleCount(schema, property, request, totalCountOfProperties);
+            if (!foundSources) {
+                determinePropertySource(schema, property, request, totalCountOfProperties);
+                determinePropertySourceTripleCount(schema, property, request, totalCountOfProperties);
+            }
             determinePropertySourceObjectTripleCount(schema, property, request, totalCountOfProperties);
             determinePropertySourceDataTripleCount(schema, property, request, totalCountOfProperties);
 
@@ -415,18 +439,22 @@ public class SchemaExtractor {
         }
     }
 
-    protected void determinePropertySourcesWithTripleCount(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties) {
+    protected boolean determinePropertySourcesWithTripleCount(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties) {
         log.info(request.getCorrelationId() + " - determinePropertySourcesWithTripleCount [" + property.getPropertyName() + "]");
 
-        boolean hasErrors = false;
+        boolean found = false;
         for (String classificationProperty : request.getMainClassificationProperties()) {
             SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_PROPERTY_SOURCES_WITH_TRIPLE_COUNT.name()), FIND_PROPERTY_SOURCES_WITH_TRIPLE_COUNT)
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, classificationProperty)
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName())
                     .withDistinct(request.getExactCountCalculations(), request.getMaxInstanceLimitForExactCount(), totalCountOfProperties);
             QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
-            if (isFalse(hasErrors)) {
-                hasErrors = queryResponse.hasErrors();
+            if (queryResponse.hasErrors()) {
+                schema.getErrors().add(new SchemaExtractorError(INFO, property.getPropertyName(), FIND_PROPERTY_SOURCES_WITH_TRIPLE_COUNT.name(), queryBuilder.getQueryString()));
+                continue;
+            }
+            if (!queryResponse.getResults().isEmpty()) {
+                found = true;
             }
             for (QueryResult queryResult : queryResponse.getResults()) {
                 String className = queryResult.getValueFullName(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS);
@@ -441,6 +469,7 @@ public class SchemaExtractor {
                 }
             }
         }
+        return found;
     }
 
     protected void determinePropertySource(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties) {

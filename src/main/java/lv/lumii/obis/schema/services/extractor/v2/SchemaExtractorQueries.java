@@ -107,7 +107,7 @@ public enum SchemaExtractorQueries {
     ),
 
     FIND_PROPERTY_SOURCES_WITH_TRIPLE_COUNT(
-            "SELECT ?class (COUNT(<DISTINCT> ?x as ?instances) WHERE {?x <property> ?y. ?x <classificationProperty> ?class. } GROUP BY ?class"
+            "SELECT ?class (COUNT(<DISTINCT> ?x) as ?instances) WHERE {?x <property> ?y. ?x <classificationProperty> ?class. } GROUP BY ?class"
     ),
     FIND_PROPERTY_SOURCES_WITHOUT_TRIPLE_COUNT(
             "SELECT DISTINCT ?class WHERE {?x <property> ?y. ?x <classificationProperty> ?class. }"

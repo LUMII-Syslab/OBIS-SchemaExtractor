@@ -6,6 +6,10 @@ import lv.lumii.obis.schema.model.v1.SchemaElement;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import java.net.MalformedURLException;
+import java.net.URISyntaxException;
+import java.net.URL;
+
 import static lv.lumii.obis.schema.constants.SchemaConstants.RDFS_NAMESPACE;
 import static lv.lumii.obis.schema.constants.SchemaConstants.RDF_NAMESPACE;
 import static lv.lumii.obis.schema.constants.SchemaConstants.XSD_NAMESPACE;
@@ -50,25 +54,25 @@ public class SchemaUtil {
     @Nonnull
     public static Long getLongValueFromString(@Nullable String longString) {
         Long longValue = 0L;
-        if(longString != null){
+        if (longString != null) {
             try {
                 longValue = Long.valueOf(longString);
-            } catch (NumberFormatException e){
+            } catch (NumberFormatException e) {
                 log.error("Cannot parse string to long " + longString, e);
             }
         }
         return longValue;
     }
 
-    public static void setLocalNameAndNamespace(@Nonnull String fullName, @Nonnull SchemaElement entity){
+    public static void setLocalNameAndNamespace(@Nonnull String fullName, @Nonnull SchemaElement entity) {
         String localName = fullName;
         String namespace = "";
 
         int localNameIndex = fullName.lastIndexOf("#");
-        if(localNameIndex == -1){
+        if (localNameIndex == -1) {
             localNameIndex = fullName.lastIndexOf("/");
         }
-        if(localNameIndex != -1 && localNameIndex < fullName.length()){
+        if (localNameIndex != -1 && localNameIndex < fullName.length()) {
             localName = fullName.substring(localNameIndex + 1);
             namespace = fullName.substring(0, localNameIndex + 1);
         }
@@ -90,6 +94,15 @@ public class SchemaUtil {
 
     public static String addStrPrefixToString(@Nullable String str) {
         return (str == null) ? null : "str(" + str + ")";
+    }
+
+    public static boolean isValidURL(String url) {
+        try {
+            new URL(url).toURI();
+            return true;
+        } catch (MalformedURLException | URISyntaxException e) {
+            return false;
+        }
     }
 
 }
