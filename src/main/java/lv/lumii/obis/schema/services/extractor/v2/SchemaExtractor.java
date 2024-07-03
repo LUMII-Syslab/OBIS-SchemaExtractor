@@ -93,7 +93,7 @@ public class SchemaExtractor {
             log.info(request.getCorrelationId() + String.format(" - found total %d classes", classes.size()));
         } else {
             for (SchemaExtractorRequestedClassDto includedClass : request.getIncludedClasses()) {
-                if (!SchemaUtil.isValidURL(includedClass.getClassName())) {
+                if (!SchemaUtil.isValidURI(includedClass.getClassName())) {
                     log.error(request.getCorrelationId() + " - invalid class URI will not be processed - " + includedClass.getClassName());
                     schema.getErrors().add(new SchemaExtractorError(ERROR, "invalidURI", includedClass.getClassName(), ""));
                     continue;
@@ -169,7 +169,7 @@ public class SchemaExtractor {
             if (classNameObject == null) {
                 continue;
             }
-            if (!SchemaUtil.isValidURL(classNameObject.getValue())) {
+            if (!SchemaUtil.isValidURI(classNameObject.getValue())) {
                 log.error(request.getCorrelationId() + " - invalid class URI will not be processed - " + classNameObject.getValue());
                 schema.getErrors().add(new SchemaExtractorError(ERROR, "invalidURI", classNameObject.getValue(), ""));
                 continue;
@@ -222,7 +222,7 @@ public class SchemaExtractor {
             log.info(request.getCorrelationId() + String.format(" - found %d properties", properties.size()));
         } else {
             for (SchemaExtractorRequestedPropertyDto includedProperty : request.getIncludedProperties()) {
-                if (!SchemaUtil.isValidURL(includedProperty.getPropertyName())) {
+                if (!SchemaUtil.isValidURI(includedProperty.getPropertyName())) {
                     log.error(request.getCorrelationId() + " - invalid property URI will not be processed - " + includedProperty.getPropertyName());
                     schema.getErrors().add(new SchemaExtractorError(ERROR, "invalidURI", includedProperty.getPropertyName(), ""));
                     continue;
@@ -263,7 +263,7 @@ public class SchemaExtractor {
         Map<String, SchemaExtractorPropertyNodeInfo> properties = new HashMap<>();
         for (QueryResult queryResult : queryResults) {
             String propertyName = queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY);
-            if (!SchemaUtil.isValidURL(propertyName)) {
+            if (!SchemaUtil.isValidURI(propertyName)) {
                 log.error(request.getCorrelationId() + " - invalid property URI will not be processed - " + propertyName);
                 schema.getErrors().add(new SchemaExtractorError(ERROR, "invalidURI", propertyName, ""));
                 continue;

@@ -96,7 +96,7 @@ public class SchemaUtil {
         return (str == null) ? null : "str(" + str + ")";
     }
 
-    public static boolean isValidURL(String url) {
+    public static boolean isValidURI(String url) {
         try {
             new URL(url).toURI();
             return true;
