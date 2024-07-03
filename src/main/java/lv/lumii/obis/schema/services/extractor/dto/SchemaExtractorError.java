@@ -7,7 +7,7 @@ import lombok.Setter;
 @Getter
 public class SchemaExtractorError {
 
-    public enum ErrorLevel {ERROR, WARNING, INFO}
+    public enum ErrorLevel {ERROR, WARNING, INFO, OK}
 
     private ErrorLevel errorLevel;
     private String entity;
