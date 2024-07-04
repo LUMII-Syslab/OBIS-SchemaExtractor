@@ -148,25 +148,31 @@ public enum SchemaExtractorQueries {
     ),
 
     COUNT_PROPERTY_URL_VALUES(
-            "SELECT (COUNT(<DISTINCT> ?y) as ?instances) WHERE {?x <property> ?y. FILTER(!isLiteral(?y)) }"
+            "SELECT (COUNT(<DISTINCT> ?x) as ?instances) WHERE {?x <property> ?y. FILTER(!isLiteral(?y)) }"
     ),
     CHECK_PROPERTY_URL_VALUES(
             "SELECT ?y where {?x <property> ?y. FILTER(!isLiteral(?y)) } LIMIT 1"
     ),
+    FIND_PROPERTY_URL_VALUES_FOR_SOURCES(
+            "SELECT ?class (COUNT(<DISTINCT> ?x) as ?instances) WHERE {?x <property> ?y. ?x <classificationProperty> ?class. FILTER(!isLiteral(?y))} GROUP BY ?class"
+    ),
     COUNT_PROPERTY_URL_VALUES_FOR_SOURCE(
-            "SELECT (COUNT(<DISTINCT> ?y) as ?instances) WHERE {?x <classificationProperty> <sourceClass>. ?x <property> ?y. FILTER(!isLiteral(?y)) }"
+            "SELECT (COUNT(<DISTINCT> ?x) as ?instances) WHERE {?x <classificationProperty> <sourceClass>. ?x <property> ?y. FILTER(!isLiteral(?y)) }"
     ),
     CHECK_PROPERTY_URL_VALUES_FOR_SOURCE(
             "SELECT ?y WHERE {?x <classificationProperty> <sourceClass>. ?x <property> ?y. FILTER(!isLiteral(?y)) } LIMIT 1"
     ),
     COUNT_PROPERTY_LITERAL_VALUES(
-            "SELECT (COUNT(<DISTINCT> ?y) as ?instances) WHERE {?x <property> ?y. FILTER(isLiteral(?y)) }"
+            "SELECT (COUNT(<DISTINCT> ?x) as ?instances) WHERE {?x <property> ?y. FILTER(isLiteral(?y)) }"
     ),
     CHECK_PROPERTY_LITERAL_VALUES(
             "SELECT ?y WHERE {?x <property> ?y. FILTER(isLiteral(?y))} LIMIT 1"
     ),
+    FIND_PROPERTY_LITERAL_VALUES_FOR_SOURCES(
+            "SELECT ?class (COUNT(<DISTINCT> ?x) as ?instances) WHERE {?x <property> ?y. ?x <classificationProperty> ?class. FILTER(isLiteral(?y))} GROUP BY ?class"
+    ),
     COUNT_PROPERTY_LITERAL_VALUES_FOR_SOURCE(
-            "SELECT (COUNT(<DISTINCT> ?y) as ?instances) WHERE {?x <classificationProperty> <sourceClass>. ?x <property> ?y. FILTER(isLiteral(?y)) }"
+            "SELECT (COUNT(<DISTINCT> ?x) as ?instances) WHERE {?x <classificationProperty> <sourceClass>. ?x <property> ?y. FILTER(isLiteral(?y)) }"
     ),
     CHECK_PROPERTY_LITERAL_VALUES_FOR_SOURCE(
             "SELECT ?y WHERE {?x <classificationProperty> <sourceClass>. ?x <property> ?y. FILTER(isLiteral(?y)) } LIMIT 1"

@@ -566,8 +566,42 @@ public class SchemaExtractor {
         return true;
     }
 
+    protected boolean determineObjectTripleCountForAllPropertySources(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties) {
+        boolean found = false;
+        for (String classificationProperty : request.getMainClassificationProperties()) {
+            SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_PROPERTY_URL_VALUES_FOR_SOURCES.name()), FIND_PROPERTY_URL_VALUES_FOR_SOURCES)
+                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, classificationProperty)
+                    .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName())
+                    .withDistinct(request.getExactCountCalculations(), request.getMaxInstanceLimitForExactCount(), totalCountOfProperties);
+            QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
+            if (queryResponse.hasErrors()) {
+                schema.getErrors().add(new SchemaExtractorError(INFO, property.getPropertyName(), FIND_PROPERTY_URL_VALUES_FOR_SOURCES.name(), queryBuilder.getQueryString()));
+                continue;
+            }
+            if (!queryResponse.getResults().isEmpty()) {
+                found = true;
+            }
+            for (QueryResult queryResult : queryResponse.getResults()) {
+                String className = queryResult.getValueFullName(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS);
+                if (StringUtils.isNotEmpty(className) && isNotExcludedResource(className, request.getExcludedNamespaces())) {
+                    SchemaExtractorClassNodeInfo sourceClass = property.getSourceClasses().stream()
+                            .filter(c -> className.equalsIgnoreCase(c.getClassName())).findFirst().orElse(null);
+                    if (sourceClass != null) {
+                        Long objectTripleCountForSource = SchemaUtil.getLongValueFromString(queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
+                        sourceClass.setObjectTripleCount(objectTripleCountForSource);
+                    }
+                }
+            }
+        }
+        return found;
+    }
+
     protected void determinePropertySourceObjectTripleCount(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties) {
         log.info(request.getCorrelationId() + " - determineObjectTripleCountForAllPropertySources [" + property.getPropertyName() + "]");
+
+        // get count of URL values for the specific property and for all source classes
+        boolean found = determineObjectTripleCountForAllPropertySources(schema, property, request, totalCountOfProperties);
+        if (found) return;
 
         // get count of URL values for the specific property and specific source
         property.getSourceClasses().forEach(sourceClass -> {
@@ -600,8 +634,42 @@ public class SchemaExtractor {
         });
     }
 
+    protected boolean determineDataTripleCountForAllPropertySources(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties) {
+        boolean found = false;
+        for (String classificationProperty : request.getMainClassificationProperties()) {
+            SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_PROPERTY_LITERAL_VALUES_FOR_SOURCES.name()), FIND_PROPERTY_LITERAL_VALUES_FOR_SOURCES)
+                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, classificationProperty)
+                    .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName())
+                    .withDistinct(request.getExactCountCalculations(), request.getMaxInstanceLimitForExactCount(), totalCountOfProperties);
+            QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
+            if (queryResponse.hasErrors()) {
+                schema.getErrors().add(new SchemaExtractorError(INFO, property.getPropertyName(), FIND_PROPERTY_LITERAL_VALUES_FOR_SOURCES.name(), queryBuilder.getQueryString()));
+                continue;
+            }
+            if (!queryResponse.getResults().isEmpty()) {
+                found = true;
+            }
+            for (QueryResult queryResult : queryResponse.getResults()) {
+                String className = queryResult.getValueFullName(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS);
+                if (StringUtils.isNotEmpty(className) && isNotExcludedResource(className, request.getExcludedNamespaces())) {
+                    SchemaExtractorClassNodeInfo sourceClass = property.getSourceClasses().stream()
+                            .filter(c -> className.equalsIgnoreCase(c.getClassName())).findFirst().orElse(null);
+                    if (sourceClass != null) {
+                        Long dataTripleCountForSource = SchemaUtil.getLongValueFromString(queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
+                        sourceClass.setDataTripleCount(dataTripleCountForSource);
+                    }
+                }
+            }
+        }
+        return found;
+    }
+
     protected void determinePropertySourceDataTripleCount(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties) {
         log.info(request.getCorrelationId() + " - determineDataTripleCountForAllPropertySources [" + property.getPropertyName() + "]");
+
+        // get count of literal values for the specific property and for all source classes
+        boolean found = determineDataTripleCountForAllPropertySources(schema, property, request, totalCountOfProperties);
+        if (found) return;
 
         // get count of literal values for the specific property and specific source
         property.getSourceClasses().forEach(sourceClass -> {
