@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import lombok.extern.slf4j.Slf4j;
+import lv.lumii.obis.schema.services.SchemaUtil;
 import lv.lumii.obis.schema.services.common.dto.QueryResponse;
 import lv.lumii.obis.schema.services.common.dto.QueryResult;
 import lv.lumii.obis.schema.services.common.dto.QueryResultObject;
@@ -49,13 +50,13 @@ public class SparqlEndpointProcessor {
     }
 
     public void checkEndpointHealthAndStopExecutionOnError(@Nonnull SparqlEndpointConfig request) {
-        log.warn(String.format("SPARQL queries encountered errors, running validation queries to check the endpoint availability - [ %s %s ]",
-                request.getEndpointUrl(), (request.getGraphName().isEmpty() ? "" : request.getGraphName())));
+        log.warn(String.format("SPARQL queries encountered errors, running validation queries to check the endpoint availability - [ %s ]",
+                SchemaUtil.getEndpointLinkText(request.getEndpointUrl(), request.getGraphName())));
         AtomicBoolean isEndpointHealthy = new AtomicBoolean(checkEndpointHealthQuery(request));
         if (!isEndpointHealthy.get()) {
             for (Long sleepTime : healtCheckWaitingTime) {
-                log.error(String.format("The endpoint is not healthy - [ %s %s ]. Stopping the execution and will retry after %d minutes.",
-                        request.getEndpointUrl(), (request.getGraphName().isEmpty() ? "" : request.getGraphName()), sleepTime / 1000 / 60));
+                log.error(String.format("The endpoint is not healthy - [ %s ]. Stopping the execution and will retry after %d minutes.",
+                        SchemaUtil.getEndpointLinkText(request.getEndpointUrl(), request.getGraphName()), sleepTime / 1000 / 60));
                 try {
                     Thread.sleep(sleepTime);
                 } catch (InterruptedException ie) {
@@ -66,11 +67,11 @@ public class SparqlEndpointProcessor {
             }
         }
         if (isEndpointHealthy.get()) {
-            log.info(String.format("The endpoint [ %s %s ] is available and in working state - schema extractor execution is resumed",
-                    request.getEndpointUrl(), (request.getGraphName().isEmpty() ? "" : request.getGraphName())));
+            log.info(String.format("The endpoint [ %s ] is available and in working state - schema extractor execution is resumed",
+                    SchemaUtil.getEndpointLinkText(request.getEndpointUrl(), request.getGraphName())));
         } else {
-            log.error(String.format("The endpoint [ %s %s ] is not available after all validation queries. Stopping the schema extractor",
-                    request.getEndpointUrl(), (request.getGraphName().isEmpty() ? "" : request.getGraphName())));
+            log.error(String.format("The endpoint [ %s ] is not available after all validation queries. Stopping the schema extractor",
+                    SchemaUtil.getEndpointLinkText(request.getEndpointUrl(), request.getGraphName())));
             throw new RuntimeException("The endpoint is not available, stopping the schema extractor");
         }
     }

@@ -2,6 +2,7 @@ package lv.lumii.obis.schema.services;
 
 import lombok.extern.slf4j.Slf4j;
 import lv.lumii.obis.schema.model.v1.SchemaElement;
+import org.apache.commons.lang3.StringUtils;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -103,6 +104,17 @@ public class SchemaUtil {
         } catch (MalformedURLException | URISyntaxException e) {
             return false;
         }
+    }
+
+    @Nonnull
+    public static String getEndpointLinkText(@Nullable String endpoint, @Nullable String graphName) {
+        if (endpoint == null) return StringUtils.EMPTY;
+        StringBuilder build = new StringBuilder(StringUtils.EMPTY);
+        build.append(endpoint);
+        if (graphName != null && !graphName.isEmpty()) {
+            build.append(" - ").append(graphName);
+        }
+        return build.toString();
     }
 
 }
