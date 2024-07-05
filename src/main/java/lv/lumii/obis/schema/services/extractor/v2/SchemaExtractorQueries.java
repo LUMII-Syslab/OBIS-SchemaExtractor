@@ -124,7 +124,7 @@ public enum SchemaExtractorQueries {
     ),
 
     FIND_PROPERTY_TARGETS_WITH_TRIPLE_COUNT(
-            "SELECT ?class (COUNT(<DISTINCT> ?x) as ?instances) WHERE {?y <property> ?x. ?x <classificationProperty> ?class. } GROUP BY ?class"
+            "SELECT ?class (COUNT(<DISTINCT> ?x) as ?instances) WHERE {?x <property> ?y. ?y <classificationProperty> ?class. } GROUP BY ?class"
     ),
     FIND_PROPERTY_TARGETS_WITHOUT_TRIPLE_COUNT(
             "SELECT DISTINCT ?class WHERE {?x <property> ?y. ?y <classificationProperty> ?class. } "
@@ -133,7 +133,7 @@ public enum SchemaExtractorQueries {
             "SELECT (COUNT(<DISTINCT> ?x) as ?instances) WHERE {?x <property> ?y. ?y <classificationProperty> <targetClass>. }"
     ),
     FIND_PROPERTY_TARGET_TRIPLE_COUNT_WITH_LIMITS(
-            "SELECT (COUNT(<DISTINCT> ?x) as ?instances) WHERE { SELECT ?x WHERE {?x <property> ?y. ?y <classificationProperty> <targetClass>. } LIMIT <limit> }"
+            "SELECT (COUNT(<DISTINCT> ?x) as ?instances) WHERE { { SELECT ?y WHERE {?y <classificationProperty> <targetClass>. } LIMIT <limit> } ?x <property> ?y. }"
     ),
 
     CHECK_CLASS_AS_PROPERTY_TARGET(
