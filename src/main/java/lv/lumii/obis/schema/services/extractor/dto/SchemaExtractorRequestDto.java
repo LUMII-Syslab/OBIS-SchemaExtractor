@@ -40,6 +40,8 @@ public class SchemaExtractorRequestDto {
 
     public enum DistinctQueryMode {yes, no, auto}
 
+    public enum ImportantIndexesMode {detailed, base, no}
+
     private String correlationId;
 
     private String endpointUrl;
@@ -50,7 +52,7 @@ public class SchemaExtractorRequestDto {
     private Boolean calculatePropertyPropertyRelations;
     private Boolean calculateSourceAndTargetPairs;
     private Boolean calculateDomainsAndRanges;
-    private Boolean calculateImportanceIndexes;
+    private ImportantIndexesMode calculateImportanceIndexes;
     private Boolean calculateClosedClassSets;
     private CalculatePropertyFeatureMode calculateCardinalitiesMode;
     private CalculatePropertyFeatureMode calculateDataTypes;
@@ -176,9 +178,9 @@ public class SchemaExtractorRequestDto {
     }
 
     @Nonnull
-    public Boolean getCalculateImportanceIndexes() {
+    public ImportantIndexesMode getCalculateImportanceIndexes() {
         if (calculateImportanceIndexes == null) {
-            return Boolean.TRUE;
+            return ImportantIndexesMode.base;
         }
         return calculateImportanceIndexes;
     }

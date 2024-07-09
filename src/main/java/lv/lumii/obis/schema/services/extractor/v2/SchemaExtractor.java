@@ -345,7 +345,7 @@ public class SchemaExtractor {
                 determineDomainsAndRanges(schema, property, schema.getClasses(), request, totalCountOfProperties);
             }
 
-            if (isTrue(request.getCalculateImportanceIndexes())) {
+            if (isFalse(SchemaExtractorRequestDto.ImportantIndexesMode.no.equals(request.getCalculateImportanceIndexes()))) {
                 determineImportanceIndexes(schema, property, schema.getClasses(), graphOfClasses, request, totalCountOfProperties);
             }
 
@@ -1575,11 +1575,7 @@ public class SchemaExtractor {
             if (importantClasses.isEmpty()) {
                 importantClasses.add(currentClass.getClassName());
                 currentClass.setImportanceIndex(index++);
-                if (isTrue(request.getCalculateImportanceIndexes())) {
-                    continue;
-                } else {
-                    break;
-                }
+                continue;
             }
 
             // check whether processed classes include the current class any subclass or superclass
@@ -1600,12 +1596,17 @@ public class SchemaExtractor {
             // check whether there is partial intersaction and if yes - check case by case
             if (graphOfClasses.get(currentClass.getClassName()) != null) {
                 List<SchemaExtractorIntersectionClassDto> currentClassNeighbors = graphOfClasses.get(currentClass.getClassName()).getNeighbors();
-                List<String> includedClassesToCheckWith = currentClassNeighbors.stream()
+                List<String> includedClassesToCheckWith = sortNeighborsByTripleCountDsc(currentClassNeighbors, graphOfClasses).stream()
                         .map(SchemaExtractorIntersectionClassDto::getClassName).filter(importantClasses::contains).collect(Collectors.toList());
 
                 if (includedClassesToCheckWith.isEmpty()) {
                     currentClass.setImportanceIndex(index++);
                     importantClasses.add(currentClass.getClassName());
+                    continue;
+                }
+
+                // if the selected important indexes mode is Base then do not check detailed combinations
+                if (SchemaExtractorRequestDto.ImportantIndexesMode.base.equals(request.getCalculateImportanceIndexes())) {
                     continue;
                 }
 
@@ -1647,19 +1648,36 @@ public class SchemaExtractor {
     protected boolean checkNewPrincipalSourceClass(@Nonnull Schema schema, @Nonnull String propertyName, @Nonnull SchemaExtractorPropertyLinkedClassInfo newSourceClass, @Nonnull List<String> existingClasses,
                                                    @Nonnull List<SchemaClass> classes, @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties) {
         boolean isPrincipalSource = false;
+
+        // check the first 5 classes with the highest triple count
+        List<String> classesForCustomFilter = existingClasses.size() <= 5 ? Collections.unmodifiableList(existingClasses) : Collections.unmodifiableList(existingClasses.subList(0, 5));
         for (String classificationProperty : request.getMainClassificationProperties()) {
             SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_PRINCIPAL_SOURCE.name()), CHECK_PRINCIPAL_SOURCE)
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL, newSourceClass.getClassName(), newSourceClass.getIsLiteral())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_SOURCE, newSourceClass.getClassificationProperty())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_OTHER, classificationProperty)
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, propertyName)
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CUSTOM_FILTER, buildCustomFilterToCheckPrincipalClass(existingClasses, classes))
+                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CUSTOM_FILTER, buildCustomFilterToCheckPrincipalClass(classesForCustomFilter, classes))
                     .withDistinct(request.getExactCountCalculations(), request.getMaxInstanceLimitForExactCount(), totalCountOfProperties);
             QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
+
+            // if the query fails, check additionally only the first biggest class from the list
             if (queryResponse.hasErrors()) {
                 schema.getErrors().add(new SchemaExtractorError(WARNING, propertyName, CHECK_PRINCIPAL_SOURCE.name(), queryBuilder.getQueryString()));
+
+                queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_PRINCIPAL_SOURCE.name()), CHECK_PRINCIPAL_SOURCE)
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL, newSourceClass.getClassName(), newSourceClass.getIsLiteral())
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_SOURCE, newSourceClass.getClassificationProperty())
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_OTHER, classificationProperty)
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, propertyName)
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CUSTOM_FILTER, buildCustomFilterToCheckPrincipalClass(Collections.unmodifiableList(existingClasses.subList(0, 1)), classes))
+                        .withDistinct(request.getExactCountCalculations(), request.getMaxInstanceLimitForExactCount(), totalCountOfProperties);
+                queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
+                if (queryResponse.hasErrors()) {
+                    schema.getErrors().add(new SchemaExtractorError(WARNING, propertyName, CHECK_PRINCIPAL_SOURCE.name(), queryBuilder.getQueryString()));
+                }
             }
-            isPrincipalSource = !queryResponse.hasErrors() && !queryResponse.getResults().isEmpty();
+            isPrincipalSource = queryResponse.hasErrors() || !queryResponse.getResults().isEmpty();
             if (isTrue(isPrincipalSource)) break;
         }
         return isPrincipalSource;
@@ -1668,19 +1686,35 @@ public class SchemaExtractor {
     protected boolean checkNewPrincipalTargetClass(@Nonnull Schema schema, @Nonnull String propertyName, @Nonnull SchemaExtractorPropertyLinkedClassInfo newTargetClass, @Nonnull List<String> existingClasses,
                                                    @Nonnull List<SchemaClass> classes, @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties) {
         boolean isPrincipalTarget = false;
+        // check the first 5 classes with the highest triple count
+        List<String> classesForCustomFilter = existingClasses.size() <= 5 ? Collections.unmodifiableList(existingClasses) : Collections.unmodifiableList(existingClasses.subList(0, 5));
         for (String classificationProperty : request.getMainClassificationProperties()) {
             SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_PRINCIPAL_TARGET.name()), CHECK_PRINCIPAL_TARGET)
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_TARGET_FULL, newTargetClass.getClassName(), newTargetClass.getIsLiteral())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_TARGET, newTargetClass.getClassificationProperty())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_OTHER, classificationProperty)
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, propertyName)
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CUSTOM_FILTER, buildCustomFilterToCheckPrincipalClass(existingClasses, classes))
+                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CUSTOM_FILTER, buildCustomFilterToCheckPrincipalClass(classesForCustomFilter, classes))
                     .withDistinct(request.getExactCountCalculations(), request.getMaxInstanceLimitForExactCount(), totalCountOfProperties);
             QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
+
+            // if the query fails, check additionally only the first biggest class from the list
             if (queryResponse.hasErrors()) {
                 schema.getErrors().add(new SchemaExtractorError(WARNING, propertyName, CHECK_PRINCIPAL_TARGET.name(), queryBuilder.getQueryString()));
+
+                queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_PRINCIPAL_TARGET.name()), CHECK_PRINCIPAL_TARGET)
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_TARGET_FULL, newTargetClass.getClassName(), newTargetClass.getIsLiteral())
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_TARGET, newTargetClass.getClassificationProperty())
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_OTHER, classificationProperty)
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, propertyName)
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CUSTOM_FILTER, buildCustomFilterToCheckPrincipalClass(Collections.unmodifiableList(existingClasses.subList(0, 1)), classes))
+                        .withDistinct(request.getExactCountCalculations(), request.getMaxInstanceLimitForExactCount(), totalCountOfProperties);
+                queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
+                if (queryResponse.hasErrors()) {
+                    schema.getErrors().add(new SchemaExtractorError(WARNING, propertyName, CHECK_PRINCIPAL_TARGET.name(), queryBuilder.getQueryString()));
+                }
             }
-            isPrincipalTarget = !queryResponse.hasErrors() && !queryResponse.getResults().isEmpty();
+            isPrincipalTarget = queryResponse.hasErrors() || !queryResponse.getResults().isEmpty();
             if (isTrue(isPrincipalTarget)) break;
         }
         return isPrincipalTarget;
@@ -1690,6 +1724,8 @@ public class SchemaExtractor {
                                                             @Nonnull List<String> existingClasses, @Nonnull List<SchemaClass> classes, @Nonnull SchemaExtractorRequestDto request,
                                                             int totalCountOfProperties) {
         boolean isPrincipalTarget = false;
+        // check the first 5 classes with the highest triple count
+        List<String> classesForCustomFilter = existingClasses.size() <= 5 ? Collections.unmodifiableList(existingClasses) : Collections.unmodifiableList(existingClasses.subList(0, 5));
         for (String classificationProperty : request.getMainClassificationProperties()) {
             SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_PRINCIPAL_TARGET_FOR_SOURCE.name()), CHECK_PRINCIPAL_TARGET_FOR_SOURCE)
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL, sourceClass.getClassName(), sourceClass.getIsLiteral())
@@ -1698,13 +1734,30 @@ public class SchemaExtractor {
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_TARGET, newTargetClass.getClassificationProperty())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_OTHER, classificationProperty)
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, propertyName)
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CUSTOM_FILTER, buildCustomFilterToCheckPrincipalClass(existingClasses, classes))
+                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CUSTOM_FILTER, buildCustomFilterToCheckPrincipalClass(classesForCustomFilter, classes))
                     .withDistinct(request.getExactCountCalculations(), request.getMaxInstanceLimitForExactCount(), totalCountOfProperties);
             QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
+
+            // if the query fails, check additionally only the first biggest class from the list
             if (queryResponse.hasErrors()) {
                 schema.getErrors().add(new SchemaExtractorError(WARNING, propertyName, CHECK_PRINCIPAL_TARGET_FOR_SOURCE.name(), queryBuilder.getQueryString()));
+
+                queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_PRINCIPAL_TARGET_FOR_SOURCE.name()), CHECK_PRINCIPAL_TARGET_FOR_SOURCE)
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL, sourceClass.getClassName(), sourceClass.getIsLiteral())
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_TARGET_FULL, newTargetClass.getClassName(), newTargetClass.getIsLiteral())
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_SOURCE, sourceClass.getClassificationProperty())
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_TARGET, newTargetClass.getClassificationProperty())
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_OTHER, classificationProperty)
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, propertyName)
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CUSTOM_FILTER, buildCustomFilterToCheckPrincipalClass(Collections.unmodifiableList(existingClasses.subList(0, 1)), classes))
+                        .withDistinct(request.getExactCountCalculations(), request.getMaxInstanceLimitForExactCount(), totalCountOfProperties);
+                queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
+
+                if (queryResponse.hasErrors()) {
+                    schema.getErrors().add(new SchemaExtractorError(WARNING, propertyName, CHECK_PRINCIPAL_TARGET_FOR_SOURCE.name(), queryBuilder.getQueryString()));
+                }
             }
-            isPrincipalTarget = !queryResponse.hasErrors() && !queryResponse.getResults().isEmpty();
+            isPrincipalTarget = queryResponse.hasErrors() || !queryResponse.getResults().isEmpty();
             if (isTrue(isPrincipalTarget)) break;
         }
         return isPrincipalTarget;
@@ -1714,6 +1767,8 @@ public class SchemaExtractor {
                                                             @Nonnull List<String> existingClasses, @Nonnull List<SchemaClass> classes, @Nonnull SchemaExtractorRequestDto request,
                                                             int totalCountOfProperties) {
         boolean isPrincipalSource = false;
+        // check the first 5 classes with the highest triple count
+        List<String> classesForCustomFilter = existingClasses.size() <= 5 ? Collections.unmodifiableList(existingClasses) : Collections.unmodifiableList(existingClasses.subList(0, 5));
         for (String classificationProperty : request.getMainClassificationProperties()) {
             SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_PRINCIPAL_SOURCE_FOR_TARGET.name()), CHECK_PRINCIPAL_SOURCE_FOR_TARGET)
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL, newSourceClass.getClassName(), newSourceClass.getIsLiteral())
@@ -1722,13 +1777,29 @@ public class SchemaExtractor {
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_TARGET, targetClass.getClassificationProperty())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_OTHER, classificationProperty)
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, propertyName)
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CUSTOM_FILTER, buildCustomFilterToCheckPrincipalClass(existingClasses, classes))
+                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CUSTOM_FILTER, buildCustomFilterToCheckPrincipalClass(classesForCustomFilter, classes))
                     .withDistinct(request.getExactCountCalculations(), request.getMaxInstanceLimitForExactCount(), totalCountOfProperties);
             QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
+
+            // if the query fails, check additionally only the first biggest class from the list
             if (queryResponse.hasErrors()) {
                 schema.getErrors().add(new SchemaExtractorError(WARNING, propertyName, CHECK_PRINCIPAL_SOURCE_FOR_TARGET.name(), queryBuilder.getQueryString()));
+
+                queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_PRINCIPAL_SOURCE_FOR_TARGET.name()), CHECK_PRINCIPAL_SOURCE_FOR_TARGET)
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL, newSourceClass.getClassName(), newSourceClass.getIsLiteral())
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_TARGET_FULL, targetClass.getClassName(), targetClass.getIsLiteral())
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_SOURCE, newSourceClass.getClassificationProperty())
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_TARGET, targetClass.getClassificationProperty())
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_OTHER, classificationProperty)
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, propertyName)
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CUSTOM_FILTER, buildCustomFilterToCheckPrincipalClass(Collections.unmodifiableList(existingClasses.subList(0, 1)), classes))
+                        .withDistinct(request.getExactCountCalculations(), request.getMaxInstanceLimitForExactCount(), totalCountOfProperties);
+                queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
+                if (queryResponse.hasErrors()) {
+                    schema.getErrors().add(new SchemaExtractorError(WARNING, propertyName, CHECK_PRINCIPAL_SOURCE_FOR_TARGET.name(), queryBuilder.getQueryString()));
+                }
             }
-            isPrincipalSource = !queryResponse.hasErrors() && !queryResponse.getResults().isEmpty();
+            isPrincipalSource = queryResponse.hasErrors() || !queryResponse.getResults().isEmpty();
             if (isTrue(isPrincipalSource)) break;
         }
         return isPrincipalSource;
@@ -2056,6 +2127,27 @@ public class SchemaExtractor {
                     Long neighborInstances1 = class1.getTripleCount();
                     Long neighborInstances2 = class2.getTripleCount();
                     int compareResult = neighborInstances1.compareTo(neighborInstances2);
+                    if (compareResult == 0) {
+                        return nullSafeStringComparator.compare(class1.getClassName(), class2.getClassName());
+                    } else {
+                        return compareResult;
+                    }
+                })
+                .collect(Collectors.toList());
+    }
+
+    @Nonnull
+    protected List<SchemaExtractorIntersectionClassDto> sortNeighborsByTripleCountDsc(List<SchemaExtractorIntersectionClassDto> neighbors, @Nonnull Map<String, SchemaExtractorClassNodeInfo> classesGraph) {
+        // sort class neighbors by triple count (descending)
+        return neighbors.stream()
+                .sorted((o1, o2) -> {
+                    SchemaExtractorClassNodeInfo class1 = classesGraph.get(o1.getClassName());
+                    if (class1 == null || class1.getTripleCount() == null) return -1;
+                    SchemaExtractorClassNodeInfo class2 = classesGraph.get(o2.getClassName());
+                    if (class2 == null || class2.getTripleCount() == null) return 1;
+                    Long neighborInstances1 = class1.getTripleCount();
+                    Long neighborInstances2 = class2.getTripleCount();
+                    int compareResult = neighborInstances2.compareTo(neighborInstances1);
                     if (compareResult == 0) {
                         return nullSafeStringComparator.compare(class1.getClassName(), class2.getClassName());
                     } else {

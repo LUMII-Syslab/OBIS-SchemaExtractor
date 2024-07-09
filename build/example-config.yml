@@ -5,7 +5,7 @@ calculateMultipleInheritanceSuperclasses: true
 calculatePropertyPropertyRelations: false
 calculateSourceAndTargetPairs: true
 calculateDomainsAndRanges: true
-calculateImportanceIndexes: false
+calculateImportanceIndexes: "base"
 calculateClosedClassSets: false
 calculateDataTypes: "propertyLevelAndClassContext"
 calculateCardinalitiesMode: "propertyLevelAndClassContext"

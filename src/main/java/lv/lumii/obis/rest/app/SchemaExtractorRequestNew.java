@@ -18,6 +18,8 @@ public class SchemaExtractorRequestNew {
 
     public enum DistinctQueryMode {yes, no, auto}
 
+    public enum ImportantIndexesMode {detailed, base, no}
+
     @ApiParam(access = "10", value = "SPARQL Endpoint URL, for example, http://localhost:8890/sparql", required = true)
     private String endpointUrl;
 
@@ -39,8 +41,8 @@ public class SchemaExtractorRequestNew {
     @ApiParam(access = "60", value = "Calculate domains and ranges", defaultValue = "true", required = true)
     private Boolean calculateDomainsAndRanges;
 
-    @ApiParam(access = "70", value = "Calculate importance indexes", defaultValue = "true", required = true)
-    private Boolean calculateImportanceIndexes;
+    @ApiParam(access = "70", value = "Calculate importance indexes", defaultValue = "base", required = true)
+    private ImportantIndexesMode calculateImportanceIndexes;
 
     @ApiParam(access = "80", value = "Calculate closed class sets", defaultValue = "false", required = true)
     private Boolean calculateClosedClassSets;
@@ -126,9 +128,9 @@ public class SchemaExtractorRequestNew {
         return calculateClosedClassSets;
     }
 
-    public Boolean getCalculateImportanceIndexes() {
+    public ImportantIndexesMode getCalculateImportanceIndexes() {
         if (calculateImportanceIndexes == null) {
-            calculateImportanceIndexes = Boolean.FALSE;
+            calculateImportanceIndexes = ImportantIndexesMode.base;
         }
         return calculateImportanceIndexes;
     }
