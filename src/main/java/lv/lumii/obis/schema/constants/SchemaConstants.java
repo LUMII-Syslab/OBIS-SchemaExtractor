@@ -84,6 +84,8 @@ public class SchemaConstants {
     public static final String SPARQL_QUERY_BINDING_NAME_CLASS_TARGET = "targetClass";
     public static final String SPARQL_QUERY_BINDING_NAME_CLASS_TARGET_FULL = "<targetClass>";
     public static final String SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT = "instances";
+    public static final String SPARQL_QUERY_BINDING_NAME_NAMESPACE = "nspace";
+    public static final String SPARQL_QUERY_BINDING_NAME_NAMESPACE_COUNT = "nsCount";
     public static final String SPARQL_QUERY_BINDING_NAME_PROPERTY = "property";
     public static final String SPARQL_QUERY_BINDING_NAME_DATA_TYPE = "dataType";
 

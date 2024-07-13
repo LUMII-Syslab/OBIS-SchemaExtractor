@@ -20,6 +20,8 @@ public class SchemaExtractorRequestNew {
 
     public enum ImportantIndexesMode {detailed, base, no}
 
+    public enum InstanceNamespacesMode {no, detailed, overview}
+
     @ApiParam(access = "10", value = "SPARQL Endpoint URL, for example, http://localhost:8890/sparql", required = true)
     private String endpointUrl;
 
@@ -56,8 +58,11 @@ public class SchemaExtractorRequestNew {
     @ApiParam(access = "110", value = "Limit of instances to use in data type calculation (no value or 0 means all data will be used)", required = false)
     private Long sampleLimitForDataTypeCalculation;
 
-    @ApiParam(access = "140", value = "Check instance namespace URIs", defaultValue = "false", required = false)
-    private Boolean checkInstanceNamespaces;
+    @ApiParam(access = "140", value = "Calculate instance namespace URIs", defaultValue = "no", required = true)
+    private InstanceNamespacesMode calculateInstanceNamespaces;
+
+    @ApiParam(access = "141", value = "Limit of instances to use in namespace calculation (no value or 0 means all data will be used)", defaultValue = "1000", required = false)
+    private Long sampleLimitForInstanceNamespacesCalculation;
 
     @ApiParam(access = "150", value = "Properties for class and property labels. rdfs:label and skos:prefLabel assumed by default. For labels in specific languages use @{en,de} notation after the label property iri or short form. To exclude a default labeling property, use property@{-} notation.", allowEmptyValue = true)
     private List<String> addedLabels;
@@ -149,11 +154,11 @@ public class SchemaExtractorRequestNew {
         return calculateCardinalitiesMode;
     }
 
-    public Boolean getCheckInstanceNamespaces() {
-        if (checkInstanceNamespaces == null) {
-            checkInstanceNamespaces = Boolean.FALSE;
+    public InstanceNamespacesMode getCalculateInstanceNamespaces() {
+        if (calculateInstanceNamespaces == null) {
+            calculateInstanceNamespaces = InstanceNamespacesMode.no;
         }
-        return checkInstanceNamespaces;
+        return calculateInstanceNamespaces;
     }
 
     @Nonnull

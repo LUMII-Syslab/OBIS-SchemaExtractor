@@ -10,7 +10,8 @@ calculateClosedClassSets: false
 calculateDataTypes: "propertyLevelAndClassContext"
 calculateCardinalitiesMode: "propertyLevelAndClassContext"
 sampleLimitForDataTypeCalculation: 0
-checkInstanceNamespaces: false
+calculateInstanceNamespaces: "overview"
+sampleLimitForInstanceNamespacesCalculation: 1000
 minimalAnalyzedClassSize: 1
 addIntersectionClasses: "auto"
 exactCountCalculations: "yes"

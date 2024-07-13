@@ -44,6 +44,12 @@ public class SchemaProperty extends SchemaElement {
     @JsonProperty("IncomingProperties")
     private List<SchemaPropertyLinkedPropertyDetails> incomingProperties;
 
+    @JsonProperty("SubjectInstanceNamespaces")
+    private List<InstanceNamespace> subjectInstanceNamespaces;
+
+    @JsonProperty("ObjectInstanceNamespaces")
+    private List<InstanceNamespace> objectInstanceNamespaces;
+
     @Nonnull
     public List<DataType> getDataTypes() {
         if (dataTypes == null) {
@@ -95,5 +101,21 @@ public class SchemaProperty extends SchemaElement {
             incomingProperties = new ArrayList<>();
         }
         return incomingProperties;
+    }
+
+    @Nonnull
+    public List<InstanceNamespace> getSubjectInstanceNamespaces() {
+        if (subjectInstanceNamespaces == null) {
+            subjectInstanceNamespaces = new ArrayList<>();
+        }
+        return subjectInstanceNamespaces;
+    }
+
+    @Nonnull
+    public List<InstanceNamespace> getObjectInstanceNamespaces() {
+        if (objectInstanceNamespaces == null) {
+            objectInstanceNamespaces = new ArrayList<>();
+        }
+        return objectInstanceNamespaces;
     }
 }

@@ -58,6 +58,7 @@ public class SchemaExtractor {
 
         buildClasses(request, schema, graphOfClasses);
         buildProperties(request, schema, graphOfClasses);
+        buildInstanceNamespaces(request, schema);
         buildPrefixMap(request, prefixMap);
         buildNamespaceMap(request, schema, prefixMap);
         buildLabels(request, schema, prefixMap);
@@ -1905,6 +1906,134 @@ public class SchemaExtractor {
                 collect(Collectors.toList());
     }
 
+    protected void buildInstanceNamespaces(@Nonnull SchemaExtractorRequestDto request, @Nonnull Schema schema) {
+        if (SchemaExtractorRequestDto.InstanceNamespacesMode.no.equals(request.getCalculateInstanceNamespaces())) {
+            return;
+        }
+        if (SchemaExtractorRequestDto.InstanceNamespacesMode.overview.equals(request.getCalculateInstanceNamespaces())) {
+            buildInstanceNamespacesWithOverviewMode(request, schema);
+            return;
+        }
+        if (SchemaExtractorRequestDto.InstanceNamespacesMode.detailed.equals(request.getCalculateInstanceNamespaces())) {
+            buildInstanceNamespacesWithDetailedMode(request, schema);
+        }
+    }
+
+    protected void buildInstanceNamespacesWithOverviewMode(@Nonnull SchemaExtractorRequestDto request, @Nonnull Schema schema) {
+
+        // find instance namespaces for classes with limit
+        for (SchemaClass clazz : schema.getClasses()) {
+            List<InstanceNamespace> instanceNamespaces = new ArrayList<>();
+            SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_INSTANCE_NAMESPACES_FOR_CLASS_WITH_LIMIT.name()), FIND_INSTANCE_NAMESPACES_FOR_CLASS_WITH_LIMIT)
+                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_A_FULL, clazz.getFullName(), clazz.getIsLiteral())
+                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, clazz.getClassificationProperty())
+                    .withContextParam(SPARQL_QUERY_BINDING_NAME_LIMIT, request.getSampleLimitForInstanceNamespacesCalculation().toString());
+            QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder, false);
+            if (!queryResponse.hasErrors() && !queryResponse.getResults().isEmpty()) {
+                queryResponse.getResults().forEach(queryResult -> {
+                    String instanceNamespace = queryResult.getValue(SPARQL_QUERY_BINDING_NAME_NAMESPACE);
+                    if (StringUtils.isNotEmpty(instanceNamespace)) {
+                        Long count = SchemaUtil.getLongValueFromString(queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_NAMESPACE_COUNT));
+                        instanceNamespaces.add(new InstanceNamespace(instanceNamespace, count, request.getSampleLimitForInstanceNamespacesCalculation()));
+                    }
+                });
+            }
+            clazz.getInstanceNamespaces().addAll(instanceNamespaces);
+        }
+
+        // find instance namespaces for property subjects and objects
+        for (SchemaProperty property : schema.getProperties()) {
+
+            List<InstanceNamespace> subjectInstanceNamespaces = new ArrayList<>();
+            SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_INSTANCE_NAMESPACES_FOR_PROPERTY_SUBJECTS_WITH_LIMIT.name()), FIND_INSTANCE_NAMESPACES_FOR_PROPERTY_SUBJECTS_WITH_LIMIT)
+                    .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getFullName())
+                    .withContextParam(SPARQL_QUERY_BINDING_NAME_LIMIT, request.getSampleLimitForInstanceNamespacesCalculation().toString());
+            QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder, false);
+            if (!queryResponse.hasErrors() && !queryResponse.getResults().isEmpty()) {
+                queryResponse.getResults().forEach(queryResult -> {
+                    String instanceNamespace = queryResult.getValue(SPARQL_QUERY_BINDING_NAME_NAMESPACE);
+                    if (StringUtils.isNotEmpty(instanceNamespace)) {
+                        Long count = SchemaUtil.getLongValueFromString(queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_NAMESPACE_COUNT));
+                        subjectInstanceNamespaces.add(new InstanceNamespace(instanceNamespace, count, request.getSampleLimitForInstanceNamespacesCalculation()));
+                    }
+                });
+            }
+            property.getSubjectInstanceNamespaces().addAll(subjectInstanceNamespaces);
+
+            List<InstanceNamespace> objectInstanceNamespaces = new ArrayList<>();
+            queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_INSTANCE_NAMESPACES_FOR_PROPERTY_OBJECTS_WITH_LIMIT.name()), FIND_INSTANCE_NAMESPACES_FOR_PROPERTY_OBJECTS_WITH_LIMIT)
+                    .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getFullName())
+                    .withContextParam(SPARQL_QUERY_BINDING_NAME_LIMIT, request.getSampleLimitForInstanceNamespacesCalculation().toString());
+            queryResponse = sparqlEndpointProcessor.read(request, queryBuilder, false);
+            if (!queryResponse.hasErrors() && !queryResponse.getResults().isEmpty()) {
+                queryResponse.getResults().forEach(queryResult -> {
+                    String instanceNamespace = queryResult.getValue(SPARQL_QUERY_BINDING_NAME_NAMESPACE);
+                    if (StringUtils.isNotEmpty(instanceNamespace)) {
+                        Long count = SchemaUtil.getLongValueFromString(queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_NAMESPACE_COUNT));
+                        objectInstanceNamespaces.add(new InstanceNamespace(instanceNamespace, count, request.getSampleLimitForInstanceNamespacesCalculation()));
+                    }
+                });
+            }
+            property.getObjectInstanceNamespaces().addAll(objectInstanceNamespaces);
+        }
+    }
+
+    protected void buildInstanceNamespacesWithDetailedMode(@Nonnull SchemaExtractorRequestDto request, @Nonnull Schema schema) {
+
+        // find instance namespaces for classes
+        for (SchemaClass clazz : schema.getClasses()) {
+            List<InstanceNamespace> instanceNamespaces = new ArrayList<>();
+            SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_INSTANCE_NAMESPACES_FOR_CLASS.name()), FIND_INSTANCE_NAMESPACES_FOR_CLASS)
+                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_A_FULL, clazz.getFullName(), clazz.getIsLiteral())
+                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, clazz.getClassificationProperty());
+            QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder, false);
+            if (!queryResponse.hasErrors() && !queryResponse.getResults().isEmpty()) {
+                queryResponse.getResults().forEach(queryResult -> {
+                    String instanceNamespace = queryResult.getValue(SPARQL_QUERY_BINDING_NAME_NAMESPACE);
+                    if (StringUtils.isNotEmpty(instanceNamespace)) {
+                        Long count = SchemaUtil.getLongValueFromString(queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_NAMESPACE_COUNT));
+                        instanceNamespaces.add(new InstanceNamespace(instanceNamespace, count));
+                    }
+                });
+            }
+            clazz.getInstanceNamespaces().addAll(instanceNamespaces);
+        }
+
+        // find instance namespaces for property subjects and objects
+        for (SchemaProperty property : schema.getProperties()) {
+
+            List<InstanceNamespace> subjectInstanceNamespaces = new ArrayList<>();
+            SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_INSTANCE_NAMESPACES_FOR_PROPERTY_SUBJECTS.name()), FIND_INSTANCE_NAMESPACES_FOR_PROPERTY_SUBJECTS)
+                    .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getFullName());
+            QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder, false);
+            if (!queryResponse.hasErrors() && !queryResponse.getResults().isEmpty()) {
+                queryResponse.getResults().forEach(queryResult -> {
+                    String instanceNamespace = queryResult.getValue(SPARQL_QUERY_BINDING_NAME_NAMESPACE);
+                    if (StringUtils.isNotEmpty(instanceNamespace)) {
+                        Long count = SchemaUtil.getLongValueFromString(queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_NAMESPACE_COUNT));
+                        subjectInstanceNamespaces.add(new InstanceNamespace(instanceNamespace, count));
+                    }
+                });
+            }
+            property.getSubjectInstanceNamespaces().addAll(subjectInstanceNamespaces);
+
+            List<InstanceNamespace> objectInstanceNamespaces = new ArrayList<>();
+            queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_INSTANCE_NAMESPACES_FOR_PROPERTY_OBJECTS.name()), FIND_INSTANCE_NAMESPACES_FOR_PROPERTY_OBJECTS)
+                    .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getFullName());
+            queryResponse = sparqlEndpointProcessor.read(request, queryBuilder, false);
+            if (!queryResponse.hasErrors() && !queryResponse.getResults().isEmpty()) {
+                queryResponse.getResults().forEach(queryResult -> {
+                    String instanceNamespace = queryResult.getValue(SPARQL_QUERY_BINDING_NAME_NAMESPACE);
+                    if (StringUtils.isNotEmpty(instanceNamespace)) {
+                        Long count = SchemaUtil.getLongValueFromString(queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_NAMESPACE_COUNT));
+                        objectInstanceNamespaces.add(new InstanceNamespace(instanceNamespace, count));
+                    }
+                });
+            }
+            property.getObjectInstanceNamespaces().addAll(objectInstanceNamespaces);
+        }
+    }
+
     protected void buildPrefixMap(@Nonnull SchemaExtractorRequestDto request, @Nonnull Map<String, String> prefixMap) {
         // collect namespace-prefix defined in the request and in the global config file; prefixes from the request override the system file
         if (request.getPredefinedNamespaces() != null && request.getPredefinedNamespaces().getNamespaceItems() != null) {
@@ -1959,51 +2088,32 @@ public class SchemaExtractor {
 
     @Nonnull
     protected Set<String> getAllSchemaNamespacesOrderedByUsageCount(@Nonnull SchemaExtractorRequestDto request, @Nonnull Schema schema) {
-        List<String> namespaces = new ArrayList<>();
+        Map<String, Long> namespacesWithCounts = new HashMap<>();
 
         // get all schema class and property namespaces
         for (SchemaClass item : schema.getClasses()) {
             if (StringUtils.isNotEmpty(item.getNamespace())) {
-                namespaces.add(item.getNamespace());
+                namespacesWithCounts.merge(item.getNamespace(), 1L, Long::sum);
             }
+            item.getInstanceNamespaces().forEach(
+                    namespace -> namespacesWithCounts.merge(namespace.getNamespace(), namespace.getCount(), Long::sum));
         }
+
         for (SchemaProperty item : schema.getProperties()) {
             if (StringUtils.isNotEmpty(item.getNamespace())) {
-                namespaces.add(item.getNamespace());
+                namespacesWithCounts.merge(item.getNamespace(), 1L, Long::sum);
             }
+            item.getSubjectInstanceNamespaces().forEach(
+                    namespace -> namespacesWithCounts.merge(namespace.getNamespace(), namespace.getCount(), Long::sum));
+            item.getObjectInstanceNamespaces().forEach(
+                    namespace -> namespacesWithCounts.merge(namespace.getNamespace(), namespace.getCount(), Long::sum));
         }
 
         // order all class and property namespaces by usage count
-        Map<String, Long> namespacesWithCounts = namespaces.stream()
-                .collect(Collectors.groupingBy(e -> e, Collectors.counting()));
         Set<String> orderedNamespaces = new LinkedHashSet<>();
         namespacesWithCounts.entrySet().stream()
                 .sorted(Map.Entry.comparingByValue(Comparator.reverseOrder()))
                 .forEach(entry -> orderedNamespaces.add(entry.getKey()));
-
-        // add all instance namespaces
-        if (request.getCheckInstanceNamespaces()) {
-            for (SchemaClass clazz : schema.getClasses()) {
-                SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_INSTANCE_NAMESPACES.name()), FIND_INSTANCE_NAMESPACES)
-                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_A_FULL, clazz.getFullName(), clazz.getIsLiteral())
-                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, clazz.getClassificationProperty());
-                QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder, false);
-                if (!queryResponse.hasErrors() && !queryResponse.getResults().isEmpty()) {
-                    queryResponse.getResults().forEach(queryResult -> {
-                        String instanceNamespace = queryResult.getValue(SPARQL_QUERY_BINDING_NAME_X);
-                        if (StringUtils.isNotEmpty(instanceNamespace)) {
-                            int namespaceIndex = instanceNamespace.lastIndexOf("#");
-                            if (namespaceIndex == -1) {
-                                namespaceIndex = instanceNamespace.lastIndexOf("/");
-                            }
-                            if (namespaceIndex != -1) {
-                                orderedNamespaces.add(instanceNamespace.substring(0, namespaceIndex + 1));
-                            }
-                        }
-                    });
-                }
-            }
-        }
 
         return orderedNamespaces;
     }

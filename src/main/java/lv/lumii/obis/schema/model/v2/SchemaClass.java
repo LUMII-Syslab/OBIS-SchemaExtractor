@@ -6,7 +6,9 @@ import lombok.Getter;
 import lombok.Setter;
 
 import javax.annotation.Nonnull;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 @Setter
@@ -34,6 +36,9 @@ public class SchemaClass extends SchemaElement {
 
     private String classificationProperty;
 
+    @JsonProperty("InstanceNamespaces")
+    private List<InstanceNamespace> instanceNamespaces;
+
     @Nonnull
     public Set<String> getSuperClasses() {
         if (superClasses == null) {
@@ -56,5 +61,13 @@ public class SchemaClass extends SchemaElement {
             intersectionClasses = new HashSet<>();
         }
         return intersectionClasses;
+    }
+
+    @Nonnull
+    public List<InstanceNamespace> getInstanceNamespaces() {
+        if (instanceNamespaces == null) {
+            instanceNamespaces = new ArrayList<>();
+        }
+        return instanceNamespaces;
     }
 }

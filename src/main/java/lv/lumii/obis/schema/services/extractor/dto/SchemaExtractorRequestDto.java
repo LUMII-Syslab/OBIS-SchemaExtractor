@@ -42,6 +42,8 @@ public class SchemaExtractorRequestDto {
 
     public enum ImportantIndexesMode {detailed, base, no}
 
+    public enum InstanceNamespacesMode {no, detailed, overview}
+
     private String correlationId;
 
     private String endpointUrl;
@@ -63,7 +65,8 @@ public class SchemaExtractorRequestDto {
     @JsonIgnore
     private Long sampleLimitForPropertyToPropertyRelationCalculation;
 
-    private Boolean checkInstanceNamespaces;
+    private InstanceNamespacesMode calculateInstanceNamespaces;
+    private Long sampleLimitForInstanceNamespacesCalculation;
     private Integer minimalAnalyzedClassSize;
     private List<String> principalClassificationProperties;
     private List<String> classificationPropertiesWithConnectionsOnly;
@@ -210,11 +213,11 @@ public class SchemaExtractorRequestDto {
     }
 
     @Nonnull
-    public Boolean getCheckInstanceNamespaces() {
-        if (checkInstanceNamespaces == null) {
-            return Boolean.FALSE;
+    public InstanceNamespacesMode getCalculateInstanceNamespaces() {
+        if (calculateInstanceNamespaces == null) {
+            return InstanceNamespacesMode.no;
         }
-        return checkInstanceNamespaces;
+        return calculateInstanceNamespaces;
     }
 
     @Nonnull
@@ -279,6 +282,14 @@ public class SchemaExtractorRequestDto {
             exactCountCalculations = DistinctQueryMode.yes;
         }
         return exactCountCalculations;
+    }
+
+    @Nonnull
+    public Long getSampleLimitForInstanceNamespacesCalculation() {
+        if (sampleLimitForInstanceNamespacesCalculation == null) {
+            sampleLimitForInstanceNamespacesCalculation = 1000L;
+        }
+        return sampleLimitForInstanceNamespacesCalculation;
     }
 
     @Nonnull
