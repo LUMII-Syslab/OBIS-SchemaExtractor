@@ -170,7 +170,7 @@ public class SchemaExtractor {
             if (classNameObject == null) {
                 continue;
             }
-            if (!SchemaUtil.isValidURI(classNameObject.getValue())) {
+            if (!classNameObject.getIsLiteral() && !SchemaUtil.isValidURI(classNameObject.getValue())) {
                 log.error(request.getCorrelationId() + " - invalid class URI will not be processed - " + classNameObject.getValue());
                 schema.getErrors().add(new SchemaExtractorError(ERROR, "invalidURI", classNameObject.getValue(), ""));
                 continue;
@@ -2155,7 +2155,7 @@ public class SchemaExtractor {
                         .withDistinct(request.getExactCountCalculations(), request.getMaxInstanceLimitForExactCount(), classes.size());
                 queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
                 if (!queryResponse.getResults().isEmpty()) {
-                    updateGraphOfClassesWithNeighbors(classA.getFullName(), queryResponse.getResults(), graphOfClasses, request);
+                    updateGraphOfClassesWithNeighbors(schema, classA.getFullName(), queryResponse.getResults(), graphOfClasses, request);
                     queryResponse.getResults().clear();
                 }
                 if (isFalse(hasErrors)) {
@@ -2190,13 +2190,16 @@ public class SchemaExtractor {
         }
     }
 
-    protected void updateGraphOfClassesWithNeighbors(@Nonnull String sourceClass, @Nonnull List<QueryResult> queryResults, @Nonnull Map<String, SchemaExtractorClassNodeInfo> graphOfClasses,
+    protected void updateGraphOfClassesWithNeighbors(@Nonnull Schema schema, @Nonnull String sourceClass, @Nonnull List<QueryResult> queryResults, @Nonnull Map<String, SchemaExtractorClassNodeInfo> graphOfClasses,
                                                      @Nonnull SchemaExtractorRequestDto request) {
         Set<String> includedClasses = request.getIncludedClasses().stream().map(SchemaExtractorRequestedClassDto::getClassName).collect(Collectors.toSet());
         for (QueryResult queryResult : queryResults) {
             String classB = queryResult.getValueFullName(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_B);
-            Long intersectionCount = SchemaUtil.getLongValueFromString(queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
-            if (StringUtils.isNotEmpty(classB) && isNotExcludedResource(classB, request.getExcludedNamespaces()) && (includedClasses.isEmpty() || includedClasses.contains(classB))) {
+            if (StringUtils.isNotEmpty(classB)
+                    && isNotExcludedResource(classB, request.getExcludedNamespaces())
+                    && (includedClasses.isEmpty() || includedClasses.contains(classB))
+                    && findClass(schema.getClasses(), classB) != null) {
+                Long intersectionCount = SchemaUtil.getLongValueFromString(queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
                 if (graphOfClasses.containsKey(sourceClass)) {
                     graphOfClasses.get(sourceClass).getNeighbors().add(new SchemaExtractorIntersectionClassDto(classB, intersectionCount));
                 }
@@ -2461,7 +2464,7 @@ public class SchemaExtractor {
             }
             if (currentClass.getSuperClasses().size() == 1) {
                 SchemaClass superClass = findClass(classes, currentClass.getSuperClasses().stream().findFirst().orElse(null));
-                if (THING_NAME.equals(superClass.getLocalName())) {
+                if (superClass == null || THING_NAME.equals(superClass.getLocalName())) {
                     continue;
                 }
             }
