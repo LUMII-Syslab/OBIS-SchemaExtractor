@@ -76,23 +76,13 @@ public class SchemaExtractor {
     protected void buildClasses(@Nonnull SchemaExtractorRequestDto request, @Nonnull Schema schema, @Nonnull Map<String, SchemaExtractorClassNodeInfo> graphOfClasses) {
         log.info(request.getCorrelationId() + " - findAllClassesWithInstanceCount");
 
-        // if the request does not include the list of classes or classes do not have instance count - read from the SPARQL endpoint
         List<SchemaClass> classes = new ArrayList<>();
+
+        // if the request does not include the list of classes - read from the SPARQL endpoint
         if (isTrue(request.getIncludedClasses().isEmpty())) {
-            for (String classificationProperty : request.getAllClassificationProperties()) {
-                SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_CLASSES_WITH_INSTANCE_COUNT.name()), FIND_CLASSES_WITH_INSTANCE_COUNT)
-                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, classificationProperty)
-                        .withDistinct(request.getExactCountCalculations(), request.getMaxInstanceLimitForExactCount(), null);
-                QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
-                if (queryResponse.hasErrors() && queryResponse.getResults().isEmpty()) {
-                    schema.getErrors().add(new SchemaExtractorError(ERROR, "allClasses", FIND_CLASSES_WITH_INSTANCE_COUNT.name(), queryBuilder.getQueryString()));
-                }
-                List<SchemaClass> resultClasses = processClassesWithEndpointData(queryResponse.getResults(), request, classificationProperty, schema);
-                classes.addAll(resultClasses);
-                log.info(request.getCorrelationId() + String.format(" - found total %d classes with classification property %s", resultClasses.size(), classificationProperty));
-            }
-            log.info(request.getCorrelationId() + String.format(" - found total %d classes", classes.size()));
+            readClassesFromEndpoint(request, schema, classes, graphOfClasses);
         } else {
+            // else read classes from the request
             for (SchemaExtractorRequestedClassDto includedClass : request.getIncludedClasses()) {
                 if (!SchemaUtil.isValidURI(includedClass.getClassName())) {
                     log.error(request.getCorrelationId() + " - invalid class URI will not be processed - " + includedClass.getClassName());
@@ -160,6 +150,89 @@ public class SchemaExtractor {
                 }
             }
         }
+    }
+
+    protected void readClassesFromEndpoint(@Nonnull SchemaExtractorRequestDto request, @Nonnull Schema schema,
+                                           @Nonnull List<SchemaClass> classes, @Nonnull Map<String, SchemaExtractorClassNodeInfo> graphOfClasses) {
+        log.info(request.getCorrelationId() + " - readClassesFromEndpoint");
+
+        for (String classificationProperty : request.getAllClassificationProperties()) {
+
+            // read all classes
+            SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_CLASSES.name()), FIND_CLASSES)
+                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, classificationProperty);
+            QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
+            if (queryResponse.hasErrors() && queryResponse.getResults().isEmpty()) {
+                schema.getErrors().add(new SchemaExtractorError(ERROR, "allClasses", FIND_CLASSES.name(), queryBuilder.getQueryString()));
+                continue;
+            }
+
+            // read instance counts for all classes
+            boolean foundInstanceCounts = readInstanceCountsForAllClasses(request, schema, classificationProperty, classes, queryResponse.getResults().size());
+            if (!foundInstanceCounts) {
+                // read instance count separately for each class
+                int totalClasses = 0;
+                for (QueryResult queryResult : queryResponse.getResults()) {
+                    QueryResultObject classNameObject = queryResult.getResultObject(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS);
+                    if (classNameObject == null) {
+                        continue;
+                    }
+                    if (!classNameObject.getIsLiteral() && !SchemaUtil.isValidURI(classNameObject.getValue())) {
+                        log.error(request.getCorrelationId() + " - invalid class URI will not be processed - " + classNameObject.getValue());
+                        schema.getErrors().add(new SchemaExtractorError(ERROR, "invalidURI", classNameObject.getValue(), ""));
+                        continue;
+                    }
+                    boolean addedClass = readInstanceCountForClass(request, schema, classNameObject, classificationProperty, classes);
+                    if (addedClass) totalClasses++;
+                }
+                log.info(request.getCorrelationId() + String.format(" - found total %d classes with classification property %s", totalClasses, classificationProperty));
+            }
+        }
+
+        if (classes.isEmpty()) {
+            log.error(request.getCorrelationId() + " - no classes were found, stopping the schema extractor");
+        } else {
+            log.info(request.getCorrelationId() + String.format(" - found total %d classes", classes.size()));
+        }
+    }
+
+    protected boolean readInstanceCountsForAllClasses(@Nonnull SchemaExtractorRequestDto request, @Nonnull Schema schema, @Nonnull String classificationProperty,
+                                                      @Nonnull List<SchemaClass> classes, int totalClasses) {
+        SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_CLASSES_WITH_INSTANCE_COUNT.name()), FIND_CLASSES_WITH_INSTANCE_COUNT)
+                .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, classificationProperty)
+                .withDistinct(request.getExactCountCalculations(), request.getMaxInstanceLimitForExactCount(), null);
+        QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
+        if (queryResponse.hasErrors() && queryResponse.getResults().isEmpty()) {
+            schema.getErrors().add(new SchemaExtractorError(ERROR, "allClasses", FIND_CLASSES_WITH_INSTANCE_COUNT.name(), queryBuilder.getQueryString()));
+            return false;
+        }
+        if (queryResponse.getResults().size() < totalClasses) {
+            log.warn(request.getCorrelationId() + " - the endpoint did not return instance counts for all classes, will read instance count for each class");
+            return false;
+        }
+        List<SchemaClass> resultClasses = processClassesWithEndpointData(queryResponse.getResults(), request, classificationProperty, schema);
+        classes.addAll(resultClasses);
+        log.info(request.getCorrelationId() + String.format(" - found total %d classes with classification property %s", resultClasses.size(), classificationProperty));
+        return true;
+    }
+
+    protected boolean readInstanceCountForClass(@Nonnull SchemaExtractorRequestDto request, @Nonnull Schema schema, @Nonnull QueryResultObject classNameObject,
+                                                @Nonnull String classificationProperty, @Nonnull List<SchemaClass> classes) {
+        SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_INSTANCE_COUNT_FOR_CLASS.name()), FIND_INSTANCE_COUNT_FOR_CLASS)
+                .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, classificationProperty)
+                .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_A_FULL, classNameObject.getValue(), false)
+                .withDistinct(request.getExactCountCalculations(), request.getMaxInstanceLimitForExactCount(), null);
+        QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
+        if (!queryResponse.hasErrors() && !queryResponse.getResults().isEmpty() && queryResponse.getResults().get(0) != null) {
+            String instancesCountStr = queryResponse.getResults().get(0).getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT);
+            if (SchemaUtil.getLongValueFromString(instancesCountStr) > 0L) {
+                addClass(classNameObject, classNameObject.getValue(), instancesCountStr, classificationProperty, classes, request);
+                return true;
+            }
+        } else {
+            schema.getErrors().add(new SchemaExtractorError(ERROR, "findInstanceCountForClass", FIND_INSTANCE_COUNT_FOR_CLASS.name(), queryBuilder.getQueryString()));
+        }
+        return false;
     }
 
     protected List<SchemaClass> processClassesWithEndpointData(@Nonnull List<QueryResult> queryResults, @Nonnull SchemaExtractorRequestDto request,

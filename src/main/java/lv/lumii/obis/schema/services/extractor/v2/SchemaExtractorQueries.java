@@ -6,6 +6,9 @@ import javax.annotation.Nonnull;
 
 public enum SchemaExtractorQueries {
 
+    FIND_CLASSES(
+            "SELECT DISTINCT ?class WHERE { ?x <classificationProperty> ?class. }"
+    ),
     FIND_CLASSES_WITH_INSTANCE_COUNT(
             "SELECT ?class (COUNT(<DISTINCT> ?x) as ?instances) WHERE { ?x <classificationProperty> ?class. } GROUP BY ?class"
     ),
