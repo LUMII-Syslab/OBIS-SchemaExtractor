@@ -49,28 +49,28 @@ public class SparqlEndpointProcessor {
         return read(new SparqlEndpointConfig(request.getEndpointUrl(), request.getGraphName(), request.getEnableLogging()), queryBuilder, withRetry);
     }
 
-    public void checkEndpointHealthAndStopExecutionOnError(@Nonnull SparqlEndpointConfig request) {
-        log.warn(String.format("SPARQL queries encountered errors, running validation queries to check the endpoint availability - [ %s ]",
-                SchemaUtil.getEndpointLinkText(request.getEndpointUrl(), request.getGraphName())));
+    public void checkEndpointHealthAndStopExecutionOnError(@Nonnull SparqlEndpointConfig request, boolean applyWaiting) {
         AtomicBoolean isEndpointHealthy = new AtomicBoolean(checkEndpointHealthQuery(request));
-        if (!isEndpointHealthy.get()) {
-            for (Long sleepTime : healtCheckWaitingTime) {
-                log.error(String.format("The endpoint is not healthy - [ %s ]. Stopping the execution and will retry after %d minutes.",
-                        SchemaUtil.getEndpointLinkText(request.getEndpointUrl(), request.getGraphName()), sleepTime / 1000 / 60));
-                try {
-                    Thread.sleep(sleepTime);
-                } catch (InterruptedException ie) {
-                    Thread.currentThread().interrupt();
+        if (applyWaiting) {
+            if (!isEndpointHealthy.get()) {
+                for (Long sleepTime : healtCheckWaitingTime) {
+                    log.error(String.format("The endpoint is not healthy - [ %s ]. Stopping the execution and will retry after %d minutes.",
+                            SchemaUtil.getEndpointLinkText(request.getEndpointUrl(), request.getGraphName()), sleepTime / 1000 / 60));
+                    try {
+                        Thread.sleep(sleepTime);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                    }
+                    isEndpointHealthy.set(checkEndpointHealthQuery(request));
+                    if (isEndpointHealthy.get()) break;
                 }
-                isEndpointHealthy.set(checkEndpointHealthQuery(request));
-                if (isEndpointHealthy.get()) break;
             }
         }
         if (isEndpointHealthy.get()) {
-            log.info(String.format("The endpoint [ %s ] is available and in working state - schema extractor execution is resumed",
+            log.info(String.format("The endpoint [ %s ] is available and in working state - schema extractor execution is in progress",
                     SchemaUtil.getEndpointLinkText(request.getEndpointUrl(), request.getGraphName())));
         } else {
-            log.error(String.format("The endpoint [ %s ] is not available after all validation queries. Stopping the schema extractor",
+            log.error(String.format("The endpoint [ %s ] is not available, stopping the schema extractor",
                     SchemaUtil.getEndpointLinkText(request.getEndpointUrl(), request.getGraphName())));
             throw new RuntimeException("The endpoint is not available, stopping the schema extractor");
         }
@@ -131,7 +131,9 @@ public class SparqlEndpointProcessor {
                 log.error(String.format("SPARQL Endpoint Exception status '%s'. This was attempt number %d for the query %s", e.getMessage(), attempt, queryName));
                 log.error("\n" + sparqlQuery);
                 if (attempt < RETRY_COUNT) {
-                    checkEndpointHealthAndStopExecutionOnError(request);
+                    log.warn(String.format("SPARQL queries encountered errors, running validation queries to check the endpoint availability - [ %s ]",
+                            SchemaUtil.getEndpointLinkText(request.getEndpointUrl(), request.getGraphName())));
+                    checkEndpointHealthAndStopExecutionOnError(request, true);
                     return requestData(request, queryName, sparqlQuery, ++attempt, withRetry);
                 }
             } else {

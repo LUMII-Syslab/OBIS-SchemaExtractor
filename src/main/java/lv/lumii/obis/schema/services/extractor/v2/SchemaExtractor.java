@@ -12,6 +12,7 @@ import lv.lumii.obis.schema.services.common.SparqlQueryBuilder;
 import lv.lumii.obis.schema.services.common.dto.QueryResponse;
 import lv.lumii.obis.schema.services.common.dto.QueryResult;
 import lv.lumii.obis.schema.services.common.dto.QueryResultObject;
+import lv.lumii.obis.schema.services.common.dto.SparqlEndpointConfig;
 import lv.lumii.obis.schema.services.extractor.dto.*;
 import lv.lumii.obis.schema.services.extractor.v2.dto.*;
 import org.apache.commons.lang3.StringUtils;
@@ -52,6 +53,8 @@ public class SchemaExtractor {
 
     @Nonnull
     public Schema extractSchema(@Nonnull SchemaExtractorRequestDto request) {
+        validateEndpointHealth(request);
+
         Schema schema = initializeSchema(request);
         Map<String, String> prefixMap = new HashMap<>();
         Map<String, SchemaExtractorClassNodeInfo> graphOfClasses = new HashMap<>();
@@ -71,6 +74,11 @@ public class SchemaExtractor {
         schema.setName((StringUtils.isNotEmpty(request.getGraphName())) ? request.getGraphName() + "_Schema" : "Schema");
         schema.setExecutionParameters(request);
         return schema;
+    }
+
+    protected void validateEndpointHealth(@Nonnull SchemaExtractorRequestDto request) {
+        sparqlEndpointProcessor.checkEndpointHealthAndStopExecutionOnError(
+                new SparqlEndpointConfig(request.getEndpointUrl(), request.getGraphName(), request.getEnableLogging()), false);
     }
 
     protected void buildClasses(@Nonnull SchemaExtractorRequestDto request, @Nonnull Schema schema, @Nonnull Map<String, SchemaExtractorClassNodeInfo> graphOfClasses) {
