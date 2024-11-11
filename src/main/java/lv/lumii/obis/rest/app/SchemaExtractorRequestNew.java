@@ -16,9 +16,9 @@ public class SchemaExtractorRequestNew {
 
     public enum ShowIntersectionClassesMode {yes, no, auto}
 
-    public enum DistinctQueryMode {yes, no, auto}
+    public enum DistinctQueryMode {yes, no}
 
-    public enum ImportantIndexesMode {detailed, base, no}
+    public enum ImportantIndexesMode {regular, unionBased, no}
 
     public enum InstanceNamespacesMode {no, detailed, overview}
 
@@ -28,34 +28,37 @@ public class SchemaExtractorRequestNew {
     @ApiParam(access = "20", value = "Named Graph (optional, recommended). If no graph name provided, the search will involve all graphs from the endpoint", allowEmptyValue = true)
     private String graphName;
 
-    @ApiParam(access = "30", value = "Calculate subclass relations", defaultValue = "true", required = true)
+    @ApiParam(access = "30", value = "Calculate subclass relation (strongly recommended)", defaultValue = "true", required = true)
     private Boolean calculateSubClassRelations;
 
-    @ApiParam(access = "31", value = "Include check for multiple inheritance", defaultValue = "true", required = true)
+    @ApiParam(access = "31", value = "Include multiple inheritance check (strongly recommended, can be skipped for performance reasons for very large endpoints)", defaultValue = "true", required = true)
     private Boolean calculateMultipleInheritanceSuperclasses;
 
-    @ApiParam(access = "40", value = "Calculate property-property relations", defaultValue = "true", required = true)
+    @ApiParam(access = "32", value = "Minimal Analyzed Class Size (if 1, all classes should be analyzed). Values above 1 (e.g., 10 or 100) may be essential for endpoints with above 500 classes", defaultValue = "1", required = true)
+    private Integer minimalAnalyzedClassSize;
+
+    @ApiParam(access = "40", value = "Calculate property-property adjacency (following properties, same subject, same object). Useful for auto-completion. Currently not used in schema visualization. Can be time consuming for larger queries", defaultValue = "true", required = true)
     private Boolean calculatePropertyPropertyRelations;
 
-    @ApiParam(access = "50", value = "Calculate source and target pairs", defaultValue = "true", required = true)
+    @ApiParam(access = "50", value = "Calculate pairs of source and target classes for properties (creates finer-grained schemas; used as a source of statistics in visual schema diagrams)", defaultValue = "true", required = true)
     private Boolean calculateSourceAndTargetPairs;
 
-    @ApiParam(access = "60", value = "Calculate domains and ranges", defaultValue = "true", required = true)
+    @ApiParam(access = "60", value = "Calculate domain and range classes for properties", defaultValue = "true", required = true)
     private Boolean calculateDomainsAndRanges;
 
-    @ApiParam(access = "70", value = "Calculate importance indexes", defaultValue = "base", required = true)
+    @ApiParam(access = "70", value = "Calculate ascription points (principal classes) for properties (strongly recommended, if schema diagrams are envisaged)", defaultValue = "regular", required = true)
     private ImportantIndexesMode calculateImportanceIndexes;
 
-    @ApiParam(access = "80", value = "Calculate closed class sets", defaultValue = "false", required = true)
+    @ApiParam(access = "80", value = "Check property source and target class set closure (essential for SHACL export (to be developed))", defaultValue = "false", required = true)
     private Boolean calculateClosedClassSets;
 
-    @ApiParam(access = "90", value = "Calculate min and max cardinalities for all properties", defaultValue = "propertyLevelAndClassContext", required = true)
-    private CalculatePropertyFeatureMode calculateCardinalitiesMode;
+    @ApiParam(access = "90", value = "Calculate min and max cardinalities for properties", defaultValue = "propertyLevelAndClassContext", required = true)
+    private CalculatePropertyFeatureMode calculateCardinalities;
 
     @ApiParam(access = "100", value = "Calculate data types for attributes", defaultValue = "propertyLevelAndClassContext", required = true)
     private CalculatePropertyFeatureMode calculateDataTypes;
 
-    @ApiParam(access = "110", value = "Limit of instances to use in data type calculation (no value or 0 means all data will be used)", required = false)
+    @ApiParam(access = "110", value = "Instance sample size for data type calculation", required = false)
     private Long sampleLimitForDataTypeCalculation;
 
     @ApiParam(access = "140", value = "Calculate instance namespace URIs", defaultValue = "no", required = true)
@@ -67,28 +70,25 @@ public class SchemaExtractorRequestNew {
     @ApiParam(access = "150", value = "Properties for class and property labels. rdfs:label and skos:prefLabel assumed by default. For labels in specific languages use @{en,de} notation after the label property iri or short form. To exclude a default labeling property, use property@{-} notation.", allowEmptyValue = true)
     private List<String> addedLabels;
 
-    @ApiParam(access = "160", value = "Minimal Analyzed Class Size (set 1 if all classes should be analyzed)", defaultValue = "1", required = true)
-    private Integer minimalAnalyzedClassSize;
-
     @ApiParam(access = "170", value = "Add intersection classes to the result schema (yes, no, auto - add only if intersection classes count <= 200 )", defaultValue = "auto", required = true)
     private ShowIntersectionClassesMode addIntersectionClasses;
 
-    @ApiParam(access = "180", value = "List of properties defining the class structure; the classifier values (objects of these property triples) can be superclasses of other classes/classifiers and are checked for being sources and targets for other properties (default property is rdf:type)", allowEmptyValue = true)
+    @ApiParam(hidden = true, access = "180", value = "List of properties defining the class structure; the classifier values (objects of these property triples) can be superclasses of other classes/classifiers and are checked for being sources and targets for other properties (default property is rdf:type)", allowEmptyValue = true)
     private List<String> principalClassificationProperties;
 
-    @ApiParam(access = "190", value = "List of properties defining the classifiers whose values can define subsets of principal property classifiers (classes) and that are checked for being sources and targets for other properties", allowEmptyValue = true)
+    @ApiParam(hidden = true, access = "190", value = "List of properties defining the classifiers whose values can define subsets of principal property classifiers (classes) and that are checked for being sources and targets for other properties", allowEmptyValue = true)
     private List<String> classificationPropertiesWithConnectionsOnly;
 
-    @ApiParam(access = "200", value = "List of properties defining simple classifiers (their values can define subsets of principal classifiers (classes)), not checked for being sources and targets for other properties", allowEmptyValue = true)
+    @ApiParam(hidden = true, access = "200", value = "List of properties defining simple classifiers (their values can define subsets of principal classifiers (classes)), not checked for being sources and targets for other properties", allowEmptyValue = true)
     private List<String> simpleClassificationProperties;
 
-    @ApiParam(access = "210", value = "Add DISTINCT in queries (yes, no, auto - add distinct only if total instances count < 10M)", defaultValue = "yes", required = true)
+    @ApiParam(access = "210", value = "Add DISTINCT in queries (can be used for classes and properties of less than 10M size, if entity/triple duplications are observed otherwise in the schemas)", defaultValue = "yes", required = true)
     private DistinctQueryMode exactCountCalculations;
 
-    @ApiParam(access = "220", value = "Total instance count limit for exact count calculations", defaultValue = "10000000", required = false)
+    @ApiParam(hidden = true, access = "220", value = "Total instance count limit for exact count calculations", defaultValue = "10000000", required = false)
     private Long maxInstanceLimitForExactCount;
 
-    @ApiParam(access = "230", value = "List of excluded namespaces", allowEmptyValue = true)
+    @ApiParam(access = "230", value = "List of excluded namespaces (e.g., http://www.openlinksw.com/schemas/virtrdf#)", allowEmptyValue = true)
     private List<String> excludedNamespaces;
 
     public Boolean getCalculateSubClassRelations() {
@@ -135,7 +135,7 @@ public class SchemaExtractorRequestNew {
 
     public ImportantIndexesMode getCalculateImportanceIndexes() {
         if (calculateImportanceIndexes == null) {
-            calculateImportanceIndexes = ImportantIndexesMode.base;
+            calculateImportanceIndexes = ImportantIndexesMode.regular;
         }
         return calculateImportanceIndexes;
     }
@@ -147,11 +147,11 @@ public class SchemaExtractorRequestNew {
         return calculateDataTypes;
     }
 
-    public CalculatePropertyFeatureMode getCalculateCardinalitiesMode() {
-        if (calculateCardinalitiesMode == null) {
-            calculateCardinalitiesMode = CalculatePropertyFeatureMode.propertyLevelAndClassContext;
+    public CalculatePropertyFeatureMode getCalculateCardinalities() {
+        if (calculateCardinalities == null) {
+            calculateCardinalities = CalculatePropertyFeatureMode.propertyLevelAndClassContext;
         }
-        return calculateCardinalitiesMode;
+        return calculateCardinalities;
     }
 
     public InstanceNamespacesMode getCalculateInstanceNamespaces() {

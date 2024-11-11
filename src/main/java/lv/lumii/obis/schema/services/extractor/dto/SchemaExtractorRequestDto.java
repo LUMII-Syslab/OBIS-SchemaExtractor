@@ -40,7 +40,7 @@ public class SchemaExtractorRequestDto {
 
     public enum DistinctQueryMode {yes, no, auto}
 
-    public enum ImportantIndexesMode {detailed, base, no}
+    public enum ImportantIndexesMode {unionBased, regular, no}
 
     public enum InstanceNamespacesMode {no, detailed, overview}
 
@@ -56,7 +56,7 @@ public class SchemaExtractorRequestDto {
     private Boolean calculateDomainsAndRanges;
     private ImportantIndexesMode calculateImportanceIndexes;
     private Boolean calculateClosedClassSets;
-    private CalculatePropertyFeatureMode calculateCardinalitiesMode;
+    private CalculatePropertyFeatureMode calculateCardinalities;
     private CalculatePropertyFeatureMode calculateDataTypes;
     private Long sampleLimitForDataTypeCalculation;
 
@@ -73,6 +73,7 @@ public class SchemaExtractorRequestDto {
     private List<String> simpleClassificationProperties;
     private ShowIntersectionClassesMode addIntersectionClasses;
     private DistinctQueryMode exactCountCalculations;
+    @JsonIgnore
     private Long maxInstanceLimitForExactCount;
     private List<SchemaExtractorRequestedLabelDto> includedLabels;
     private List<SchemaExtractorRequestedClassDto> includedClasses;
@@ -183,7 +184,7 @@ public class SchemaExtractorRequestDto {
     @Nonnull
     public ImportantIndexesMode getCalculateImportanceIndexes() {
         if (calculateImportanceIndexes == null) {
-            return ImportantIndexesMode.base;
+            return ImportantIndexesMode.regular;
         }
         return calculateImportanceIndexes;
     }
@@ -205,11 +206,11 @@ public class SchemaExtractorRequestDto {
     }
 
     @Nonnull
-    public CalculatePropertyFeatureMode getCalculateCardinalitiesMode() {
-        if (calculateCardinalitiesMode == null) {
+    public CalculatePropertyFeatureMode getCalculateCardinalities() {
+        if (calculateCardinalities == null) {
             return CalculatePropertyFeatureMode.propertyLevelAndClassContext;
         }
-        return calculateCardinalitiesMode;
+        return calculateCardinalities;
     }
 
     @Nonnull

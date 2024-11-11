@@ -5,10 +5,10 @@ calculateMultipleInheritanceSuperclasses: true
 calculatePropertyPropertyRelations: false
 calculateSourceAndTargetPairs: true
 calculateDomainsAndRanges: true
-calculateImportanceIndexes: "base"
+calculateImportanceIndexes: "regular"
 calculateClosedClassSets: false
 calculateDataTypes: "propertyLevelAndClassContext"
-calculateCardinalitiesMode: "propertyLevelAndClassContext"
+calculateCardinalities: "propertyLevelAndClassContext"
 sampleLimitForDataTypeCalculation: 0
 calculateInstanceNamespaces: "overview"
 sampleLimitForInstanceNamespacesCalculation: 1000

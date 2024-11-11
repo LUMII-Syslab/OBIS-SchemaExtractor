@@ -438,7 +438,7 @@ public class SchemaExtractor {
                 determineIncomingProperties(schema, property, request, totalCountOfProperties);
             }
 
-            switch (request.getCalculateCardinalitiesMode()) {
+            switch (request.getCalculateCardinalities()) {
                 case propertyLevelOnly:
                     determinePropertyMaxCardinality(schema, property, request, totalCountOfProperties);
                     if (property.getObjectTripleCount() > 0) {
@@ -1688,7 +1688,7 @@ public class SchemaExtractor {
                 }
 
                 // if the selected important indexes mode is Base then do not check detailed combinations
-                if (SchemaExtractorRequestDto.ImportantIndexesMode.base.equals(request.getCalculateImportanceIndexes())) {
+                if (SchemaExtractorRequestDto.ImportantIndexesMode.regular.equals(request.getCalculateImportanceIndexes())) {
                     continue;
                 }
 
