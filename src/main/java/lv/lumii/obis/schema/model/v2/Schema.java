@@ -8,6 +8,7 @@ import lv.lumii.obis.schema.services.extractor.dto.SchemaExtractorError;
 import lv.lumii.obis.schema.services.extractor.dto.SchemaExtractorRequestDto;
 
 import javax.annotation.Nonnull;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -33,6 +34,11 @@ public class Schema {
     @JsonProperty("Parameters")
     private SchemaExtractorRequestDto executionParameters;
 
+    @JsonProperty("StartDateTime")
+    private String startTime;
+    @JsonProperty("EndDateTime")
+    private String endTime;
+
     @JsonProperty("HasErrors")
     private Boolean hasErrors;
 
@@ -42,7 +48,7 @@ public class Schema {
     @JsonProperty("HasNotes")
     private Boolean hasNotes;
 
-    @JsonIgnore
+    @JsonProperty("Errors")
     private List<SchemaExtractorError> errors;
 
     @Nonnull

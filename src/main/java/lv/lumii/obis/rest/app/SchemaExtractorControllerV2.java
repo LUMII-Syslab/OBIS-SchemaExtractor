@@ -23,6 +23,7 @@ import javax.ws.rs.core.MediaType;
 import java.io.*;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -56,6 +57,8 @@ public class SchemaExtractorControllerV2 {
     private static final String SCHEMA_READ_PREFIX_FILE_MESSAGE_START = "Request %s - Starting to read Prefixes from the JSON file [%s]";
     private static final String SCHEMA_READ_PREFIX_FILE_MESSAGE_END = "Request %s - Completed to read Prefixes from the JSON file [%s]";
     private static final String SCHEMA_READ_PREFIX_FILE_MESSAGE_ERROR = "Request %s - Cannot read Prefixes from the JSON file [%s]";
+
+    private static final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss");
 
     @Autowired
     private SchemaExtractor schemaExtractor;
@@ -192,6 +195,9 @@ public class SchemaExtractorControllerV2 {
             log.error(SCHEMA_EXTRACT_MESSAGE_ERROR);
         }
         log.info(String.format(SCHEMA_EXTRACT_MESSAGE_FULL_PARAMETERS, objectConversionService.getJsonFromObject(requestDto)));
+
+        schema.setStartTime(dateTimeFormatter.format(startTime));
+        schema.setEndTime(dateTimeFormatter.format(endTime));
 
         String resultSchema = objectConversionService.getJsonFromObject(schema);
         if (resultSchema != null) {
