@@ -91,6 +91,9 @@ public class SchemaExtractorRequestDto {
     @JsonIgnore
     private Set<String> mainClassificationProperties;
 
+    @JsonIgnore
+    private Boolean postMethod;
+
     /**
      * DEPRECATED properties for old services
      */
@@ -313,6 +316,14 @@ public class SchemaExtractorRequestDto {
                             .collect(Collectors.toSet());
         }
         return mainClassificationProperties;
+    }
+
+    @Nonnull
+    public Boolean getPostMethod() {
+        if (postMethod == null) {
+            return Boolean.FALSE;
+        }
+        return postMethod;
     }
 
     @Nonnull

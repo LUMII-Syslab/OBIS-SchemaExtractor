@@ -7,6 +7,7 @@ import lv.lumii.obis.schema.constants.SchemaConstants;
 import lv.lumii.obis.schema.model.v2.*;
 import lv.lumii.obis.schema.services.ObjectConversionService;
 import lv.lumii.obis.schema.services.SchemaUtil;
+import lv.lumii.obis.schema.services.SparqlEndpointException;
 import lv.lumii.obis.schema.services.common.SparqlEndpointProcessor;
 import lv.lumii.obis.schema.services.common.SparqlQueryBuilder;
 import lv.lumii.obis.schema.services.common.dto.QueryResponse;
@@ -77,8 +78,30 @@ public class SchemaExtractor {
     }
 
     protected void validateEndpointHealth(@Nonnull SchemaExtractorRequestDto request) {
-        sparqlEndpointProcessor.checkEndpointHealthAndStopExecutionOnError(
-                new SparqlEndpointConfig(request.getEndpointUrl(), request.getGraphName(), request.getEnableLogging()), false);
+        // validate GET health check query
+        SparqlEndpointConfig requestConfig = new SparqlEndpointConfig(request.getEndpointUrl(), request.getGraphName(), request.getEnableLogging(), false);
+        boolean isEndpointHealthy = sparqlEndpointProcessor.checkEndpointHealthQuery(requestConfig);
+        if (isEndpointHealthy) {
+            request.setPostMethod(Boolean.FALSE);
+            log.info(String.format("The endpoint [ %s ] is available and in working state - schema extractor execution is in progress with GET requests",
+                    SchemaUtil.getEndpointLinkText(request.getEndpointUrl(), request.getGraphName())));
+            return;
+        }
+
+        // validate POST health check query
+        requestConfig.setPostRequest(true);
+        isEndpointHealthy = sparqlEndpointProcessor.checkEndpointHealthQuery(requestConfig);
+        if (isEndpointHealthy) {
+            request.setPostMethod(Boolean.TRUE);
+            log.info(String.format("The endpoint [ %s ] is available and in working state - schema extractor execution is in progress with POST requests",
+                    SchemaUtil.getEndpointLinkText(request.getEndpointUrl(), request.getGraphName())));
+            return;
+        }
+
+        // log error and stop extractor execution
+        log.error(String.format("The endpoint [ %s ] is not available for GET and POST requests, stopping the schema extractor",
+                SchemaUtil.getEndpointLinkText(request.getEndpointUrl(), request.getGraphName())));
+        throw new SparqlEndpointException("The endpoint is not available, stopping the schema extractor");
     }
 
     protected void buildClasses(@Nonnull SchemaExtractorRequestDto request, @Nonnull Schema schema, @Nonnull Map<String, SchemaExtractorClassNodeInfo> graphOfClasses) {

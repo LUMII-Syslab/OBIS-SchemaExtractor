@@ -22,6 +22,7 @@ import org.apache.jena.rdf.model.Resource;
 
 import org.apache.jena.sparql.exec.http.QueryExecutionHTTP;
 import org.apache.jena.sparql.exec.http.QueryExecutionHTTPBuilder;
+import org.apache.jena.sparql.exec.http.QuerySendMode;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Nonnull;
@@ -47,7 +48,7 @@ public class SparqlEndpointProcessor {
 
     @Nonnull
     public QueryResponse read(@Nonnull SchemaExtractorRequestDto request, @Nonnull SparqlQueryBuilder queryBuilder, boolean withRetry) {
-        return read(new SparqlEndpointConfig(request.getEndpointUrl(), request.getGraphName(), request.getEnableLogging()), queryBuilder, withRetry);
+        return read(new SparqlEndpointConfig(request.getEndpointUrl(), request.getGraphName(), request.getEnableLogging(), request.getPostMethod()), queryBuilder, withRetry);
     }
 
     public void checkEndpointHealthAndStopExecutionOnError(@Nonnull SparqlEndpointConfig request, boolean applyWaiting) {
@@ -77,9 +78,9 @@ public class SparqlEndpointProcessor {
         }
     }
 
-    private boolean checkEndpointHealthQuery(@Nonnull SparqlEndpointConfig request) {
+    public boolean checkEndpointHealthQuery(@Nonnull SparqlEndpointConfig request) {
         SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(ENDPOINT_HEALTH_CHECK.getSparqlQuery(), ENDPOINT_HEALTH_CHECK);
-        QueryResponse response = read(new SparqlEndpointConfig(request.getEndpointUrl(), request.getGraphName(), request.isEnableLogging()), queryBuilder, false);
+        QueryResponse response = read(new SparqlEndpointConfig(request.getEndpointUrl(), request.getGraphName(), request.isEnableLogging(), request.isPostRequest()), queryBuilder, false);
         return !response.hasErrors() && !response.getResults().isEmpty();
     }
 
@@ -114,7 +115,7 @@ public class SparqlEndpointProcessor {
                                           int attempt, boolean withRetry) {
         List<QueryResult> queryResults = null;
         ResultSet resultSet;
-        QueryExecutionHTTP queryExecutor = getQueryExecutor(request.getEndpointUrl(), request.getGraphName(), sparqlQuery);
+        QueryExecutionHTTP queryExecutor = getQueryExecutor(request.getEndpointUrl(), request.getGraphName(), sparqlQuery, request.isPostRequest());
         try {
             resultSet = queryExecutor.execSelect();
             if (attempt > 1) {
@@ -183,10 +184,13 @@ public class SparqlEndpointProcessor {
         queryResults.add(queryResult);
     }
 
-    private QueryExecutionHTTP getQueryExecutor(@Nonnull String endpointUrl, @Nullable String graphName, @Nonnull String query) {
+    private QueryExecutionHTTP getQueryExecutor(@Nonnull String endpointUrl, @Nullable String graphName, @Nonnull String query, boolean isPostMethod) {
         QueryExecutionHTTPBuilder builder = QueryExecutionHTTP.create().endpoint(endpointUrl).queryString(query);
         if (StringUtils.isNotEmpty(graphName)) {
-            builder.addDefaultGraphURI(graphName);
+            builder = builder.addDefaultGraphURI(graphName);
+        }
+        if (isPostMethod) {
+            builder = builder.sendMode(QuerySendMode.asPostForm);
         }
         return builder.build();
     }
@@ -202,7 +206,7 @@ public class SparqlEndpointProcessor {
 
     @Nonnull
     public List<QueryResult> read(@Nonnull SchemaExtractorRequestDto request, @Nonnull String queryName, @Nonnull String sparqlQuery) {
-        return read(new SparqlEndpointConfig(request.getEndpointUrl(), request.getGraphName(), request.getEnableLogging()),
+        return read(new SparqlEndpointConfig(request.getEndpointUrl(), request.getGraphName(), request.getEnableLogging(), request.getPostMethod()),
                 queryName, sparqlQuery);
     }
 
