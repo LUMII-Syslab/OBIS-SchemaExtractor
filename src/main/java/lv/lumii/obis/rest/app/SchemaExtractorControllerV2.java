@@ -15,6 +15,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
 import javax.annotation.Nonnull;
 
@@ -57,6 +58,10 @@ public class SchemaExtractorControllerV2 {
     private static final String SCHEMA_READ_PREFIX_FILE_MESSAGE_START = "Request %s - Starting to read Prefixes from the JSON file [%s]";
     private static final String SCHEMA_READ_PREFIX_FILE_MESSAGE_END = "Request %s - Completed to read Prefixes from the JSON file [%s]";
     private static final String SCHEMA_READ_PREFIX_FILE_MESSAGE_ERROR = "Request %s - Cannot read Prefixes from the JSON file [%s]";
+
+    private static final String SCHEMA_EXTRACT_EXCEPTION_BAD_REQUEST = "The requested endpoint is not available, stopping the schema extractor for this execution";
+    private static final String SCHEMA_EXTRACT_EXCEPTION_INTERNAL_ERROR = "Internal server error, stopping the schema extractor for this execution. Please check logs for more details";
+    private static final String SCHEMA_EXTRACT_EXCEPTION_NO_CONFIG_FILE = "Valid configuration file is not provided";
 
     private static final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss");
 
@@ -129,16 +134,25 @@ public class SchemaExtractorControllerV2 {
         // 5. Load SPARQL queries defined in the system file
         requestDto.setQueries(initializeSparqlQueries());
 
-        // 6. Build the schema from the endpoint and Save the result JSON schema in file
-        String resultSchema = extractSchema(requestDto);
+        try {
+            // 6. Build the schema from the endpoint and Save the result JSON schema in file
+            String resultSchema = extractSchema(requestDto);
 
-        // 7. Save this specific configuration to file
-        if (BooleanUtils.isTrue(saveConfig)) {
-            writeDataToFile(requestDto.getCorrelationId() + "-config.yml", objectConversionService.getYamlFromObject(requestDto));
+            // 7. Save this specific configuration to file
+            if (BooleanUtils.isTrue(saveConfig)) {
+                writeDataToFile(requestDto.getCorrelationId() + "-config.yml", objectConversionService.getYamlFromObject(requestDto));
+            }
+
+            // 8. Return the result JSON schema
+            return resultSchema;
+
+        } catch (SparqlEndpointException e) {
+            log.error(SCHEMA_EXTRACT_EXCEPTION_BAD_REQUEST);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, SCHEMA_EXTRACT_EXCEPTION_BAD_REQUEST, e);
+        } catch (Exception e) {
+            log.error(SCHEMA_EXTRACT_EXCEPTION_INTERNAL_ERROR, e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, SCHEMA_EXTRACT_EXCEPTION_INTERNAL_ERROR, e);
         }
-
-        // 8. Return the result JSON schema
-        return resultSchema;
     }
 
     @RequestMapping(value = "/endpoint/buildFullSchemaFromConfigFile", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON)
@@ -157,30 +171,43 @@ public class SchemaExtractorControllerV2 {
         String correlationId = SchemaExtractorRequestBuilder.generateCorrelationId();
         log.info(String.format(SCHEMA_BUILD_PARAMETERS, correlationId));
         if (configurationFile == null) {
-            return objectConversionService.getJsonFromObject(new ApiError(HttpStatus.BAD_REQUEST, "Valid configuration file is not provided"));
+            log.error(SCHEMA_EXTRACT_EXCEPTION_NO_CONFIG_FILE);
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, SCHEMA_EXTRACT_EXCEPTION_NO_CONFIG_FILE);
         }
         SchemaExtractorRequestDto requestDto;
         try {
             requestDto = objectConversionService.getObjectFromYamlStream(configurationFile.getInputStream(), SchemaExtractorRequestDto.class);
         } catch (Exception e) {
-            return objectConversionService.getJsonFromObject(new ApiError(HttpStatus.BAD_REQUEST, "Valid configuration file is not provided", e));
+            log.error(SCHEMA_EXTRACT_EXCEPTION_NO_CONFIG_FILE);
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, SCHEMA_EXTRACT_EXCEPTION_NO_CONFIG_FILE, e);
         }
         if (requestDto == null) {
-            return objectConversionService.getJsonFromObject(new ApiError(HttpStatus.BAD_REQUEST, "Valid configuration file is not provided"));
+            log.error(SCHEMA_EXTRACT_EXCEPTION_NO_CONFIG_FILE);
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, SCHEMA_EXTRACT_EXCEPTION_NO_CONFIG_FILE);
         }
 
         // 2. Validate the main request parameters
         requestDto.setCorrelationId(correlationId);
         if (StringUtils.isEmpty(requestDto.getEndpointUrl())) {
-            return objectConversionService.getJsonFromObject(new ApiError(HttpStatus.BAD_REQUEST, "Valid configuration file is not provided, endpoint URL is empty"));
+            log.error("Valid configuration file is not provided, endpoint URL is empty");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Valid configuration file is not provided, endpoint URL is empty");
         }
 
         // 3. Load SPARQL queries defined in the system file
         requestDto.setQueries(initializeSparqlQueries());
 
-        // 4. Build the schema from the endpoint and Save the result JSON schema in file
-        // 5. Return the result JSON schema
-        return extractSchema(requestDto);
+        try {
+            // 4. Build the schema from the endpoint and Save the result JSON schema in file
+            String resultSchema = extractSchema(requestDto);
+            // 8. Return the result JSON schema
+            return resultSchema;
+        } catch (SparqlEndpointException e) {
+            log.error(SCHEMA_EXTRACT_EXCEPTION_BAD_REQUEST);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, SCHEMA_EXTRACT_EXCEPTION_BAD_REQUEST, e);
+        } catch (Exception e) {
+            log.error(SCHEMA_EXTRACT_EXCEPTION_INTERNAL_ERROR, e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, SCHEMA_EXTRACT_EXCEPTION_INTERNAL_ERROR, e);
+        }
     }
 
     private String extractSchema(@Nonnull SchemaExtractorRequestDto requestDto) {
@@ -206,7 +233,7 @@ public class SchemaExtractorControllerV2 {
             log.info(String.format(SCHEMA_EXTRACT_MESSAGE_SAVED_FILE, fileName));
         }
 
-        if(!schema.getErrors().isEmpty()) {
+        if (!schema.getErrors().isEmpty()) {
             StringBuilder errors = new StringBuilder("");
             schema.getErrors().forEach(error -> {
                 errors.append(error.toString()).append(System.lineSeparator());

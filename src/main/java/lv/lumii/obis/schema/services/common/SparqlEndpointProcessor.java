@@ -8,6 +8,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import lombok.extern.slf4j.Slf4j;
 import lv.lumii.obis.schema.services.SchemaUtil;
+import lv.lumii.obis.schema.services.SparqlEndpointException;
 import lv.lumii.obis.schema.services.common.dto.QueryResponse;
 import lv.lumii.obis.schema.services.common.dto.QueryResult;
 import lv.lumii.obis.schema.services.common.dto.QueryResultObject;
@@ -72,7 +73,7 @@ public class SparqlEndpointProcessor {
         } else {
             log.error(String.format("The endpoint [ %s ] is not available, stopping the schema extractor",
                     SchemaUtil.getEndpointLinkText(request.getEndpointUrl(), request.getGraphName())));
-            throw new RuntimeException("The endpoint is not available, stopping the schema extractor");
+            throw new SparqlEndpointException("The endpoint is not available, stopping the schema extractor");
         }
     }
 
