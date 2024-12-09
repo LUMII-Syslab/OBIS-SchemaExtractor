@@ -91,6 +91,11 @@ public class SchemaExtractorRequestNew {
     @ApiParam(access = "230", value = "List of excluded namespaces (e.g., http://www.openlinksw.com/schemas/virtrdf#)", allowEmptyValue = true)
     private List<String> excludedNamespaces;
 
+    @ApiParam(access = "235", value = "Large Query Timeout (in seconds). Default value 600 seconds (set 0 to execute without timeout)", defaultValue = "600", required = false)
+    private Long largeQueryTimeout;
+    @ApiParam(access = "236", value = "Small Query Timeout (in seconds). Default value 60 seconds (set 0 to execute without timeout)", defaultValue = "60", required = false)
+    private Long smallQueryTimeout;
+
     public Boolean getCalculateSubClassRelations() {
         if (calculateSubClassRelations == null) {
             calculateSubClassRelations = Boolean.TRUE;

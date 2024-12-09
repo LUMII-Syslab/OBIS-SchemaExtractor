@@ -30,7 +30,7 @@ public class OWLOntologyEnhancer {
 
     @Nonnull
     public Schema enhanceSchema(@Nonnull Schema inputSchema, @Nonnull OWLOntologyEnhancerRequest enhancerRequest) {
-        SparqlEndpointConfig endpointConfig = new SparqlEndpointConfig(enhancerRequest.getEndpointUrl(), enhancerRequest.getGraphName(), false);
+        SparqlEndpointConfig endpointConfig = new SparqlEndpointConfig(enhancerRequest.getEndpointUrl(), enhancerRequest.getGraphName(), false, null);
 
         Map<String, Long> allProperties = getAllProperties(endpointConfig, enhancerRequest);
 

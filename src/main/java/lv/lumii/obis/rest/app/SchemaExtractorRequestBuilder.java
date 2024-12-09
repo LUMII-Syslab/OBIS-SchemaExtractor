@@ -65,6 +65,8 @@ public class SchemaExtractorRequestBuilder {
         requestDto.setExactCountCalculations(Enums.getIfPresent(SchemaExtractorRequestDto.DistinctQueryMode.class, request.getExactCountCalculations().name()).orNull());
         requestDto.setMaxInstanceLimitForExactCount(request.getMaxInstanceLimitForExactCount());
         requestDto.setExcludedNamespaces(request.getExcludedNamespaces());
+        requestDto.setLargeQueryTimeout(request.getLargeQueryTimeout());
+        requestDto.setSmallQueryTimeout(request.getSmallQueryTimeout());
         return requestDto;
     }
 

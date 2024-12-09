@@ -81,6 +81,9 @@ public class SchemaExtractorRequestDto {
     private List<String> excludedNamespaces;
     private SchemaExtractorPredefinedNamespaces predefinedNamespaces;
 
+    private Long largeQueryTimeout;
+    private Long smallQueryTimeout;
+
     private Boolean enableLogging;
 
     @JsonIgnore
@@ -324,6 +327,22 @@ public class SchemaExtractorRequestDto {
             return Boolean.FALSE;
         }
         return postMethod;
+    }
+
+    @Nonnull
+    public Long getLargeQueryTimeout() {
+        if(largeQueryTimeout == null) {
+            return 0L;
+        }
+        return largeQueryTimeout;
+    }
+
+    @Nonnull
+    public Long getSmallQueryTimeout() {
+        if(smallQueryTimeout == null) {
+            return 0L;
+        }
+        return smallQueryTimeout;
     }
 
     @Nonnull

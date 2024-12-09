@@ -29,6 +29,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import static lv.lumii.obis.schema.services.extractor.v2.SchemaExtractorQueries.*;
+import static lv.lumii.obis.schema.services.extractor.v2.SchemaExtractorQueries.QueryType;
 
 @Slf4j
 @Service
@@ -48,7 +49,8 @@ public class SparqlEndpointProcessor {
 
     @Nonnull
     public QueryResponse read(@Nonnull SchemaExtractorRequestDto request, @Nonnull SparqlQueryBuilder queryBuilder, boolean withRetry) {
-        return read(new SparqlEndpointConfig(request.getEndpointUrl(), request.getGraphName(), request.getEnableLogging(), request.getPostMethod()), queryBuilder, withRetry);
+        Long timeout = calculateTimeout(request, queryBuilder);
+        return read(new SparqlEndpointConfig(request.getEndpointUrl(), request.getGraphName(), request.getEnableLogging(), request.getPostMethod(), timeout), queryBuilder, withRetry);
     }
 
     public void checkEndpointHealthAndStopExecutionOnError(@Nonnull SparqlEndpointConfig request, boolean applyWaiting) {
@@ -80,7 +82,7 @@ public class SparqlEndpointProcessor {
 
     public boolean checkEndpointHealthQuery(@Nonnull SparqlEndpointConfig request) {
         SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(ENDPOINT_HEALTH_CHECK.getSparqlQuery(), ENDPOINT_HEALTH_CHECK);
-        QueryResponse response = read(new SparqlEndpointConfig(request.getEndpointUrl(), request.getGraphName(), request.isEnableLogging(), request.isPostRequest()), queryBuilder, false);
+        QueryResponse response = read(new SparqlEndpointConfig(request.getEndpointUrl(), request.getGraphName(), request.isEnableLogging(), request.isPostRequest(), null), queryBuilder, false);
         return !response.hasErrors() && !response.getResults().isEmpty();
     }
 
@@ -95,10 +97,10 @@ public class SparqlEndpointProcessor {
         }
 
         if (request.isEnableLogging()) {
-            log.info(queryBuilder.getQueryName() + "\n" + queryBuilder.getQueryString());
+            log.info(queryBuilder.getQueryName() + (request.getTimeout() != null ? " (timeout: " + request.getTimeout() + "s)" : "") + "\n" + queryBuilder.getQueryString());
         }
 
-        List<QueryResult> results = requestData(request, queryBuilder.getQueryName(), queryBuilder.getQueryString(), 1, withRetry);
+        List<QueryResult> results = requestData(request, queryBuilder.getQueryName(), queryBuilder.getQueryString(), request.getTimeout(), 1, withRetry);
         if (results != null) {
             response.setHasErrors(false);
             response.setResults(results);
@@ -111,11 +113,11 @@ public class SparqlEndpointProcessor {
     }
 
     @Nullable
-    private List<QueryResult> requestData(@Nonnull SparqlEndpointConfig request, @Nonnull String queryName, @Nonnull String sparqlQuery,
+    private List<QueryResult> requestData(@Nonnull SparqlEndpointConfig request, @Nonnull String queryName, @Nonnull String sparqlQuery, @Nullable Long timeout,
                                           int attempt, boolean withRetry) {
         List<QueryResult> queryResults = null;
         ResultSet resultSet;
-        QueryExecutionHTTP queryExecutor = getQueryExecutor(request.getEndpointUrl(), request.getGraphName(), sparqlQuery, request.isPostRequest());
+        QueryExecutionHTTP queryExecutor = getQueryExecutor(request.getEndpointUrl(), request.getGraphName(), sparqlQuery, request.isPostRequest(), timeout);
         try {
             resultSet = queryExecutor.execSelect();
             if (attempt > 1) {
@@ -136,7 +138,7 @@ public class SparqlEndpointProcessor {
                     log.warn(String.format("SPARQL queries encountered errors, running validation queries to check the endpoint availability - [ %s ]",
                             SchemaUtil.getEndpointLinkText(request.getEndpointUrl(), request.getGraphName())));
                     checkEndpointHealthAndStopExecutionOnError(request, true);
-                    return requestData(request, queryName, sparqlQuery, ++attempt, withRetry);
+                    return requestData(request, queryName, sparqlQuery, timeout, ++attempt, withRetry);
                 }
             } else {
                 log.error(String.format("SPARQL Endpoint Exception status '%s' for the query %s", e.getMessage(), queryName));
@@ -184,7 +186,7 @@ public class SparqlEndpointProcessor {
         queryResults.add(queryResult);
     }
 
-    private QueryExecutionHTTP getQueryExecutor(@Nonnull String endpointUrl, @Nullable String graphName, @Nonnull String query, boolean isPostMethod) {
+    private QueryExecutionHTTP getQueryExecutor(@Nonnull String endpointUrl, @Nullable String graphName, @Nonnull String query, boolean isPostMethod, @Nullable Long timeout) {
         QueryExecutionHTTPBuilder builder = QueryExecutionHTTP.create().endpoint(endpointUrl).queryString(query);
         if (StringUtils.isNotEmpty(graphName)) {
             builder = builder.addDefaultGraphURI(graphName);
@@ -192,7 +194,22 @@ public class SparqlEndpointProcessor {
         if (isPostMethod) {
             builder = builder.sendMode(QuerySendMode.asPostForm);
         }
+        if (timeout != null) {
+            builder.timeout(timeout * 1000);
+        }
         return builder.build();
+    }
+
+    @Nullable
+    private Long calculateTimeout(@Nonnull SchemaExtractorRequestDto request, @Nonnull SparqlQueryBuilder queryBuilder) {
+        QueryType queryType = queryBuilder.getQueryType();
+        if (QueryType.LARGE.equals(queryType) && request.getLargeQueryTimeout() > 0L) {
+            return request.getLargeQueryTimeout();
+        }
+        if (QueryType.SMALL.equals(queryType) && request.getSmallQueryTimeout() > 0L) {
+            return request.getSmallQueryTimeout();
+        }
+        return null;
     }
 
     /**
@@ -206,7 +223,7 @@ public class SparqlEndpointProcessor {
 
     @Nonnull
     public List<QueryResult> read(@Nonnull SchemaExtractorRequestDto request, @Nonnull String queryName, @Nonnull String sparqlQuery) {
-        return read(new SparqlEndpointConfig(request.getEndpointUrl(), request.getGraphName(), request.getEnableLogging(), request.getPostMethod()),
+        return read(new SparqlEndpointConfig(request.getEndpointUrl(), request.getGraphName(), request.getEnableLogging(), request.getPostMethod(), null),
                 queryName, sparqlQuery);
     }
 
@@ -233,7 +250,7 @@ public class SparqlEndpointProcessor {
             log.info(queryName + "\n" + sparqlQuery);
         }
 
-        List<QueryResult> results = requestData(request, queryName, sparqlQuery, 1, withRetry);
+        List<QueryResult> results = requestData(request, queryName, sparqlQuery, null, 1, withRetry);
         if (results != null) {
             response.setHasErrors(false);
             response.setResults(results);

@@ -63,6 +63,10 @@ public class SparqlQueryBuilder {
         return this.backupQuery.name();
     }
 
+    public SchemaExtractorQueries.QueryType getQueryType() {
+        return this.backupQuery.getQueryType();
+    }
+
     public String getQueryString() {
         return this.resultQuery;
     }
