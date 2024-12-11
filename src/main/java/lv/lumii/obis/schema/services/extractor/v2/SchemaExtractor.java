@@ -233,7 +233,7 @@ public class SchemaExtractor {
                 .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, classificationProperty);
         QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
         if (queryResponse.hasErrors() && queryResponse.getResults().isEmpty()) {
-            schema.getErrors().add(new SchemaExtractorError(ERROR, "allClasses", query.name(), queryBuilder.getQueryString()));
+            schema.getErrors().add(new SchemaExtractorError(WARNING, "allClassesWithInstanceCounts", query.name(), queryBuilder.getQueryString()));
             return false;
         }
         if (queryResponse.getResults().size() < totalClasses) {
@@ -312,18 +312,13 @@ public class SchemaExtractor {
         // find all properties with triple count
         log.info(request.getCorrelationId() + " - findAllPropertiesWithTripleCount");
 
-        // if the request does not include the list of properties - read from the SPARQL endpoint
         Map<String, SchemaExtractorPropertyNodeInfo> properties = new HashMap<>();
+
+        // if the request does not include the list of properties - read from the SPARQL endpoint
         if (isTrue(request.getIncludedProperties().isEmpty())) {
-            SchemaExtractorQueries query = selectQuery(request.getExactCountCalculations(), FIND_ALL_PROPERTIES, FIND_ALL_PROPERTIES_DISTINCT);
-            SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(query.name()), query);
-            QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
-            if (queryResponse.hasErrors() && queryResponse.getResults().isEmpty()) {
-                schema.getErrors().add(new SchemaExtractorError(ERROR, "allProperties", query.name(), queryBuilder.getQueryString()));
-            }
-            properties = processPropertiesWithEndpointData(queryResponse.getResults(), request, schema);
-            log.info(request.getCorrelationId() + String.format(" - found %d properties", properties.size()));
+            readPropertiesFromEndpoint(request, schema, properties);
         } else {
+            // else read properties from the request
             for (SchemaExtractorRequestedPropertyDto includedProperty : request.getIncludedProperties()) {
                 if (!SchemaUtil.isValidURI(includedProperty.getPropertyName())) {
                     log.error(request.getCorrelationId() + " - invalid property URI will not be processed - " + includedProperty.getPropertyName());
@@ -358,6 +353,78 @@ public class SchemaExtractor {
 
         // fill schema object with attributes and roles
         formatProperties(properties, schema);
+    }
+
+    protected void readPropertiesFromEndpoint(@Nonnull SchemaExtractorRequestDto request, @Nonnull Schema schema, @Nonnull Map<String, SchemaExtractorPropertyNodeInfo> properties) {
+        log.info(request.getCorrelationId() + " - readPropertiesFromEndpoint");
+
+        // read all properties
+        SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_PROPERTIES.name()), FIND_PROPERTIES);
+        QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
+        if (queryResponse.hasErrors() && queryResponse.getResults().isEmpty()) {
+            schema.getErrors().add(new SchemaExtractorError(ERROR, "allProperties", FIND_PROPERTIES.name(), queryBuilder.getQueryString()));
+            log.error(request.getCorrelationId() + " - no properties were found, stopping the schema extractor");
+            return;
+        }
+
+        // read triple counts for all properties
+        boolean foundTripleCounts = readTripleCountsForAllProperties(request, schema, properties, queryResponse.getResults().size());
+        if (!foundTripleCounts) {
+            // read triple count separately for each property
+            for (QueryResult queryResult : queryResponse.getResults()) {
+                QueryResultObject propertyObject = queryResult.getResultObject(SPARQL_QUERY_BINDING_NAME_PROPERTY);
+                if (propertyObject == null) {
+                    continue;
+                }
+                if (!propertyObject.getIsLiteral() && !SchemaUtil.isValidURI(propertyObject.getValue())) {
+                    log.error(request.getCorrelationId() + " - invalid property URI will not be processed - " + propertyObject.getValue());
+                    schema.getErrors().add(new SchemaExtractorError(ERROR, "invalidURI", propertyObject.getValue(), ""));
+                    continue;
+                }
+                readTripleCountForProperty(request, schema, propertyObject, properties);
+            }
+        }
+
+        if (properties.isEmpty()) {
+            log.error(request.getCorrelationId() + " - no properties were found, stopping the schema extractor");
+        } else {
+            log.info(request.getCorrelationId() + String.format(" - found total %d properties", properties.size()));
+        }
+    }
+
+    protected boolean readTripleCountsForAllProperties(@Nonnull SchemaExtractorRequestDto request, @Nonnull Schema schema,
+                                                       @Nonnull Map<String, SchemaExtractorPropertyNodeInfo> properties, int totalProperties) {
+
+        SchemaExtractorQueries query = selectQuery(request.getExactCountCalculations(), FIND_PROPERTIES_WITH_TRIPLE_COUNT, FIND_PROPERTIES_WITH_TRIPLE_COUNT_DISTINCT);
+        SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(query.name()), query);
+        QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
+        if (queryResponse.hasErrors() && queryResponse.getResults().isEmpty()) {
+            schema.getErrors().add(new SchemaExtractorError(WARNING, "allPropertiesWithTripleCounts", query.name(), queryBuilder.getQueryString()));
+            return false;
+        }
+        if (queryResponse.getResults().size() < totalProperties) {
+            log.warn(request.getCorrelationId() + " - the endpoint did not return triple counts for all properties, will read triple count for each property");
+            return false;
+        }
+        properties.putAll(processPropertiesWithEndpointData(queryResponse.getResults(), request, schema));
+        return true;
+    }
+
+    protected void readTripleCountForProperty(@Nonnull SchemaExtractorRequestDto request, @Nonnull Schema schema, @Nonnull QueryResultObject propertyObject,
+                                              @Nonnull Map<String, SchemaExtractorPropertyNodeInfo> properties) {
+
+        SchemaExtractorQueries query = selectQuery(request.getExactCountCalculations(), FIND_TRIPLE_COUNT_FOR_PROPERTY, FIND_TRIPLE_COUNT_FOR_PROPERTY_DISTINCT);
+        SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(query.name()), query)
+                .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, propertyObject.getValue());
+        QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
+        if (!queryResponse.hasErrors() && !queryResponse.getResults().isEmpty() && queryResponse.getResults().get(0) != null) {
+            String instancesCountStr = queryResponse.getResults().get(0).getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT);
+            if (SchemaUtil.getLongValueFromString(instancesCountStr) > 0L) {
+                addProperty(propertyObject.getValue(), instancesCountStr, properties, request);
+            }
+        } else {
+            schema.getErrors().add(new SchemaExtractorError(ERROR, "findTripleCountForProperty", FIND_TRIPLE_COUNT_FOR_PROPERTY.name(), queryBuilder.getQueryString()));
+        }
     }
 
     @Nonnull

@@ -138,10 +138,13 @@ public enum SchemaExtractorQueries {
             "SELECT ?p2 (COUNT(?x) as ?instances) WHERE { { SELECT DISTINCT ?x WHERE { [] <property> ?x . FILTER(!isLiteral(?x))} LIMIT <limit> } [] ?p2 ?x } GROUP BY ?p2", QueryType.LARGE
     ),
 
-    FIND_ALL_PROPERTIES(
+    FIND_PROPERTIES(
+            "SELECT DISTINCT ?property WHERE {?x ?property ?y}", QueryType.LARGE
+    ),
+    FIND_PROPERTIES_WITH_TRIPLE_COUNT(
             "SELECT ?property (COUNT(?x) as ?instances) WHERE {?x ?property ?y} GROUP BY ?property", QueryType.LARGE
     ),
-    FIND_ALL_PROPERTIES_DISTINCT(
+    FIND_PROPERTIES_WITH_TRIPLE_COUNT_DISTINCT(
             "SELECT ?property (COUNT(DISTINCT ?x) as ?instances) WHERE {?x ?property ?y} GROUP BY ?property", QueryType.LARGE
     ),
 
