@@ -147,6 +147,12 @@ public enum SchemaExtractorQueries {
     FIND_PROPERTIES_WITH_TRIPLE_COUNT_DISTINCT(
             "SELECT ?property (COUNT(DISTINCT ?x) as ?instances) WHERE {?x ?property ?y} GROUP BY ?property", QueryType.LARGE
     ),
+    FIND_PROPERTIES_FOR_CLASS(
+            "SELECT DISTINCT ?property WHERE { { SELECT ?x ?property ?y WHERE { ?x <classificationProperty> <sourceClass> . ?x ?property ?y . } } }", QueryType.LARGE
+    ),
+    FIND_PROPERTIES_FOR_CLASS_WITH_LIMIT(
+            "SELECT DISTINCT ?property WHERE { { SELECT ?x ?property ?y WHERE { ?x <classificationProperty> <sourceClass> . ?x ?property ?y . } LIMIT <limit> } }", QueryType.LARGE
+    ),
 
     FIND_PROPERTY_SOURCES_WITH_TRIPLE_COUNT(
             "SELECT ?class (COUNT(?x) as ?instances) WHERE {?x <property> ?y. ?x <classificationProperty> ?class. } GROUP BY ?class", QueryType.LARGE
@@ -187,13 +193,13 @@ public enum SchemaExtractorQueries {
             "SELECT (COUNT(?x) as ?instances) WHERE {?x <property> ?y. ?y <classificationProperty> <targetClass>. }", QueryType.SMALL
     ),
     FIND_PROPERTY_TARGET_TRIPLE_COUNT_DISTINCT(
-            "SELECT (COUNT(?x) as ?instances) WHERE { {SELECT DISTINCT ?x <property> ?y. ?y <classificationProperty> <targetClass>. }", QueryType.SMALL
+            "SELECT (COUNT(?x) as ?instances) WHERE { {SELECT DISTINCT ?x WHERE { ?x <property> ?y. ?y <classificationProperty> <targetClass>. }}}", QueryType.SMALL
     ),
     FIND_PROPERTY_TARGET_TRIPLE_COUNT_WITH_LIMITS(
             "SELECT (COUNT(?x) as ?instances) WHERE { { SELECT ?y WHERE {?y <classificationProperty> <targetClass>. } LIMIT <limit> } ?x <property> ?y. }", QueryType.SMALL
     ),
     FIND_PROPERTY_TARGET_TRIPLE_COUNT_WITH_LIMITS_DISTINCT(
-            "SELECT (COUNT(?x) as ?instances) WHERE { SELECT DISTINCT ?x ?y WHERE {{ SELECT DISTINCT ?y WHERE {?y <classificationProperty> <targetClass>. } LIMIT <limit> } ?x <property> ?y. }}}", QueryType.SMALL
+            "SELECT (COUNT(?x) as ?instances) WHERE { SELECT DISTINCT ?x ?y WHERE {{ SELECT DISTINCT ?y WHERE {?y <classificationProperty> <targetClass>. } LIMIT <limit> } ?x <property> ?y. }}", QueryType.SMALL
     ),
 
     CHECK_CLASS_AS_PROPERTY_TARGET(
@@ -232,7 +238,7 @@ public enum SchemaExtractorQueries {
             "SELECT (COUNT(?x) as ?instances) WHERE {?x <classificationProperty> <sourceClass>. ?x <property> ?y. FILTER(!isLiteral(?y)) }", QueryType.SMALL
     ),
     COUNT_PROPERTY_URL_VALUES_FOR_SOURCE_DISTINCT(
-            "SELECT (COUNT(?x) as ?instances) WHERE { {SELECT DISTINCT ?x ?y WHERE {?x <classificationProperty> <sourceClass>. ?x <property> ?y. FILTER(!isLiteral(?y)) }}", QueryType.SMALL
+            "SELECT (COUNT(?x) as ?instances) WHERE { {SELECT DISTINCT ?x ?y WHERE {?x <classificationProperty> <sourceClass>. ?x <property> ?y. FILTER(!isLiteral(?y)) }}}", QueryType.SMALL
     ),
     CHECK_PROPERTY_URL_VALUES_FOR_SOURCE(
             "SELECT ?y WHERE {?x <classificationProperty> <sourceClass>. ?x <property> ?y. FILTER(!isLiteral(?y)) } LIMIT 1", QueryType.SMALL
