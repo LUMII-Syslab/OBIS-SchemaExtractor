@@ -1690,7 +1690,7 @@ public class SchemaExtractor {
                                               @Nonnull Map<String, SchemaExtractorClassNodeInfo> graphOfClasses,
                                               @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties) {
 
-        if (isNotTrue(property.getHasDomain())) {
+        if (isNotTrue(property.getHasDomain()) || SchemaExtractorRequestDto.ImportantIndexesMode.classCoverage.equals(request.getCalculateImportanceIndexes())) {
             log.info(request.getCorrelationId() + " - determineImportanceIndexesForSourceClasses [" + property.getPropertyName() + "]");
             List<SchemaExtractorPropertyLinkedClassInfo> principalSourceClasses = determinePrincipalClasses(schema, property,
                     buildAndSortPropertyLinkedClasses(property.getSourceClasses(), classes), classes, graphOfClasses, request, LinkedClassType.SOURCE, null, null,
@@ -1698,7 +1698,7 @@ public class SchemaExtractor {
             mapPrincipalClasses(property.getSourceClasses(), principalSourceClasses);
         }
 
-        if (isNotTrue(property.getHasRange())) {
+        if (isNotTrue(property.getHasRange()) || SchemaExtractorRequestDto.ImportantIndexesMode.classCoverage.equals(request.getCalculateImportanceIndexes())) {
             log.info(request.getCorrelationId() + " - determineImportanceIndexesForTargetClasses [" + property.getPropertyName() + "]");
             List<SchemaExtractorPropertyLinkedClassInfo> principalTargetClasses = determinePrincipalClasses(schema, property,
                     buildAndSortPropertyLinkedClasses(property.getTargetClasses(), classes), classes, graphOfClasses, request, LinkedClassType.TARGET, null, null,
@@ -1709,7 +1709,7 @@ public class SchemaExtractor {
         log.info(request.getCorrelationId() + " - determineImportanceIndexesForClassPairSource [" + property.getPropertyName() + "]");
         // set pair target important indexes
         property.getSourceClasses().forEach(sourceClass -> {
-            if (isNotTrue(sourceClass.getHasRangeInClassPair())) {
+            if (isNotTrue(sourceClass.getHasRangeInClassPair()) || SchemaExtractorRequestDto.ImportantIndexesMode.classCoverage.equals(request.getCalculateImportanceIndexes())) {
                 List<SchemaExtractorSourceTargetInfo> pairsForSpecificSource = findPairsWithSpecificSource(property.getSourceAndTargetPairs(), sourceClass.getClassName());
                 List<SchemaExtractorPropertyLinkedClassInfo> principalPairTargets = determinePrincipalClasses(schema, property,
                         buildAndSortPropertyPairTargets(pairsForSpecificSource, classes), classes, graphOfClasses, request, LinkedClassType.PAIR_SOURCE, sourceClass, null,
@@ -1725,7 +1725,7 @@ public class SchemaExtractor {
         log.info(request.getCorrelationId() + " - determineImportanceIndexesForClassPairTarget [" + property.getPropertyName() + "]");
         // set pair source important indexes
         property.getTargetClasses().forEach(targetClass -> {
-            if (isNotTrue(targetClass.getHasDomainInClassPair())) {
+            if (isNotTrue(targetClass.getHasDomainInClassPair()) || SchemaExtractorRequestDto.ImportantIndexesMode.classCoverage.equals(request.getCalculateImportanceIndexes())) {
                 List<SchemaExtractorSourceTargetInfo> pairsForSpecificTarget = findPairsWithSpecificTarget(property.getSourceAndTargetPairs(), targetClass.getClassName());
                 List<SchemaExtractorPropertyLinkedClassInfo> principalPairSources = determinePrincipalClasses(schema, property,
                         buildAndSortPropertyPairSources(pairsForSpecificTarget, classes), classes, graphOfClasses, request, LinkedClassType.PAIR_TARGET, null, targetClass,
@@ -1784,20 +1784,24 @@ public class SchemaExtractor {
                 continue;
             }
 
-            // check whether there is partial intersaction and if yes - check case by case
+            // check whether there is partial intersection and if yes - check case by case
             if (graphOfClasses.get(currentClass.getClassName()) != null) {
                 List<SchemaExtractorIntersectionClassDto> currentClassNeighbors = graphOfClasses.get(currentClass.getClassName()).getNeighbors();
                 List<String> includedClassesToCheckWith = sortNeighborsByTripleCountDsc(currentClassNeighbors, graphOfClasses).stream()
                         .map(SchemaExtractorIntersectionClassDto::getClassName).filter(importantClasses::contains).collect(Collectors.toList());
 
+                // if there is no intersection, set importance index > 0
                 if (includedClassesToCheckWith.isEmpty()) {
                     currentClass.setImportanceIndex(index++);
                     importantClasses.add(currentClass.getClassName());
                     continue;
                 }
 
-                // if the selected important indexes mode is Base then do not check detailed combinations
-                if (SchemaExtractorRequestDto.ImportantIndexesMode.regular.equals(request.getCalculateImportanceIndexes())) {
+                // if the selected important indexes mode is Basic/ClassCoverage then do not check detailed combinations
+                if (SchemaExtractorRequestDto.ImportantIndexesMode.basic.equals(request.getCalculateImportanceIndexes())
+                        || SchemaExtractorRequestDto.ImportantIndexesMode.classCoverage.equals(request.getCalculateImportanceIndexes())) {
+                    currentClass.setImportanceIndex(index++);
+                    importantClasses.add(currentClass.getClassName());
                     continue;
                 }
 

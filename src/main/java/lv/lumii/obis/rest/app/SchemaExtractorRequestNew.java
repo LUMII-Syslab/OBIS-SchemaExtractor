@@ -18,7 +18,7 @@ public class SchemaExtractorRequestNew {
 
     public enum DistinctQueryMode {yes, no}
 
-    public enum ImportantIndexesMode {regular, unionBased, no}
+    public enum ImportantIndexesMode {basic, unionBased, classCoverage, no}
 
     public enum InstanceNamespacesMode {no, detailed, overview}
 
@@ -46,7 +46,7 @@ public class SchemaExtractorRequestNew {
     @ApiParam(access = "60", value = "Calculate domain and range classes for properties", defaultValue = "true", required = true)
     private Boolean calculateDomainsAndRanges;
 
-    @ApiParam(access = "70", value = "Calculate ascription points (principal classes) for properties (strongly recommended, if schema diagrams are envisaged)", defaultValue = "regular", required = true)
+    @ApiParam(access = "70", value = "Calculate ascription points (principal classes) for properties (strongly recommended, if schema diagrams are envisaged). Use 'class coverage', if all class-to-property connections are to be marked for the class itself, or some its superclass or subclass (can make a difference in the case of overlapping classes)", defaultValue = "basic", required = true)
     private ImportantIndexesMode calculateImportanceIndexes;
 
     @ApiParam(access = "80", value = "Check property source and target class set closure (essential for SHACL export (to be developed))", defaultValue = "false", required = true)
@@ -140,7 +140,7 @@ public class SchemaExtractorRequestNew {
 
     public ImportantIndexesMode getCalculateImportanceIndexes() {
         if (calculateImportanceIndexes == null) {
-            calculateImportanceIndexes = ImportantIndexesMode.regular;
+            calculateImportanceIndexes = ImportantIndexesMode.basic;
         }
         return calculateImportanceIndexes;
     }

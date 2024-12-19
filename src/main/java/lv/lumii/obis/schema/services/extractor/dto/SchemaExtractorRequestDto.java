@@ -40,7 +40,7 @@ public class SchemaExtractorRequestDto {
 
     public enum DistinctQueryMode {yes, no, auto}
 
-    public enum ImportantIndexesMode {unionBased, regular, no}
+    public enum ImportantIndexesMode {basic, unionBased, classCoverage, no}
 
     public enum InstanceNamespacesMode {no, detailed, overview}
 
@@ -190,7 +190,7 @@ public class SchemaExtractorRequestDto {
     @Nonnull
     public ImportantIndexesMode getCalculateImportanceIndexes() {
         if (calculateImportanceIndexes == null) {
-            return ImportantIndexesMode.regular;
+            return ImportantIndexesMode.basic;
         }
         return calculateImportanceIndexes;
     }
