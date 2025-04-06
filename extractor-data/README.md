@@ -1,0 +1,1 @@
+Data directory for OBIS Schema extractor data when running in a container
