@@ -42,6 +42,8 @@ public class SchemaExtractor {
 
     private static final List<Long> sampleLimits = Collections.unmodifiableList(Arrays.asList(1000000L, 100000L, 10000L, 1000L));
 
+    private static final String PROPERTY_PROCESSING = " - processing property %d/%d [%s]";
+
     @Autowired
     @Setter
     @Getter
@@ -501,9 +503,12 @@ public class SchemaExtractor {
     protected void enrichProperties(@Nonnull Map<String, SchemaExtractorPropertyNodeInfo> properties, @Nonnull Schema schema,
                                     @Nonnull Map<String, SchemaExtractorClassNodeInfo> graphOfClasses, @Nonnull SchemaExtractorRequestDto request) {
         int totalCountOfProperties = properties.size();
+        int currentPropertyInd = 1;
         for (Map.Entry<String, SchemaExtractorPropertyNodeInfo> entry : properties.entrySet()) {
 
             SchemaExtractorPropertyNodeInfo property = entry.getValue();
+
+            log.info(request.getCorrelationId() + String.format(PROPERTY_PROCESSING, currentPropertyInd++, totalCountOfProperties, property.getPropertyName()));
 
             determinePropertyObjectTripleCount(schema, property, request, totalCountOfProperties);
             determinePropertyDataTripleCount(schema, property, request, totalCountOfProperties);

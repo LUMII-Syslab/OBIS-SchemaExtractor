@@ -135,13 +135,13 @@ public class SchemaExtractorControllerV2 {
         requestDto.setQueries(initializeSparqlQueries());
 
         try {
-            // 6. Build the schema from the endpoint and Save the result JSON schema in file
-            String resultSchema = extractSchema(requestDto);
-
-            // 7. Save this specific configuration to file
+            // 6. Save this specific configuration to file
             if (BooleanUtils.isTrue(saveConfig)) {
                 writeDataToFile(requestDto.getCorrelationId() + "-config.yml", objectConversionService.getYamlFromObject(requestDto));
             }
+
+            // 7. Build the schema from the endpoint and Save the result JSON schema in file
+            String resultSchema = extractSchema(requestDto);
 
             // 8. Return the result JSON schema
             return resultSchema;
