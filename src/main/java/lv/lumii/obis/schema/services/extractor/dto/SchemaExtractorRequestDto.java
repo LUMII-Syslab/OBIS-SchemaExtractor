@@ -84,6 +84,8 @@ public class SchemaExtractorRequestDto {
     private Long largeQueryTimeout;
     private Long smallQueryTimeout;
 
+    private Long delayOnFailure;
+
     private Boolean enableLogging;
 
     @JsonIgnore
@@ -343,6 +345,14 @@ public class SchemaExtractorRequestDto {
             return 0L;
         }
         return smallQueryTimeout;
+    }
+
+    @Nonnull
+    public Long getDelayOnFailure() {
+        if(delayOnFailure == null) {
+            return 0L;
+        }
+        return delayOnFailure;
     }
 
     @Nonnull

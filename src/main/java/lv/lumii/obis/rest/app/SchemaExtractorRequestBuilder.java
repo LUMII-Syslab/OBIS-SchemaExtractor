@@ -67,6 +67,7 @@ public class SchemaExtractorRequestBuilder {
         requestDto.setExcludedNamespaces(request.getExcludedNamespaces());
         requestDto.setLargeQueryTimeout(request.getLargeQueryTimeout());
         requestDto.setSmallQueryTimeout(request.getSmallQueryTimeout());
+        requestDto.setDelayOnFailure(request.getDelayOnFailure());
         return requestDto;
     }
 

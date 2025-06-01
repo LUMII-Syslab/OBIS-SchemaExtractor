@@ -12,6 +12,17 @@ public class SparqlEndpointConfig {
     private boolean isPostRequest;
     private Long timeout;
 
+    private Long delayOnFailure;
+
+    public SparqlEndpointConfig(String endpointUrl, String graphName, boolean enableLogging, boolean isPostRequest, Long timeout, Long delayOnFailure) {
+        this.endpointUrl = endpointUrl;
+        this.graphName = graphName;
+        this.enableLogging = enableLogging;
+        this.isPostRequest = isPostRequest;
+        this.timeout = timeout;
+        this.delayOnFailure = delayOnFailure;
+    }
+
     public SparqlEndpointConfig(String endpointUrl, String graphName, boolean enableLogging, boolean isPostRequest, Long timeout) {
         this.endpointUrl = endpointUrl;
         this.graphName = graphName;

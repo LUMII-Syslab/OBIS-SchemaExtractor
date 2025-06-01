@@ -96,6 +96,9 @@ public class SchemaExtractorRequestNew {
     @ApiParam(access = "236", value = "Small Query Timeout (in seconds). Default value 60 seconds (set 0 to execute without timeout)", defaultValue = "60", required = false)
     private Long smallQueryTimeout;
 
+    @ApiParam(hidden = true, access = "237", value ="Query Delay Timeout in case of failure (in seconds)", defaultValue = "0", required = false)
+    private Long delayOnFailure;
+
     public Boolean getCalculateSubClassRelations() {
         if (calculateSubClassRelations == null) {
             calculateSubClassRelations = Boolean.TRUE;

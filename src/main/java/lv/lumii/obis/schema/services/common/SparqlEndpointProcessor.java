@@ -50,7 +50,7 @@ public class SparqlEndpointProcessor {
     @Nonnull
     public QueryResponse read(@Nonnull SchemaExtractorRequestDto request, @Nonnull SparqlQueryBuilder queryBuilder, boolean withRetry) {
         Long timeout = calculateTimeout(request, queryBuilder);
-        return read(new SparqlEndpointConfig(request.getEndpointUrl(), request.getGraphName(), request.getEnableLogging(), request.getPostMethod(), timeout), queryBuilder, withRetry);
+        return read(new SparqlEndpointConfig(request.getEndpointUrl(), request.getGraphName(), request.getEnableLogging(), request.getPostMethod(), timeout, request.getDelayOnFailure()), queryBuilder, withRetry);
     }
 
     public void checkEndpointHealthAndStopExecutionOnError(@Nonnull SparqlEndpointConfig request, boolean applyWaiting) {
@@ -71,8 +71,18 @@ public class SparqlEndpointProcessor {
             }
         }
         if (isEndpointHealthy.get()) {
-            log.info(String.format("The endpoint [ %s ] is available and in working state - schema extractor execution is in progress",
-                    SchemaUtil.getEndpointLinkText(request.getEndpointUrl(), request.getGraphName())));
+            if (request.getDelayOnFailure() != null && request.getDelayOnFailure() > 0L) {
+                log.info(String.format("The endpoint [ %s ] is available and in working state - schema extractor execution will be resumed in %d seconds",
+                        SchemaUtil.getEndpointLinkText(request.getEndpointUrl(), request.getGraphName()), request.getDelayOnFailure()));
+                try {
+                    Thread.sleep(request.getDelayOnFailure() * 1000);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                }
+            } else {
+                log.info(String.format("The endpoint [ %s ] is available and in working state - schema extractor execution is in progress",
+                        SchemaUtil.getEndpointLinkText(request.getEndpointUrl(), request.getGraphName())));
+            }
         } else {
             log.error(String.format("The endpoint [ %s ] is not available, stopping the schema extractor",
                     SchemaUtil.getEndpointLinkText(request.getEndpointUrl(), request.getGraphName())));
@@ -82,7 +92,7 @@ public class SparqlEndpointProcessor {
 
     public boolean checkEndpointHealthQuery(@Nonnull SparqlEndpointConfig request) {
         SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(ENDPOINT_HEALTH_CHECK.getSparqlQuery(), ENDPOINT_HEALTH_CHECK);
-        QueryResponse response = read(new SparqlEndpointConfig(request.getEndpointUrl(), request.getGraphName(), request.isEnableLogging(), request.isPostRequest(), null), queryBuilder, false);
+        QueryResponse response = read(new SparqlEndpointConfig(request.getEndpointUrl(), request.getGraphName(), request.isEnableLogging(), request.isPostRequest(), null, null), queryBuilder, false);
         return !response.hasErrors() && !response.getResults().isEmpty();
     }
 
