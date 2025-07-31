@@ -1386,7 +1386,7 @@ public class SchemaExtractor {
                 for (QueryResult queryResult : queryResponse.getResults()) {
                     String otherProperty = queryResult.getValue(SPARQL_QUERY_BINDING_NAME_PROPERTY_OTHER);
                     Long tripleCount = SchemaUtil.getLongValueFromString(queryResult.getValue(SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
-                    if (StringUtils.isNotEmpty(otherProperty)) {
+                    if (StringUtils.isNotEmpty(otherProperty) && isNotExcludedResource(otherProperty, request.getExcludedNamespaces())) {
                         relatedProperties.add(new SchemaExtractorPropertyRelatedPropertyInfo(otherProperty, tripleCount, tripleCountBase));
                     }
                 }
