@@ -1366,6 +1366,9 @@ public class SchemaExtractor {
         while (isTrue(retry)) {
             queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
             if (isTrue(queryResponse.hasErrors())) {
+                if (tripleCountBase == null) {
+                    schema.getErrors().add(new SchemaExtractorError(WARNING, property.getPropertyName(), queryWithoutLimit.name(), queryBuilder.getQueryString()));
+                }
                 retry = true;
                 Long finalTripleCountBase = tripleCountBase;
                 Long newLimit = sampleLimits.stream().filter(limit -> finalTripleCountBase == null || limit < finalTripleCountBase).findFirst().orElse(null);
@@ -1377,7 +1380,7 @@ public class SchemaExtractor {
                 } else {
                     retry = false;
                     if (queryResponse.hasErrors()) {
-                        schema.getErrors().add(new SchemaExtractorError(WARNING, property.getPropertyName(), queryWithoutLimit.name(), queryBuilder.getQueryString()));
+                        schema.getErrors().add(new SchemaExtractorError(WARNING, property.getPropertyName(), queryWithLimit.name(), queryBuilder.getQueryString()));
                         isOK = false;
                     }
                 }
