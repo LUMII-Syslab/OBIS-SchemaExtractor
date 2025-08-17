@@ -2826,13 +2826,13 @@ public class SchemaExtractor {
             QueryResponse queryResponse;
             if (label.getLanguages().isEmpty()) {
                 SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_LABEL.name()), FIND_LABEL)
-                        .withContextParam(SPARQL_QUERY_BINDING_NAME_RESOURCE, element.getFullName())
-                        .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, label.getLabelProperty());
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_RESOURCE1, element.getFullName())
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_RESOURCE2, label.getLabelProperty());
                 queryResponse = sparqlEndpointProcessor.read(request, queryBuilder, false);
             } else {
                 SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_LABEL_WITH_LANG.name()), FIND_LABEL_WITH_LANG)
-                        .withContextParam(SPARQL_QUERY_BINDING_NAME_RESOURCE, element.getFullName())
-                        .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, label.getLabelProperty())
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_RESOURCE1, element.getFullName())
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_RESOURCE2, label.getLabelProperty())
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CUSTOM_FILTER, buildFilterWithLanguages(label.getLanguages()));
                 queryResponse = sparqlEndpointProcessor.read(request, queryBuilder, false);
             }

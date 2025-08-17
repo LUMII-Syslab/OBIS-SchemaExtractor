@@ -5,8 +5,8 @@ import lv.lumii.obis.schema.services.SchemaUtil;
 import lv.lumii.obis.schema.services.extractor.v2.SchemaExtractorQueries;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.jena.query.QueryException;
 import org.apache.jena.query.QueryFactory;
-import org.apache.jena.query.QueryParseException;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -100,7 +100,7 @@ public class SparqlQueryBuilder {
             QueryFactory.create(queryToBuild);
             this.resultQuery = queryToBuild;
             return this.resultQuery;
-        } catch (QueryParseException e) {
+        } catch (QueryException e) {
             log.error(String.format("SPARQL query syntax or parsing exception for the query %s", this.backupQuery.name()));
             log.error("\n" + queryToBuild);
         }

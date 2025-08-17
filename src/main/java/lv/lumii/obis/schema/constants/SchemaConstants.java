@@ -96,7 +96,8 @@ public class SchemaConstants {
     public static final String SPARQL_QUERY_BINDING_NAME_Y = "y";
     public static final String SPARQL_QUERY_BINDING_NAME_PROPERTY_OTHER = "p2";
     public static final String SPARQL_QUERY_BINDING_NAME_CUSTOM_FILTER = "customFilter";
-    public static final String SPARQL_QUERY_BINDING_NAME_RESOURCE = "resource";
+    public static final String SPARQL_QUERY_BINDING_NAME_RESOURCE1 = "resource1";
+    public static final String SPARQL_QUERY_BINDING_NAME_RESOURCE2 = "resource2";
     public static final String SPARQL_QUERY_BINDING_NAME_VALUE = "value";
     public static final String SPARQL_QUERY_BINDING_NAME_LANGUAGE = "language";
     public static final String SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY = "classificationProperty";
