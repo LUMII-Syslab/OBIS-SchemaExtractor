@@ -212,6 +212,12 @@ public enum SchemaExtractorQueries {
     FIND_PROPERTY_SOURCE_TARGET_PAIRS_DISTINCT(
             "SELECT ?sourceClass ?targetClass (COUNT(?x) as ?instances) WHERE { { SELECT DISTINCT ?x ?y ?sourceClass ?targetClass WHERE {?x <property> ?y. ?x <classificationPropertySource> ?sourceClass. ?y <classificationPropertyTarget> ?targetClass. }}} GROUP BY ?sourceClass ?targetClass", QueryType.LARGE
     ),
+    FIND_PROPERTY_SOURCE_TARGET_PAIRS_FOR_SPECIFIC_SOURCE(
+            "SELECT ?targetClass (COUNT(?x) as ?instances) WHERE {?x <property> ?y. ?x <classificationPropertySource> <sourceClass>. ?y <classificationPropertyTarget> ?targetClass. } GROUP BY ?targetClass", QueryType.SMALL
+    ),
+    FIND_PROPERTY_SOURCE_TARGET_PAIRS_FOR_SPECIFIC_SOURCE_DISTINCT(
+            "SELECT ?targetClass (COUNT(?x) as ?instances) WHERE { {SELECT DISTINCT ?x ?y ?targetClass WHERE {?x <property> ?y. ?x <classificationPropertySource> <sourceClass>. ?y <classificationPropertyTarget> ?targetClass .}}} GROUP BY ?targetClass", QueryType.SMALL
+    ),
     FIND_PROPERTY_SOURCE_TARGET_PAIRS_FOR_SPECIFIC_CLASSES(
             "SELECT (COUNT(?x) as ?instances) WHERE {?x <property> ?y. ?x <classificationPropertySource> <sourceClass>. ?y <classificationPropertyTarget> <targetClass>.}", QueryType.SMALL
     ),

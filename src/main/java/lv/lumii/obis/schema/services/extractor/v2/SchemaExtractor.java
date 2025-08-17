@@ -1074,6 +1074,34 @@ public class SchemaExtractor {
             }
         }
 
+        // endpoint was not able to return class pairs with direct query, so trying to find target classes for each source
+        if (property.getSourceAndTargetPairs().isEmpty()) {
+            log.info(request.getCorrelationId() + " - determinePropertySourceTargetPairsForEachSource [" + property.getPropertyName() + "]");
+
+            property.getSourceClasses().forEach(sourceClass -> {
+                for (String classificationPropertyTarget : request.getMainClassificationProperties()) {
+                    SchemaExtractorQueries query = selectQuery(request.getExactCountCalculations(), FIND_PROPERTY_SOURCE_TARGET_PAIRS_FOR_SPECIFIC_SOURCE, FIND_PROPERTY_SOURCE_TARGET_PAIRS_FOR_SPECIFIC_SOURCE_DISTINCT);
+                    SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(query.name()), query)
+                            .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL, sourceClass.getClassName(), sourceClass.getIsLiteral())
+                            .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_SOURCE, sourceClass.getClassificationProperty())
+                            .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_TARGET, classificationPropertyTarget)
+                            .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
+                    QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
+                    for (QueryResult queryResult : queryResponse.getResults()) {
+                        String targetClass = queryResult.getValueFullName(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_TARGET);
+                        String tripleCountStr = queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT);
+                        if (StringUtils.isNotEmpty(targetClass) && isNotExcludedResource(targetClass, request.getExcludedNamespaces())) {
+                            SchemaClass targetSchemaClass = findClass(schema.getClasses(), targetClass);
+                            if (targetSchemaClass != null && isNotFalse(targetSchemaClass.getPropertiesInSchema())) {
+                                property.getSourceAndTargetPairs().add(new SchemaExtractorSourceTargetInfo(
+                                        sourceClass.getClassName(), targetClass, SchemaUtil.getLongValueFromString(tripleCountStr), sourceClass.getClassificationProperty(), classificationPropertyTarget));
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
         // endpoint was not able to return class pairs with direct query, so trying to match each source and target class combination
         if (property.getSourceAndTargetPairs().isEmpty()) {
             log.info(request.getCorrelationId() + " - determinePropertySourceTargetPairsForEachSourceAndTargetCombination [" + property.getPropertyName() + "]");
