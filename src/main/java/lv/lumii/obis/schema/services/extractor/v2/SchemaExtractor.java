@@ -1394,7 +1394,7 @@ public class SchemaExtractor {
         }
         if (!request.getIncludedProperties().isEmpty()) {
             if (!properties.keySet().isEmpty()) {
-                queryBuilder.withContextParam(SPARQL_QUERY_BINDING_NAME_VALUES, buildValuesClause(properties.keySet()));
+                queryBuilder.withContextParam(SPARQL_QUERY_BINDING_NAME_VALUES, buildValuesClause(properties.keySet(), SPARQL_QUERY_BINDING_NAME_PROPERTY_OTHER));
             } else {
                 return isOK;
             }
@@ -2060,8 +2060,8 @@ public class SchemaExtractor {
         return customFilter.toString();
     }
 
-    protected String buildValuesClause(@Nonnull Set<String> values) {
-        StringBuilder valuesClause = new StringBuilder("VALUES ?p2 { ");
+    protected String buildValuesClause(@Nonnull Set<String> values, @Nonnull String param) {
+        StringBuilder valuesClause = new StringBuilder("VALUES ?").append(param).append(" { ");
         values.forEach(value -> valuesClause.append("<").append(value).append(">").append(" "));
         valuesClause.append("} ");
         return valuesClause.toString();
@@ -2393,6 +2393,12 @@ public class SchemaExtractor {
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL, classA.getFullName(), classA.getIsLiteral())
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_A, classA.getClassificationProperty())
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_B, classificationProperty);
+                if (!request.getIncludedClasses().isEmpty()) {
+                    queryBuilder.withContextParam(SPARQL_QUERY_BINDING_NAME_VALUES,
+                            buildValuesClause(classes.stream().map(SchemaClass::getFullName).collect(Collectors.toSet()), SPARQL_QUERY_BINDING_NAME_CLASS_B));
+                } else {
+                    queryBuilder.withContextParam(SPARQL_QUERY_BINDING_NAME_VALUES, StringUtils.EMPTY);
+                }
                 queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
                 if (!queryResponse.getResults().isEmpty()) {
                     updateGraphOfClassesWithNeighbors(schema, classA.getFullName(), queryResponse.getResults(), graphOfClasses, request);
