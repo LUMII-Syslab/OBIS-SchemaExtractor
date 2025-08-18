@@ -568,9 +568,9 @@ public class SchemaExtractor {
 
 
             if (isTrue(request.getCalculatePropertyPropertyRelations())) {
-                determineFollowers(schema, property, request, totalCountOfProperties);
-                determineOutgoingProperties(schema, property, request, totalCountOfProperties);
-                determineIncomingProperties(schema, property, request, totalCountOfProperties);
+                determineFollowers(schema, property, request, properties);
+                determineOutgoingProperties(schema, property, request, properties);
+                determineIncomingProperties(schema, property, request, properties);
             }
 
             switch (request.getCalculateCardinalities()) {
@@ -1351,27 +1351,30 @@ public class SchemaExtractor {
         });
     }
 
-    protected void determineFollowers(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties) {
+    protected void determineFollowers(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request,
+                                      @Nonnull Map<String, SchemaExtractorPropertyNodeInfo> properties) {
         log.info(request.getCorrelationId() + " - determinePropertyFollowers [" + property.getPropertyName() + "]");
-        boolean hasFollowersOK = executePropertyRelationsQueries(schema, property, request, FIND_PROPERTY_FOLLOWERS, FIND_PROPERTY_FOLLOWERS_WITH_LIMITS, property.getFollowers(), totalCountOfProperties);
+        boolean hasFollowersOK = executePropertyRelationsQueries(schema, property, request, FIND_PROPERTY_FOLLOWERS, FIND_PROPERTY_FOLLOWERS_WITH_LIMITS, property.getFollowers(), properties);
         property.setHasFollowersOK(hasFollowersOK);
     }
 
-    protected void determineOutgoingProperties(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties) {
+    protected void determineOutgoingProperties(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request,
+                                               @Nonnull Map<String, SchemaExtractorPropertyNodeInfo> properties) {
         log.info(request.getCorrelationId() + " - determinePropertyOutgoingProperties [" + property.getPropertyName() + "]");
-        boolean hasOutgoingPropertiesOK = executePropertyRelationsQueries(schema, property, request, FIND_PROPERTY_OUTGOING_PROPERTIES, FIND_PROPERTY_OUTGOING_PROPERTIES_WITH_LIMITS, property.getOutgoingProperties(), totalCountOfProperties);
+        boolean hasOutgoingPropertiesOK = executePropertyRelationsQueries(schema, property, request, FIND_PROPERTY_OUTGOING_PROPERTIES, FIND_PROPERTY_OUTGOING_PROPERTIES_WITH_LIMITS, property.getOutgoingProperties(), properties);
         property.setHasOutgoingPropertiesOK(hasOutgoingPropertiesOK);
     }
 
-    protected void determineIncomingProperties(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties) {
+    protected void determineIncomingProperties(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request,
+                                               @Nonnull Map<String, SchemaExtractorPropertyNodeInfo> properties) {
         log.info(request.getCorrelationId() + " - determinePropertyIncomingProperties [" + property.getPropertyName() + "]");
-        boolean hasIncomingPropertiesOK = executePropertyRelationsQueries(schema, property, request, FIND_PROPERTY_INCOMING_PROPERTIES, FIND_PROPERTY_INCOMING_PROPERTIES_WITH_LIMITS, property.getIncomingProperties(), totalCountOfProperties);
+        boolean hasIncomingPropertiesOK = executePropertyRelationsQueries(schema, property, request, FIND_PROPERTY_INCOMING_PROPERTIES, FIND_PROPERTY_INCOMING_PROPERTIES_WITH_LIMITS, property.getIncomingProperties(), properties);
         property.setHasIncomingPropertiesOK(hasIncomingPropertiesOK);
     }
 
     protected boolean executePropertyRelationsQueries(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request,
                                                       @Nonnull SchemaExtractorQueries queryWithoutLimit, @Nonnull SchemaExtractorQueries queryWithLimit,
-                                                      @Nonnull List<SchemaExtractorPropertyRelatedPropertyInfo> relatedProperties, int totalCountOfProperties) {
+                                                      @Nonnull List<SchemaExtractorPropertyRelatedPropertyInfo> relatedProperties, @Nonnull Map<String, SchemaExtractorPropertyNodeInfo> properties) {
         boolean isOK = true;
         Long tripleCountBase = null;
         if (request.getSampleLimitForPropertyToPropertyRelationCalculation() != null && request.getSampleLimitForPropertyToPropertyRelationCalculation() > 0) {
@@ -1388,6 +1391,15 @@ public class SchemaExtractor {
             queryBuilder = new SparqlQueryBuilder(request.getQueries().get(queryWithLimit.name()), queryWithLimit)
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_LIMIT, tripleCountBase.toString());
+        }
+        if (!request.getIncludedProperties().isEmpty()) {
+            if (!properties.keySet().isEmpty()) {
+                queryBuilder.withContextParam(SPARQL_QUERY_BINDING_NAME_VALUES, buildValuesClause(properties.keySet()));
+            } else {
+                return isOK;
+            }
+        } else {
+            queryBuilder.withContextParam(SPARQL_QUERY_BINDING_NAME_VALUES, StringUtils.EMPTY);
         }
         boolean retry = true;
         QueryResponse queryResponse;
@@ -2046,6 +2058,13 @@ public class SchemaExtractor {
             }
         }
         return customFilter.toString();
+    }
+
+    protected String buildValuesClause(@Nonnull Set<String> values) {
+        StringBuilder valuesClause = new StringBuilder("VALUES ?p2 { ");
+        values.forEach(value -> valuesClause.append("<").append(value).append(">").append(" "));
+        valuesClause.append("} ");
+        return valuesClause.toString();
     }
 
     protected void updateClassesWithIncomingTripleCount(@Nonnull Map<String, SchemaExtractorPropertyNodeInfo> properties, @Nonnull Schema schema) {
