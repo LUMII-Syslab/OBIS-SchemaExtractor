@@ -1417,6 +1417,15 @@ public class SchemaExtractor {
                     queryBuilder = new SparqlQueryBuilder(request.getQueries().get(queryWithLimit.name()), queryWithLimit)
                             .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName())
                             .withContextParam(SPARQL_QUERY_BINDING_NAME_LIMIT, tripleCountBase.toString());
+                    if (!request.getIncludedProperties().isEmpty()) {
+                        if (!properties.keySet().isEmpty()) {
+                            queryBuilder.withContextParam(SPARQL_QUERY_BINDING_NAME_VALUES, buildValuesClause(properties.keySet(), SPARQL_QUERY_BINDING_NAME_PROPERTY_OTHER));
+                        } else {
+                            return isOK;
+                        }
+                    } else {
+                        queryBuilder.withContextParam(SPARQL_QUERY_BINDING_NAME_VALUES, StringUtils.EMPTY);
+                    }
                 } else {
                     retry = false;
                     if (queryResponse.hasErrors()) {
