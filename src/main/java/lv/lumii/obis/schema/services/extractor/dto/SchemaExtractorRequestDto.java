@@ -51,6 +51,7 @@ public class SchemaExtractorRequestDto {
 
     private Boolean calculateSubClassRelations;
     private Boolean calculateMultipleInheritanceSuperclasses;
+    private Boolean requireClasses;
     private Boolean calculatePropertyPropertyRelations;
     private Boolean calculateSourceAndTargetPairs;
     private Boolean calculateDomainsAndRanges;
@@ -163,6 +164,14 @@ public class SchemaExtractorRequestDto {
             calculateMultipleInheritanceSuperclasses = Boolean.TRUE;
         }
         return calculateMultipleInheritanceSuperclasses;
+    }
+
+    @Nonnull
+    public Boolean getRequireClasses() {
+        if (requireClasses == null) {
+            requireClasses = Boolean.TRUE;
+        }
+        return requireClasses;
     }
 
     @Nonnull

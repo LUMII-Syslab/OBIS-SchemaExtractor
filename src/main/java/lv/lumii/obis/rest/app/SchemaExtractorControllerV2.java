@@ -59,7 +59,6 @@ public class SchemaExtractorControllerV2 {
     private static final String SCHEMA_READ_PREFIX_FILE_MESSAGE_END = "Request %s - Completed to read Prefixes from the JSON file [%s]";
     private static final String SCHEMA_READ_PREFIX_FILE_MESSAGE_ERROR = "Request %s - Cannot read Prefixes from the JSON file [%s]";
 
-    private static final String SCHEMA_EXTRACT_EXCEPTION_BAD_REQUEST = "The requested endpoint is not available, stopping the schema extractor for this execution";
     private static final String SCHEMA_EXTRACT_EXCEPTION_INTERNAL_ERROR = "Internal server error, stopping the schema extractor for this execution. Please check logs for more details";
     private static final String SCHEMA_EXTRACT_EXCEPTION_NO_CONFIG_FILE = "Valid configuration file is not provided";
 
@@ -147,8 +146,8 @@ public class SchemaExtractorControllerV2 {
             return resultSchema;
 
         } catch (SparqlEndpointException e) {
-            log.error(SCHEMA_EXTRACT_EXCEPTION_BAD_REQUEST);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, SCHEMA_EXTRACT_EXCEPTION_BAD_REQUEST, e);
+            log.error(e.getMessage());
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage(), e);
         } catch (Exception e) {
             log.error(SCHEMA_EXTRACT_EXCEPTION_INTERNAL_ERROR, e);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, SCHEMA_EXTRACT_EXCEPTION_INTERNAL_ERROR, e);
@@ -202,8 +201,8 @@ public class SchemaExtractorControllerV2 {
             // 8. Return the result JSON schema
             return resultSchema;
         } catch (SparqlEndpointException e) {
-            log.error(SCHEMA_EXTRACT_EXCEPTION_BAD_REQUEST);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, SCHEMA_EXTRACT_EXCEPTION_BAD_REQUEST, e);
+            log.error(e.getMessage());
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage(), e);
         } catch (Exception e) {
             log.error(SCHEMA_EXTRACT_EXCEPTION_INTERNAL_ERROR, e);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, SCHEMA_EXTRACT_EXCEPTION_INTERNAL_ERROR, e);

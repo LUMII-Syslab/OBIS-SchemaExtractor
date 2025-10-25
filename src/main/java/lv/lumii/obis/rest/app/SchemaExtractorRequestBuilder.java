@@ -44,6 +44,7 @@ public class SchemaExtractorRequestBuilder {
         requestDto.setGraphName(request.getGraphName());
         requestDto.setCalculateSubClassRelations(request.getCalculateSubClassRelations());
         requestDto.setCalculateMultipleInheritanceSuperclasses(request.getCalculateMultipleInheritanceSuperclasses());
+        requestDto.setRequireClasses(request.getRequireClasses());
         requestDto.setCalculatePropertyPropertyRelations(request.getCalculatePropertyPropertyRelations());
         requestDto.setCalculateSourceAndTargetPairs(request.getCalculateSourceAndTargetPairs());
         requestDto.setCalculateDomainsAndRanges(request.getCalculateDomainsAndRanges());

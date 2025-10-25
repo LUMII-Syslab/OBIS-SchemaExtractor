@@ -146,6 +146,11 @@ public class SchemaExtractor {
             log.info(request.getCorrelationId() + String.format(" - processed %d classes from the request input", classes.size()));
         }
 
+        if (classes.isEmpty() && request.getRequireClasses()) {
+            log.error(request.getCorrelationId() + " - no classes were found, stopping the schema extractor");
+            throw new SparqlEndpointException("No classes were found from the endpoint, stopping the schema extractor. If you want to proceed with the schema extraction without classes, please set [requireClasses=false]");
+        }
+
         schema.setClasses(classes);
 
         if (isTrue(request.getCalculateSubClassRelations())) {
@@ -221,9 +226,7 @@ public class SchemaExtractor {
             }
         }
 
-        if (classes.isEmpty()) {
-            log.error(request.getCorrelationId() + " - no classes were found, stopping the schema extractor");
-        } else {
+        if (!classes.isEmpty()) {
             log.info(request.getCorrelationId() + String.format(" - found total %d classes", classes.size()));
         }
     }

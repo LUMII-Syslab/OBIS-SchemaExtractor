@@ -37,6 +37,9 @@ public class SchemaExtractorRequestNew {
     @ApiParam(access = "32", value = "Minimal Analyzed Class Size (if 1, all classes should be analyzed). Values above 1 (e.g., 10 or 100) may be essential for endpoints with above 500 classes", defaultValue = "1", required = true)
     private Integer minimalAnalyzedClassSize;
 
+    @ApiParam(access = "33", value = "At least 1 class is required for the schema extraction, if no classes found - the extractor work is aborted", defaultValue = "true", required = true)
+    private Boolean requireClasses;
+
     @ApiParam(access = "40", value = "Calculate property-property adjacency (following properties, same subject, same object). Useful for auto-completion. Currently not used in schema visualization. Can be time consuming for larger queries", defaultValue = "true", required = true)
     private Boolean calculatePropertyPropertyRelations;
 
@@ -223,5 +226,13 @@ public class SchemaExtractorRequestNew {
             exactCountCalculations = DistinctQueryMode.yes;
         }
         return exactCountCalculations;
+    }
+
+    @Nonnull
+    public Boolean getRequireClasses() {
+        if (requireClasses == null) {
+            requireClasses = Boolean.TRUE;
+        }
+        return requireClasses;
     }
 }
