@@ -672,7 +672,7 @@ public class SchemaExtractor {
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, classificationProperty)
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
             QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
-            if (queryResponse.hasErrors()) {
+            if (queryResponse.hasErrors() || queryResponse.getResults().isEmpty()) {
                 schema.getErrors().add(new SchemaExtractorError(INFO, property.getPropertyName(), query.name(), queryBuilder.getQueryString()));
                 continue;
             }
@@ -933,7 +933,7 @@ public class SchemaExtractor {
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, classificationProperty)
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
             QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
-            if (queryResponse.hasErrors()) {
+            if (queryResponse.hasErrors() || queryResponse.getResults().isEmpty()) {
                 schema.getErrors().add(new SchemaExtractorError(INFO, property.getPropertyName(), query.name(), queryBuilder.getQueryString()));
                 continue;
             }
