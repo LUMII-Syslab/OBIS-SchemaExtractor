@@ -81,12 +81,12 @@ public class SchemaExtractor {
 
     protected void validateEndpointHealth(@Nonnull SchemaExtractorRequestDto request) {
         // validate GET health check query
-        SparqlEndpointConfig requestConfig = new SparqlEndpointConfig(request.getEndpointUrl(), request.getGraphName(), request.getEnableLogging(), false, null);
+        SparqlEndpointConfig requestConfig = new SparqlEndpointConfig(request.getCorrelationId(), request.getEndpointUrl(), request.getGraphName(), request.getEnableLogging(), false, null);
         boolean isEndpointHealthy = sparqlEndpointProcessor.checkEndpointHealthQuery(requestConfig);
         if (isEndpointHealthy) {
             request.setPostMethod(Boolean.FALSE);
-            log.info(String.format("The endpoint [ %s ] is available and in working state - schema extractor execution is in progress with GET requests",
-                    SchemaUtil.getEndpointLinkText(request.getEndpointUrl(), request.getGraphName())));
+            log.info(String.format("The endpoint [ %s ] is available and in working state - schema extractor execution [ %s ] is in progress with GET requests",
+                    SchemaUtil.getEndpointLinkText(request.getEndpointUrl(), request.getGraphName()), request.getCorrelationId()));
             return;
         }
 
@@ -95,15 +95,16 @@ public class SchemaExtractor {
         isEndpointHealthy = sparqlEndpointProcessor.checkEndpointHealthQuery(requestConfig);
         if (isEndpointHealthy) {
             request.setPostMethod(Boolean.TRUE);
-            log.info(String.format("The endpoint [ %s ] is available and in working state - schema extractor execution is in progress with POST requests",
-                    SchemaUtil.getEndpointLinkText(request.getEndpointUrl(), request.getGraphName())));
+            log.info(String.format("The endpoint [ %s ] is available and in working state - schema extractor execution [ %s ] is in progress with POST requests",
+                    SchemaUtil.getEndpointLinkText(request.getEndpointUrl(), request.getGraphName()), request.getCorrelationId()));
             return;
         }
 
-        // log error and stop extractor execution
-        log.error(String.format("The endpoint [ %s ] is not available for GET and POST requests, stopping the schema extractor",
-                SchemaUtil.getEndpointLinkText(request.getEndpointUrl(), request.getGraphName())));
-        throw new SparqlEndpointException("The endpoint is not available, stopping the schema extractor");
+        // log error and stop extractor execution for the specific request
+        String stoppingError = String.format("The endpoint [ %s ] is not available for GET and POST requests, stopping the schema extraction for the request [ %s ]",
+                SchemaUtil.getEndpointLinkText(request.getEndpointUrl(), request.getGraphName()), request.getCorrelationId());
+        log.error(stoppingError);
+        throw new SparqlEndpointException(stoppingError);
     }
 
     protected void buildClasses(@Nonnull SchemaExtractorRequestDto request, @Nonnull Schema schema, @Nonnull Map<String, SchemaExtractorClassNodeInfo> graphOfClasses) {

@@ -86,6 +86,7 @@ public class SchemaExtractorRequestDto {
     private Long smallQueryTimeout;
 
     private Long delayOnFailure;
+    private Long waitingTimeForEndpoint;
 
     private Boolean enableLogging;
 
@@ -362,6 +363,14 @@ public class SchemaExtractorRequestDto {
             return 0L;
         }
         return delayOnFailure;
+    }
+
+    @Nonnull
+    public Long getWaitingTimeForEndpoint() {
+        if(waitingTimeForEndpoint == null) {
+            return 0L;
+        }
+        return waitingTimeForEndpoint;
     }
 
     @Nonnull

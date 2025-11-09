@@ -1,8 +1,6 @@
 package lv.lumii.obis.schema.services.common;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -37,8 +35,6 @@ public class SparqlEndpointProcessor {
 
     private static final int RETRY_COUNT = 2;
 
-    private static final List<Long> healtCheckWaitingTime = Collections.unmodifiableList(Arrays.asList(60 * 1000L, 15 * 60 * 1000L, 60 * 60 * 1000L));
-
     /**
      * Actual methods for SchemaExtractor V2
      */
@@ -50,50 +46,69 @@ public class SparqlEndpointProcessor {
     @Nonnull
     public QueryResponse read(@Nonnull SchemaExtractorRequestDto request, @Nonnull SparqlQueryBuilder queryBuilder, boolean withRetry) {
         Long timeout = calculateTimeout(request, queryBuilder);
-        return read(new SparqlEndpointConfig(request.getEndpointUrl(), request.getGraphName(), request.getEnableLogging(), request.getPostMethod(), timeout, request.getDelayOnFailure()), queryBuilder, withRetry);
+        return read(new SparqlEndpointConfig(request.getCorrelationId(), request.getEndpointUrl(), request.getGraphName(), request.getEnableLogging(),
+                        request.getPostMethod(), timeout, request.getDelayOnFailure(), request.getWaitingTimeForEndpoint()),
+                queryBuilder, withRetry);
     }
 
     public void checkEndpointHealthAndStopExecutionOnError(@Nonnull SparqlEndpointConfig request, boolean applyWaiting) {
         AtomicBoolean isEndpointHealthy = new AtomicBoolean(checkEndpointHealthQuery(request));
         if (applyWaiting) {
             if (!isEndpointHealthy.get()) {
-                for (Long sleepTime : healtCheckWaitingTime) {
-                    log.error(String.format("The endpoint is not healthy - [ %s ]. Stopping the execution and will retry after %d minutes.",
-                            SchemaUtil.getEndpointLinkText(request.getEndpointUrl(), request.getGraphName()), sleepTime / 1000 / 60));
-                    try {
-                        Thread.sleep(sleepTime);
-                    } catch (InterruptedException ie) {
-                        Thread.currentThread().interrupt();
+                // wait 1 minute
+                waitForEndpoint(request, 60 * 1000L);
+                isEndpointHealthy.set(checkEndpointHealthQuery(request));
+                if (!isEndpointHealthy.get()) {
+                    // wait 15 minutes periods for the time <= request.getWaitingTimeForEndpoint()
+                    // if getWaitingTimeForEndpoint == 0 then wait forever
+                    long waitingIterations = (request.getWaitingTimeForEndpoint() != null && request.getWaitingTimeForEndpoint() > 15)
+                            ? request.getWaitingTimeForEndpoint() / 15 : 1;
+                    boolean waitForever = request.getWaitingTimeForEndpoint() == null || request.getWaitingTimeForEndpoint() <= 0;
+                    while (waitingIterations > 0 || waitForever) {
+                        if (!waitForever) waitingIterations--;
+                        waitForEndpoint(request, 15 * 60 * 1000L);
+                        isEndpointHealthy.set(checkEndpointHealthQuery(request));
+                        if (isEndpointHealthy.get()) break;
                     }
-                    isEndpointHealthy.set(checkEndpointHealthQuery(request));
-                    if (isEndpointHealthy.get()) break;
                 }
             }
         }
         if (isEndpointHealthy.get()) {
             if (request.getDelayOnFailure() != null && request.getDelayOnFailure() > 0L) {
-                log.info(String.format("The endpoint [ %s ] is available and in working state - schema extractor execution will be resumed in %d seconds",
-                        SchemaUtil.getEndpointLinkText(request.getEndpointUrl(), request.getGraphName()), request.getDelayOnFailure()));
+                log.info(String.format("The endpoint [ %s ] is available and in working state - schema extractor execution [ %s ] will be resumed in %d seconds",
+                        SchemaUtil.getEndpointLinkText(request.getEndpointUrl(), request.getGraphName()), request.getCorrelationId(), request.getDelayOnFailure()));
                 try {
                     Thread.sleep(request.getDelayOnFailure() * 1000);
                 } catch (InterruptedException ie) {
                     Thread.currentThread().interrupt();
                 }
             } else {
-                log.info(String.format("The endpoint [ %s ] is available and in working state - schema extractor execution is in progress",
-                        SchemaUtil.getEndpointLinkText(request.getEndpointUrl(), request.getGraphName())));
+                log.info(String.format("The endpoint [ %s ] is available and in working state - schema extractor execution [ %s ] is in progress",
+                        SchemaUtil.getEndpointLinkText(request.getEndpointUrl(), request.getGraphName()), request.getCorrelationId()));
             }
         } else {
-            log.error(String.format("The endpoint [ %s ] is not available, stopping the schema extractor",
-                    SchemaUtil.getEndpointLinkText(request.getEndpointUrl(), request.getGraphName())));
-            throw new SparqlEndpointException("The endpoint is not available, stopping the schema extractor");
+            String stoppingError = String.format("The endpoint [ %s ] is not available, stopping the schema extraction for the request [ %s ]",
+                    SchemaUtil.getEndpointLinkText(request.getEndpointUrl(), request.getGraphName()), request.getCorrelationId());
+            log.error(stoppingError);
+            throw new SparqlEndpointException(stoppingError);
         }
     }
 
     public boolean checkEndpointHealthQuery(@Nonnull SparqlEndpointConfig request) {
         SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(ENDPOINT_HEALTH_CHECK.getSparqlQuery(), ENDPOINT_HEALTH_CHECK);
-        QueryResponse response = read(new SparqlEndpointConfig(request.getEndpointUrl(), request.getGraphName(), request.isEnableLogging(), request.isPostRequest(), null, null), queryBuilder, false);
+        QueryResponse response = read(new SparqlEndpointConfig(request.getCorrelationId(), request.getEndpointUrl(), request.getGraphName(), request.isEnableLogging(), request.isPostRequest(), null, null, null), queryBuilder, false);
         return !response.hasErrors() && !response.getResults().isEmpty();
+    }
+
+    private void waitForEndpoint(@Nonnull SparqlEndpointConfig request, @Nonnull Long sleepTime) {
+        log.error(String.format("The endpoint is not healthy - [ %s ]. Stopping the execution [ %s ] and will retry after %d %s.",
+                SchemaUtil.getEndpointLinkText(request.getEndpointUrl(), request.getGraphName()),
+                request.getCorrelationId(), sleepTime / 1000 / 60, (sleepTime / 1000 / 60) == 1 ? "minute" : "minutes"));
+        try {
+            Thread.sleep(sleepTime);
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     @Nonnull
@@ -233,7 +248,7 @@ public class SparqlEndpointProcessor {
 
     @Nonnull
     public List<QueryResult> read(@Nonnull SchemaExtractorRequestDto request, @Nonnull String queryName, @Nonnull String sparqlQuery) {
-        return read(new SparqlEndpointConfig(request.getEndpointUrl(), request.getGraphName(), request.getEnableLogging(), request.getPostMethod(), null),
+        return read(new SparqlEndpointConfig(request.getCorrelationId(), request.getEndpointUrl(), request.getGraphName(), request.getEnableLogging(), request.getPostMethod(), null),
                 queryName, sparqlQuery);
     }
 

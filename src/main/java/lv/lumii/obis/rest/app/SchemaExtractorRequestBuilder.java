@@ -69,6 +69,7 @@ public class SchemaExtractorRequestBuilder {
         requestDto.setLargeQueryTimeout(request.getLargeQueryTimeout());
         requestDto.setSmallQueryTimeout(request.getSmallQueryTimeout());
         requestDto.setDelayOnFailure(request.getDelayOnFailure());
+        requestDto.setWaitingTimeForEndpoint(request.getWaitingTimeForEndpoint());
         return requestDto;
     }
 

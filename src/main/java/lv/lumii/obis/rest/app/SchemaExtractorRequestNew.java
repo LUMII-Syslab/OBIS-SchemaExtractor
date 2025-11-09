@@ -101,6 +101,8 @@ public class SchemaExtractorRequestNew {
 
     @ApiParam(hidden = true, access = "237", value ="Query Delay Timeout in case of failure (in seconds)", defaultValue = "0", required = false)
     private Long delayOnFailure;
+    @ApiParam(hidden = true, access = "238", value ="Waiting time for the endpoint availability (in minutes). If 0 - then wait forever", defaultValue = "60", required = false)
+    private Long waitingTimeForEndpoint;
 
     public Boolean getCalculateSubClassRelations() {
         if (calculateSubClassRelations == null) {
