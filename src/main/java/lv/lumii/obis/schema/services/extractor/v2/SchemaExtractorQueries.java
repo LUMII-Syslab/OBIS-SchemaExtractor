@@ -281,10 +281,10 @@ public enum SchemaExtractorQueries {
             "SELECT ?x ?y WHERE { ?x <property> ?y. OPTIONAL {?x <classificationProperty> ?c} FILTER(!BOUND(?c)) } LIMIT 1", QueryType.LARGE
     ),
     FIND_CLOSED_RANGE_FOR_PROPERTY_AND_CLASS(
-            "SELECT ?x ?y WHERE { ?x <classificationProperty> <sourceClass>. ?x <property> ?y. FILTER(!isLiteral(?y)) OPTIONAL {?y <classificationPropertyTarget> ?c} FILTER(!BOUND(?c)) } LIMIT 1", QueryType.SMALL
+            "SELECT ?x ?y WHERE { ?x <classificationPropertySource> <sourceClass>. ?x <property> ?y. FILTER(!isLiteral(?y)) OPTIONAL {?y <classificationPropertyTarget> ?c} FILTER(!BOUND(?c)) } LIMIT 1", QueryType.SMALL
     ),
     FIND_CLOSED_DOMAIN_FOR_PROPERTY_AND_CLASS(
-            "SELECT ?x ?y WHERE { ?y <classificationProperty> <targetClass>. ?x <property> ?y. OPTIONAL {?x <classificationPropertySource> ?c} FILTER(!BOUND(?c)) } LIMIT 1", QueryType.SMALL
+            "SELECT ?x ?y WHERE { ?y <classificationPropertyTarget> <targetClass>. ?x <property> ?y. OPTIONAL {?x <classificationPropertySource> ?c} FILTER(!BOUND(?c)) } LIMIT 1", QueryType.SMALL
     ),
 
     CHECK_DOMAIN_FOR_PROPERTY(
