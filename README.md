@@ -13,7 +13,7 @@ The structure of the response JSON data schema format is described at http://viz
 
 ## Deployment and Running
 
-OBIS Schema Extractor artifact is packaged executable JAR file and needs [Java 1.8](https://www.java.com/en/) to run.
+OBIS Schema Extractor artifact is packaged executable JAR file and needs [Java 17](https://www.java.com/en/) to run.
 
 1. install Java
 2. copy [build/schema-extractor-exec.jar](build/schema-extractor-exec.jar) to any folder

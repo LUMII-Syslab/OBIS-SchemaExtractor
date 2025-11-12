@@ -1,4 +1,4 @@
-FROM openjdk:25-jdk
+FROM eclipse-temurin:17-jdk
 RUN mkdir -p /opt/app/data
 COPY build/schema-extractor-exec.jar /opt/app/schema-extractor.jar
 WORKDIR /opt/app/data
