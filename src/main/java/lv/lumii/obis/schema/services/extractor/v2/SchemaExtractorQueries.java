@@ -13,7 +13,7 @@ public enum SchemaExtractorQueries {
             "SELECT ?class (COUNT(?x) as ?instances) WHERE { ?x <classificationProperty> ?class. } GROUP BY ?class", QueryType.LARGE
     ),
     FIND_CLASSES_WITH_INSTANCE_COUNT_DISTINCT(
-            "SELECT ?class (COUNT(DISTINCT ?x) as ?instances) WHERE { ?x <classificationProperty> ?class. } GROUP BY ?class", QueryType.LARGE
+            "SELECT ?class (COUNT(?x) as ?instances) WHERE { { SELECT DISTINCT ?x ?class WHERE { ?x <classificationProperty> ?class. } } } GROUP BY ?class", QueryType.LARGE
     ),
     FIND_INSTANCE_COUNT_FOR_CLASS(
             "SELECT (COUNT(?x) as ?instances) WHERE { ?x <classificationProperty> <classA>. }", QueryType.LARGE
@@ -145,7 +145,7 @@ public enum SchemaExtractorQueries {
             "SELECT ?property (COUNT(?x) as ?instances) WHERE {?x ?property ?y} GROUP BY ?property", QueryType.LARGE
     ),
     FIND_PROPERTIES_WITH_TRIPLE_COUNT_DISTINCT(
-            "SELECT ?property (COUNT(DISTINCT ?x) as ?instances) WHERE {?x ?property ?y} GROUP BY ?property", QueryType.LARGE
+            "SELECT ?property (COUNT(?x) as ?instances) WHERE { { SELECT DISTINCT ?x ?property WHERE { ?x ?property ?y } } } GROUP BY ?property", QueryType.LARGE
     ),
     FIND_PROPERTIES_FOR_CLASS(
             "SELECT DISTINCT ?property WHERE { { SELECT ?x ?property ?y WHERE { ?x <classificationProperty> <sourceClass> . ?x ?property ?y . } } }", QueryType.LARGE
