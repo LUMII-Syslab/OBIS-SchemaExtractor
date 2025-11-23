@@ -3,6 +3,7 @@ package lv.lumii.obis.rest.app;
 import io.swagger.annotations.ApiParam;
 import lombok.Getter;
 import lombok.Setter;
+import lv.lumii.obis.schema.services.extractor.dto.SchemaExtractorRequestDto;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
@@ -21,6 +22,8 @@ public class SchemaExtractorRequestNew {
     public enum ImportantIndexesMode {basic, unionBased, classCoverage, no}
 
     public enum InstanceNamespacesMode {no, detailed, overview}
+
+    public enum NoClassesLoggingOptions {yes, no, sourcesOnly}
 
     @ApiParam(access = "10", value = "SPARQL Endpoint URL, for example, http://localhost:8890/sparql", required = true)
     private String endpointUrl;
@@ -104,6 +107,9 @@ public class SchemaExtractorRequestNew {
     @ApiParam(hidden = true, access = "238", value ="Waiting time for the endpoint availability (in minutes). If 0 - then wait forever", defaultValue = "60", required = false)
     private Long waitingTimeForEndpoint;
 
+    @ApiParam(hidden = true, access = "239", value = "The level of logging when the property does not have associated classes", defaultValue = "sourcesOnly", required = true)
+    private NoClassesLoggingOptions logNoClassesForProperty;
+
     public Boolean getCalculateSubClassRelations() {
         if (calculateSubClassRelations == null) {
             calculateSubClassRelations = Boolean.TRUE;
@@ -151,6 +157,14 @@ public class SchemaExtractorRequestNew {
             calculateImportanceIndexes = ImportantIndexesMode.basic;
         }
         return calculateImportanceIndexes;
+    }
+
+    @Nonnull
+    public NoClassesLoggingOptions getLogNoClassesForProperty() {
+        if (logNoClassesForProperty == null) {
+            logNoClassesForProperty = NoClassesLoggingOptions.sourcesOnly;
+        }
+        return logNoClassesForProperty;
     }
 
     public CalculatePropertyFeatureMode getCalculateDataTypes() {

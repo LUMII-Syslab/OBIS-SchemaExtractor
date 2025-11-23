@@ -44,6 +44,8 @@ public class SchemaExtractorRequestDto {
 
     public enum InstanceNamespacesMode {no, detailed, overview}
 
+    public enum NoClassesLoggingOptions {yes, no, sourcesOnly}
+
     private String correlationId;
 
     private String endpointUrl;
@@ -89,6 +91,8 @@ public class SchemaExtractorRequestDto {
     private Long waitingTimeForEndpoint;
 
     private Boolean enableLogging;
+
+    private NoClassesLoggingOptions logNoClassesForProperty;
 
     @JsonIgnore
     private Map<String, String> queries;
@@ -371,6 +375,14 @@ public class SchemaExtractorRequestDto {
             return 0L;
         }
         return waitingTimeForEndpoint;
+    }
+
+    @Nonnull
+    public NoClassesLoggingOptions getLogNoClassesForProperty() {
+        if (logNoClassesForProperty == null) {
+            logNoClassesForProperty = NoClassesLoggingOptions.sourcesOnly;
+        }
+        return logNoClassesForProperty;
     }
 
     @Nonnull

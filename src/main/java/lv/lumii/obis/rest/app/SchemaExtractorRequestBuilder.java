@@ -70,6 +70,7 @@ public class SchemaExtractorRequestBuilder {
         requestDto.setSmallQueryTimeout(request.getSmallQueryTimeout());
         requestDto.setDelayOnFailure(request.getDelayOnFailure());
         requestDto.setWaitingTimeForEndpoint(request.getWaitingTimeForEndpoint());
+        requestDto.setLogNoClassesForProperty(Enums.getIfPresent(SchemaExtractorRequestDto.NoClassesLoggingOptions.class, request.getLogNoClassesForProperty().name()).orNull());
         return requestDto;
     }
 

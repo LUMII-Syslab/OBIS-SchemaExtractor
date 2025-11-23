@@ -50,3 +50,4 @@ smallQueryTimeout: 60
 delayOnFailure: 0
 waitingTimeForEndpoint: 60
 enableLogging: true
+logNoClassesForProperty: sourcesOnly

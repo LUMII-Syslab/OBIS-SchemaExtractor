@@ -518,7 +518,7 @@ public class SchemaExtractor {
             determinePropertyDataTripleCount(schema, property, request, totalCountOfProperties);
             determinePropertyType(property, request);
 
-            boolean foundSources = determinePropertySourcesWithTripleCount(schema, property, request, totalCountOfProperties);
+            boolean foundSources = determinePropertySourcesWithTripleCount(schema, property, request);
             if (!foundSources) {
                 determinePropertySource(schema, property, request, totalCountOfProperties);
                 determinePropertySourceTripleCount(schema, property, request, totalCountOfProperties);
@@ -527,7 +527,7 @@ public class SchemaExtractor {
             determinePropertySourceDataTripleCount(schema, property, request, totalCountOfProperties);
 
             if (property.getObjectTripleCount() > 0 || property.getObjectTripleCount() == -1L) {
-                boolean foundTargets = determinePropertyTargetsWithTripleCount(schema, property, request, totalCountOfProperties);
+                boolean foundTargets = determinePropertyTargetsWithTripleCount(schema, property, request);
                 if (!foundTargets) {
                     determinePropertyTarget(schema, property, request, totalCountOfProperties);
                     determinePropertyTargetTripleCount(schema, property, request, totalCountOfProperties);
@@ -663,7 +663,7 @@ public class SchemaExtractor {
         }
     }
 
-    protected boolean determinePropertySourcesWithTripleCount(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties) {
+    protected boolean determinePropertySourcesWithTripleCount(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request) {
         log.info(request.getCorrelationId() + " - determinePropertySourcesWithTripleCount [" + property.getPropertyName() + "]");
 
         boolean found = false;
@@ -673,8 +673,15 @@ public class SchemaExtractor {
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, classificationProperty)
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
             QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
-            if (queryResponse.hasErrors() || queryResponse.getResults().isEmpty()) {
-                schema.getErrors().add(new SchemaExtractorError(INFO, property.getPropertyName(), query.name(), queryBuilder.getQueryString()));
+            if (queryResponse.hasErrors()) {
+                schema.getErrors().add(new SchemaExtractorError(INFO, property.getPropertyName() + " - Endpoint Error", query.name(), queryBuilder.getQueryString()));
+                continue;
+            }
+            if (queryResponse.getResults().isEmpty()) {
+                if (SchemaExtractorRequestDto.NoClassesLoggingOptions.yes.equals(request.getLogNoClassesForProperty())
+                        || SchemaExtractorRequestDto.NoClassesLoggingOptions.sourcesOnly.equals(request.getLogNoClassesForProperty())) {
+                    schema.getErrors().add(new SchemaExtractorError(INFO, property.getPropertyName() + " - No source class for a property", query.name(), queryBuilder.getQueryString()));
+                }
                 continue;
             }
             if (!queryResponse.getResults().isEmpty()) {
@@ -924,7 +931,7 @@ public class SchemaExtractor {
         });
     }
 
-    protected boolean determinePropertyTargetsWithTripleCount(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties) {
+    protected boolean determinePropertyTargetsWithTripleCount(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request) {
         log.info(request.getCorrelationId() + " - determinePropertyTargetsWithTripleCount [" + property.getPropertyName() + "]");
 
         boolean found = false;
@@ -934,8 +941,14 @@ public class SchemaExtractor {
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, classificationProperty)
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
             QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
-            if (queryResponse.hasErrors() || queryResponse.getResults().isEmpty()) {
-                schema.getErrors().add(new SchemaExtractorError(INFO, property.getPropertyName(), query.name(), queryBuilder.getQueryString()));
+            if (queryResponse.hasErrors()) {
+                schema.getErrors().add(new SchemaExtractorError(INFO, property.getPropertyName() + " - Endpoint Error", query.name(), queryBuilder.getQueryString()));
+                continue;
+            }
+            if (queryResponse.getResults().isEmpty()) {
+                if (SchemaExtractorRequestDto.NoClassesLoggingOptions.yes.equals(request.getLogNoClassesForProperty())) {
+                    schema.getErrors().add(new SchemaExtractorError(INFO, property.getPropertyName() + " - No target class for a property", query.name(), queryBuilder.getQueryString()));
+                }
                 continue;
             }
             if (!queryResponse.getResults().isEmpty()) {
