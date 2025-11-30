@@ -1104,44 +1104,43 @@ public class SchemaExtractor {
                             .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_TARGET, classificationPropertyTarget)
                             .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false);
                     QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
-                    for (QueryResult queryResult : queryResponse.getResults()) {
-                        String targetClass = queryResult.getValueFullName(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_TARGET);
-                        String tripleCountStr = queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT);
-                        if (StringUtils.isNotEmpty(targetClass) && isNotExcludedResource(targetClass, request.getExcludedNamespaces())) {
-                            SchemaClass targetSchemaClass = findClass(schema.getClasses(), targetClass);
-                            if (targetSchemaClass != null && isNotFalse(targetSchemaClass.getPropertiesInSchema())) {
-                                property.getSourceAndTargetPairs().add(new SchemaExtractorSourceTargetInfo(
-                                        sourceClass.getClassName(), targetClass, SchemaUtil.getLongValueFromString(tripleCountStr), sourceClass.getClassificationProperty(), classificationPropertyTarget));
+                    if (!queryResponse.hasErrors()) {
+                        for (QueryResult queryResult : queryResponse.getResults()) {
+                            String targetClass = queryResult.getValueFullName(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS_TARGET);
+                            String tripleCountStr = queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT);
+                            if (StringUtils.isNotEmpty(targetClass) && isNotExcludedResource(targetClass, request.getExcludedNamespaces())) {
+                                SchemaClass targetSchemaClass = findClass(schema.getClasses(), targetClass);
+                                if (targetSchemaClass != null && isNotFalse(targetSchemaClass.getPropertiesInSchema())) {
+                                    property.getSourceAndTargetPairs().add(new SchemaExtractorSourceTargetInfo(
+                                            sourceClass.getClassName(), targetClass, SchemaUtil.getLongValueFromString(tripleCountStr), sourceClass.getClassificationProperty(), classificationPropertyTarget));
+                                }
                             }
                         }
+                    } else {
+                        // endpoint was not able to return class pairs with direct query, so trying to match each source and target class combination
+                        log.info(request.getCorrelationId() + " - determinePropertySourceTargetPairsForEachSourceAndTargetCombination [" + property.getPropertyName() + "]");
+                        property.getTargetClasses().forEach(targetClass -> {
+                            SchemaExtractorQueries pairQuery = selectQuery(request.getExactCountCalculations(), FIND_PROPERTY_SOURCE_TARGET_PAIRS_FOR_SPECIFIC_CLASSES, FIND_PROPERTY_SOURCE_TARGET_PAIRS_FOR_SPECIFIC_CLASSES_DISTINCT);
+                            SparqlQueryBuilder pairQueryBuilder = new SparqlQueryBuilder(request.getQueries().get(pairQuery.name()), pairQuery)
+                                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL, sourceClass.getClassName(), sourceClass.getIsLiteral())
+                                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_TARGET_FULL, targetClass.getClassName(), targetClass.getIsLiteral())
+                                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_SOURCE, sourceClass.getClassificationProperty())
+                                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_TARGET, targetClass.getClassificationProperty())
+                                    .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false);
+                            QueryResponse pairQueryResponse = sparqlEndpointProcessor.read(request, pairQueryBuilder);
+                            if (!pairQueryResponse.getResults().isEmpty() && pairQueryResponse.getResults().get(0) != null) {
+                                Long tripleCountForPair = SchemaUtil.getLongValueFromString(pairQueryResponse.getResults().get(0).getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
+                                if (tripleCountForPair > 0) {
+                                    property.getSourceAndTargetPairs().add(new SchemaExtractorSourceTargetInfo(
+                                            sourceClass.getClassName(), targetClass.getClassName(), tripleCountForPair, sourceClass.getClassificationProperty(), targetClass.getClassificationProperty()));
+                                }
+                            } else if (pairQueryResponse.hasErrors()) {
+                                schema.getErrors().add(new SchemaExtractorError(WARNING, property.getPropertyName(), pairQuery.name(), pairQueryBuilder.getQueryString()));
+                            }
+                        });
                     }
                 }
             });
-        }
-
-        // endpoint was not able to return class pairs with direct query, so trying to match each source and target class combination
-        if (property.getSourceAndTargetPairs().isEmpty()) {
-            log.info(request.getCorrelationId() + " - determinePropertySourceTargetPairsForEachSourceAndTargetCombination [" + property.getPropertyName() + "]");
-
-            property.getSourceClasses().forEach(sourceClass -> property.getTargetClasses().forEach(targetClass -> {
-                SchemaExtractorQueries query = selectQuery(request.getExactCountCalculations(), FIND_PROPERTY_SOURCE_TARGET_PAIRS_FOR_SPECIFIC_CLASSES, FIND_PROPERTY_SOURCE_TARGET_PAIRS_FOR_SPECIFIC_CLASSES_DISTINCT);
-                SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(query.name()), query)
-                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL, sourceClass.getClassName(), sourceClass.getIsLiteral())
-                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_TARGET_FULL, targetClass.getClassName(), targetClass.getIsLiteral())
-                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_SOURCE, sourceClass.getClassificationProperty())
-                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_TARGET, targetClass.getClassificationProperty())
-                        .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false);
-                QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
-                if (!queryResponse.getResults().isEmpty() && queryResponse.getResults().get(0) != null) {
-                    Long tripleCountForPair = SchemaUtil.getLongValueFromString(queryResponse.getResults().get(0).getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
-                    if (tripleCountForPair > 0) {
-                        property.getSourceAndTargetPairs().add(new SchemaExtractorSourceTargetInfo(
-                                sourceClass.getClassName(), targetClass.getClassName(), tripleCountForPair, sourceClass.getClassificationProperty(), targetClass.getClassificationProperty()));
-                    }
-                } else if (queryResponse.hasErrors()) {
-                    schema.getErrors().add(new SchemaExtractorError(WARNING, property.getPropertyName(), query.name(), queryBuilder.getQueryString()));
-                }
-            }));
         }
     }
 
