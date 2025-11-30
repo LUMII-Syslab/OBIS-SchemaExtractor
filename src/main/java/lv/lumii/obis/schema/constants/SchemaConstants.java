@@ -87,6 +87,7 @@ public class SchemaConstants {
     public static final String SPARQL_QUERY_BINDING_NAME_NAMESPACE = "nspace";
     public static final String SPARQL_QUERY_BINDING_NAME_NAMESPACE_COUNT = "nsCount";
     public static final String SPARQL_QUERY_BINDING_NAME_PROPERTY = "property";
+    public static final String SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL = "<property>";
     public static final String SPARQL_QUERY_BINDING_NAME_DATA_TYPE = "dataType";
 
     public static final String SPARQL_QUERY_BINDING_NAME_DISTINCT_FULL = "<DISTINCT>";
