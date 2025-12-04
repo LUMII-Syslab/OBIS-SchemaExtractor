@@ -16,6 +16,7 @@ import lv.lumii.obis.schema.services.common.dto.QueryResultObject;
 import lv.lumii.obis.schema.services.common.dto.SparqlEndpointConfig;
 import lv.lumii.obis.schema.services.extractor.dto.*;
 import lv.lumii.obis.schema.services.extractor.v2.dto.*;
+import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -2097,7 +2098,7 @@ public class SchemaExtractor {
                 if (targetClassTripleCounts.containsKey(targetClass.getClassName())) {
                     targetClassTripleCount = targetClassTripleCounts.get(targetClass.getClassName());
                 }
-                targetClassTripleCounts.put(targetClass.getClassName(), targetClassTripleCount + targetClass.getTripleCount());
+                targetClassTripleCounts.put(targetClass.getClassName(), targetClassTripleCount + (targetClass.getTripleCount() != null ? targetClass.getTripleCount() : 0L));
             });
         });
         schema.getClasses().forEach(clazz -> {
@@ -2487,7 +2488,7 @@ public class SchemaExtractor {
                     if (compareResult != 0) {
                         return compareResult;
                     }
-                    compareResult = o1.getValue().getTripleCount().compareTo(o2.getValue().getTripleCount());
+                    compareResult = ObjectUtils.compare(o1.getValue().getTripleCount(), o2.getValue().getTripleCount());
                     if (compareResult != 0) {
                         return compareResult;
                     } else {
@@ -2641,8 +2642,9 @@ public class SchemaExtractor {
                 log.error("The Neighbor [" + neighbor + "] of the class [ " + currentClassInfo.getClassName() + " ] cannot be found in the classes list.");
                 continue;
             }
-            Long neighborClassTotalInstances = neighborClassInfo.getTripleCount();
-            if (neighborClassTotalInstances < currentClassInfo.getTripleCount() || neighbor.getInstanceCount() < currentClassInfo.getTripleCount()
+            Long neighborClassTotalInstances = (neighborClassInfo.getTripleCount() != null ? neighborClassInfo.getTripleCount() : 0L);
+            Long currentClassInfoTripleCount = (currentClassInfo.getTripleCount() != null ? currentClassInfo.getTripleCount() : 0L);
+            if (neighborClassTotalInstances < currentClassInfoTripleCount || neighbor.getInstanceCount() < currentClassInfoTripleCount
                     || neighborClassTotalInstances < request.getMinimalAnalyzedClassSize()) {
                 continue;
             }
