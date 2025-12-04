@@ -3,6 +3,8 @@ graphName: "MiniUniv"
 calculateSubClassRelations: true
 calculateMultipleInheritanceSuperclasses: true
 requireClasses: true
+validateClassesList: true
+validatePropertiesList: true
 calculatePropertyPropertyRelations: false
 calculateSourceAndTargetPairs: true
 calculateDomainsAndRanges: true

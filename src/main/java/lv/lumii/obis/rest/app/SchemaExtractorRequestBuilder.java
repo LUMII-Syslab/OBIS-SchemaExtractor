@@ -45,6 +45,8 @@ public class SchemaExtractorRequestBuilder {
         requestDto.setCalculateSubClassRelations(request.getCalculateSubClassRelations());
         requestDto.setCalculateMultipleInheritanceSuperclasses(request.getCalculateMultipleInheritanceSuperclasses());
         requestDto.setRequireClasses(request.getRequireClasses());
+        requestDto.setValidateClassesList(request.getValidateClassesList());
+        requestDto.setValidatePropertiesList(request.getValidatePropertiesList());
         requestDto.setCalculatePropertyPropertyRelations(request.getCalculatePropertyPropertyRelations());
         requestDto.setCalculateSourceAndTargetPairs(request.getCalculateSourceAndTargetPairs());
         requestDto.setCalculateDomainsAndRanges(request.getCalculateDomainsAndRanges());

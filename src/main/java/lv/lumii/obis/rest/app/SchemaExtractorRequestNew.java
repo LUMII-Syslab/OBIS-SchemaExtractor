@@ -43,6 +43,11 @@ public class SchemaExtractorRequestNew {
     @ApiParam(access = "33", value = "At least 1 class is required for the schema extraction, if no classes found - the extractor work is aborted", defaultValue = "true", required = true)
     private Boolean requireClasses;
 
+    @ApiParam(hidden = true, access = "34", value = "Validate the list of classes with simple and statistics queries ", defaultValue = "true", required = true)
+    private Boolean validateClassesList;
+    @ApiParam(hidden = true, access = "35", value = "Validate the list of properties with simple and statistics queries ", defaultValue = "true", required = true)
+    private Boolean validatePropertiesList;
+
     @ApiParam(access = "40", value = "Calculate property-property adjacency (following properties, same subject, same object). Useful for auto-completion. Currently not used in schema visualization. Can be time consuming for larger schemas", defaultValue = "true", required = true)
     private Boolean calculatePropertyPropertyRelations;
 
@@ -250,5 +255,21 @@ public class SchemaExtractorRequestNew {
             requireClasses = Boolean.TRUE;
         }
         return requireClasses;
+    }
+
+    @Nonnull
+    public Boolean getValidateClassesList() {
+        if (validateClassesList == null) {
+            validateClassesList = Boolean.TRUE;
+        }
+        return validateClassesList;
+    }
+
+    @Nonnull
+    public Boolean getValidatePropertiesList() {
+        if (validatePropertiesList == null) {
+            validatePropertiesList = Boolean.TRUE;
+        }
+        return validatePropertiesList;
     }
 }
