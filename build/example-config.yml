@@ -7,15 +7,15 @@ calculatePropertyPropertyRelations: false
 calculateSourceAndTargetPairs: true
 calculateDomainsAndRanges: true
 calculateImportanceIndexes: "basic"
-calculateClosedClassSets: false
+calculateClosedClassSets: true
 calculateDataTypes: "propertyLevelAndClassContext"
 calculateCardinalities: "propertyLevelAndClassContext"
 sampleLimitForDataTypeCalculation: 0
 calculateInstanceNamespaces: "overview"
 sampleLimitForInstanceNamespacesCalculation: 1000
 minimalAnalyzedClassSize: 1
-addIntersectionClasses: "auto"
-exactCountCalculations: "yes"
+addIntersectionClasses: "yes"
+exactCountCalculations: "no"
 maxInstanceLimitForExactCount: 1000000
 principalClassificationProperties:
 - "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
@@ -45,8 +45,8 @@ predefinedNamespaces:
     namespace: "http://lumii.lv/ontologies/UnivExample_hasMark.owl#"
   - prefix: "rdfs:"
     namespace: "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-largeQueryTimeout: 600
-smallQueryTimeout: 60
+largeQueryTimeout: 0
+smallQueryTimeout: 0
 delayOnFailure: 0
 waitingTimeForEndpoint: 60
 enableLogging: true

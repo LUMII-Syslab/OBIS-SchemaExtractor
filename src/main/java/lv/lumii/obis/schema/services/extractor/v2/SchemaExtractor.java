@@ -179,13 +179,10 @@ public class SchemaExtractor {
             }
 
             // add intersection classes to the result schema
-            if (SchemaExtractorRequestDto.ShowIntersectionClassesMode.yes.equals(request.getAddIntersectionClasses())
-                    || SchemaExtractorRequestDto.ShowIntersectionClassesMode.auto.equals(request.getAddIntersectionClasses())) {
+            if (SchemaExtractorRequestDto.ShowIntersectionClassesMode.yes.equals(request.getAddIntersectionClasses())) {
                 for (SchemaClass clazz : classes) {
                     List<SchemaExtractorIntersectionClassDto> intersectionClasses = graphOfClasses.get(clazz.getFullName()).getNeighbors();
-                    if (SchemaExtractorRequestDto.ShowIntersectionClassesMode.yes.equals(request.getAddIntersectionClasses())
-                            || intersectionClasses.size() <= 200)
-                        clazz.getIntersectionClasses().addAll(intersectionClasses.stream().map(SchemaExtractorIntersectionClassDto::getClassName).collect(Collectors.toSet()));
+                    clazz.getIntersectionClasses().addAll(intersectionClasses.stream().map(SchemaExtractorIntersectionClassDto::getClassName).collect(Collectors.toSet()));
                 }
             }
         }

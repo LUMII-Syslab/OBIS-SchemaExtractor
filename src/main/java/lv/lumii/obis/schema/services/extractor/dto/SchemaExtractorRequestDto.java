@@ -36,7 +36,7 @@ public class SchemaExtractorRequestDto {
 
     public enum CalculatePropertyFeatureMode {none, propertyLevelOnly, propertyLevelAndClassContext}
 
-    public enum ShowIntersectionClassesMode {yes, no, auto}
+    public enum ShowIntersectionClassesMode {yes, no}
 
     public enum DistinctQueryMode {yes, no, auto}
 
@@ -214,7 +214,7 @@ public class SchemaExtractorRequestDto {
     @Nonnull
     public Boolean getCalculateClosedClassSets() {
         if (calculateClosedClassSets == null) {
-            return Boolean.FALSE;
+            return Boolean.TRUE;
         }
         return calculateClosedClassSets;
     }
@@ -294,7 +294,7 @@ public class SchemaExtractorRequestDto {
     @Nonnull
     public ShowIntersectionClassesMode getAddIntersectionClasses() {
         if (addIntersectionClasses == null) {
-            addIntersectionClasses = ShowIntersectionClassesMode.auto;
+            addIntersectionClasses = ShowIntersectionClassesMode.yes;
         }
         return addIntersectionClasses;
     }
@@ -302,7 +302,7 @@ public class SchemaExtractorRequestDto {
     @Nonnull
     public DistinctQueryMode getExactCountCalculations() {
         if (exactCountCalculations == null) {
-            exactCountCalculations = DistinctQueryMode.yes;
+            exactCountCalculations = DistinctQueryMode.no;
         }
         return exactCountCalculations;
     }
