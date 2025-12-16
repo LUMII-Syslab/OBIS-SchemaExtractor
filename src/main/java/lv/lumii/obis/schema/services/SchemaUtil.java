@@ -3,6 +3,8 @@ package lv.lumii.obis.schema.services;
 import lombok.extern.slf4j.Slf4j;
 import lv.lumii.obis.schema.model.v1.SchemaElement;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.jena.irix.IRIException;
+import org.apache.jena.irix.IRIs;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -97,11 +99,11 @@ public class SchemaUtil {
         return (str == null) ? null : "str(" + str + ")";
     }
 
-    public static boolean isValidURI(String url) {
+    public static boolean isValidURI(String urlStr) {
         try {
-            new URL(url).toURI();
-            return true;
-        } catch (MalformedURLException | URISyntaxException e) {
+            new URL(urlStr).toURI();
+            return IRIs.resolveIRI(urlStr) != null;
+        } catch (MalformedURLException | URISyntaxException | IRIException e) {
             return false;
         }
     }
