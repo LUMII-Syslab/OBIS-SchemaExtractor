@@ -23,7 +23,7 @@ public enum SchemaExtractorQueries {
     ),
 
     FIND_INTERSECTION_CLASSES_FOR_KNOWN_CLASS(
-            "SELECT DISTINCT ?classB (count(?x) as ?instances) WHERE { <valuesClause> " + "\n\t"
+            "SELECT ?classB COUNT(DISTINCT ?x) as ?instances) WHERE { <valuesClause> " + "\n\t"
                     + "?x <classificationPropertyA> ?classA." + "\n\t"
                     + "?x <classificationPropertyB> ?classB." + "\n\t"
                     + "FILTER (?classA = <sourceClass>)" + "\n\t"
@@ -32,7 +32,7 @@ public enum SchemaExtractorQueries {
     ),
 
     CHECK_CLASS_INTERSECTION(
-            "SELECT (COUNT(?x) as ?instances) where {?x <classificationPropertyA> <classA>. ?x <classificationPropertyB> <classB>}", QueryType.SMALL
+            "SELECT (COUNT(DISTINCT ?x) as ?instances) where {?x <classificationPropertyA> <classA>. ?x <classificationPropertyB> <classB>}", QueryType.SMALL
     ),
 
     CHECK_SUPERCLASS(

@@ -183,7 +183,9 @@ public class SchemaExtractor {
             if (SchemaExtractorRequestDto.ShowIntersectionClassesMode.yes.equals(request.getAddIntersectionClasses())) {
                 for (SchemaClass clazz : classes) {
                     List<SchemaExtractorIntersectionClassDto> intersectionClasses = graphOfClasses.get(clazz.getFullName()).getNeighbors();
-                    clazz.getIntersectionClasses().addAll(intersectionClasses.stream().map(SchemaExtractorIntersectionClassDto::getClassName).collect(Collectors.toSet()));
+                    clazz.getIntersectionClasses().addAll(intersectionClasses.stream().map(
+                            intersectionClass -> new SchemaIntersactionClass(intersectionClass.getClassName(), intersectionClass.getInstanceCount())
+                    ).collect(Collectors.toList()));
                 }
             }
         }
@@ -2518,7 +2520,7 @@ public class SchemaExtractor {
                         if (!checkQueryResponse.hasErrors() && !checkQueryResponse.getResults().isEmpty()) {
                             if (graphOfClasses.containsKey(classA.getFullName())) {
                                 Long intersectionCount = SchemaUtil.getLongValueFromString(checkQueryResponse.getResults().get(0).getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
-                                if (intersectionCount != null && intersectionCount > 0L) {
+                                if (intersectionCount > 0L) {
                                     graphOfClasses.get(classA.getFullName()).getNeighbors().add(new SchemaExtractorIntersectionClassDto(classB.getFullName(), intersectionCount));
                                 }
                             }

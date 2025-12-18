@@ -19,7 +19,7 @@ public class SchemaClass extends SchemaElement {
     private Set<String> superClasses;
 
     @JsonProperty("IntersectionClasses")
-    private Set<String> intersectionClasses;
+    private List<SchemaIntersactionClass> intersectionClasses;
 
     @JsonIgnore
     private Set<String> subClasses;
@@ -56,9 +56,9 @@ public class SchemaClass extends SchemaElement {
     }
 
     @Nonnull
-    public Set<String> getIntersectionClasses() {
+    public List<SchemaIntersactionClass> getIntersectionClasses() {
         if (intersectionClasses == null) {
-            intersectionClasses = new HashSet<>();
+            intersectionClasses = new ArrayList<>();
         }
         return intersectionClasses;
     }
