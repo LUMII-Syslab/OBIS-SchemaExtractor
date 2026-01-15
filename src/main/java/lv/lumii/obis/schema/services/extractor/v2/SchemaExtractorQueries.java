@@ -23,7 +23,7 @@ public enum SchemaExtractorQueries {
     ),
 
     FIND_INTERSECTION_CLASSES_FOR_KNOWN_CLASS(
-            "SELECT ?classB COUNT(DISTINCT ?x) as ?instances) WHERE { <valuesClause> " + "\n\t"
+            "SELECT ?classB (COUNT(DISTINCT ?x) as ?instances) WHERE { <valuesClause> " + "\n\t"
                     + "?x <classificationPropertyA> ?classA." + "\n\t"
                     + "?x <classificationPropertyB> ?classB." + "\n\t"
                     + "FILTER (?classA = <sourceClass>)" + "\n\t"
