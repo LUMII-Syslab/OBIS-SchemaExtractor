@@ -37,7 +37,7 @@ import static lv.lumii.obis.schema.services.extractor.dto.SchemaExtractorError.E
 @Service
 public class SchemaExtractor {
 
-    private static final Comparator<String> nullSafeStringComparator = Comparator.nullsLast(String::compareToIgnoreCase);
+    private static final Comparator<String> nullSafeStringComparator = Comparator.nullsLast(String::compareTo);
 
     private enum LinkedClassType {SOURCE, TARGET, PAIR_SOURCE, PAIR_TARGET}
 
@@ -881,7 +881,7 @@ public class SchemaExtractor {
                 String className = queryResult.getValueFullName(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS);
                 if (StringUtils.isNotEmpty(className) && isNotExcludedResource(className, request.getExcludedNamespaces())) {
                     SchemaExtractorClassNodeInfo sourceClass = property.getSourceClasses().stream()
-                            .filter(c -> className.equalsIgnoreCase(c.getClassName())).findFirst().orElse(null);
+                            .filter(c -> className.equals(c.getClassName())).findFirst().orElse(null);
                     if (sourceClass != null) {
                         Long objectTripleCountForSource = SchemaUtil.getLongValueFromString(queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
                         sourceClass.setObjectTripleCount(objectTripleCountForSource);
@@ -951,7 +951,7 @@ public class SchemaExtractor {
                 String className = queryResult.getValueFullName(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS);
                 if (StringUtils.isNotEmpty(className) && isNotExcludedResource(className, request.getExcludedNamespaces())) {
                     SchemaExtractorClassNodeInfo sourceClass = property.getSourceClasses().stream()
-                            .filter(c -> className.equalsIgnoreCase(c.getClassName())).findFirst().orElse(null);
+                            .filter(c -> className.equals(c.getClassName())).findFirst().orElse(null);
                     if (sourceClass != null) {
                         Long dataTripleCountForSource = SchemaUtil.getLongValueFromString(queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
                         sourceClass.setDataTripleCount(dataTripleCountForSource);
@@ -1668,7 +1668,7 @@ public class SchemaExtractor {
             if (pairRange != null) {
                 sourceClass.setHasRangeInClassPair(true);
                 pairsForSpecificSource.forEach(linkedPair -> {
-                    if (pairRange.getClassName().equalsIgnoreCase(linkedPair.getTargetClass())) {
+                    if (pairRange.getClassName().equals(linkedPair.getTargetClass())) {
                         linkedPair.setIsPrincipalTarget(true);
                         linkedPair.setTargetImportanceIndex(1);
                     } else {
@@ -1691,7 +1691,7 @@ public class SchemaExtractor {
             if (pairDomain != null) {
                 targetClass.setHasDomainInClassPair(true);
                 pairsForSpecificTarget.forEach(linkedPair -> {
-                    if (pairDomain.getClassName().equalsIgnoreCase(linkedPair.getSourceClass())) {
+                    if (pairDomain.getClassName().equals(linkedPair.getSourceClass())) {
                         linkedPair.setIsPrincipalSource(true);
                         linkedPair.setSourceImportanceIndex(1);
                     } else {
@@ -1715,7 +1715,7 @@ public class SchemaExtractor {
 
     protected void mapDomainOrRangeClass(@Nonnull List<SchemaExtractorClassNodeInfo> propertyLinkedClasses, @Nonnull SchemaExtractorPropertyLinkedClassInfo clazz) {
         propertyLinkedClasses.forEach(linkedClass -> {
-            if (linkedClass.getClassName().equalsIgnoreCase(clazz.getClassName())) {
+            if (linkedClass.getClassName().equals(clazz.getClassName())) {
                 linkedClass.setIsPrincipal(true);
                 linkedClass.setImportanceIndex(1);
             } else {
@@ -1860,7 +1860,7 @@ public class SchemaExtractor {
                         totalCountOfProperties);
                 pairsForSpecificSource.forEach(linkedPair -> {
                     SchemaExtractorPropertyLinkedClassInfo pairWithIndex = principalPairTargets.stream()
-                            .filter(pairTarget -> pairTarget.getClassName().equalsIgnoreCase(linkedPair.getTargetClass())).findFirst().orElse(null);
+                            .filter(pairTarget -> pairTarget.getClassName().equals(linkedPair.getTargetClass())).findFirst().orElse(null);
                     linkedPair.setTargetImportanceIndex((pairWithIndex != null) ? pairWithIndex.getImportanceIndex() : 0);
                 });
             }
@@ -1876,7 +1876,7 @@ public class SchemaExtractor {
                         totalCountOfProperties);
                 pairsForSpecificTarget.forEach(linkedPair -> {
                     SchemaExtractorPropertyLinkedClassInfo pairWithIndex = principalPairSources.stream()
-                            .filter(pairTarget -> pairTarget.getClassName().equalsIgnoreCase(linkedPair.getSourceClass())).findFirst().orElse(null);
+                            .filter(pairTarget -> pairTarget.getClassName().equals(linkedPair.getSourceClass())).findFirst().orElse(null);
                     linkedPair.setSourceImportanceIndex((pairWithIndex != null) ? pairWithIndex.getImportanceIndex() : 0);
                 });
             }
@@ -2507,7 +2507,7 @@ public class SchemaExtractor {
 
             if (hasErrors) {
                 classes.forEach(classB -> {
-                    if (!classA.getFullName().equalsIgnoreCase(classB.getFullName())
+                    if (!classA.getFullName().equals(classB.getFullName())
                             && isNotExcludedResource(classB.getFullName(), request.getExcludedNamespaces())
                             && (isNotFalse(classA.getPropertiesInSchema()) || isNotFalse(classB.getPropertiesInSchema()))
                     ) {
@@ -2859,12 +2859,12 @@ public class SchemaExtractor {
 
     @Nonnull
     protected List<SchemaExtractorSourceTargetInfo> findPairsWithSpecificSource(@Nonnull List<SchemaExtractorSourceTargetInfo> allPairs, @Nonnull String sourceClass) {
-        return allPairs.stream().filter(pair -> sourceClass.equalsIgnoreCase(pair.getSourceClass())).collect(Collectors.toList());
+        return allPairs.stream().filter(pair -> sourceClass.equals(pair.getSourceClass())).collect(Collectors.toList());
     }
 
     @Nonnull
     protected List<SchemaExtractorSourceTargetInfo> findPairsWithSpecificTarget(@Nonnull List<SchemaExtractorSourceTargetInfo> allPairs, @Nonnull String targetClass) {
-        return allPairs.stream().filter(pair -> targetClass.equalsIgnoreCase(pair.getTargetClass())).collect(Collectors.toList());
+        return allPairs.stream().filter(pair -> targetClass.equals(pair.getTargetClass())).collect(Collectors.toList());
     }
 
     @Nonnull
@@ -2891,7 +2891,7 @@ public class SchemaExtractor {
     protected void mapPrincipalClasses(@Nonnull List<SchemaExtractorClassNodeInfo> propertyLinkedClasses, @Nonnull List<SchemaExtractorPropertyLinkedClassInfo> principalClasses) {
         propertyLinkedClasses.forEach(linkedClass -> {
             SchemaExtractorPropertyLinkedClassInfo classInfo = principalClasses.stream()
-                    .filter(c -> c.getClassName().equalsIgnoreCase(linkedClass.getClassName())).findFirst().orElse(null);
+                    .filter(c -> c.getClassName().equals(linkedClass.getClassName())).findFirst().orElse(null);
             linkedClass.setImportanceIndex((classInfo != null) ? classInfo.getImportanceIndex() : 0);
         });
     }
