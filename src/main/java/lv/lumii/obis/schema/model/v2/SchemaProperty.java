@@ -6,9 +6,7 @@ import lombok.Setter;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 @Setter
 @Getter
@@ -21,9 +19,9 @@ public class SchemaProperty extends SchemaElement {
     private Long objectTripleCount;
     private Boolean closedDomain;
     private Boolean closedRange;
-    private Boolean hasOutgoingPropertiesOK;
-    private Boolean hasIncomingPropertiesOK;
-    private Boolean hasFollowersOK;
+    private Integer hasOutgoingPropertiesOK;
+    private Integer hasIncomingPropertiesOK;
+    private Integer hasFollowersOK;
 
     @JsonProperty("DataTypes")
     private List<DataType> dataTypes;
