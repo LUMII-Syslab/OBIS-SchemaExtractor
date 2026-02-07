@@ -218,6 +218,8 @@ public class SparqlEndpointProcessor {
         }
         if (isPostMethod) {
             builder = builder.sendMode(QuerySendMode.asPostForm);
+        } else {
+            builder = builder.sendMode(QuerySendMode.asGetAlways);
         }
         if (timeout != null) {
             builder.timeout(timeout * 1000);
