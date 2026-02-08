@@ -1318,11 +1318,9 @@ public class SchemaExtractor {
     protected void determinePropertyDataTypes(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties) {
         log.info(request.getCorrelationId() + " - determinePropertyDataTypes [" + property.getPropertyName() + "]");
         Long tripleCountBase = null;
-        if (request.getSampleLimitForDataTypeCalculation() != null && request.getSampleLimitForDataTypeCalculation() > 0) {
+        if (request.getSampleLimitForDataTypeCalculation() != null && request.getSampleLimitForDataTypeCalculation() > 0
+                && property.getDataTripleCount() != null && property.getDataTripleCount() > request.getSampleLimitForDataTypeCalculation()) {
             tripleCountBase = request.getSampleLimitForDataTypeCalculation();
-            if (property.getDataTripleCount() != null && property.getDataTripleCount() < request.getSampleLimitForDataTypeCalculation()) {
-                tripleCountBase = property.getDataTripleCount();
-            }
         }
         // find data types
         SparqlQueryBuilder queryBuilder;
@@ -1375,11 +1373,9 @@ public class SchemaExtractor {
         log.info(request.getCorrelationId() + " - determinePropertySourceDataTypes [" + property.getPropertyName() + "]");
 
         Long tripleCountBase = null;
-        if (request.getSampleLimitForDataTypeCalculation() != null && request.getSampleLimitForDataTypeCalculation() > 0) {
+        if (request.getSampleLimitForDataTypeCalculation() != null && request.getSampleLimitForDataTypeCalculation() > 0
+                && property.getDataTripleCount() != null && property.getDataTripleCount() > request.getSampleLimitForDataTypeCalculation()) {
             tripleCountBase = request.getSampleLimitForDataTypeCalculation();
-            if (property.getDataTripleCount() != null && property.getDataTripleCount() < request.getSampleLimitForDataTypeCalculation()) {
-                tripleCountBase = property.getDataTripleCount();
-            }
         }
 
         Long finalTripleCountBase = tripleCountBase;
