@@ -53,3 +53,4 @@ delayOnFailure: 0
 waitingTimeForEndpoint: 60
 enableLogging: true
 logNoClassesForProperty: sourcesOnly
+crossCheckTargetClassesOnNonLiteralPropertyObjectCheckFailure: false

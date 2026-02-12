@@ -99,6 +99,9 @@ public class SchemaExtractorRequestNew {
     @ApiParam(hidden = true, access = "220", value = "Total instance count limit for exact count calculations", defaultValue = "10000000", required = false)
     private Long maxInstanceLimitForExactCount;
 
+    @ApiParam(hidden = true, access = "221", value = "Cross check target classes on non-literal property object check failure", defaultValue = "false", required = false)
+    private Boolean crossCheckTargetClassesOnNonLiteralPropertyObjectCheckFailure;
+
     @ApiParam(access = "230", value = "List of excluded namespaces (e.g., http://www.openlinksw.com/schemas/virtrdf#)", allowEmptyValue = true)
     private List<String> excludedNamespaces;
 
@@ -271,5 +274,13 @@ public class SchemaExtractorRequestNew {
             validatePropertiesList = Boolean.TRUE;
         }
         return validatePropertiesList;
+    }
+
+    @Nonnull
+    public Boolean getCrossCheckTargetClassesOnNonLiteralPropertyObjectCheckFailure() {
+        if (crossCheckTargetClassesOnNonLiteralPropertyObjectCheckFailure == null) {
+            crossCheckTargetClassesOnNonLiteralPropertyObjectCheckFailure = Boolean.FALSE;
+        }
+        return crossCheckTargetClassesOnNonLiteralPropertyObjectCheckFailure;
     }
 }

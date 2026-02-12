@@ -73,6 +73,7 @@ public class SchemaExtractorRequestBuilder {
         requestDto.setDelayOnFailure(request.getDelayOnFailure());
         requestDto.setWaitingTimeForEndpoint(request.getWaitingTimeForEndpoint());
         requestDto.setLogNoClassesForProperty(Enums.getIfPresent(SchemaExtractorRequestDto.NoClassesLoggingOptions.class, request.getLogNoClassesForProperty().name()).orNull());
+        requestDto.setCrossCheckTargetClassesOnNonLiteralPropertyObjectCheckFailure(request.getCrossCheckTargetClassesOnNonLiteralPropertyObjectCheckFailure());
         return requestDto;
     }
 

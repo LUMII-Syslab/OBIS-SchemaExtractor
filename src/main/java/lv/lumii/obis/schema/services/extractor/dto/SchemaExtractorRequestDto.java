@@ -96,6 +96,8 @@ public class SchemaExtractorRequestDto {
 
     private NoClassesLoggingOptions logNoClassesForProperty;
 
+    private Boolean crossCheckTargetClassesOnNonLiteralPropertyObjectCheckFailure;
+
     @JsonIgnore
     private Map<String, String> queries;
 

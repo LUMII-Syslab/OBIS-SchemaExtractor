@@ -592,7 +592,7 @@ public class SchemaExtractor {
             determinePropertySourceObjectTripleCount(schema, property, request, totalCountOfProperties);
             determinePropertySourceDataTripleCount(schema, property, request, totalCountOfProperties);
 
-            if (property.getObjectTripleCount() != null && property.getObjectTripleCount() > 0) {
+            if (calculateTargetClasses(request, property)) {
                 boolean foundTargets = determinePropertyTargetsWithTripleCount(schema, property, request);
                 if (!foundTargets) {
                     determinePropertyTarget(schema, property, request, totalCountOfProperties);
@@ -601,7 +601,6 @@ public class SchemaExtractor {
                 if (isTrue(request.getCalculateSourceAndTargetPairs())) {
                     determinePropertySourceTargetPairs(schema, property, request, totalCountOfProperties);
                 }
-
             }
 
             if (isTrue(request.getCalculateClosedClassSets())) {
@@ -687,6 +686,8 @@ public class SchemaExtractor {
             if (!checkQueryResponseForUrlCount.hasErrors()) {
                 if (checkQueryResponseForUrlCount.getResults().isEmpty()) {
                     property.setObjectTripleCount(0L);
+                } else {
+                    property.setObjectTripleCount(-1L);
                 }
             } else {
                 schema.getErrors().add(new SchemaExtractorError(ERROR, property.getPropertyName(), CHECK_PROPERTY_URL_VALUES.name(), queryBuilder.getQueryString()));
@@ -2188,7 +2189,9 @@ public class SchemaExtractor {
             property.setMaxInverseCardinality(propertyData.getMaxInverseCardinality());
             property.setTripleCount(propertyData.getTripleCount());
             property.setDataTripleCount(propertyData.getDataTripleCount());
-            property.setObjectTripleCount(propertyData.getObjectTripleCount());
+            if (propertyData.getObjectTripleCount() != null && propertyData.getObjectTripleCount() != -1) {
+                property.setObjectTripleCount(propertyData.getObjectTripleCount());
+            }
             property.setClosedDomain(propertyData.getIsClosedDomain());
             property.setClosedRange(propertyData.getIsClosedRange());
             property.setHasFollowersOK(propertyData.getHasFollowersOK());
@@ -3011,6 +3014,16 @@ public class SchemaExtractor {
             return distinctQuery;
         }
         return regularQuery;
+    }
+
+    private boolean calculateTargetClasses(@Nonnull SchemaExtractorRequestDto request, @Nonnull SchemaExtractorPropertyNodeInfo property) {
+        if (property.getObjectTripleCount() != null && property.getObjectTripleCount() != 0)
+            return true;
+        if (property.getTripleCount() != null && property.getTripleCount().equals(property.getDataTripleCount()))
+            return false;
+        if (property.getObjectTripleCount() == null && request.getCrossCheckTargetClassesOnNonLiteralPropertyObjectCheckFailure())
+            return true;
+        return false;
     }
 
 }
