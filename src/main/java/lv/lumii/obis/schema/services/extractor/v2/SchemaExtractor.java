@@ -509,20 +509,6 @@ public class SchemaExtractor {
         return properties;
     }
 
-    protected boolean readTripleCountsForAllProperties(@Nonnull SchemaExtractorRequestDto request, @Nonnull Schema schema,
-                                                       @Nonnull Map<String, SchemaExtractorPropertyNodeInfo> properties) {
-
-        SchemaExtractorQueries query = selectQuery(request.getExactCountCalculations(), FIND_PROPERTIES_WITH_TRIPLE_COUNT, FIND_PROPERTIES_WITH_TRIPLE_COUNT_DISTINCT);
-        SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(query.name()), query);
-        QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
-        if (queryResponse.hasErrors() && queryResponse.getResults().isEmpty()) {
-            schema.getErrors().add(new SchemaExtractorError(WARNING, "allPropertiesWithTripleCounts", query.name(), queryBuilder.getQueryString()));
-            return false;
-        }
-        properties.putAll(processPropertiesWithEndpointData(queryResponse.getResults(), request, schema));
-        return true;
-    }
-
     protected void readTripleCountForProperty(@Nonnull SchemaExtractorRequestDto request, @Nonnull Schema schema, @Nonnull String propertyName,
                                               @Nonnull Map<String, SchemaExtractorPropertyNodeInfo> properties) {
 
@@ -574,6 +560,10 @@ public class SchemaExtractor {
                                     @Nonnull Map<String, SchemaExtractorClassNodeInfo> graphOfClasses, @Nonnull SchemaExtractorRequestDto request) {
         int totalCountOfProperties = properties.size();
         int currentPropertyInd = 1;
+
+        Map<String, Long> subjectsMap = determineDistinctSubjectsForAllProperties(schema, request);
+        Map<String, Long> objectsMap = determineDistinctObjectsForAllProperties(schema, request);
+
         for (Map.Entry<String, SchemaExtractorPropertyNodeInfo> entry : properties.entrySet()) {
 
             SchemaExtractorPropertyNodeInfo property = entry.getValue();
@@ -601,6 +591,24 @@ public class SchemaExtractor {
                 if (isTrue(request.getCalculateSourceAndTargetPairs())) {
                     determinePropertySourceTargetPairs(schema, property, request, totalCountOfProperties);
                 }
+            }
+
+            if (isTrue(SchemaExtractorRequestDto.DistinctSubjectsAndObjectsMode.yes.equals(request.getIncludeDistinctSubjectsAndObjects()))
+                    || isTrue(SchemaExtractorRequestDto.DistinctSubjectsAndObjectsMode.propertyLevel.equals(request.getIncludeDistinctSubjectsAndObjects()))) {
+                if (subjectsMap.isEmpty()) {
+                    determineDistinctPropertySubjects(schema, property, request);
+                } else {
+                    property.setDistinctSubjectsCount(subjectsMap.get(property.getPropertyName()));
+                }
+                if (objectsMap.isEmpty()) {
+                    determineDistinctPropertyObjects(schema, property, request);
+                } else {
+                    property.setDistinctObjectsCount(objectsMap.get(property.getPropertyName()));
+                }
+            }
+            if (isTrue(SchemaExtractorRequestDto.DistinctSubjectsAndObjectsMode.yes.equals(request.getIncludeDistinctSubjectsAndObjects()))) {
+                determineDistinctPropertySubjectsOnSourceClassLevel(schema, property, request);
+                determineDistinctPropertyObjectsOnTargetClassLevel(schema, property, request);
             }
 
             if (isTrue(request.getCalculateClosedClassSets())) {
@@ -634,7 +642,6 @@ public class SchemaExtractor {
             if (isFalse(SchemaExtractorRequestDto.ImportantIndexesMode.no.equals(request.getCalculateImportanceIndexes()))) {
                 determineImportanceIndexes(schema, property, schema.getClasses(), graphOfClasses, request, totalCountOfProperties);
             }
-
 
             if (isTrue(request.getCalculatePropertyPropertyRelations())) {
                 determineFollowers(schema, property, request, properties);
@@ -1214,6 +1221,180 @@ public class SchemaExtractor {
                 }
             });
         }
+    }
+
+    protected Map<String, Long> determineDistinctSubjectsForAllProperties(@Nonnull Schema schema, @Nonnull SchemaExtractorRequestDto request) {
+        log.info(request.getCorrelationId() + " - determineDistinctSubjectsForAllProperties ");
+
+        Map<String, Long> subjectsMap = new HashMap<>();
+        SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(COUNT_DISTINCT_SUBJECTS_FOR_PROPERTIES.name()), COUNT_DISTINCT_SUBJECTS_FOR_PROPERTIES);
+        QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
+        if (!queryResponse.hasErrors() && !queryResponse.getResults().isEmpty()) {
+            for (QueryResult queryResult : queryResponse.getResults()) {
+                String propertyName = queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY);
+                long distinctSubjectsCount = SchemaUtil.getLongValueFromString(queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
+                subjectsMap.put(propertyName, distinctSubjectsCount);
+            }
+        } else if (queryResponse.hasErrors()) {
+            schema.getErrors().add(new SchemaExtractorError(INFO, "distinctSubjectsForAllProperties", COUNT_DISTINCT_SUBJECTS_FOR_PROPERTIES.name(), queryBuilder.getQueryString()));
+        }
+        return subjectsMap;
+    }
+
+    protected Map<String, Long> determineDistinctObjectsForAllProperties(@Nonnull Schema schema, @Nonnull SchemaExtractorRequestDto request) {
+        log.info(request.getCorrelationId() + " - determineDistinctObjectsForAllProperties ");
+
+        Map<String, Long> objectsMap = new HashMap<>();
+        SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(COUNT_DISTINCT_OBJECTS_FOR_PROPERTIES.name()), COUNT_DISTINCT_OBJECTS_FOR_PROPERTIES);
+        QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
+        if (!queryResponse.hasErrors() && !queryResponse.getResults().isEmpty()) {
+            for (QueryResult queryResult : queryResponse.getResults()) {
+                String propertyName = queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY);
+                long distinctObjectsCount = SchemaUtil.getLongValueFromString(queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
+                objectsMap.put(propertyName, distinctObjectsCount);
+            }
+        } else if (queryResponse.hasErrors()) {
+            schema.getErrors().add(new SchemaExtractorError(INFO, "distinctObjectsForAllProperties", COUNT_DISTINCT_OBJECTS_FOR_PROPERTIES.name(), queryBuilder.getQueryString()));
+        }
+        return objectsMap;
+    }
+
+    protected void determineDistinctPropertySubjects(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request) {
+        log.info(request.getCorrelationId() + " - determineDistinctPropertySubjects [" + property.getPropertyName() + "]");
+
+        SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(COUNT_DISTINCT_SUBJECTS_FOR_PROPERTY.name()), COUNT_DISTINCT_SUBJECTS_FOR_PROPERTY)
+                .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false);
+        QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
+        if (!queryResponse.hasErrors() && !queryResponse.getResults().isEmpty() && queryResponse.getResults().get(0) != null) {
+            long distinctSubjectsCount = SchemaUtil.getLongValueFromString(queryResponse.getResults().get(0).getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
+            property.setDistinctSubjectsCount(distinctSubjectsCount);
+        } else if (queryResponse.hasErrors()) {
+            schema.getErrors().add(new SchemaExtractorError(WARNING, property.getPropertyName(), COUNT_DISTINCT_SUBJECTS_FOR_PROPERTY.name(), queryBuilder.getQueryString()));
+        }
+    }
+
+    protected void determineDistinctPropertyObjects(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request) {
+        log.info(request.getCorrelationId() + " - determineDistinctPropertyObjects [" + property.getPropertyName() + "]");
+
+        SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(COUNT_DISTINCT_OBJECTS_FOR_PROPERTY.name()), COUNT_DISTINCT_OBJECTS_FOR_PROPERTY)
+                .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false);
+        QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
+        if (!queryResponse.hasErrors() && !queryResponse.getResults().isEmpty() && queryResponse.getResults().get(0) != null) {
+            long distinctObjectsCount = SchemaUtil.getLongValueFromString(queryResponse.getResults().get(0).getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
+            property.setDistinctObjectsCount(distinctObjectsCount);
+        } else if (queryResponse.hasErrors()) {
+            schema.getErrors().add(new SchemaExtractorError(WARNING, property.getPropertyName(), COUNT_DISTINCT_OBJECTS_FOR_PROPERTY.name(), queryBuilder.getQueryString()));
+        }
+    }
+
+    protected boolean determineDistinctPropertySubjectsForAllSources(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request) {
+        log.info(request.getCorrelationId() + " - determineDistinctPropertySubjectsForAllSources [" + property.getPropertyName() + "]");
+
+        boolean found = false;
+        for (String classificationProperty : request.getMainClassificationProperties()) {
+            SchemaExtractorQueries query = selectQuery(request.getExactCountCalculations(), COUNT_DISTINCT_SUBJECTS_FOR_PROPERTY_SOURCES, COUNT_DISTINCT_SUBJECTS_FOR_PROPERTY_SOURCES);
+            SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(query.name()), query)
+                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, classificationProperty)
+                    .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false);
+            QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
+            if (queryResponse.hasErrors()) {
+                schema.getErrors().add(new SchemaExtractorError(INFO, property.getPropertyName(), query.name(), queryBuilder.getQueryString()));
+                continue;
+            }
+            if (!queryResponse.getResults().isEmpty()) {
+                found = true;
+            }
+            for (QueryResult queryResult : queryResponse.getResults()) {
+                String className = queryResult.getValueFullName(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS);
+                if (StringUtils.isNotEmpty(className) && isNotExcludedResource(className, request.getExcludedNamespaces())) {
+                    SchemaExtractorClassNodeInfo sourceClass = property.getSourceClasses().stream()
+                            .filter(c -> className.equals(c.getClassName())).findFirst().orElse(null);
+                    if (sourceClass != null) {
+                        Long distinctSubjectsCount = SchemaUtil.getLongValueFromString(queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
+                        sourceClass.setDistinctSubjectsCount(distinctSubjectsCount);
+                    }
+                }
+            }
+        }
+        return found;
+    }
+
+    protected void determineDistinctPropertySubjectsOnSourceClassLevel(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request) {
+
+        // get distinct subjects for the specific property and for all source classes
+        boolean found = determineDistinctPropertySubjectsForAllSources(schema, property, request);
+        if (found) return;
+
+        log.info(request.getCorrelationId() + " - determineDistinctPropertySubjectsOnSourceClassLevel [" + property.getPropertyName() + "]");
+
+        property.getSourceClasses().forEach(sourceClass -> {
+            SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(COUNT_DISTINCT_SUBJECTS_FOR_PROPERTY_SOURCE.name()), COUNT_DISTINCT_SUBJECTS_FOR_PROPERTY_SOURCE)
+                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL, sourceClass.getClassName(), sourceClass.getIsLiteral())
+                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, sourceClass.getClassificationProperty())
+                    .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false);
+            QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
+            if (!queryResponse.hasErrors() && !queryResponse.getResults().isEmpty() && queryResponse.getResults().get(0) != null) {
+                long distinctSubjectsCount = SchemaUtil.getLongValueFromString(queryResponse.getResults().get(0).getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
+                sourceClass.setDistinctSubjectsCount(distinctSubjectsCount);
+            } else if (queryResponse.hasErrors()) {
+                schema.getErrors().add(new SchemaExtractorError(WARNING, property.getPropertyName(), COUNT_DISTINCT_SUBJECTS_FOR_PROPERTY_SOURCE.name(), queryBuilder.getQueryString()));
+            }
+        });
+    }
+
+    protected boolean determineDistinctPropertyObjectsForAllSources(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request) {
+        log.info(request.getCorrelationId() + " - determineDistinctPropertyObjectsForAllSources [" + property.getPropertyName() + "]");
+
+        boolean found = false;
+        for (String classificationProperty : request.getMainClassificationProperties()) {
+            SchemaExtractorQueries query = selectQuery(request.getExactCountCalculations(), COUNT_DISTINCT_OBJECTS_FOR_PROPERTY_TARGETS, COUNT_DISTINCT_OBJECTS_FOR_PROPERTY_TARGETS);
+            SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(query.name()), query)
+                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, classificationProperty)
+                    .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false);
+            QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
+            if (queryResponse.hasErrors()) {
+                schema.getErrors().add(new SchemaExtractorError(INFO, property.getPropertyName(), query.name(), queryBuilder.getQueryString()));
+                continue;
+            }
+            if (!queryResponse.getResults().isEmpty()) {
+                found = true;
+            }
+            for (QueryResult queryResult : queryResponse.getResults()) {
+                String className = queryResult.getValueFullName(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS);
+                if (StringUtils.isNotEmpty(className) && isNotExcludedResource(className, request.getExcludedNamespaces())) {
+                    SchemaExtractorClassNodeInfo targetClass = property.getTargetClasses().stream()
+                            .filter(c -> className.equals(c.getClassName())).findFirst().orElse(null);
+                    if (targetClass != null) {
+                        Long distinctObjectsount = SchemaUtil.getLongValueFromString(queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
+                        targetClass.setDistinctObjectsCount(distinctObjectsount);
+                    }
+                }
+            }
+        }
+        return found;
+    }
+
+    protected void determineDistinctPropertyObjectsOnTargetClassLevel(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request) {
+
+        // get distinct objects for the specific property and for all target classes
+        boolean found = determineDistinctPropertyObjectsForAllSources(schema, property, request);
+        if (found) return;
+
+        log.info(request.getCorrelationId() + " - determineDistinctPropertyObjectsOnTargetClassLevel [" + property.getPropertyName() + "]");
+
+        property.getTargetClasses().forEach(targetClass -> {
+            SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(COUNT_DISTINCT_OBJECTS_FOR_PROPERTY_TARGET.name()), COUNT_DISTINCT_OBJECTS_FOR_PROPERTY_TARGET)
+                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_TARGET_FULL, targetClass.getClassName(), targetClass.getIsLiteral())
+                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, targetClass.getClassificationProperty())
+                    .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false);
+            QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
+            if (!queryResponse.hasErrors() && !queryResponse.getResults().isEmpty() && queryResponse.getResults().get(0) != null) {
+                long distinctObjectsCount = SchemaUtil.getLongValueFromString(queryResponse.getResults().get(0).getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
+                targetClass.setDistinctObjectsCount(distinctObjectsCount);
+            } else if (queryResponse.hasErrors()) {
+                schema.getErrors().add(new SchemaExtractorError(WARNING, property.getPropertyName(), COUNT_DISTINCT_OBJECTS_FOR_PROPERTY_TARGET.name(), queryBuilder.getQueryString()));
+            }
+        });
     }
 
     protected void determinePropertyClosedDomains(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties) {
@@ -2192,6 +2373,8 @@ public class SchemaExtractor {
             if (propertyData.getObjectTripleCount() != null && propertyData.getObjectTripleCount() != -1) {
                 property.setObjectTripleCount(propertyData.getObjectTripleCount());
             }
+            property.setDistinctSubjectsCount(propertyData.getDistinctSubjectsCount());
+            property.setDistinctObjectsCount(propertyData.getDistinctObjectsCount());
             property.setClosedDomain(propertyData.getIsClosedDomain());
             property.setClosedRange(propertyData.getIsClosedRange());
             property.setHasFollowersOK(propertyData.getHasFollowersOK());
@@ -2221,6 +2404,7 @@ public class SchemaExtractor {
                         .map(internalDto -> new SchemaPropertyLinkedClassDetails(
                                 internalDto.getClassName(),
                                 internalDto.getTripleCount(), internalDto.getTripleCountBase(), internalDto.getDataTripleCount(), internalDto.getObjectTripleCount(),
+                                internalDto.getDistinctSubjectsCount(), internalDto.getDistinctObjectsCount(),
                                 internalDto.getIsClosedDomain(), internalDto.getIsClosedRange(), internalDto.getIsPrincipal(),
                                 internalDto.getMinCardinality(), internalDto.getMaxCardinality(),
                                 internalDto.getMinInverseCardinality(), internalDto.getMaxInverseCardinality(),

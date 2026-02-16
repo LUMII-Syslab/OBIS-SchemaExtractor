@@ -22,6 +22,8 @@ public class SchemaPropertyLinkedClassDetails {
     private Long dataTripleCount;
 
     private Long objectTripleCount;
+    private Long distinctSubjectsCount;
+    private Long distinctObjectsCount;
 
     private Boolean closedDomain;
 
@@ -44,6 +46,7 @@ public class SchemaPropertyLinkedClassDetails {
 
     public SchemaPropertyLinkedClassDetails(String classFullName,
                                             Long tripleCount, Long tripleCountBase, Long dataTripleCount, Long objectTripleCount,
+                                            Long distinctSubjectsCount, Long distinctObjectsCount,
                                             Boolean closedDomain, Boolean closedRange, Boolean isPrincipal,
                                             Integer minCardinality, Integer maxCardinality,
                                             Integer minInverseCardinality, Integer maxInverseCardinality,
@@ -53,6 +56,8 @@ public class SchemaPropertyLinkedClassDetails {
         this.tripleCountBase = tripleCountBase;
         this.dataTripleCount = dataTripleCount;
         this.objectTripleCount = objectTripleCount;
+        this.distinctSubjectsCount = distinctSubjectsCount;
+        this.distinctObjectsCount = distinctObjectsCount;
         this.closedDomain = closedDomain;
         this.closedRange = closedRange;
         this.isPrincipal = isPrincipal;

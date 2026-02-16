@@ -23,6 +23,8 @@ public class SchemaExtractorRequestNew {
 
     public enum InstanceNamespacesMode {no, detailed, overview}
 
+    public enum DistinctSubjectsAndObjectsMode {no, propertyLevel, yes}
+
     public enum NoClassesLoggingOptions {yes, no, sourcesOnly}
 
     @ApiParam(access = "10", value = "SPARQL Endpoint URL, for example, http://localhost:8890/sparql", required = true)
@@ -56,6 +58,9 @@ public class SchemaExtractorRequestNew {
 
     @ApiParam(access = "60", value = "Calculate domain and range classes for properties", defaultValue = "true", required = true)
     private Boolean calculateDomainsAndRanges;
+
+    @ApiParam(access = "61", value = "Calculate distinct subjects and objects count for property and/or for property source and target classes", defaultValue = "no", required = true)
+    private DistinctSubjectsAndObjectsMode includeDistinctSubjectsAndObjects;
 
     @ApiParam(access = "70", value = "Calculate ascription points (principal classes) for properties (strongly recommended, if schema diagrams are envisaged). Use 'class coverage', if all class-to-property connections are to be marked for the class itself, or some its superclass or subclass (can make a difference in the case of overlapping classes)", defaultValue = "basic", required = true)
     private ImportantIndexesMode calculateImportanceIndexes;
@@ -151,6 +156,13 @@ public class SchemaExtractorRequestNew {
             calculateDomainsAndRanges = Boolean.FALSE;
         }
         return calculateDomainsAndRanges;
+    }
+
+    public DistinctSubjectsAndObjectsMode getIncludeDistinctSubjectsAndObjects() {
+        if (includeDistinctSubjectsAndObjects == null) {
+            includeDistinctSubjectsAndObjects = DistinctSubjectsAndObjectsMode.no;
+        }
+        return includeDistinctSubjectsAndObjects;
     }
 
     public Boolean getCalculateClosedClassSets() {

@@ -8,6 +8,7 @@ validatePropertiesList: true
 calculatePropertyPropertyRelations: false
 calculateSourceAndTargetPairs: true
 calculateDomainsAndRanges: true
+includeDistinctSubjectsAndObjects: "no"
 calculateImportanceIndexes: "basic"
 calculateClosedClassSets: true
 calculateDataTypes: "propertyLevelAndClassContext"

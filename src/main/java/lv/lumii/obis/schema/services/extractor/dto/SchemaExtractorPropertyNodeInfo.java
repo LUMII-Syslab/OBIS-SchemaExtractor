@@ -20,6 +20,8 @@ public class SchemaExtractorPropertyNodeInfo {
     private Long tripleCount;
     private Long dataTripleCount;
     private Long objectTripleCount;
+    private Long distinctSubjectsCount;
+    private Long distinctObjectsCount;
     private Boolean isClosedDomain;
     private Boolean isClosedRange;
     private Boolean hasDomain;

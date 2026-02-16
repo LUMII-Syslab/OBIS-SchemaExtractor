@@ -313,6 +313,31 @@ public enum SchemaExtractorQueries {
             "SELECT ?x ?y WHERE { ?x <classificationPropertySource> <sourceClass>. ?x <property> ?y. ?y <classificationPropertyTarget> <targetClass>. OPTIONAL {?x <classificationPropertyOther> ?cc. FILTER (customFilter)} FILTER (!BOUND(?cc))} LIMIT 1", QueryType.SMALL
     ),
 
+    COUNT_DISTINCT_SUBJECTS_FOR_PROPERTIES(
+           "SELECT ?property (COUNT(DISTINCT ?x) as ?instances) WHERE {?x ?property ?y} GROUP BY ?property", QueryType.LARGE
+    ),
+    COUNT_DISTINCT_SUBJECTS_FOR_PROPERTY(
+            "SELECT (COUNT(DISTINCT ?x) as ?instances) WHERE {?x <property> ?y}", QueryType.SMALL
+    ),
+    COUNT_DISTINCT_OBJECTS_FOR_PROPERTIES(
+            "SELECT ?property (COUNT(DISTINCT ?y) as ?instances) WHERE {?x ?property ?y} GROUP BY ?property", QueryType.LARGE
+    ),
+    COUNT_DISTINCT_OBJECTS_FOR_PROPERTY(
+            "SELECT (COUNT(DISTINCT ?y) as ?instances) WHERE {?x <property> ?y}", QueryType.SMALL
+    ),
+    COUNT_DISTINCT_SUBJECTS_FOR_PROPERTY_SOURCES(
+            "SELECT ?class (COUNT(DISTINCT ?x) as ?instances) WHERE {?x <property> ?y. ?x <classificationProperty> ?class} GROUP BY ?class", QueryType.SMALL
+    ),
+    COUNT_DISTINCT_SUBJECTS_FOR_PROPERTY_SOURCE(
+            "SELECT (COUNT(DISTINCT ?x) as ?instances) WHERE {?x <property> ?y. ?x <classificationProperty> <sourceClass>}", QueryType.SMALL
+    ),
+    COUNT_DISTINCT_OBJECTS_FOR_PROPERTY_TARGETS(
+            "SELECT ?class (COUNT(DISTINCT ?y) as ?instances) WHERE {?x <property> ?y. ?y <classificationProperty> ?class} GROUP BY ?class", QueryType.SMALL
+    ),
+    COUNT_DISTINCT_OBJECTS_FOR_PROPERTY_TARGET(
+            "SELECT (COUNT(DISTINCT ?y) as ?instances) WHERE {?x <property> ?y. ?y <classificationProperty> <targetClass>}", QueryType.SMALL
+    ),
+
     FIND_LABEL(
             "SELECT (STR(?z) as ?value) (LANG(?z) as ?language) WHERE { ?x ?y ?z. FILTER(?x = <resource1>) FILTER(?y = <resource2>) }", QueryType.LARGE
     ),
