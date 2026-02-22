@@ -46,6 +46,8 @@ public class SchemaExtractorRequestDto {
 
     public enum DistinctSubjectsAndObjectsMode {no, propertyLevel, yes}
 
+    public enum BlankNodeMode {no, targetsOnly, full}
+
     public enum NoClassesLoggingOptions {yes, no, sourcesOnly}
 
     private String correlationId;
@@ -62,6 +64,7 @@ public class SchemaExtractorRequestDto {
     private Boolean calculateSourceAndTargetPairs;
     private Boolean calculateDomainsAndRanges;
     private DistinctSubjectsAndObjectsMode includeDistinctSubjectsAndObjects;
+    private BlankNodeMode computeBlankNodeStatistics;
     private ImportantIndexesMode calculateImportanceIndexes;
     private Boolean calculateClosedClassSets;
     private CalculatePropertyFeatureMode calculateCardinalities;

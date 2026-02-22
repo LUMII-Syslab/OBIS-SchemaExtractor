@@ -25,6 +25,8 @@ public class SchemaExtractorRequestNew {
 
     public enum DistinctSubjectsAndObjectsMode {no, propertyLevel, yes}
 
+    public enum BlankNodeMode {no, targetsOnly, full}
+
     public enum NoClassesLoggingOptions {yes, no, sourcesOnly}
 
     @ApiParam(access = "10", value = "SPARQL Endpoint URL, for example, http://localhost:8890/sparql", required = true)
@@ -59,8 +61,11 @@ public class SchemaExtractorRequestNew {
     @ApiParam(access = "60", value = "Calculate domain and range classes for properties", defaultValue = "true", required = true)
     private Boolean calculateDomainsAndRanges;
 
-    @ApiParam(access = "61", value = "Calculate distinct subjects and objects count for property and/or for property source and target classes", defaultValue = "no", required = true)
+    @ApiParam(hidden = true, access = "61", value = "Calculate distinct subjects and objects count for property and/or for property source and target classes", defaultValue = "propertyLevel", required = true)
     private DistinctSubjectsAndObjectsMode includeDistinctSubjectsAndObjects;
+
+    @ApiParam(hidden = true, access = "62", value = "Calculate blank node statistics", defaultValue = "no", required = true)
+    private BlankNodeMode computeBlankNodeStatistics;
 
     @ApiParam(access = "70", value = "Calculate ascription points (principal classes) for properties (strongly recommended, if schema diagrams are envisaged). Use 'class coverage', if all class-to-property connections are to be marked for the class itself, or some its superclass or subclass (can make a difference in the case of overlapping classes)", defaultValue = "basic", required = true)
     private ImportantIndexesMode calculateImportanceIndexes;
@@ -160,9 +165,16 @@ public class SchemaExtractorRequestNew {
 
     public DistinctSubjectsAndObjectsMode getIncludeDistinctSubjectsAndObjects() {
         if (includeDistinctSubjectsAndObjects == null) {
-            includeDistinctSubjectsAndObjects = DistinctSubjectsAndObjectsMode.no;
+            includeDistinctSubjectsAndObjects = DistinctSubjectsAndObjectsMode.propertyLevel;
         }
         return includeDistinctSubjectsAndObjects;
+    }
+
+    public BlankNodeMode getComputeBlankNodeStatistics() {
+        if (computeBlankNodeStatistics == null) {
+            computeBlankNodeStatistics = BlankNodeMode.no;
+        }
+        return computeBlankNodeStatistics;
     }
 
     public Boolean getCalculateClosedClassSets() {

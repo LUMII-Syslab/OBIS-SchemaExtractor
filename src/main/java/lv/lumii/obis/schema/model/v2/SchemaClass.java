@@ -26,6 +26,8 @@ public class SchemaClass extends SchemaElement {
 
     private Long instanceCount;
 
+    private Long blankNodeCount;
+
     private Long incomingTripleCount;
 
     private String dataType;

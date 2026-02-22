@@ -19,6 +19,8 @@ public class SchemaProperty extends SchemaElement {
     private Long tripleCount;
     private Long dataTripleCount;
     private Long objectTripleCount;
+    private Long blankNodeObjects;
+    private Long blankNodeSubjects;
     private Long distinctSubjectsCount;
     private Long distinctObjectsCount;
     private Boolean closedDomain;

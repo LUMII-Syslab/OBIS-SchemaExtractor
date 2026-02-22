@@ -313,6 +313,31 @@ public enum SchemaExtractorQueries {
             "SELECT ?x ?y WHERE { ?x <classificationPropertySource> <sourceClass>. ?x <property> ?y. ?y <classificationPropertyTarget> <targetClass>. OPTIONAL {?x <classificationPropertyOther> ?cc. FILTER (customFilter)} FILTER (!BOUND(?cc))} LIMIT 1", QueryType.SMALL
     ),
 
+    VALIDATE_BLANK_NODES_FOR_CLASS(
+            "SELECT * WHERE { ?x ?p ?y. FILTER(isBlank(?x)) } LIMIT 1", QueryType.SMALL
+    ),
+    VALIDATE_BLANK_NODES_FOR_PROPERTY(
+            "SELECT * WHERE { ?x ?p ?y. FILTER(isBlank(?y)) } LIMIT 1", QueryType.SMALL
+    ),
+    COUNT_BLANK_INSTANCES_FOR_CLASSES(
+            "SELECT ?class (COUNT(?x) as ?instances) WHERE { ?x <classificationProperty> ?class. FILTER(isBlank(?x)) } GROUP BY ?class", QueryType.LARGE
+    ),
+    COUNT_BLANK_INSTANCES_FOR_CLASS(
+            "SELECT (COUNT(?x) as ?instances) WHERE { ?x <classificationProperty> <class>. FILTER(isBlank(?x)) }", QueryType.SMALL
+    ),
+    COUNT_TARGET_BLANK_VALUES_FOR_PROPERTIES(
+            "SELECT ?property (COUNT(?x) as ?instances) WHERE { <valuesClause> ?x ?property ?y. FILTER(isBlank(?y)) } GROUP BY ?property", QueryType.LARGE
+    ),
+    COUNT_TARGET_BLANK_VALUES_FOR_PROPERTY(
+            "SELECT (COUNT(?x) as ?instances) WHERE { ?x <property> ?y. FILTER(isBlank(?y)) }", QueryType.SMALL
+    ),
+    COUNT_SOURCE_BLANK_VALUES_FOR_PROPERTIES(
+            "SELECT ?property (COUNT(?x) as ?instances) WHERE { <valuesClause> ?x ?property ?y. FILTER(isBlank(?x)) } group by ?property", QueryType.LARGE
+    ),
+    COUNT_SOURCE_BLANK_VALUES_FOR_PROPERTY(
+            "SELECT (COUNT(?x) as ?instances) WHERE {?x <property> ?y. FILTER(isBlank(?x)) }", QueryType.SMALL
+    ),
+
     COUNT_DISTINCT_SUBJECTS_FOR_PROPERTIES(
            "SELECT ?property (COUNT(DISTINCT ?x) as ?instances) WHERE {?x ?property ?y} GROUP BY ?property", QueryType.LARGE
     ),

@@ -16,6 +16,7 @@ import lv.lumii.obis.schema.services.common.dto.QueryResultObject;
 import lv.lumii.obis.schema.services.common.dto.SparqlEndpointConfig;
 import lv.lumii.obis.schema.services.extractor.dto.*;
 import lv.lumii.obis.schema.services.extractor.v2.dto.*;
+import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -187,6 +188,13 @@ public class SchemaExtractor {
                             intersectionClass -> new SchemaIntersactionClass(intersectionClass.getClassName(), intersectionClass.getInstanceCount())
                     ).collect(Collectors.toList()));
                 }
+            }
+        }
+
+        if (SchemaExtractorRequestDto.BlankNodeMode.full.equals(request.getComputeBlankNodeStatistics())) {
+            validateBlankNodesForClasses(schema, request);
+            if (BooleanUtils.isNotFalse(schema.getHasBlankNodeSubjects())) {
+                determineBlankValuesForClasses(schema, request);
             }
         }
     }
@@ -561,8 +569,26 @@ public class SchemaExtractor {
         int totalCountOfProperties = properties.size();
         int currentPropertyInd = 1;
 
-        Map<String, Long> subjectsMap = determineDistinctSubjectsForAllProperties(schema, request);
-        Map<String, Long> objectsMap = determineDistinctObjectsForAllProperties(schema, request);
+        Map<String, Long> subjectsMap = null, objectsMap = null, blankNodeObjects = null, blankNodeSubjects = null;
+
+        if (isTrue(SchemaExtractorRequestDto.DistinctSubjectsAndObjectsMode.yes.equals(request.getIncludeDistinctSubjectsAndObjects()))
+                || isTrue(SchemaExtractorRequestDto.DistinctSubjectsAndObjectsMode.propertyLevel.equals(request.getIncludeDistinctSubjectsAndObjects()))) {
+            subjectsMap = determineDistinctSubjectsForAllProperties(schema, request);
+            objectsMap = determineDistinctObjectsForAllProperties(schema, request);
+        }
+        if (isTrue(SchemaExtractorRequestDto.BlankNodeMode.full.equals(request.getComputeBlankNodeStatistics()))
+                && BooleanUtils.isNotFalse(schema.getHasBlankNodeSubjects())) {
+            blankNodeSubjects = determineBlankNodeSubjectsForAllProperties(schema, request, properties);
+        }
+        boolean calculateBlankNodeObjects = false;
+        if (isTrue(SchemaExtractorRequestDto.BlankNodeMode.targetsOnly.equals(request.getComputeBlankNodeStatistics()))
+                || isTrue(SchemaExtractorRequestDto.BlankNodeMode.full.equals(request.getComputeBlankNodeStatistics()))) {
+            validateBlankNodesForProperties(schema, request);
+            if (BooleanUtils.isNotFalse(schema.getHasBlankNodeObjects())) {
+                blankNodeObjects = determineBlankNodeObjectsForAllProperties(schema, request, properties);
+                calculateBlankNodeObjects = true;
+            }
+        }
 
         for (Map.Entry<String, SchemaExtractorPropertyNodeInfo> entry : properties.entrySet()) {
 
@@ -609,6 +635,22 @@ public class SchemaExtractor {
             if (isTrue(SchemaExtractorRequestDto.DistinctSubjectsAndObjectsMode.yes.equals(request.getIncludeDistinctSubjectsAndObjects()))) {
                 determineDistinctPropertySubjectsOnSourceClassLevel(schema, property, request);
                 determineDistinctPropertyObjectsOnTargetClassLevel(schema, property, request);
+            }
+
+            if (isTrue(SchemaExtractorRequestDto.BlankNodeMode.full.equals(request.getComputeBlankNodeStatistics()))
+                    && BooleanUtils.isNotFalse(schema.getHasBlankNodeSubjects())) {
+                if (blankNodeSubjects.isEmpty()) {
+                    determinePropertyBlankNodeSubjects(schema, property, request);
+                } else {
+                    property.setBlankNodeSubjects(blankNodeSubjects.get(property.getPropertyName()));
+                }
+            }
+            if (calculateBlankNodeObjects && property.getObjectTripleCount() != null && property.getObjectTripleCount() > 0) {
+                if (blankNodeObjects.isEmpty()) {
+                    determinePropertyBlankNodeObjects(schema, property, request);
+                } else {
+                    property.setBlankNodeObjects(blankNodeObjects.get(property.getPropertyName()));
+                }
             }
 
             if (isTrue(request.getCalculateClosedClassSets())) {
@@ -1223,6 +1265,162 @@ public class SchemaExtractor {
         }
     }
 
+    protected void validateBlankNodesForClasses(@Nonnull Schema schema, @Nonnull SchemaExtractorRequestDto request) {
+        log.info(request.getCorrelationId() + " - validateBlankNodesForClasses ");
+
+        SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(VALIDATE_BLANK_NODES_FOR_CLASS.name()), VALIDATE_BLANK_NODES_FOR_CLASS);
+        QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
+        if (!queryResponse.hasErrors()) {
+            schema.setHasBlankNodeSubjects(!queryResponse.getResults().isEmpty());
+        }
+    }
+
+    protected void validateBlankNodesForProperties(@Nonnull Schema schema, @Nonnull SchemaExtractorRequestDto request) {
+        log.info(request.getCorrelationId() + " - validateBlankNodesForProperties ");
+
+        SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(VALIDATE_BLANK_NODES_FOR_PROPERTY.name()), VALIDATE_BLANK_NODES_FOR_PROPERTY);
+        QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
+        if (!queryResponse.hasErrors()) {
+            schema.setHasBlankNodeObjects(!queryResponse.getResults().isEmpty());
+        }
+    }
+
+    protected void determineBlankValuesForClasses(@Nonnull Schema schema, @Nonnull SchemaExtractorRequestDto request) {
+        log.info(request.getCorrelationId() + " - determineBlankValuesForClasses ");
+
+        // read blank values for all classes
+        List<String> classificationPropertiesWithError = new ArrayList<>();
+        for (String classificationProperty : request.getAllClassificationProperties()) {
+            SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(COUNT_BLANK_INSTANCES_FOR_CLASSES.name()), COUNT_BLANK_INSTANCES_FOR_CLASSES)
+                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, classificationProperty);
+            QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
+            if (queryResponse.hasErrors()) {
+                schema.getErrors().add(new SchemaExtractorError(WARNING, "determineBlankValuesForClasses", COUNT_BLANK_INSTANCES_FOR_CLASSES.name(), queryBuilder.getQueryString()));
+                classificationPropertiesWithError.add(classificationProperty);
+            } else {
+                for (QueryResult queryResult : queryResponse.getResults()) {
+                    String className = queryResult.getValueFullName(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS);
+                    if (className == null) {
+                        continue;
+                    }
+                    SchemaClass clazz = findClass(schema.getClasses(), className);
+                    if (clazz == null) {
+                        continue;
+                    }
+                    String instancesCountStr = queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT);
+                    if (StringUtils.isNotEmpty(instancesCountStr)) {
+                        Long instanceCount = SchemaUtil.getLongValueFromString(instancesCountStr);
+                        clazz.setBlankNodeCount(instanceCount);
+                    }
+                }
+
+            }
+        }
+        // if statistics query returns error then read blank nodes count separately for each class
+        if (!classificationPropertiesWithError.isEmpty()) {
+            for (SchemaClass clazz : schema.getClasses()) {
+                if (!classificationPropertiesWithError.contains(clazz.getClassificationProperty())) {
+                    continue;
+                }
+                log.info(request.getCorrelationId() + " - determineBlankValuesForClass [" + clazz.getFullName() + "]");
+                SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(COUNT_BLANK_INSTANCES_FOR_CLASS.name()), COUNT_BLANK_INSTANCES_FOR_CLASS)
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_FULL, clazz.getFullName(), clazz.getIsLiteral())
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, clazz.getClassificationProperty());
+                QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
+                if (!queryResponse.hasErrors() && !queryResponse.getResults().isEmpty() && queryResponse.getResults().get(0) != null) {
+                    long blankNodeCount = SchemaUtil.getLongValueFromString(queryResponse.getResults().get(0).getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
+                    clazz.setBlankNodeCount(blankNodeCount);
+                } else {
+                    schema.getErrors().add(new SchemaExtractorError(WARNING, "determineBlankValuesForClass", COUNT_BLANK_INSTANCES_FOR_CLASS.name(), queryBuilder.getQueryString()));
+                }
+            }
+        }
+    }
+
+    protected Map<String, Long> determineBlankNodeSubjectsForAllProperties(@Nonnull Schema schema, @Nonnull SchemaExtractorRequestDto request,
+                                                                           @Nonnull Map<String, SchemaExtractorPropertyNodeInfo> properties) {
+        log.info(request.getCorrelationId() + " - determineBlankNodeSubjectsForAllProperties ");
+
+        Map<String, Long> blankNodeMap = new HashMap<>();
+        SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(COUNT_SOURCE_BLANK_VALUES_FOR_PROPERTIES.name()), COUNT_SOURCE_BLANK_VALUES_FOR_PROPERTIES);
+        if (!request.getIncludedProperties().isEmpty()) {
+            if (!properties.keySet().isEmpty()) {
+                queryBuilder.withContextParam(SPARQL_QUERY_BINDING_NAME_VALUES, buildValuesClause(properties.keySet(), SPARQL_QUERY_BINDING_NAME_PROPERTY));
+            }
+        } else {
+            queryBuilder.withContextParam(SPARQL_QUERY_BINDING_NAME_VALUES, StringUtils.EMPTY);
+        }
+        QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
+        if (!queryResponse.hasErrors() && !queryResponse.getResults().isEmpty()) {
+            for (QueryResult queryResult : queryResponse.getResults()) {
+                String propertyName = queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY);
+                String instanceCount = queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT);
+                if (StringUtils.isNotEmpty(instanceCount)) {
+                    blankNodeMap.put(propertyName, SchemaUtil.getLongValueFromString(instanceCount));
+                }
+            }
+        } else if (queryResponse.hasErrors()) {
+            schema.getErrors().add(new SchemaExtractorError(INFO, "determineBlankNodeSubjectsForAllProperties", COUNT_SOURCE_BLANK_VALUES_FOR_PROPERTIES.name(), queryBuilder.getQueryString()));
+        }
+        return blankNodeMap;
+    }
+
+    protected Map<String, Long> determineBlankNodeObjectsForAllProperties(@Nonnull Schema schema, @Nonnull SchemaExtractorRequestDto request,
+                                                                          @Nonnull Map<String, SchemaExtractorPropertyNodeInfo> properties) {
+        log.info(request.getCorrelationId() + " - determineBlankNodeObjectsForAllProperties ");
+
+        Map<String, Long> blankNodeMap = new HashMap<>();
+        SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(COUNT_TARGET_BLANK_VALUES_FOR_PROPERTIES.name()), COUNT_TARGET_BLANK_VALUES_FOR_PROPERTIES);
+        if (!request.getIncludedProperties().isEmpty()) {
+            if (!properties.keySet().isEmpty()) {
+                queryBuilder.withContextParam(SPARQL_QUERY_BINDING_NAME_VALUES, buildValuesClause(properties.keySet(), SPARQL_QUERY_BINDING_NAME_PROPERTY));
+            }
+        } else {
+            queryBuilder.withContextParam(SPARQL_QUERY_BINDING_NAME_VALUES, StringUtils.EMPTY);
+        }
+        QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
+        if (!queryResponse.hasErrors() && !queryResponse.getResults().isEmpty()) {
+            for (QueryResult queryResult : queryResponse.getResults()) {
+                String propertyName = queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY);
+                String instanceCount = queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT);
+                if (StringUtils.isNotEmpty(instanceCount)) {
+                    blankNodeMap.put(propertyName, SchemaUtil.getLongValueFromString(instanceCount));
+                }
+            }
+        } else if (queryResponse.hasErrors()) {
+            schema.getErrors().add(new SchemaExtractorError(INFO, "determineBlankNodeObjectsForAllProperties", COUNT_TARGET_BLANK_VALUES_FOR_PROPERTIES.name(), queryBuilder.getQueryString()));
+        }
+        return blankNodeMap;
+    }
+
+    protected void determinePropertyBlankNodeSubjects(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request) {
+        log.info(request.getCorrelationId() + " - determinePropertyBlankNodeSubjects [" + property.getPropertyName() + "]");
+
+        SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(COUNT_SOURCE_BLANK_VALUES_FOR_PROPERTY.name()), COUNT_SOURCE_BLANK_VALUES_FOR_PROPERTY)
+                .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false);
+        QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
+        if (!queryResponse.hasErrors() && !queryResponse.getResults().isEmpty() && queryResponse.getResults().get(0) != null) {
+            long blankNodeCount = SchemaUtil.getLongValueFromString(queryResponse.getResults().get(0).getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
+            property.setBlankNodeSubjects(blankNodeCount);
+        } else if (queryResponse.hasErrors()) {
+            schema.getErrors().add(new SchemaExtractorError(WARNING, property.getPropertyName(), COUNT_SOURCE_BLANK_VALUES_FOR_PROPERTY.name(), queryBuilder.getQueryString()));
+        }
+    }
+
+    protected void determinePropertyBlankNodeObjects(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request) {
+        log.info(request.getCorrelationId() + " - determinePropertyBlankNodeObjects [" + property.getPropertyName() + "]");
+
+        SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(COUNT_TARGET_BLANK_VALUES_FOR_PROPERTY.name()), COUNT_TARGET_BLANK_VALUES_FOR_PROPERTY)
+                .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false);
+        QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
+        if (!queryResponse.hasErrors() && !queryResponse.getResults().isEmpty() && queryResponse.getResults().get(0) != null) {
+            long blankNodeCount = SchemaUtil.getLongValueFromString(queryResponse.getResults().get(0).getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
+            property.setBlankNodeObjects(blankNodeCount);
+        } else if (queryResponse.hasErrors()) {
+            schema.getErrors().add(new SchemaExtractorError(WARNING, property.getPropertyName(), COUNT_TARGET_BLANK_VALUES_FOR_PROPERTY.name(), queryBuilder.getQueryString()));
+        }
+    }
+
     protected Map<String, Long> determineDistinctSubjectsForAllProperties(@Nonnull Schema schema, @Nonnull SchemaExtractorRequestDto request) {
         log.info(request.getCorrelationId() + " - determineDistinctSubjectsForAllProperties ");
 
@@ -1232,8 +1430,10 @@ public class SchemaExtractor {
         if (!queryResponse.hasErrors() && !queryResponse.getResults().isEmpty()) {
             for (QueryResult queryResult : queryResponse.getResults()) {
                 String propertyName = queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY);
-                long distinctSubjectsCount = SchemaUtil.getLongValueFromString(queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
-                subjectsMap.put(propertyName, distinctSubjectsCount);
+                String distinctSubjectsCount = queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT);
+                if (StringUtils.isNotEmpty(distinctSubjectsCount)) {
+                    subjectsMap.put(propertyName, SchemaUtil.getLongValueFromString(distinctSubjectsCount));
+                }
             }
         } else if (queryResponse.hasErrors()) {
             schema.getErrors().add(new SchemaExtractorError(INFO, "distinctSubjectsForAllProperties", COUNT_DISTINCT_SUBJECTS_FOR_PROPERTIES.name(), queryBuilder.getQueryString()));
@@ -1250,8 +1450,10 @@ public class SchemaExtractor {
         if (!queryResponse.hasErrors() && !queryResponse.getResults().isEmpty()) {
             for (QueryResult queryResult : queryResponse.getResults()) {
                 String propertyName = queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY);
-                long distinctObjectsCount = SchemaUtil.getLongValueFromString(queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
-                objectsMap.put(propertyName, distinctObjectsCount);
+                String distinctObjectsCount = queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT);
+                if (StringUtils.isNotEmpty(distinctObjectsCount)) {
+                    objectsMap.put(propertyName, SchemaUtil.getLongValueFromString(distinctObjectsCount));
+                }
             }
         } else if (queryResponse.hasErrors()) {
             schema.getErrors().add(new SchemaExtractorError(INFO, "distinctObjectsForAllProperties", COUNT_DISTINCT_OBJECTS_FOR_PROPERTIES.name(), queryBuilder.getQueryString()));
@@ -1310,8 +1512,10 @@ public class SchemaExtractor {
                     SchemaExtractorClassNodeInfo sourceClass = property.getSourceClasses().stream()
                             .filter(c -> className.equals(c.getClassName())).findFirst().orElse(null);
                     if (sourceClass != null) {
-                        Long distinctSubjectsCount = SchemaUtil.getLongValueFromString(queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
-                        sourceClass.setDistinctSubjectsCount(distinctSubjectsCount);
+                        String distinctSubjectsCount = queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT);
+                        if (StringUtils.isNotEmpty(distinctSubjectsCount)) {
+                            sourceClass.setDistinctSubjectsCount(SchemaUtil.getLongValueFromString(distinctSubjectsCount));
+                        }
                     }
                 }
             }
@@ -1365,8 +1569,10 @@ public class SchemaExtractor {
                     SchemaExtractorClassNodeInfo targetClass = property.getTargetClasses().stream()
                             .filter(c -> className.equals(c.getClassName())).findFirst().orElse(null);
                     if (targetClass != null) {
-                        Long distinctObjectsount = SchemaUtil.getLongValueFromString(queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
-                        targetClass.setDistinctObjectsCount(distinctObjectsount);
+                        String distinctObjectsount = queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT);
+                        if (StringUtils.isNotEmpty(distinctObjectsount)) {
+                            targetClass.setDistinctObjectsCount(SchemaUtil.getLongValueFromString(distinctObjectsount));
+                        }
                     }
                 }
             }
@@ -2373,6 +2579,8 @@ public class SchemaExtractor {
             if (propertyData.getObjectTripleCount() != null && propertyData.getObjectTripleCount() != -1) {
                 property.setObjectTripleCount(propertyData.getObjectTripleCount());
             }
+            property.setBlankNodeObjects(propertyData.getBlankNodeObjects());
+            property.setBlankNodeSubjects(propertyData.getBlankNodeSubjects());
             property.setDistinctSubjectsCount(propertyData.getDistinctSubjectsCount());
             property.setDistinctObjectsCount(propertyData.getDistinctObjectsCount());
             property.setClosedDomain(propertyData.getIsClosedDomain());

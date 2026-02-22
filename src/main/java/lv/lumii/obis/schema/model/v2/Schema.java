@@ -48,6 +48,11 @@ public class Schema {
     @JsonProperty("HasNotes")
     private Boolean hasNotes;
 
+    @JsonIgnore
+    private Boolean hasBlankNodeObjects;
+    @JsonIgnore
+    private Boolean hasBlankNodeSubjects;
+
     @JsonProperty("Errors")
     private List<SchemaExtractorError> errors;
 
