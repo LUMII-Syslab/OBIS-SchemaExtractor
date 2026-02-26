@@ -48,6 +48,8 @@ public class SchemaExtractorRequestDto {
 
     public enum BlankNodeMode {no, targetsOnly, full}
 
+    public enum PropertyRelationsCheckMode {none, limits, details}
+
     public enum NoClassesLoggingOptions {yes, no, sourcesOnly}
 
     private String correlationId;
@@ -61,6 +63,7 @@ public class SchemaExtractorRequestDto {
     private Boolean validateClassesList;
     private Boolean validatePropertiesList;
     private Boolean calculatePropertyPropertyRelations;
+    private PropertyRelationsCheckMode propertyPropertyLinkCheckBackupMode;
     private Boolean calculateSourceAndTargetPairs;
     private Boolean calculateDomainsAndRanges;
     private DistinctSubjectsAndObjectsMode includeDistinctSubjectsAndObjects;

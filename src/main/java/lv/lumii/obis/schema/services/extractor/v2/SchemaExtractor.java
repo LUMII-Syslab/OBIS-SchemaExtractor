@@ -1825,7 +1825,9 @@ public class SchemaExtractor {
     protected void determineFollowers(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request,
                                       @Nonnull Map<String, SchemaExtractorPropertyNodeInfo> properties) {
         log.info(request.getCorrelationId() + " - determinePropertyFollowers [" + property.getPropertyName() + "]");
-        boolean hasFollowersOK = executePropertyRelationsQueries(schema, property, request, FIND_PROPERTY_FOLLOWERS, FIND_PROPERTY_FOLLOWERS_WITH_LIMITS, property.getFollowers(), properties);
+        SchemaExtractorQueries mainQuery = selectQuery(request.getExactCountCalculations(), FIND_PROPERTY_FOLLOWERS, FIND_PROPERTY_FOLLOWERS_DISTINCT);
+        SchemaExtractorQueries mainQueryLimits = selectQuery(request.getExactCountCalculations(), FIND_PROPERTY_FOLLOWERS_WITH_LIMITS, FIND_PROPERTY_FOLLOWERS_WITH_LIMITS_DISTINCT);
+        boolean hasFollowersOK = executePropertyRelationsQueries(schema, property, request, mainQuery, mainQueryLimits, property.getFollowers(), properties);
         property.setHasFollowersOK(hasFollowersOK);
     }
 
@@ -1846,79 +1848,85 @@ public class SchemaExtractor {
     protected boolean executePropertyRelationsQueries(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request,
                                                       @Nonnull SchemaExtractorQueries queryWithoutLimit, @Nonnull SchemaExtractorQueries queryWithLimit,
                                                       @Nonnull List<SchemaExtractorPropertyRelatedPropertyInfo> relatedProperties, @Nonnull Map<String, SchemaExtractorPropertyNodeInfo> properties) {
-        boolean isOK = true;
-        Long tripleCountBase = null;
-        if (request.getSampleLimitForPropertyToPropertyRelationCalculation() != null && request.getSampleLimitForPropertyToPropertyRelationCalculation() > 0) {
-            tripleCountBase = request.getSampleLimitForPropertyToPropertyRelationCalculation();
-            if (property.getTripleCount() != null && property.getTripleCount() < request.getSampleLimitForPropertyToPropertyRelationCalculation()) {
-                tripleCountBase = property.getTripleCount();
-            }
-        }
-        SparqlQueryBuilder queryBuilder;
-        if (tripleCountBase == null) {
-            queryBuilder = new SparqlQueryBuilder(request.getQueries().get(queryWithoutLimit.name()), queryWithoutLimit)
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false);
+
+        SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(queryWithoutLimit.name()), queryWithoutLimit)
+                .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false);
+        updateValueClause(request, properties, queryBuilder);
+
+        QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
+
+        if (isFalse(queryResponse.hasErrors())) {
+            updatedRelatedProperties(request, queryResponse, relatedProperties, null);
+            return true;
         } else {
-            queryBuilder = new SparqlQueryBuilder(request.getQueries().get(queryWithLimit.name()), queryWithLimit)
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false)
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_LIMIT, tripleCountBase.toString());
-        }
-        if (!request.getIncludedProperties().isEmpty()) {
-            if (!properties.keySet().isEmpty()) {
-                queryBuilder.withContextParam(SPARQL_QUERY_BINDING_NAME_VALUES, buildValuesClause(properties.keySet(), SPARQL_QUERY_BINDING_NAME_PROPERTY_OTHER));
-            } else {
-                return isOK;
+            if (SchemaExtractorRequestDto.PropertyRelationsCheckMode.none.equals(request.getPropertyPropertyLinkCheckBackupMode())) {
+                return false;
             }
+            if (SchemaExtractorRequestDto.PropertyRelationsCheckMode.limits.equals(request.getPropertyPropertyLinkCheckBackupMode())) {
+                return executeLimitQueries(schema, property, request, queryWithLimit, queryResponse, relatedProperties, properties);
+            }
+            if (SchemaExtractorRequestDto.PropertyRelationsCheckMode.details.equals(request.getPropertyPropertyLinkCheckBackupMode())) {
+                return false;
+            }
+        }
+
+        return false;
+    }
+
+    private void updateValueClause(@Nonnull SchemaExtractorRequestDto request, @Nonnull Map<String, SchemaExtractorPropertyNodeInfo> properties,
+                                   @Nonnull SparqlQueryBuilder queryBuilder) {
+        if (!request.getIncludedProperties().isEmpty() && !properties.keySet().isEmpty()) {
+            queryBuilder.withContextParam(SPARQL_QUERY_BINDING_NAME_VALUES, buildValuesClause(properties.keySet(), SPARQL_QUERY_BINDING_NAME_PROPERTY_OTHER));
         } else {
             queryBuilder.withContextParam(SPARQL_QUERY_BINDING_NAME_VALUES, StringUtils.EMPTY);
         }
+    }
+
+    private void updatedRelatedProperties(@Nonnull SchemaExtractorRequestDto request, @Nonnull QueryResponse queryResponse,
+                                          @Nonnull List<SchemaExtractorPropertyRelatedPropertyInfo> relatedProperties, @Nullable Long tripleCountBase) {
+        for (QueryResult queryResult : queryResponse.getResults()) {
+            String otherProperty = queryResult.getValue(SPARQL_QUERY_BINDING_NAME_PROPERTY_OTHER);
+            Long tripleCount = SchemaUtil.getLongValueFromString(queryResult.getValue(SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
+            if (StringUtils.isNotEmpty(otherProperty) && isNotExcludedResource(otherProperty, request.getExcludedNamespaces())) {
+                relatedProperties.add(new SchemaExtractorPropertyRelatedPropertyInfo(otherProperty, tripleCount, tripleCountBase));
+            }
+        }
+    }
+
+    private boolean executeLimitQueries(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request,
+                                        @Nonnull SchemaExtractorQueries queryWithLimit, @Nonnull QueryResponse queryResponse,
+                                        @Nonnull List<SchemaExtractorPropertyRelatedPropertyInfo> relatedProperties, @Nonnull Map<String, SchemaExtractorPropertyNodeInfo> properties) {
         boolean retry = true;
-        QueryResponse queryResponse;
+        Long tripleCountLimit = null;
+        SparqlQueryBuilder queryBuilder = null;
+
         while (isTrue(retry)) {
-            queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
-            if (isTrue(queryResponse.hasErrors())) {
-                if (tripleCountBase == null) {
-                    schema.getErrors().add(new SchemaExtractorError(WARNING, property.getPropertyName(), queryWithoutLimit.name(), queryBuilder.getQueryString()));
-                }
-                retry = true;
-                Long finalTripleCountBase = tripleCountBase;
-                Long newLimit = sampleLimits.stream().filter(limit -> finalTripleCountBase == null || limit < finalTripleCountBase).findFirst().orElse(null);
-                if (newLimit != null) {
-                    tripleCountBase = newLimit;
-                    queryBuilder = new SparqlQueryBuilder(request.getQueries().get(queryWithLimit.name()), queryWithLimit)
-                            .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false)
-                            .withContextParam(SPARQL_QUERY_BINDING_NAME_LIMIT, tripleCountBase.toString());
-                    if (!request.getIncludedProperties().isEmpty()) {
-                        if (!properties.keySet().isEmpty()) {
-                            queryBuilder.withContextParam(SPARQL_QUERY_BINDING_NAME_VALUES, buildValuesClause(properties.keySet(), SPARQL_QUERY_BINDING_NAME_PROPERTY_OTHER));
-                        } else {
-                            return isOK;
-                        }
-                    } else {
-                        queryBuilder.withContextParam(SPARQL_QUERY_BINDING_NAME_VALUES, StringUtils.EMPTY);
-                    }
-                } else {
-                    retry = false;
-                    if (queryResponse.hasErrors()) {
-                        schema.getErrors().add(new SchemaExtractorError(WARNING, property.getPropertyName(), queryWithLimit.name(), queryBuilder.getQueryString()));
-                        isOK = false;
-                    }
+
+            Long finalTripleCountLimit = tripleCountLimit;
+            Long newLimit = sampleLimits.stream().filter(limit -> finalTripleCountLimit == null || limit < finalTripleCountLimit).findFirst().orElse(null);
+            if (newLimit != null) {
+                tripleCountLimit = newLimit;
+                queryBuilder = new SparqlQueryBuilder(request.getQueries().get(queryWithLimit.name()), queryWithLimit)
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false)
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_LIMIT, tripleCountLimit.toString());
+                updateValueClause(request, properties, queryBuilder);
+                queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
+
+                if (isFalse(queryResponse.hasErrors())) {
+                    updatedRelatedProperties(request, queryResponse, relatedProperties, tripleCountLimit);
+                    return true;
                 }
             } else {
                 retry = false;
-                for (QueryResult queryResult : queryResponse.getResults()) {
-                    String otherProperty = queryResult.getValue(SPARQL_QUERY_BINDING_NAME_PROPERTY_OTHER);
-                    Long tripleCount = SchemaUtil.getLongValueFromString(queryResult.getValue(SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
-                    if (StringUtils.isNotEmpty(otherProperty) && isNotExcludedResource(otherProperty, request.getExcludedNamespaces())) {
-                        relatedProperties.add(new SchemaExtractorPropertyRelatedPropertyInfo(otherProperty, tripleCount, tripleCountBase));
-                    }
-                }
             }
         }
-        return isOK;
+        schema.getErrors().add(new SchemaExtractorError(WARNING, property.getPropertyName(), queryWithLimit.name(), queryBuilder.getQueryString()));
+        return false;
     }
 
-    protected void determinePropertySourceMinCardinality(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties) {
+    protected void determinePropertySourceMinCardinality(@Nonnull Schema
+                                                                 schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request,
+                                                         int totalCountOfProperties) {
         log.info(request.getCorrelationId() + " - determinePropertySourceMinCardinality [" + property.getPropertyName() + "]");
         property.getSourceClasses().forEach(sourceClass -> {
             SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_PROPERTY_MIN_CARDINALITY.name()), FIND_PROPERTY_MIN_CARDINALITY)
@@ -1937,7 +1945,8 @@ public class SchemaExtractor {
         });
     }
 
-    protected void determinePropertyMaxCardinality(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties) {
+    protected void determinePropertyMaxCardinality(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo
+            property, @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties) {
         log.info(request.getCorrelationId() + " - determinePropertyMaxCardinality [" + property.getPropertyName() + "]");
         SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_PROPERTY_MAX_CARDINALITY.name()), FIND_PROPERTY_MAX_CARDINALITY)
                 .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false);
@@ -1952,7 +1961,9 @@ public class SchemaExtractor {
         }
     }
 
-    protected void determinePropertySourceMaxCardinality(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties) {
+    protected void determinePropertySourceMaxCardinality(@Nonnull Schema
+                                                                 schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request,
+                                                         int totalCountOfProperties) {
         log.info(request.getCorrelationId() + " - determinePropertySourceMaxCardinality [" + property.getPropertyName() + "]");
         property.getSourceClasses().forEach(sourceClass -> {
             SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_PROPERTY_MAX_CARDINALITY_FOR_SOURCE.name()), FIND_PROPERTY_MAX_CARDINALITY_FOR_SOURCE)
@@ -1971,7 +1982,9 @@ public class SchemaExtractor {
         });
     }
 
-    protected void determinePropertyInverseMaxCardinality(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties) {
+    protected void determinePropertyInverseMaxCardinality(@Nonnull Schema
+                                                                  schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request,
+                                                          int totalCountOfProperties) {
         log.info(request.getCorrelationId() + " - determinePropertyInverseMaxCardinality [" + property.getPropertyName() + "]");
         SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_INVERSE_PROPERTY_MAX_CARDINALITY.name()), FIND_INVERSE_PROPERTY_MAX_CARDINALITY)
                 .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false);
@@ -1986,7 +1999,9 @@ public class SchemaExtractor {
         }
     }
 
-    protected void determinePropertyTargetsInverseMaxCardinality(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties) {
+    protected void determinePropertyTargetsInverseMaxCardinality(@Nonnull Schema
+                                                                         schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request,
+                                                                 int totalCountOfProperties) {
         log.info(request.getCorrelationId() + " - determinePropertyTargetsInverseMaxCardinality [" + property.getPropertyName() + "]");
         property.getTargetClasses().forEach(targetClass -> {
             SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_INVERSE_PROPERTY_MAX_CARDINALITY_FOR_TARGET.name()), FIND_INVERSE_PROPERTY_MAX_CARDINALITY_FOR_TARGET)
@@ -2001,7 +2016,9 @@ public class SchemaExtractor {
         });
     }
 
-    protected void determinePropertyTargetsInverseMinCardinality(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties) {
+    protected void determinePropertyTargetsInverseMinCardinality(@Nonnull Schema
+                                                                         schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request,
+                                                                 int totalCountOfProperties) {
         log.info(request.getCorrelationId() + " - determinePropertyTargetsInverseMinCardinality [" + property.getPropertyName() + "]");
         property.getTargetClasses().forEach(targetClass -> {
             SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_INVERSE_PROPERTY_MIN_CARDINALITY.name()), FIND_INVERSE_PROPERTY_MIN_CARDINALITY)
@@ -2016,7 +2033,8 @@ public class SchemaExtractor {
         });
     }
 
-    protected void determineDomainsAndRanges(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull List<SchemaClass> classes,
+    protected void determineDomainsAndRanges(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo
+            property, @Nonnull List<SchemaClass> classes,
                                              @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties) {
 
         log.info(request.getCorrelationId() + " - determineDomainForProperty [" + property.getPropertyName() + "]");
@@ -2091,13 +2109,16 @@ public class SchemaExtractor {
     }
 
     @Nullable
-    protected SchemaExtractorPropertyLinkedClassInfo getTheFirstMainClass(List<SchemaExtractorPropertyLinkedClassInfo> classes) {
+    protected SchemaExtractorPropertyLinkedClassInfo getTheFirstMainClass
+            (List<SchemaExtractorPropertyLinkedClassInfo> classes) {
         return classes.stream()
                 .filter(currentClass -> !OWL_RDF_TOP_LEVEL_RESOURCES.contains(currentClass.getClassName()))
                 .findFirst().orElse(null);
     }
 
-    protected void mapDomainOrRangeClass(@Nonnull List<SchemaExtractorClassNodeInfo> propertyLinkedClasses, @Nonnull SchemaExtractorPropertyLinkedClassInfo clazz) {
+    protected void mapDomainOrRangeClass
+            (@Nonnull List<SchemaExtractorClassNodeInfo> propertyLinkedClasses, @Nonnull SchemaExtractorPropertyLinkedClassInfo
+                    clazz) {
         propertyLinkedClasses.forEach(linkedClass -> {
             if (linkedClass.getClassName().equals(clazz.getClassName())) {
                 linkedClass.setIsPrincipal(true);
@@ -2150,7 +2171,8 @@ public class SchemaExtractor {
         return null;
     }
 
-    protected boolean checkDomainClass(@Nonnull Schema schema, @Nonnull String propertyName, @Nonnull SchemaExtractorPropertyLinkedClassInfo potentialDomain,
+    protected boolean checkDomainClass(@Nonnull Schema schema, @Nonnull String
+            propertyName, @Nonnull SchemaExtractorPropertyLinkedClassInfo potentialDomain,
                                        @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties) {
         boolean isDomainClass;
         SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_DOMAIN_FOR_PROPERTY.name()), CHECK_DOMAIN_FOR_PROPERTY)
@@ -2165,7 +2187,8 @@ public class SchemaExtractor {
         return isDomainClass;
     }
 
-    protected boolean checkRangeClass(@Nonnull Schema schema, @Nonnull String propertyName, @Nonnull SchemaExtractorPropertyLinkedClassInfo potentialRange,
+    protected boolean checkRangeClass(@Nonnull Schema schema, @Nonnull String
+            propertyName, @Nonnull SchemaExtractorPropertyLinkedClassInfo potentialRange,
                                       @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties) {
         boolean isRangeClass;
         SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_RANGE_FOR_PROPERTY.name()), CHECK_RANGE_FOR_PROPERTY)
@@ -2180,7 +2203,9 @@ public class SchemaExtractor {
         return isRangeClass;
     }
 
-    protected boolean checkRangeForSource(@Nonnull Schema schema, @Nonnull String propertyName, @Nonnull SchemaExtractorClassNodeInfo sourceClass, @Nonnull SchemaExtractorPropertyLinkedClassInfo potentialRange,
+    protected boolean checkRangeForSource(@Nonnull Schema schema, @Nonnull String
+            propertyName, @Nonnull SchemaExtractorClassNodeInfo sourceClass, @Nonnull SchemaExtractorPropertyLinkedClassInfo
+                                                  potentialRange,
                                           @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties) {
         boolean isRangeClass;
         SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_RANGE_FOR_PAIR_SOURCE.name()), CHECK_RANGE_FOR_PAIR_SOURCE)
@@ -2197,7 +2222,9 @@ public class SchemaExtractor {
         return isRangeClass;
     }
 
-    protected boolean checkDomainForTarget(@Nonnull Schema schema, @Nonnull String propertyName, @Nonnull SchemaExtractorClassNodeInfo targetClass, @Nonnull SchemaExtractorPropertyLinkedClassInfo potentialDomain,
+    protected boolean checkDomainForTarget(@Nonnull Schema schema, @Nonnull String
+            propertyName, @Nonnull SchemaExtractorClassNodeInfo targetClass, @Nonnull SchemaExtractorPropertyLinkedClassInfo
+                                                   potentialDomain,
                                            @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties) {
         boolean isDomainClass;
         SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_DOMAIN_FOR_PAIR_TARGET.name()), CHECK_DOMAIN_FOR_PAIR_TARGET)
@@ -2214,7 +2241,8 @@ public class SchemaExtractor {
         return isDomainClass;
     }
 
-    protected void determineImportanceIndexes(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull List<SchemaClass> classes,
+    protected void determineImportanceIndexes(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo
+            property, @Nonnull List<SchemaClass> classes,
                                               @Nonnull Map<String, SchemaExtractorClassNodeInfo> graphOfClasses,
                                               @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties) {
 
@@ -2368,8 +2396,11 @@ public class SchemaExtractor {
         return propertyLinkedClassesSorted;
     }
 
-    protected boolean checkNewPrincipalSourceClass(@Nonnull Schema schema, @Nonnull String propertyName, @Nonnull SchemaExtractorPropertyLinkedClassInfo newSourceClass, @Nonnull List<String> existingClasses,
-                                                   @Nonnull List<SchemaClass> classes, @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties) {
+    protected boolean checkNewPrincipalSourceClass(@Nonnull Schema schema, @Nonnull String
+            propertyName, @Nonnull SchemaExtractorPropertyLinkedClassInfo
+                                                           newSourceClass, @Nonnull List<String> existingClasses,
+                                                   @Nonnull List<SchemaClass> classes, @Nonnull SchemaExtractorRequestDto request,
+                                                   int totalCountOfProperties) {
         boolean isPrincipalSource = false;
 
         // check the first 5 classes with the highest triple count
@@ -2404,8 +2435,11 @@ public class SchemaExtractor {
         return isPrincipalSource;
     }
 
-    protected boolean checkNewPrincipalTargetClass(@Nonnull Schema schema, @Nonnull String propertyName, @Nonnull SchemaExtractorPropertyLinkedClassInfo newTargetClass, @Nonnull List<String> existingClasses,
-                                                   @Nonnull List<SchemaClass> classes, @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties) {
+    protected boolean checkNewPrincipalTargetClass(@Nonnull Schema schema, @Nonnull String
+            propertyName, @Nonnull SchemaExtractorPropertyLinkedClassInfo
+                                                           newTargetClass, @Nonnull List<String> existingClasses,
+                                                   @Nonnull List<SchemaClass> classes, @Nonnull SchemaExtractorRequestDto request,
+                                                   int totalCountOfProperties) {
         boolean isPrincipalTarget = false;
         // check the first 5 classes with the highest triple count
         List<String> classesForCustomFilter = existingClasses.size() <= 5 ? Collections.unmodifiableList(existingClasses) : Collections.unmodifiableList(existingClasses.subList(0, 5));
@@ -2439,8 +2473,11 @@ public class SchemaExtractor {
         return isPrincipalTarget;
     }
 
-    protected boolean checkNewPrincipalTargetClassForSource(@Nonnull Schema schema, @Nonnull String propertyName, @Nonnull SchemaExtractorClassNodeInfo sourceClass, @Nonnull SchemaExtractorPropertyLinkedClassInfo newTargetClass,
-                                                            @Nonnull List<String> existingClasses, @Nonnull List<SchemaClass> classes, @Nonnull SchemaExtractorRequestDto request,
+    protected boolean checkNewPrincipalTargetClassForSource(@Nonnull Schema schema, @Nonnull String
+            propertyName, @Nonnull SchemaExtractorClassNodeInfo sourceClass, @Nonnull SchemaExtractorPropertyLinkedClassInfo
+                                                                    newTargetClass,
+                                                            @Nonnull List<String> existingClasses, @Nonnull List<SchemaClass> classes, @Nonnull SchemaExtractorRequestDto
+                                                                    request,
                                                             int totalCountOfProperties) {
         boolean isPrincipalTarget = false;
         // check the first 5 classes with the highest triple count
@@ -2480,8 +2517,11 @@ public class SchemaExtractor {
         return isPrincipalTarget;
     }
 
-    protected boolean checkNewPrincipalSourceClassForTarget(@Nonnull Schema schema, @Nonnull String propertyName, @Nonnull SchemaExtractorClassNodeInfo targetClass, @Nonnull SchemaExtractorPropertyLinkedClassInfo newSourceClass,
-                                                            @Nonnull List<String> existingClasses, @Nonnull List<SchemaClass> classes, @Nonnull SchemaExtractorRequestDto request,
+    protected boolean checkNewPrincipalSourceClassForTarget(@Nonnull Schema schema, @Nonnull String
+            propertyName, @Nonnull SchemaExtractorClassNodeInfo targetClass, @Nonnull SchemaExtractorPropertyLinkedClassInfo
+                                                                    newSourceClass,
+                                                            @Nonnull List<String> existingClasses, @Nonnull List<SchemaClass> classes, @Nonnull SchemaExtractorRequestDto
+                                                                    request,
                                                             int totalCountOfProperties) {
         boolean isPrincipalSource = false;
         // check the first 5 classes with the highest triple count
@@ -2520,7 +2560,8 @@ public class SchemaExtractor {
         return isPrincipalSource;
     }
 
-    protected String buildCustomFilterToCheckPrincipalClass(@Nonnull List<String> existingClasses, @Nonnull List<SchemaClass> classes) {
+    protected String buildCustomFilterToCheckPrincipalClass
+            (@Nonnull List<String> existingClasses, @Nonnull List<SchemaClass> classes) {
         StringBuilder customFilter = new StringBuilder(StringUtils.EMPTY);
         for (int i = 0; i < existingClasses.size(); i++) {
             SchemaClass clazz = findClass(classes, existingClasses.get(i));
@@ -2547,7 +2588,8 @@ public class SchemaExtractor {
         return valuesClause.toString();
     }
 
-    protected void updateClassesWithIncomingTripleCount(@Nonnull Map<String, SchemaExtractorPropertyNodeInfo> properties, @Nonnull Schema schema) {
+    protected void updateClassesWithIncomingTripleCount
+            (@Nonnull Map<String, SchemaExtractorPropertyNodeInfo> properties, @Nonnull Schema schema) {
         Map<String, Long> targetClassTripleCounts = new HashMap<>();
         properties.values().forEach(property -> {
             property.getTargetClasses().forEach(targetClass -> {
@@ -2565,7 +2607,8 @@ public class SchemaExtractor {
         });
     }
 
-    protected void formatProperties(@Nonnull Map<String, SchemaExtractorPropertyNodeInfo> properties, @Nonnull Schema schema) {
+    protected void formatProperties
+            (@Nonnull Map<String, SchemaExtractorPropertyNodeInfo> properties, @Nonnull Schema schema) {
         for (Map.Entry<String, SchemaExtractorPropertyNodeInfo> p : properties.entrySet()) {
 
             SchemaExtractorPropertyNodeInfo propertyData = p.getValue();
@@ -2606,7 +2649,8 @@ public class SchemaExtractor {
         }
     }
 
-    protected List<SchemaPropertyLinkedClassDetails> convertInternalDtoToApiDto(@Nonnull List<SchemaExtractorClassNodeInfo> internalDtos) {
+    protected List<SchemaPropertyLinkedClassDetails> convertInternalDtoToApiDto
+            (@Nonnull List<SchemaExtractorClassNodeInfo> internalDtos) {
         return sortPropertyLinkedClassesByImportanceIndexAndTripleCount(
                 internalDtos.stream()
                         .map(internalDto -> new SchemaPropertyLinkedClassDetails(
@@ -2620,14 +2664,16 @@ public class SchemaExtractor {
                         collect(Collectors.toList()));
     }
 
-    protected List<DataType> convertInternalDataTypesToApiDto(@Nonnull List<SchemaExtractorDataTypeInfo> internalDtos) {
+    protected List<DataType> convertInternalDataTypesToApiDto
+            (@Nonnull List<SchemaExtractorDataTypeInfo> internalDtos) {
         return internalDtos.stream()
                 .map(internalDto -> new DataType(
                         internalDto.getDataType(), internalDto.getTripleCount(), internalDto.getTripleCountBase())).
                 collect(Collectors.toList());
     }
 
-    protected List<SchemaPropertyLinkedPropertyDetails> convertInternalLinkedPropertyToApiDto(@Nonnull List<SchemaExtractorPropertyRelatedPropertyInfo> internalDtos) {
+    protected List<SchemaPropertyLinkedPropertyDetails> convertInternalLinkedPropertyToApiDto
+            (@Nonnull List<SchemaExtractorPropertyRelatedPropertyInfo> internalDtos) {
         return sortPropertyLinkedPropertiesByTripleCount(internalDtos).stream()
                 .map(internalDto -> new SchemaPropertyLinkedPropertyDetails(
                         internalDto.getPropertyName(), internalDto.getTripleCount(), internalDto.getTripleCountBase())).
@@ -2647,7 +2693,8 @@ public class SchemaExtractor {
         }
     }
 
-    protected void buildInstanceNamespacesWithOverviewMode(@Nonnull SchemaExtractorRequestDto request, @Nonnull Schema schema) {
+    protected void buildInstanceNamespacesWithOverviewMode(@Nonnull SchemaExtractorRequestDto
+                                                                   request, @Nonnull Schema schema) {
 
         // find instance namespaces for classes with limit
         for (SchemaClass clazz : schema.getClasses()) {
@@ -2706,7 +2753,8 @@ public class SchemaExtractor {
         }
     }
 
-    protected void buildInstanceNamespacesWithDetailedMode(@Nonnull SchemaExtractorRequestDto request, @Nonnull Schema schema) {
+    protected void buildInstanceNamespacesWithDetailedMode(@Nonnull SchemaExtractorRequestDto
+                                                                   request, @Nonnull Schema schema) {
 
         // find instance namespaces for classes
         for (SchemaClass clazz : schema.getClasses()) {
@@ -2762,7 +2810,8 @@ public class SchemaExtractor {
         }
     }
 
-    protected void buildPrefixMap(@Nonnull SchemaExtractorRequestDto request, @Nonnull Map<String, String> prefixMap) {
+    protected void buildPrefixMap(@Nonnull SchemaExtractorRequestDto
+                                          request, @Nonnull Map<String, String> prefixMap) {
         // collect namespace-prefix defined in the request and in the global config file; prefixes from the request override the system file
         if (request.getPredefinedNamespaces() != null && request.getPredefinedNamespaces().getNamespaceItems() != null) {
             request.getPredefinedNamespaces().getNamespaceItems().forEach(namespaceItem -> prefixMap.put(namespaceItem.getNamespace(), namespaceItem.getPrefix()));
@@ -2791,7 +2840,8 @@ public class SchemaExtractor {
         }
     }
 
-    protected void buildNamespaceMap(@Nonnull SchemaExtractorRequestDto request, @Nonnull Schema schema, @Nonnull Map<String, String> prefixMap) {
+    protected void buildNamespaceMap(@Nonnull SchemaExtractorRequestDto request, @Nonnull Schema
+            schema, @Nonnull Map<String, String> prefixMap) {
         // 1. collect all namespaces used in the schema
         Set<String> orderedSchemaNamespaces = getAllSchemaNamespacesOrderedByUsageCount(request, schema);
 
@@ -2815,7 +2865,8 @@ public class SchemaExtractor {
     }
 
     @Nonnull
-    protected Set<String> getAllSchemaNamespacesOrderedByUsageCount(@Nonnull SchemaExtractorRequestDto request, @Nonnull Schema schema) {
+    protected Set<String> getAllSchemaNamespacesOrderedByUsageCount(@Nonnull SchemaExtractorRequestDto
+                                                                            request, @Nonnull Schema schema) {
         Map<String, Long> namespacesWithCounts = new HashMap<>();
 
         // get all schema class and property namespaces
@@ -2864,14 +2915,17 @@ public class SchemaExtractor {
         entity.setNamespace(namespace);
     }
 
-    protected boolean isDuplicatePair(@Nonnull List<ClassPair> pairs, @Nullable String source, @Nullable String target) {
+    protected boolean isDuplicatePair(@Nonnull List<ClassPair> pairs, @Nullable String source, @Nullable String
+            target) {
         return pairs.stream().anyMatch(p -> p != null
                 && ((p.getSourceClass() == null && source == null) || (p.getSourceClass() != null && p.getSourceClass().equals(source)))
                 && ((p.getTargetClass() == null && target == null) || (p.getTargetClass() != null && p.getTargetClass().equals(target)))
         );
     }
 
-    protected void findIntersectionClassesAndUpdateClassNeighbors(@Nonnull Schema schema, @Nonnull List<SchemaClass> classes, @Nonnull Map<String, SchemaExtractorClassNodeInfo> graphOfClasses, @Nonnull SchemaExtractorRequestDto request) {
+    protected void findIntersectionClassesAndUpdateClassNeighbors(@Nonnull Schema
+                                                                          schema, @Nonnull List<SchemaClass> classes, @Nonnull Map<String, SchemaExtractorClassNodeInfo> graphOfClasses, @Nonnull SchemaExtractorRequestDto
+                                                                          request) {
         QueryResponse queryResponse;
         for (SchemaClass classA : classes) {
             boolean hasErrors = false;
@@ -2924,7 +2978,8 @@ public class SchemaExtractor {
         }
     }
 
-    protected void updateGraphOfClassesWithNeighbors(@Nonnull Schema schema, @Nonnull String sourceClass, @Nonnull List<QueryResult> queryResults, @Nonnull Map<String, SchemaExtractorClassNodeInfo> graphOfClasses,
+    protected void updateGraphOfClassesWithNeighbors(@Nonnull Schema schema, @Nonnull String
+            sourceClass, @Nonnull List<QueryResult> queryResults, @Nonnull Map<String, SchemaExtractorClassNodeInfo> graphOfClasses,
                                                      @Nonnull SchemaExtractorRequestDto request) {
         Set<String> includedClasses = request.getIncludedClasses().stream().map(SchemaExtractorRequestedClassDto::getClassName).collect(Collectors.toSet());
         for (QueryResult queryResult : queryResults) {
@@ -2942,7 +2997,8 @@ public class SchemaExtractor {
     }
 
     @Nonnull
-    protected Map<String, SchemaExtractorClassNodeInfo> sortGraphOfClassesByNeighborsSizeAsc(@Nonnull Map<String, SchemaExtractorClassNodeInfo> graphOfClasses) {
+    protected Map<String, SchemaExtractorClassNodeInfo> sortGraphOfClassesByNeighborsSizeAsc
+            (@Nonnull Map<String, SchemaExtractorClassNodeInfo> graphOfClasses) {
         // sort classes by neighbors size (ascending)
         return graphOfClasses.entrySet().stream()
                 .sorted((o1, o2) -> {
@@ -2963,7 +3019,8 @@ public class SchemaExtractor {
     }
 
     @Nonnull
-    protected List<SchemaExtractorIntersectionClassDto> sortNeighborsByTripleCountAsc(List<SchemaExtractorIntersectionClassDto> neighbors, @Nonnull Map<String, SchemaExtractorClassNodeInfo> classesGraph) {
+    protected List<SchemaExtractorIntersectionClassDto> sortNeighborsByTripleCountAsc
+            (List<SchemaExtractorIntersectionClassDto> neighbors, @Nonnull Map<String, SchemaExtractorClassNodeInfo> classesGraph) {
         // sort class neighbors by triple count (ascending)
         return neighbors.stream()
                 .sorted((o1, o2) -> {
@@ -2984,7 +3041,8 @@ public class SchemaExtractor {
     }
 
     @Nonnull
-    protected List<SchemaExtractorIntersectionClassDto> sortNeighborsByTripleCountDsc(List<SchemaExtractorIntersectionClassDto> neighbors, @Nonnull Map<String, SchemaExtractorClassNodeInfo> classesGraph) {
+    protected List<SchemaExtractorIntersectionClassDto> sortNeighborsByTripleCountDsc
+            (List<SchemaExtractorIntersectionClassDto> neighbors, @Nonnull Map<String, SchemaExtractorClassNodeInfo> classesGraph) {
         // sort class neighbors by triple count (descending)
         return neighbors.stream()
                 .sorted((o1, o2) -> {
@@ -3005,7 +3063,8 @@ public class SchemaExtractor {
     }
 
     @Nonnull
-    protected List<SchemaClass> sortClassesByTripleCountDesc(@Nonnull List<SchemaClass> classes, @Nonnull Map<String, SchemaExtractorClassNodeInfo> classesGraph) {
+    protected List<SchemaClass> sortClassesByTripleCountDesc
+            (@Nonnull List<SchemaClass> classes, @Nonnull Map<String, SchemaExtractorClassNodeInfo> classesGraph) {
         // sort classes by triple count (descending)
         return classes.stream()
                 .sorted((o1, o2) -> {
@@ -3026,7 +3085,8 @@ public class SchemaExtractor {
     }
 
     @Nonnull
-    protected List<SchemaExtractorPropertyLinkedClassInfo> sortPropertyLinkedClassesByTripleCount(@Nonnull List<SchemaExtractorPropertyLinkedClassInfo> propertyLinkedClasses) {
+    protected List<SchemaExtractorPropertyLinkedClassInfo> sortPropertyLinkedClassesByTripleCount
+            (@Nonnull List<SchemaExtractorPropertyLinkedClassInfo> propertyLinkedClasses) {
         // sort property classes by triple count (descending) and then by total class triple count (ascending)
         return propertyLinkedClasses.stream()
                 .sorted((o1, o2) -> {
@@ -3041,7 +3101,8 @@ public class SchemaExtractor {
     }
 
     @Nonnull
-    protected List<SchemaExtractorPropertyRelatedPropertyInfo> sortPropertyLinkedPropertiesByTripleCount(@Nonnull List<SchemaExtractorPropertyRelatedPropertyInfo> propertyRelatedProperties) {
+    protected List<SchemaExtractorPropertyRelatedPropertyInfo> sortPropertyLinkedPropertiesByTripleCount
+            (@Nonnull List<SchemaExtractorPropertyRelatedPropertyInfo> propertyRelatedProperties) {
         // sort properties by triple count (descending) and then by property name (natural)
         return propertyRelatedProperties.stream()
                 .sorted((o1, o2) -> {
@@ -3056,7 +3117,8 @@ public class SchemaExtractor {
     }
 
     @Nonnull
-    protected List<SchemaPropertyLinkedClassDetails> sortPropertyLinkedClassesByImportanceIndexAndTripleCount(@Nonnull List<SchemaPropertyLinkedClassDetails> propertyLinkedClasses) {
+    protected List<SchemaPropertyLinkedClassDetails> sortPropertyLinkedClassesByImportanceIndexAndTripleCount
+            (@Nonnull List<SchemaPropertyLinkedClassDetails> propertyLinkedClasses) {
         // sort property classes by importance index (ascending) leaving 0 as last and then by triple count (descending)
         return propertyLinkedClasses.stream()
                 .sorted((o1, o2) -> {
@@ -3071,7 +3133,8 @@ public class SchemaExtractor {
                 .collect(Collectors.toList());
     }
 
-    protected void processSuperclasses(@Nonnull Schema schema, @Nonnull Map<String, SchemaExtractorClassNodeInfo> classesGraph, @Nonnull List<SchemaClass> classes,
+    protected void processSuperclasses(@Nonnull Schema
+                                               schema, @Nonnull Map<String, SchemaExtractorClassNodeInfo> classesGraph, @Nonnull List<SchemaClass> classes,
                                        @Nonnull SchemaExtractorRequestDto request) {
 
         for (Map.Entry<String, SchemaExtractorClassNodeInfo> entry : classesGraph.entrySet()) {
@@ -3096,7 +3159,9 @@ public class SchemaExtractor {
                 .findFirst().orElse(null);
     }
 
-    protected void findSuperClass(@Nonnull Schema schema, @Nonnull SchemaClass currentClass, @Nonnull SchemaExtractorClassNodeInfo currentClassInfo, @Nonnull List<SchemaExtractorIntersectionClassDto> neighbors,
+    protected void findSuperClass(@Nonnull Schema schema, @Nonnull SchemaClass
+            currentClass, @Nonnull SchemaExtractorClassNodeInfo
+                                          currentClassInfo, @Nonnull List<SchemaExtractorIntersectionClassDto> neighbors,
                                   @Nonnull Map<String, SchemaExtractorClassNodeInfo> classesGraph, List<SchemaClass> classes,
                                   @Nonnull SchemaExtractorRequestDto request) {
 
@@ -3135,7 +3200,8 @@ public class SchemaExtractor {
         }
     }
 
-    protected boolean hasCyclicDependency(@Nonnull SchemaClass currentClass, @Nullable SchemaClass newClass, @Nonnull List<SchemaClass> classes) {
+    protected boolean hasCyclicDependency(@Nonnull SchemaClass currentClass, @Nullable SchemaClass
+            newClass, @Nonnull List<SchemaClass> classes) {
         if (newClass == null) {
             return false;
         }
@@ -3145,7 +3211,8 @@ public class SchemaExtractor {
         return isClassAccessibleFromSuperclasses(newClass.getFullName(), currentClass.getFullName(), classes);
     }
 
-    protected boolean isClassAccessibleFromSuperclasses(@Nonnull String currentClass, @Nonnull String neighbor, @Nonnull List<SchemaClass> classes) {
+    protected boolean isClassAccessibleFromSuperclasses(@Nonnull String currentClass, @Nonnull String
+            neighbor, @Nonnull List<SchemaClass> classes) {
         if (currentClass.equals(neighbor)) {
             return true;
         }
@@ -3160,7 +3227,8 @@ public class SchemaExtractor {
         return accessible;
     }
 
-    protected boolean isClassAccessibleFromSubclasses(@Nonnull String currentClass, @Nonnull String neighbor, @Nonnull List<SchemaClass> classes) {
+    protected boolean isClassAccessibleFromSubclasses(@Nonnull String currentClass, @Nonnull String
+            neighbor, @Nonnull List<SchemaClass> classes) {
         if (currentClass.equals(neighbor)) {
             return true;
         }
@@ -3185,7 +3253,8 @@ public class SchemaExtractor {
     //		b. includes all instances from X
     //		c. is not accessible from X
     // 6. repeat validation
-    protected void updateMultipleInheritanceSuperclasses(@Nonnull Schema schema, @Nonnull Map<String, SchemaExtractorClassNodeInfo> classesGraph, @Nonnull List<SchemaClass> classes,
+    protected void updateMultipleInheritanceSuperclasses(@Nonnull Schema
+                                                                 schema, @Nonnull Map<String, SchemaExtractorClassNodeInfo> classesGraph, @Nonnull List<SchemaClass> classes,
                                                          @Nonnull SchemaExtractorRequestDto request) {
 
         List<SchemaClass> sortedClasses = sortClassesByTripleCountDesc(classes, classesGraph);
@@ -3220,8 +3289,10 @@ public class SchemaExtractor {
         }
     }
 
-    protected boolean validateAllNeighbors(@Nonnull Schema schema, @Nonnull SchemaClass currentClass, @Nonnull SchemaExtractorClassNodeInfo currentClassInfo, @Nonnull List<SchemaClass> classes,
-                                           @Nonnull Map<String, SchemaExtractorClassNodeInfo> classesGraph, @Nonnull SchemaExtractorRequestDto request) {
+    protected boolean validateAllNeighbors(@Nonnull Schema schema, @Nonnull SchemaClass
+            currentClass, @Nonnull SchemaExtractorClassNodeInfo currentClassInfo, @Nonnull List<SchemaClass> classes,
+                                           @Nonnull Map<String, SchemaExtractorClassNodeInfo> classesGraph, @Nonnull SchemaExtractorRequestDto
+                                                   request) {
         boolean accessible = true;
         List<SchemaExtractorIntersectionClassDto> notAccessibleNeighbors = new ArrayList<>();
         for (SchemaExtractorIntersectionClassDto neighbor : currentClassInfo.getNeighbors()) {
@@ -3249,17 +3320,20 @@ public class SchemaExtractor {
     }
 
     @Nonnull
-    protected List<SchemaExtractorSourceTargetInfo> findPairsWithSpecificSource(@Nonnull List<SchemaExtractorSourceTargetInfo> allPairs, @Nonnull String sourceClass) {
+    protected List<SchemaExtractorSourceTargetInfo> findPairsWithSpecificSource
+            (@Nonnull List<SchemaExtractorSourceTargetInfo> allPairs, @Nonnull String sourceClass) {
         return allPairs.stream().filter(pair -> sourceClass.equals(pair.getSourceClass())).collect(Collectors.toList());
     }
 
     @Nonnull
-    protected List<SchemaExtractorSourceTargetInfo> findPairsWithSpecificTarget(@Nonnull List<SchemaExtractorSourceTargetInfo> allPairs, @Nonnull String targetClass) {
+    protected List<SchemaExtractorSourceTargetInfo> findPairsWithSpecificTarget
+            (@Nonnull List<SchemaExtractorSourceTargetInfo> allPairs, @Nonnull String targetClass) {
         return allPairs.stream().filter(pair -> targetClass.equals(pair.getTargetClass())).collect(Collectors.toList());
     }
 
     @Nonnull
-    protected List<SchemaExtractorPropertyLinkedClassInfo> buildAndSortPropertyLinkedClasses(@Nonnull List<SchemaExtractorClassNodeInfo> propertyLinkedClasses, @Nonnull List<SchemaClass> classes) {
+    protected List<SchemaExtractorPropertyLinkedClassInfo> buildAndSortPropertyLinkedClasses
+            (@Nonnull List<SchemaExtractorClassNodeInfo> propertyLinkedClasses, @Nonnull List<SchemaClass> classes) {
         // prepare data - classes with property triple count and total class instance count
         List<SchemaExtractorPropertyLinkedClassInfo> classesForProcessing = new ArrayList<>();
         propertyLinkedClasses.forEach(linkedClass -> {
@@ -3279,7 +3353,8 @@ public class SchemaExtractor {
         return sortPropertyLinkedClassesByTripleCount(classesForProcessing);
     }
 
-    protected void mapPrincipalClasses(@Nonnull List<SchemaExtractorClassNodeInfo> propertyLinkedClasses, @Nonnull List<SchemaExtractorPropertyLinkedClassInfo> principalClasses) {
+    protected void mapPrincipalClasses
+            (@Nonnull List<SchemaExtractorClassNodeInfo> propertyLinkedClasses, @Nonnull List<SchemaExtractorPropertyLinkedClassInfo> principalClasses) {
         propertyLinkedClasses.forEach(linkedClass -> {
             SchemaExtractorPropertyLinkedClassInfo classInfo = principalClasses.stream()
                     .filter(c -> c.getClassName().equals(linkedClass.getClassName())).findFirst().orElse(null);
@@ -3288,7 +3363,8 @@ public class SchemaExtractor {
     }
 
     @Nonnull
-    protected List<SchemaExtractorPropertyLinkedClassInfo> buildAndSortPropertyPairTargets(@Nonnull List<SchemaExtractorSourceTargetInfo> propertyLinkedPairs, @Nonnull List<SchemaClass> classes) {
+    protected List<SchemaExtractorPropertyLinkedClassInfo> buildAndSortPropertyPairTargets
+            (@Nonnull List<SchemaExtractorSourceTargetInfo> propertyLinkedPairs, @Nonnull List<SchemaClass> classes) {
         List<SchemaExtractorPropertyLinkedClassInfo> classesForProcessing = new ArrayList<>();
         propertyLinkedPairs.forEach(linkedPair -> {
             SchemaClass schemaClass = findClass(classes, linkedPair.getTargetClass());
@@ -3307,7 +3383,8 @@ public class SchemaExtractor {
     }
 
     @Nonnull
-    protected List<SchemaExtractorPropertyLinkedClassInfo> buildAndSortPropertyPairSources(@Nonnull List<SchemaExtractorSourceTargetInfo> propertyLinkedPairs, @Nonnull List<SchemaClass> classes) {
+    protected List<SchemaExtractorPropertyLinkedClassInfo> buildAndSortPropertyPairSources
+            (@Nonnull List<SchemaExtractorSourceTargetInfo> propertyLinkedPairs, @Nonnull List<SchemaClass> classes) {
         List<SchemaExtractorPropertyLinkedClassInfo> classesForProcessing = new ArrayList<>();
         propertyLinkedPairs.forEach(linkedPair -> {
             SchemaClass schemaClass = findClass(classes, linkedPair.getSourceClass());
@@ -3325,7 +3402,8 @@ public class SchemaExtractor {
         return sortPropertyLinkedClassesByTripleCount(classesForProcessing);
     }
 
-    protected void buildLabels(@Nonnull SchemaExtractorRequestDto request, @Nonnull Schema schema, @Nonnull Map<String, String> prefixMap) {
+    protected void buildLabels(@Nonnull SchemaExtractorRequestDto request, @Nonnull Schema
+            schema, @Nonnull Map<String, String> prefixMap) {
         request.getIncludedLabels().forEach(label -> {
             findLabelProperty(label, prefixMap);
             if (label.getLabelProperty() != null) {
@@ -3337,7 +3415,8 @@ public class SchemaExtractor {
         });
     }
 
-    protected void findLabelProperty(@Nonnull SchemaExtractorRequestedLabelDto label, @Nonnull Map<String, String> prefixMap) {
+    protected void findLabelProperty(@Nonnull SchemaExtractorRequestedLabelDto
+                                             label, @Nonnull Map<String, String> prefixMap) {
         // request contains full property name
         if (label.getLabelPropertyFullOrPrefix().contains("://")) {
             label.setLabelProperty(label.getLabelPropertyFullOrPrefix());
@@ -3363,7 +3442,8 @@ public class SchemaExtractor {
         }
     }
 
-    protected void buildLabelsForSchemaElements(@Nonnull SchemaExtractorRequestDto request, @Nonnull SchemaExtractorRequestedLabelDto label,
+    protected void buildLabelsForSchemaElements(@Nonnull SchemaExtractorRequestDto
+                                                        request, @Nonnull SchemaExtractorRequestedLabelDto label,
                                                 @Nonnull List<? extends SchemaElement> elements) {
         elements.forEach(element -> {
             QueryResponse queryResponse;
@@ -3408,7 +3488,8 @@ public class SchemaExtractor {
         return regularQuery;
     }
 
-    private boolean calculateTargetClasses(@Nonnull SchemaExtractorRequestDto request, @Nonnull SchemaExtractorPropertyNodeInfo property) {
+    private boolean calculateTargetClasses(@Nonnull SchemaExtractorRequestDto
+                                                   request, @Nonnull SchemaExtractorPropertyNodeInfo property) {
         if (property.getObjectTripleCount() != null && property.getObjectTripleCount() != 0)
             return true;
         if (property.getTripleCount() != null && property.getTripleCount().equals(property.getDataTripleCount()))

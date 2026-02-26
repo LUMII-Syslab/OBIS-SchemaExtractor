@@ -27,6 +27,8 @@ public class SchemaExtractorRequestNew {
 
     public enum BlankNodeMode {no, targetsOnly, full}
 
+    public enum PropertyRelationsCheckMode {none, limits, details}
+
     public enum NoClassesLoggingOptions {yes, no, sourcesOnly}
 
     @ApiParam(access = "10", value = "SPARQL Endpoint URL, for example, http://localhost:8890/sparql", required = true)
@@ -54,6 +56,9 @@ public class SchemaExtractorRequestNew {
 
     @ApiParam(access = "40", value = "Calculate property-property adjacency (following properties, same subject, same object). Useful for auto-completion. Currently not used in schema visualization. Can be time consuming for larger schemas", defaultValue = "true", required = true)
     private Boolean calculatePropertyPropertyRelations;
+
+    @ApiParam(access = "41", value = "Set backup validation queries to calculate property-property relations", defaultValue = "details", required = true)
+    private PropertyRelationsCheckMode propertyPropertyLinkCheckBackupMode;
 
     @ApiParam(access = "50", value = "Calculate pairs of source and target classes for properties (creates finer-grained schemas; used as a source of statistics in visual schema diagrams)", defaultValue = "true", required = true)
     private Boolean calculateSourceAndTargetPairs;
@@ -306,5 +311,13 @@ public class SchemaExtractorRequestNew {
             crossCheckTargetClassesOnNonLiteralPropertyObjectCheckFailure = Boolean.FALSE;
         }
         return crossCheckTargetClassesOnNonLiteralPropertyObjectCheckFailure;
+    }
+
+    @Nonnull
+    public PropertyRelationsCheckMode getPropertyPropertyLinkCheckBackupMode() {
+        if (propertyPropertyLinkCheckBackupMode == null) {
+            propertyPropertyLinkCheckBackupMode = PropertyRelationsCheckMode.details;
+        }
+        return propertyPropertyLinkCheckBackupMode;
     }
 }

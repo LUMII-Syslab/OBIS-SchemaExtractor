@@ -6,6 +6,7 @@ requireClasses: true
 validateClassesList: true
 validatePropertiesList: true
 calculatePropertyPropertyRelations: false
+propertyPropertyLinkCheckBackupMode: "details"
 calculateSourceAndTargetPairs: true
 calculateDomainsAndRanges: true
 includeDistinctSubjectsAndObjects: "no"

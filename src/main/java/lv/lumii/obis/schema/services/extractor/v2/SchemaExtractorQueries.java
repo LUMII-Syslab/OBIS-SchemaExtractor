@@ -122,8 +122,14 @@ public enum SchemaExtractorQueries {
     FIND_PROPERTY_FOLLOWERS(
             "SELECT ?p2 (COUNT(?x) as ?instances) WHERE { <valuesClause> { SELECT DISTINCT ?x where { [] <property> ?x } } ?x ?p2 [] } GROUP BY ?p2", QueryType.LARGE
     ),
+    FIND_PROPERTY_FOLLOWERS_DISTINCT(
+            "SELECT ?p2 (COUNT(?x) as ?instances) WHERE { <valuesClause> { SELECT DISTINCT ?x ?p2 ?y WHERE { { SELECT DISTINCT ?x where { [] <property> ?x } }  ?x ?p2 ?y } } } GROUP BY ?p2", QueryType.LARGE
+    ),
     FIND_PROPERTY_FOLLOWERS_WITH_LIMITS(
             "SELECT ?p2 (COUNT(?x) as ?instances) WHERE { <valuesClause> { SELECT DISTINCT ?x where { [] <property> ?x } LIMIT <limit> } ?x ?p2 [] } GROUP BY ?p2", QueryType.LARGE
+    ),
+    FIND_PROPERTY_FOLLOWERS_WITH_LIMITS_DISTINCT(
+            "SELECT ?p2 (COUNT(?x) as ?instances) WHERE { { SELECT DISTINCT ?x ?p2 ?y WHERE { <valuesClause> { SELECT DISTINCT ?x where {[] <property> ?x } LIMIT <limit> } ?x ?p2 ?y } } } GROUP BY ?p2", QueryType.LARGE
     ),
     FIND_PROPERTY_OUTGOING_PROPERTIES(
             "SELECT ?p2 (COUNT(?x) as ?instances) WHERE { <valuesClause> { SELECT DISTINCT ?x WHERE { ?x <property> [] } } ?x ?p2 [] } GROUP BY ?p2", QueryType.LARGE

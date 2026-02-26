@@ -48,6 +48,7 @@ public class SchemaExtractorRequestBuilder {
         requestDto.setValidateClassesList(request.getValidateClassesList());
         requestDto.setValidatePropertiesList(request.getValidatePropertiesList());
         requestDto.setCalculatePropertyPropertyRelations(request.getCalculatePropertyPropertyRelations());
+        requestDto.setPropertyPropertyLinkCheckBackupMode(Enums.getIfPresent(SchemaExtractorRequestDto.PropertyRelationsCheckMode.class, request.getPropertyPropertyLinkCheckBackupMode().name()).orNull());
         requestDto.setCalculateSourceAndTargetPairs(request.getCalculateSourceAndTargetPairs());
         requestDto.setCalculateDomainsAndRanges(request.getCalculateDomainsAndRanges());
         requestDto.setIncludeDistinctSubjectsAndObjects(Enums.getIfPresent(SchemaExtractorRequestDto.DistinctSubjectsAndObjectsMode.class, request.getIncludeDistinctSubjectsAndObjects().name()).orNull());
