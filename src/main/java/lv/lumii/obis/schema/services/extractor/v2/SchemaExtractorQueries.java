@@ -131,6 +131,15 @@ public enum SchemaExtractorQueries {
     FIND_PROPERTY_FOLLOWERS_WITH_LIMITS_DISTINCT(
             "SELECT ?p2 (COUNT(?x) as ?instances) WHERE { { SELECT DISTINCT ?x ?p2 ?y WHERE { <valuesClause> { SELECT DISTINCT ?x where {[] <property> ?x } LIMIT <limit> } ?x ?p2 ?y } } } GROUP BY ?p2", QueryType.LARGE
     ),
+    CHECK_PROPERTY_FOLLOWER_TRIPLES(
+          "SELECT (COUNT(?x) as ?instances) WHERE { { SELECT DISTINCT ?x where { [] <property> ?x } } ?x <property2> [] }", QueryType.SMALL
+    ),
+    CHECK_PROPERTY_FOLLOWER(
+         "SELECT * WHERE { [] <property> ?x. ?x <property2> [] } LIMIT 1", QueryType.SMALL
+    ),
+    CHECK_PROPERTY_FOLLOWER_TRIPLES_LIMITS(
+            "SELECT (COUNT(?x) as ?instances) WHERE { { SELECT DISTINCT ?x where { [] <property> ?x } LIMIT <limit>} ?x <property2> [] }", QueryType.SMALL
+    ),
     FIND_PROPERTY_OUTGOING_PROPERTIES(
             "SELECT ?p2 (COUNT(?x) as ?instances) WHERE { <valuesClause> { SELECT DISTINCT ?x WHERE { ?x <property> [] } } ?x ?p2 [] } GROUP BY ?p2", QueryType.LARGE
     ),
