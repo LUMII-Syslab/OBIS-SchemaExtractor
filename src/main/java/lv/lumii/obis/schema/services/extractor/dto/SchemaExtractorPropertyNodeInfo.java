@@ -28,9 +28,9 @@ public class SchemaExtractorPropertyNodeInfo {
     private Boolean isClosedRange;
     private Boolean hasDomain;
     private Boolean hasRange;
-    private Boolean hasOutgoingPropertiesOK;
-    private Boolean hasIncomingPropertiesOK;
-    private Boolean hasFollowersOK;
+    private Integer hasOutgoingPropertiesOK;
+    private Integer hasIncomingPropertiesOK;
+    private Integer hasFollowersOK;
     private List<SchemaExtractorSourceTargetInfo> sourceAndTargetPairs;
     private List<SchemaExtractorClassNodeInfo> sourceClasses;
     private List<SchemaExtractorClassNodeInfo> targetClasses;
