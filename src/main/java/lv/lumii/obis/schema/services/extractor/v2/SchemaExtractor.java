@@ -43,7 +43,7 @@ public class SchemaExtractor {
 
     private enum LinkedClassType {SOURCE, TARGET, PAIR_SOURCE, PAIR_TARGET}
 
-    private static final List<Long> sampleLimits = List.of(1000000L, 100000L, 10000L, 1000L, 5L, 1L);
+    private static final List<Long> sampleLimits = List.of(1000000L, 100000L, 10000L, 1000L);
     private static final List<Long> sampleLimitsSmall = List.of(300L, 100L, 30L, 10L);
 
     private static final String PROPERTY_PROCESSING = " - processing property %d/%d [%s]";
@@ -1929,7 +1929,8 @@ public class SchemaExtractor {
                 retry = false;
             }
         }
-        schema.getErrors().add(new SchemaExtractorError(WARNING, property.getPropertyName(), queryWithLimit.name(), queryBuilder.getQueryString()));
+        schema.getErrors().add(new SchemaExtractorError(WARNING, property.getPropertyName(), queryWithLimit.name(),
+                (queryBuilder != null ? queryBuilder.getQueryString() : "no applicable limit value was found")));
         return false;
     }
 
@@ -1940,7 +1941,6 @@ public class SchemaExtractor {
         boolean result = false;
         for (Map.Entry<String, SchemaExtractorPropertyNodeInfo> entry : properties.entrySet()) {
             SchemaExtractorPropertyNodeInfo property2 = entry.getValue();
-            if (property.getPropertyName().equals(property2.getPropertyName())) continue;
 
             SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(queryCheckCount.name()), queryCheckCount)
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false)
@@ -1961,15 +1961,23 @@ public class SchemaExtractor {
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY2_FULL, property2.getPropertyName(), false);
                 queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
 
-                if (queryResponse.hasErrors()) {
-                    // execute block B
-                } else if (!queryResponse.getResults().isEmpty()) {
-                    SchemaExtractorPropertyRelatedPropertyInfo candidate = new SchemaExtractorPropertyRelatedPropertyInfo(property2.getPropertyName(), null, null);
-                    boolean blockResult = executeDetailsQueryBlockA(request, schema, property, candidate, queryCheckCountLimit);
-                    if (blockResult) {
-                        result = true;
-                        relatedProperties.add(candidate);
-                    }
+                if (!queryResponse.hasErrors() && queryResponse.getResults().isEmpty()) {
+                    continue;
+                }
+                schema.getErrors().add(checkQueryError);
+
+                SchemaExtractorPropertyRelatedPropertyInfo candidate = new SchemaExtractorPropertyRelatedPropertyInfo(property2.getPropertyName(), null, null);
+                boolean blockResult = false;
+
+                if (!queryResponse.hasErrors()) {
+                    blockResult = executeDetailsQueryBlockA(request, schema, property, candidate, queryCheckCountLimit);
+                } else {
+                    blockResult = executeDetailsQueryBlockB(request, schema, property, candidate, queryCheckCountLimit);
+                }
+
+                if (blockResult) {
+                    result = true;
+                    relatedProperties.add(candidate);
                 }
             }
         }
@@ -2011,7 +2019,9 @@ public class SchemaExtractor {
         }
         if (candidate.getTripleCount() != null) {
             if (candidate.getTripleCount() == 0) {
-                schema.getErrors().add(new SchemaExtractorError(WARNING, property.getPropertyName(), queryCheckCountLimit.name(), "property follower [" + candidate.getPropertyName() + "] statistics not available"));
+                schema.getErrors().add(new SchemaExtractorError(WARNING, property.getPropertyName(), queryCheckCountLimit.name(),
+                        "property follower [" + candidate.getPropertyName() + "] statistics not available",
+                        (queryBuilder != null ? queryBuilder.getQueryString() : "no applicable limit value was found")));
                 return false;
             } else {
                 return true;
@@ -2041,11 +2051,97 @@ public class SchemaExtractor {
                 }
             }
             if (candidate.getTripleCount() == null || candidate.getTripleCount() == 0) {
-                schema.getErrors().add(new SchemaExtractorError(WARNING, property.getPropertyName(), queryCheckCountLimit.name(), "property follower [ " + candidate.getPropertyName() + "] statistics not available"));
+                schema.getErrors().add(new SchemaExtractorError(WARNING, property.getPropertyName(), queryCheckCountLimit.name(),
+                        "property follower [ " + candidate.getPropertyName() + "] statistics not available",
+                        (queryBuilder != null ? queryBuilder.getQueryString() : "no applicable limit value was found")));
                 return false;
             } else {
                 return true;
             }
+        }
+    }
+
+    private boolean executeDetailsQueryBlockB(@Nonnull SchemaExtractorRequestDto request, @Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property,
+                                              @Nonnull SchemaExtractorPropertyRelatedPropertyInfo candidate, @Nonnull SchemaExtractorQueries queryCheckCountLimit) {
+
+        boolean retry = true;
+        Long tripleCountLimit = null;
+        SparqlQueryBuilder queryBuilder = null;
+        List<Long> sampleLimitsReversed = Lists.reverse(sampleLimits);
+
+        while (isTrue(retry)) {
+
+            Long finalTripleCountLimit = tripleCountLimit;
+            Long newLimit = sampleLimitsReversed.stream()
+                    .filter(limit -> (finalTripleCountLimit == null || limit > finalTripleCountLimit) && limit <= property.getTripleCount()).findFirst().orElse(null);
+            if (newLimit != null) {
+                tripleCountLimit = newLimit;
+                queryBuilder = new SparqlQueryBuilder(request.getQueries().get(queryCheckCountLimit.name()), queryCheckCountLimit)
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false)
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY2_FULL, candidate.getPropertyName(), false)
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_LIMIT, tripleCountLimit.toString());
+                QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
+
+                if (!queryResponse.hasErrors() && !queryResponse.getResults().isEmpty() && queryResponse.getResults().get(0) != null) {
+                    Long tripleCount = SchemaUtil.getLongValueFromString(queryResponse.getResults().get(0).getValue(SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
+                    candidate.setTripleCount(tripleCount);
+                    candidate.setTripleCountBase(tripleCountLimit);
+                } else {
+                    retry = false;
+                }
+            } else {
+                retry = false;
+            }
+        }
+        if (candidate.getTripleCount() != null) {
+            if (candidate.getTripleCount() == 0) {
+                schema.getErrors().add(new SchemaExtractorError(INFO, property.getPropertyName(), queryCheckCountLimit.name(),
+                        "property follower [ " + candidate.getPropertyName() + "] non-existence confirmed",
+                        (queryBuilder != null ? queryBuilder.getQueryString() : "no applicable limit value was found")));
+                return false;
+            } else {
+                schema.getErrors().add(new SchemaExtractorError(INFO, property.getPropertyName(), queryCheckCountLimit.name(),
+                        "property follower [" + candidate.getPropertyName() + "] information recovered",
+                        (queryBuilder != null ? queryBuilder.getQueryString() : "no applicable limit value was found")));
+                return true;
+            }
+        } else {
+            retry = true;
+            while (isTrue(retry)) {
+                Long finalTripleCountLimit = tripleCountLimit;
+                Long newLimit = sampleLimitsSmall.stream()
+                        .filter(limit -> (finalTripleCountLimit == null || limit < finalTripleCountLimit) && limit <= property.getTripleCount()).findFirst().orElse(null);
+                if (newLimit != null) {
+                    tripleCountLimit = newLimit;
+                    queryBuilder = new SparqlQueryBuilder(request.getQueries().get(queryCheckCountLimit.name()), queryCheckCountLimit)
+                            .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false)
+                            .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY2_FULL, candidate.getPropertyName(), false)
+                            .withContextParam(SPARQL_QUERY_BINDING_NAME_LIMIT, tripleCountLimit.toString());
+                    QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
+
+                    if (!queryResponse.hasErrors() && !queryResponse.getResults().isEmpty() && queryResponse.getResults().get(0) != null) {
+                        Long tripleCount = SchemaUtil.getLongValueFromString(queryResponse.getResults().get(0).getValue(SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
+                        candidate.setTripleCount(tripleCount);
+                        candidate.setTripleCountBase(tripleCountLimit);
+                        retry = false;
+                    }
+                } else {
+                    retry = false;
+                }
+            }
+            if (candidate.getTripleCount() == null) {
+                return false;
+            }
+            if (candidate.getTripleCount() == 0) {
+                schema.getErrors().add(new SchemaExtractorError(INFO, property.getPropertyName(), queryCheckCountLimit.name(),
+                        "property follower [ " + candidate.getPropertyName() + "] non-existence confirmed",
+                        (queryBuilder != null ? queryBuilder.getQueryString() : "no applicable limit value was found")));
+                return false;
+            }
+            schema.getErrors().add(new SchemaExtractorError(INFO, property.getPropertyName(), queryCheckCountLimit.name(),
+                    "property follower [" + candidate.getPropertyName() + "] information recovered",
+                    (queryBuilder != null ? queryBuilder.getQueryString() : "no applicable limit value was found")));
+            return true;
         }
     }
 
