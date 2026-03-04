@@ -16,21 +16,25 @@ public class ClassPair {
 	private Long tripleCount;
 
 	private Boolean isPrincipalSource;
+	private Integer sourcePrincipalAssertedSize;
 
 	private Integer sourceImportanceIndex;
 
 	private Boolean isPrincipalTarget;
+	private Integer targetPrincipalAssertedSize;
 
 	private Integer targetImportanceIndex;
 	
-	public ClassPair(String sourceClass, String targetClass, Long tripleCount, Boolean isPrincipalSource,
-					 Integer sourceImportanceIndex, Boolean isPrincipalTarget, Integer targetImportanceIndex) {
+	public ClassPair(String sourceClass, String targetClass, Long tripleCount, Boolean isPrincipalSource, Integer sourcePrincipalAssertedSize,
+					 Integer sourceImportanceIndex, Boolean isPrincipalTarget, Integer targetPrincipalAssertedSize, Integer targetImportanceIndex) {
 		this.sourceClass = sourceClass;
 		this.targetClass = targetClass;
 		this.tripleCount = tripleCount;
 		this.isPrincipalSource = isPrincipalSource;
+		this.sourcePrincipalAssertedSize = sourcePrincipalAssertedSize;
 		this.sourceImportanceIndex = sourceImportanceIndex;
 		this.isPrincipalTarget = isPrincipalTarget;
+		this.targetPrincipalAssertedSize = targetPrincipalAssertedSize;
 		this.targetImportanceIndex = targetImportanceIndex;
 	}
 }

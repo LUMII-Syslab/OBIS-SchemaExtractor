@@ -16,7 +16,9 @@ public class SchemaExtractorPropertyNodeInfo {
     private String dataType;
     private Integer minCardinality;
     private Integer maxCardinality;
+    private Integer maxCardinalityAssertionSize;
     private Integer maxInverseCardinality;
+    private Integer maxInverseCardinalityAssertionSize;
     private Long tripleCount;
     private Long dataTripleCount;
     private Long objectTripleCount;
@@ -25,7 +27,9 @@ public class SchemaExtractorPropertyNodeInfo {
     private Long distinctSubjectsCount;
     private Long distinctObjectsCount;
     private Boolean isClosedDomain;
+    private Integer closedSourceAssertedSize;
     private Boolean isClosedRange;
+    private Integer closedTargetAssertedSize;
     private Boolean hasDomain;
     private Boolean hasRange;
     private Integer hasOutgoingPropertiesOK;

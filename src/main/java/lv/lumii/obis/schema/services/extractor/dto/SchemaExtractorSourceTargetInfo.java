@@ -15,7 +15,9 @@ public class SchemaExtractorSourceTargetInfo {
     private Boolean validTarget;
 
     private Boolean isPrincipalSource;
+    private Integer sourcePrincipalAssertedSize;
     private Boolean isPrincipalTarget;
+    private Integer targetPrincipalAssertedSize;
 
     private Integer sourceImportanceIndex;
     private Integer targetImportanceIndex;

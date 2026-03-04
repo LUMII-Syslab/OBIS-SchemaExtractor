@@ -15,7 +15,9 @@ import java.util.Set;
 public class SchemaProperty extends SchemaElement {
 
     private Integer maxCardinality;
+    private Integer maxCardinalityAssertionSize;
     private Integer maxInverseCardinality;
+    private Integer maxInverseCardinalityAssertionSize;
     private Long tripleCount;
     private Long dataTripleCount;
     private Long objectTripleCount;
@@ -24,7 +26,9 @@ public class SchemaProperty extends SchemaElement {
     private Long distinctSubjectsCount;
     private Long distinctObjectsCount;
     private Boolean closedDomain;
+    private Integer closedSourceAssertedSize;
     private Boolean closedRange;
+    private Integer closedTargetAssertedSize;
     private Integer hasOutgoingPropertiesOK;
     private Integer hasIncomingPropertiesOK;
     private Integer hasFollowersOK;
