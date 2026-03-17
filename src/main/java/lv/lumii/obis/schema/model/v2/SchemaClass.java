@@ -38,6 +38,9 @@ public class SchemaClass extends SchemaElement {
 
     private String classificationProperty;
 
+    private Integer incomingPropertiesOK;
+    private Integer outgoingPropertiesOK;
+
     @JsonProperty("InstanceNamespaces")
     private List<InstanceNamespace> instanceNamespaces;
 

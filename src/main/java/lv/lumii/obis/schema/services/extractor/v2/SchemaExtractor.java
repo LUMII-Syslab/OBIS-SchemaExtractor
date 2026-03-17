@@ -28,6 +28,7 @@ import javax.annotation.Nullable;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 import static lv.lumii.obis.schema.constants.SchemaConstants.*;
@@ -795,6 +796,8 @@ public class SchemaExtractor {
             if (queryResponse.hasErrors()) {
                 schema.getErrors().add(new SchemaExtractorError(INFO, property.getPropertyName() + " - Endpoint Error", query.name(), queryBuilder.getQueryString()));
                 continue;
+            } else {
+                property.setSourceClassesOK(5);
             }
             if (queryResponse.getResults().isEmpty()) {
                 if (SchemaExtractorRequestDto.NoClassesLoggingOptions.yes.equals(request.getLogNoClassesForProperty())
@@ -815,6 +818,9 @@ public class SchemaExtractor {
                         sourceClass.setTripleCount(SchemaUtil.getLongValueFromString(queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT)));
                         sourceClass.setTripleCountBase(null);
                         property.getSourceClasses().add(sourceClass);
+                        if (schemaClass.getOutgoingPropertiesOK() == null) {
+                            schemaClass.setOutgoingPropertiesOK(5);
+                        }
                     }
                 }
             }
@@ -840,12 +846,22 @@ public class SchemaExtractor {
                     SchemaClass schemaClass = findClass(schema.getClasses(), className);
                     if (schemaClass != null && isNotFalse(schemaClass.getPropertiesInSchema())) {
                         property.getSourceClasses().add(new SchemaExtractorClassNodeInfo(className, classificationProperty, schemaClass.getIsLiteral()));
+                        if (schemaClass.getOutgoingPropertiesOK() == null) {
+                            schemaClass.setOutgoingPropertiesOK(5);
+                        }
                     }
                 }
             }
         }
+        if (isFalse(hasErrors)) {
+            property.setSourceClassesOK(5);
+        } else if (!property.getSourceClasses().isEmpty()) {
+            property.setSourceClassesOK(3);
+        }
 
         if (hasErrors && property.getSourceClasses().isEmpty()) {
+            AtomicBoolean hasAtLeastOneError = new AtomicBoolean(false);
+            AtomicBoolean hasAtLeastOneResult = new AtomicBoolean(false);
             schema.getClasses().forEach(potentialSource -> {
                 if (isNotFalse(potentialSource.getPropertiesInSchema())) {
                     SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_CLASS_AS_PROPERTY_SOURCE.name()), CHECK_CLASS_AS_PROPERTY_SOURCE)
@@ -854,12 +870,19 @@ public class SchemaExtractor {
                             .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false);
                     QueryResponse checkSourceQueryResponse = sparqlEndpointProcessor.read(request, queryBuilder, false);
                     if (!checkSourceQueryResponse.hasErrors() && !checkSourceQueryResponse.getResults().isEmpty()) {
+                        hasAtLeastOneResult.set(true);
                         property.getSourceClasses().add(new SchemaExtractorClassNodeInfo(potentialSource.getFullName(), potentialSource.getClassificationProperty(), potentialSource.getIsLiteral()));
+                        if (potentialSource.getOutgoingPropertiesOK() == null) {
+                            potentialSource.setOutgoingPropertiesOK(5);
+                        }
                     } else if (checkSourceQueryResponse.hasErrors()) {
+                        hasAtLeastOneError.set(true);
                         schema.getErrors().add(new SchemaExtractorError(ERROR, property.getPropertyName(), CHECK_CLASS_AS_PROPERTY_SOURCE.name(), queryBuilder.getQueryString()));
+                        potentialSource.setOutgoingPropertiesOK(3);
                     }
                 }
             });
+            property.setSourceClassesOK(!hasAtLeastOneError.get() ? 5 : (hasAtLeastOneResult.get() ? 3 : 0));
         }
     }
 
@@ -1067,6 +1090,8 @@ public class SchemaExtractor {
             if (queryResponse.hasErrors()) {
                 schema.getErrors().add(new SchemaExtractorError(INFO, property.getPropertyName() + " - Endpoint Error", query.name(), queryBuilder.getQueryString()));
                 continue;
+            } else {
+                property.setTargetClassesOK(5);
             }
             if (queryResponse.getResults().isEmpty()) {
                 if (SchemaExtractorRequestDto.NoClassesLoggingOptions.yes.equals(request.getLogNoClassesForProperty())) {
@@ -1086,6 +1111,9 @@ public class SchemaExtractor {
                         targetClass.setTripleCount(SchemaUtil.getLongValueFromString(queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT)));
                         targetClass.setTripleCountBase(null);
                         property.getTargetClasses().add(targetClass);
+                        if (schemaClass.getIncomingPropertiesOK() == null) {
+                            schemaClass.setIncomingPropertiesOK(5);
+                        }
                     }
                 }
             }
@@ -1111,12 +1139,22 @@ public class SchemaExtractor {
                     SchemaClass schemaClass = findClass(schema.getClasses(), className);
                     if (schemaClass != null && isNotFalse(schemaClass.getPropertiesInSchema())) {
                         property.getTargetClasses().add(new SchemaExtractorClassNodeInfo(className, classificationProperty, schemaClass.getIsLiteral()));
+                        if (schemaClass.getIncomingPropertiesOK() == null) {
+                            schemaClass.setIncomingPropertiesOK(5);
+                        }
                     }
                 }
             }
         }
+        if (isFalse(hasErrors)) {
+            property.setTargetClassesOK(5);
+        } else if (!property.getTargetClasses().isEmpty()) {
+            property.setTargetClassesOK(3);
+        }
 
         if (hasErrors && property.getTargetClasses().isEmpty()) {
+            AtomicBoolean hasAtLeastOneError = new AtomicBoolean(false);
+            AtomicBoolean hasAtLeastOneResult = new AtomicBoolean(false);
             schema.getClasses().forEach(potentialTarget -> {
                 if (isNotFalse(potentialTarget.getPropertiesInSchema())) {
                     SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_CLASS_AS_PROPERTY_TARGET.name()), CHECK_CLASS_AS_PROPERTY_TARGET)
@@ -1125,12 +1163,19 @@ public class SchemaExtractor {
                             .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false);
                     QueryResponse checkTargetQueryResponse = sparqlEndpointProcessor.read(request, queryBuilder, false);
                     if (!checkTargetQueryResponse.hasErrors() && !checkTargetQueryResponse.getResults().isEmpty()) {
+                        hasAtLeastOneResult.set(true);
                         property.getTargetClasses().add(new SchemaExtractorClassNodeInfo(potentialTarget.getFullName(), potentialTarget.getClassificationProperty(), potentialTarget.getIsLiteral()));
+                        if (potentialTarget.getIncomingPropertiesOK() == null) {
+                            potentialTarget.setIncomingPropertiesOK(5);
+                        }
                     } else if (checkTargetQueryResponse.hasErrors()) {
+                        hasAtLeastOneError.set(true);
                         schema.getErrors().add(new SchemaExtractorError(ERROR, property.getPropertyName(), CHECK_CLASS_AS_PROPERTY_TARGET.name(), queryBuilder.getQueryString()));
+                        potentialTarget.setIncomingPropertiesOK(3);
                     }
                 }
             });
+            property.setTargetClassesOK(!hasAtLeastOneError.get() ? 5 : (hasAtLeastOneResult.get() ? 3 : 0));
         }
     }
 
@@ -2858,8 +2903,7 @@ public class SchemaExtractor {
         return valuesClause.toString();
     }
 
-    protected void updateClassesWithIncomingTripleCount
-            (@Nonnull Map<String, SchemaExtractorPropertyNodeInfo> properties, @Nonnull Schema schema) {
+    protected void updateClassesWithIncomingTripleCount(@Nonnull Map<String, SchemaExtractorPropertyNodeInfo> properties, @Nonnull Schema schema) {
         Map<String, Long> targetClassTripleCounts = new HashMap<>();
         properties.values().forEach(property -> {
             property.getTargetClasses().forEach(targetClass -> {
@@ -2902,6 +2946,8 @@ public class SchemaExtractor {
             property.setClosedSourceAssertedSize(propertyData.getClosedSourceAssertedSize());
             property.setClosedRange(propertyData.getIsClosedRange());
             property.setClosedTargetAssertedSize(propertyData.getClosedTargetAssertedSize());
+            property.setSourceClassesOK(propertyData.getSourceClassesOK());
+            property.setTargetClassesOK(propertyData.getTargetClassesOK());
             property.setHasFollowersOK(propertyData.getHasFollowersOK());
             property.setHasOutgoingPropertiesOK(propertyData.getHasOutgoingPropertiesOK());
             property.setHasIncomingPropertiesOK(propertyData.getHasIncomingPropertiesOK());

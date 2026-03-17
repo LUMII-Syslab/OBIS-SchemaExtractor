@@ -32,6 +32,8 @@ public class SchemaExtractorPropertyNodeInfo {
     private Integer closedTargetAssertedSize;
     private Boolean hasDomain;
     private Boolean hasRange;
+    private Integer sourceClassesOK;
+    private Integer targetClassesOK;
     private Integer hasOutgoingPropertiesOK;
     private Integer hasIncomingPropertiesOK;
     private Integer hasFollowersOK;

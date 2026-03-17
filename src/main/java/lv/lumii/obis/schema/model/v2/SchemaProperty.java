@@ -29,6 +29,8 @@ public class SchemaProperty extends SchemaElement {
     private Integer closedSourceAssertedSize;
     private Boolean closedRange;
     private Integer closedTargetAssertedSize;
+    private Integer sourceClassesOK;
+    private Integer targetClassesOK;
     private Integer hasOutgoingPropertiesOK;
     private Integer hasIncomingPropertiesOK;
     private Integer hasFollowersOK;
