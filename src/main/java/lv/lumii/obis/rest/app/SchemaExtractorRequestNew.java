@@ -110,6 +110,8 @@ public class SchemaExtractorRequestNew {
 
     @ApiParam(hidden = true, access = "210", value = "Add DISTINCT in queries (can be used for classes and properties of less than 10M size, if entity/triple duplications are observed otherwise in the schemas)", defaultValue = "no", required = true)
     private DistinctQueryMode exactCountCalculations;
+    @ApiParam(hidden = true, access = "211", value = "Calculate distinct triples count for classes and properties)", defaultValue = "yes", required = true)
+    private Boolean calculateDistinctTriples;
 
     @ApiParam(hidden = true, access = "220", value = "Total instance count limit for exact count calculations", defaultValue = "10000000", required = false)
     private Long maxInstanceLimitForExactCount;
@@ -279,6 +281,14 @@ public class SchemaExtractorRequestNew {
             exactCountCalculations = DistinctQueryMode.no;
         }
         return exactCountCalculations;
+    }
+
+    @Nonnull
+    public Boolean getCalculateDistinctTriples() {
+        if (calculateDistinctTriples == null) {
+            calculateDistinctTriples = Boolean.TRUE;
+        }
+        return calculateDistinctTriples;
     }
 
     @Nonnull

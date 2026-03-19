@@ -69,6 +69,7 @@ public class SchemaExtractorRequestBuilder {
         requestDto.setClassificationPropertiesWithConnectionsOnly(applyClassificationProperties(request.getClassificationPropertiesWithConnectionsOnly(), false));
         requestDto.setSimpleClassificationProperties(applyClassificationProperties(request.getSimpleClassificationProperties(), false));
         requestDto.setExactCountCalculations(Enums.getIfPresent(SchemaExtractorRequestDto.DistinctQueryMode.class, request.getExactCountCalculations().name()).orNull());
+        requestDto.setCalculateDistinctTriples(request.getCalculateDistinctTriples());
         requestDto.setMaxInstanceLimitForExactCount(request.getMaxInstanceLimitForExactCount());
         requestDto.setExcludedNamespaces(request.getExcludedNamespaces());
         requestDto.setLargeQueryTimeout(request.getLargeQueryTimeout());

@@ -120,6 +120,9 @@ public class SchemaExtractor {
         // if the request does not include the list of classes - read from the SPARQL endpoint
         if (isTrue(request.getIncludedClasses().isEmpty())) {
             readClassesFromEndpoint(request, schema, classes);
+            if (SchemaExtractorRequestDto.DistinctQueryMode.no.equals(request.getExactCountCalculations()) && request.getCalculateDistinctTriples()) {
+                calculateDistinctTriplesForClasses(request, schema, classes);
+            }
         } else {
             // else read classes from the request
             for (SchemaExtractorRequestedClassDto includedClass : request.getIncludedClasses()) {
@@ -145,6 +148,14 @@ public class SchemaExtractor {
                             }
                         } else {
                             schema.getErrors().add(new SchemaExtractorError(ERROR, "findInstanceCountForClass", query.name(), queryBuilder.getQueryString()));
+                        }
+                    }
+
+                    if (SchemaExtractorRequestDto.DistinctQueryMode.no.equals(request.getExactCountCalculations()) && request.getCalculateDistinctTriples()) {
+                        for (SchemaClass clazz : schema.getClasses()) {
+                            if (clazz.getDistinctTriples() == null) {
+                                readDistinctInstanceCountForClass(request, schema, clazz);
+                            }
                         }
                     }
                 }
@@ -257,6 +268,42 @@ public class SchemaExtractor {
         }
     }
 
+    protected void calculateDistinctTriplesForClasses(@Nonnull SchemaExtractorRequestDto request, @Nonnull Schema schema, @Nonnull List<SchemaClass> classes) {
+        log.info(request.getCorrelationId() + " - calculateDistinctTriplesForClasses");
+
+        boolean foundClassWithInstanceCounts = true;
+        for (String classificationProperty : request.getAllClassificationProperties()) {
+            SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_CLASSES_WITH_INSTANCE_COUNT_DISTINCT), FIND_CLASSES_WITH_INSTANCE_COUNT_DISTINCT)
+                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, classificationProperty);
+            QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
+            if (queryResponse.hasErrors() && queryResponse.getResults().isEmpty()) {
+                schema.getErrors().add(new SchemaExtractorError(INFO, "calculateDistinctTriplesForAllClasses", FIND_CLASSES_WITH_INSTANCE_COUNT_DISTINCT.name(), queryBuilder.getQueryString()));
+                foundClassWithInstanceCounts = false;
+            } else {
+                for (QueryResult queryResult : queryResponse.getResults()) {
+                    QueryResultObject classNameObject = queryResult.getResultObject(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS);
+                    if (classNameObject == null) {
+                        continue;
+                    }
+                    SchemaClass clazz = findClass(classes, classNameObject.getValue());
+                    if (clazz != null) {
+                        Long distinctCount = SchemaUtil.getLongValueFromString(queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
+                        if (distinctCount > 0L) {
+                            clazz.setDistinctTriples(distinctCount);
+                        }
+                    }
+                }
+            }
+        }
+        if (!foundClassWithInstanceCounts) {
+            for (SchemaClass clazz : schema.getClasses()) {
+                if (clazz.getDistinctTriples() == null) {
+                    readDistinctInstanceCountForClass(request, schema, clazz);
+                }
+            }
+        }
+    }
+
     protected void validateClassesFromEndpoint(@Nonnull SchemaExtractorRequestDto request, @Nonnull Schema schema, @Nonnull List<SchemaClass> classes,
                                                @Nonnull String classificationProperty, int classesCountFromStatisticsQuery) {
         log.info(request.getCorrelationId() + " - validateListOfClasses");
@@ -295,7 +342,8 @@ public class SchemaExtractor {
 
     protected boolean readInstanceCountForClass(@Nonnull SchemaExtractorRequestDto request, @Nonnull Schema schema, @Nonnull QueryResultObject classNameObject,
                                                 @Nonnull String classificationProperty, @Nonnull List<SchemaClass> classes) {
-        SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_INSTANCE_COUNT_FOR_CLASS.name()), FIND_INSTANCE_COUNT_FOR_CLASS)
+        SchemaExtractorQueries query = selectQuery(request.getExactCountCalculations(), FIND_INSTANCE_COUNT_FOR_CLASS, FIND_INSTANCE_COUNT_FOR_CLASS_DISTINCT);
+        SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(query.name()), query)
                 .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, classificationProperty)
                 .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_A_FULL, classNameObject.getValue(), false);
         QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
@@ -306,9 +354,24 @@ public class SchemaExtractor {
                 return true;
             }
         } else {
-            schema.getErrors().add(new SchemaExtractorError(ERROR, "findInstanceCountForClass", FIND_INSTANCE_COUNT_FOR_CLASS.name(), queryBuilder.getQueryString()));
+            schema.getErrors().add(new SchemaExtractorError(ERROR, "findInstanceCountForClass", query.name(), queryBuilder.getQueryString()));
         }
         return false;
+    }
+
+    protected void readDistinctInstanceCountForClass(@Nonnull SchemaExtractorRequestDto request, @Nonnull Schema schema, @Nonnull SchemaClass clazz) {
+        SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_INSTANCE_COUNT_FOR_CLASS_DISTINCT.name()), FIND_INSTANCE_COUNT_FOR_CLASS_DISTINCT)
+                .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, clazz.getClassificationProperty())
+                .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_A_FULL, clazz.getFullName(), false);
+        QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
+        if (!queryResponse.hasErrors() && !queryResponse.getResults().isEmpty() && queryResponse.getResults().get(0) != null) {
+            Long distinctCount = SchemaUtil.getLongValueFromString(queryResponse.getResults().get(0).getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
+            if (distinctCount > 0L) {
+                clazz.setDistinctTriples(distinctCount);
+            }
+        } else {
+            schema.getErrors().add(new SchemaExtractorError(WARNING, "findDistinctInstanceCountForClass", FIND_INSTANCE_COUNT_FOR_CLASS_DISTINCT.name(), queryBuilder.getQueryString()));
+        }
     }
 
     protected List<SchemaClass> processClassesWithEndpointData(@Nonnull List<QueryResult> queryResults, @Nonnull SchemaExtractorRequestDto request,
@@ -364,6 +427,9 @@ public class SchemaExtractor {
         // if the request does not include the list of properties - read from the SPARQL endpoint
         if (isTrue(request.getIncludedProperties().isEmpty())) {
             readPropertiesFromEndpoint(request, schema, properties);
+            if (SchemaExtractorRequestDto.DistinctQueryMode.no.equals(request.getExactCountCalculations()) && request.getCalculateDistinctTriples()) {
+                calculateDistinctTriplesForProperties(request, schema, properties);
+            }
         } else {
             // else read properties from the request
             for (SchemaExtractorRequestedPropertyDto includedProperty : request.getIncludedProperties()) {
@@ -386,6 +452,13 @@ public class SchemaExtractor {
                         }
                     } else {
                         schema.getErrors().add(new SchemaExtractorError(ERROR, "findInstanceCountForProperty", query.name(), queryBuilder.getQueryString()));
+                    }
+                }
+            }
+            if (SchemaExtractorRequestDto.DistinctQueryMode.no.equals(request.getExactCountCalculations()) && request.getCalculateDistinctTriples()) {
+                for (SchemaExtractorPropertyNodeInfo property : properties.values()) {
+                    if (property.getDistinctTriples() == null) {
+                        readDistinctTripleCountForProperty(request, schema, property);
                     }
                 }
             }
@@ -441,6 +514,39 @@ public class SchemaExtractor {
             log.error(request.getCorrelationId() + " - no properties were found, stopping the schema extractor");
         } else {
             log.info(request.getCorrelationId() + String.format(" - found total %d properties", properties.size()));
+        }
+    }
+
+    protected void calculateDistinctTriplesForProperties(@Nonnull SchemaExtractorRequestDto request, @Nonnull Schema schema, @Nonnull Map<String, SchemaExtractorPropertyNodeInfo> properties) {
+        log.info(request.getCorrelationId() + " - calculateDistinctTriplesForProperties");
+
+        // read triple counts for all properties
+        SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_PROPERTIES_WITH_TRIPLE_COUNT_DISTINCT.name()), FIND_PROPERTIES_WITH_TRIPLE_COUNT_DISTINCT);
+        QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
+        boolean foundPropertiesWithTripleCounts = true;
+        if (queryResponse.hasErrors() && queryResponse.getResults().isEmpty()) {
+            schema.getErrors().add(new SchemaExtractorError(INFO, "calculateDistinctTriplesForAllProperties", FIND_PROPERTIES_WITH_TRIPLE_COUNT_DISTINCT.name(), queryBuilder.getQueryString()));
+            foundPropertiesWithTripleCounts = false;
+        } else {
+            for (QueryResult queryResult : queryResponse.getResults()) {
+                String propertyName = queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY);
+                if (propertyName == null) {
+                    continue;
+                }
+                SchemaExtractorPropertyNodeInfo property = properties.get(propertyName);
+                if (property != null) {
+                    Long distinctCount = SchemaUtil.getLongValueFromString(queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
+                    if (distinctCount > 0L) {
+                        property.setDistinctTriples(distinctCount);
+                    }
+                }
+            }
+        }
+
+        if (!foundPropertiesWithTripleCounts) {
+            for (SchemaExtractorPropertyNodeInfo property : properties.values()) {
+                readDistinctTripleCountForProperty(request, schema, property);
+            }
         }
     }
 
@@ -535,6 +641,21 @@ public class SchemaExtractor {
         } else {
             addProperty(propertyName, "0", properties, request);
             schema.getErrors().add(new SchemaExtractorError(ERROR, "findTripleCountForProperty", FIND_TRIPLE_COUNT_FOR_PROPERTY.name(), queryBuilder.getQueryString()));
+        }
+    }
+
+    protected void readDistinctTripleCountForProperty(@Nonnull SchemaExtractorRequestDto request, @Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property) {
+
+        SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_TRIPLE_COUNT_FOR_PROPERTY_DISTINCT.name()), FIND_TRIPLE_COUNT_FOR_PROPERTY_DISTINCT)
+                .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false);
+        QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
+        if (!queryResponse.hasErrors() && !queryResponse.getResults().isEmpty() && queryResponse.getResults().get(0) != null) {
+            Long distinctCount = SchemaUtil.getLongValueFromString(queryResponse.getResults().get(0).getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
+            if (distinctCount > 0L) {
+                property.setDistinctTriples(distinctCount);
+            }
+        } else {
+            schema.getErrors().add(new SchemaExtractorError(WARNING, "findTripleCountForProperty", FIND_TRIPLE_COUNT_FOR_PROPERTY_DISTINCT.name(), queryBuilder.getQueryString()));
         }
     }
 
@@ -2934,6 +3055,7 @@ public class SchemaExtractor {
             property.setMaxInverseCardinality(propertyData.getMaxInverseCardinality());
             property.setMaxInverseCardinalityAssertionSize(propertyData.getMaxInverseCardinalityAssertionSize());
             property.setTripleCount(propertyData.getTripleCount());
+            property.setDistinctTriples(propertyData.getDistinctTriples());
             property.setDataTripleCount(propertyData.getDataTripleCount());
             if (propertyData.getObjectTripleCount() != null && propertyData.getObjectTripleCount() != -1) {
                 property.setObjectTripleCount(propertyData.getObjectTripleCount());

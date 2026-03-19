@@ -87,6 +87,7 @@ public class SchemaExtractorRequestDto {
     private List<String> simpleClassificationProperties;
     private ShowIntersectionClassesMode addIntersectionClasses;
     private DistinctQueryMode exactCountCalculations;
+    private Boolean calculateDistinctTriples;
     @JsonIgnore
     private Long maxInstanceLimitForExactCount;
     private List<SchemaExtractorRequestedLabelDto> includedLabels;

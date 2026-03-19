@@ -19,6 +19,7 @@ public class SchemaProperty extends SchemaElement {
     private Integer maxInverseCardinality;
     private Integer maxInverseCardinalityAssertionSize;
     private Long tripleCount;
+    private Long distinctTriples;
     private Long dataTripleCount;
     private Long objectTripleCount;
     private Long blankNodeObjects;
