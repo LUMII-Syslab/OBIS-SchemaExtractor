@@ -131,6 +131,9 @@ public class SchemaExtractor {
                     schema.getErrors().add(new SchemaExtractorError(ERROR, "invalidURI", includedClass.getClassName(), ""));
                     continue;
                 }
+                if (!isNotExcludedResource(includedClass.getClassName(), request.getExcludedNamespaces())) {
+                    continue;
+                }
                 if (SchemaUtil.getLongValueFromString(includedClass.getInstanceCount()) > 0L) {
                     addClass(null, includedClass.getClassName(), includedClass.getInstanceCount(), null, classes, request);
                 } else {
@@ -232,7 +235,7 @@ public class SchemaExtractor {
                 classes.addAll(resultClasses);
                 // validate whether statistics query returned the full list of classes
                 if (request.getValidateClassesList()) {
-                    validateClassesFromEndpoint(request, schema, classes, classificationProperty, queryResponse.getResults().size());
+                    validateClassesFromEndpoint(request, schema, classes, classificationProperty, resultClasses.size());
                 } else {
                     log.info(request.getCorrelationId() + String.format(" - found total %d classes with classification property %s", resultClasses.size(), classificationProperty));
                 }
@@ -254,6 +257,9 @@ public class SchemaExtractor {
                         if (!classNameObject.getIsLiteral() && !SchemaUtil.isValidURI(classNameObject.getValue())) {
                             log.error(request.getCorrelationId() + " - invalid class URI will not be processed - " + classNameObject.getValue());
                             schema.getErrors().add(new SchemaExtractorError(ERROR, "invalidURI", classNameObject.getValue(), ""));
+                            continue;
+                        }
+                        if (!isNotExcludedResource(classNameObject.getValue(), request.getExcludedNamespaces())) {
                             continue;
                         }
                         boolean addedClass = readInstanceCountForClass(request, schema, classNameObject, classificationProperty, classes);
@@ -327,13 +333,16 @@ public class SchemaExtractor {
                     log.error(request.getCorrelationId() + " - invalid class URI will not be processed - " + classNameObject.getValue());
                     continue;
                 }
+                if (!isNotExcludedResource(classNameObject.getValue(), request.getExcludedNamespaces())) {
+                    continue;
+                }
                 if (findClass(classes, classNameObject.getValue()) == null) {
                     boolean addedClass = readInstanceCountForClass(request, schema, classNameObject, classificationProperty, classes);
                     if (addedClass) classesFromSimpleQuery++;
                 }
             }
             if (classesFromSimpleQuery > 0) {
-                schema.getErrors().add(new SchemaExtractorError(WARNING, "validateClasses", FIND_CLASSES.name(), "found " + classesFromSimpleQuery + "more classes than FIND_CLASSES_WITH_INSTANCE_COUNT"));
+                schema.getErrors().add(new SchemaExtractorError(WARNING, "validateClasses", FIND_CLASSES.name(), "found " + classesFromSimpleQuery + " more classes than FIND_CLASSES_WITH_INSTANCE_COUNT"));
                 log.info(request.getCorrelationId() + String.format(" - FIND_CLASSES found %d more classes than FIND_CLASSES_WITH_INSTANCE_COUNT for classification property %s", classesFromSimpleQuery, classificationProperty));
             }
             log.info(request.getCorrelationId() + String.format(" - found total %d classes with classification property %s", classesCountFromStatisticsQuery + classesFromSimpleQuery, classificationProperty));
@@ -386,6 +395,9 @@ public class SchemaExtractor {
             if (!classNameObject.getIsLiteral() && !SchemaUtil.isValidURI(classNameObject.getValue())) {
                 log.error(request.getCorrelationId() + " - invalid class URI will not be processed - " + classNameObject.getValue());
                 schema.getErrors().add(new SchemaExtractorError(ERROR, "invalidURI", classNameObject.getValue(), ""));
+                continue;
+            }
+            if (!isNotExcludedResource(classNameObject.getValue(), request.getExcludedNamespaces())) {
                 continue;
             }
             String instancesCountStr = queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT);
