@@ -825,9 +825,11 @@ public class SchemaExtractor {
             }
 
             if (isTrue(request.getCalculatePropertyPropertyRelations())) {
-                determineFollowers(schema, property, request, properties);
                 determineOutgoingProperties(schema, property, request, properties);
-                determineIncomingProperties(schema, property, request, properties);
+                if (property.getObjectTripleCount() != null && property.getObjectTripleCount() > 0) {
+                    determineFollowers(schema, property, request, properties);
+                    determineIncomingProperties(schema, property, request, properties);
+                }
             }
 
             switch (request.getCalculateCardinalities()) {
