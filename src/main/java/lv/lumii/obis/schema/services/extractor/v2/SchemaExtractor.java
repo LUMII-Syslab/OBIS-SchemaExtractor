@@ -2044,7 +2044,7 @@ public class SchemaExtractor {
      * 1 - low limit bound
      * 2 - limit bound
      * 3 - likely ok
-     * 4 - complete data
+     * 5 - complete data
      */
     protected Integer executePropertyRelationsQueries(@Nonnull SchemaExtractorRequestDto request, @Nonnull Schema schema, @Nonnull Map<String, SchemaExtractorPropertyNodeInfo> properties,
                                                       @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull List<SchemaExtractorPropertyRelatedPropertyInfo> relatedProperties,
@@ -2060,7 +2060,7 @@ public class SchemaExtractor {
 
         if (isFalse(queryResponse.hasErrors())) {
             updatedRelatedProperties(request, queryResponse, relatedProperties, linkType, null);
-            return 4;
+            return 5;
         } else {
             if (SchemaExtractorRequestDto.PropertyRelationsCheckMode.none.equals(request.getPropertyPropertyLinkCheckBackupMode())) {
                 return 0;
@@ -2187,7 +2187,7 @@ public class SchemaExtractor {
                 }
             }
         }
-        if (completeData) return 4;
+        if (completeData) return 5;
         if (completeDataWithCheck) return 3;
         if (finalResultWithLimits != null) return finalResultWithLimits;
         return 0;
