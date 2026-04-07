@@ -11,14 +11,20 @@ public class QueryResponse {
 
     private boolean hasErrors;
 
+    private long executionTime;
+
     private List<QueryResult> results;
 
     public boolean hasErrors() {
         return hasErrors;
     }
 
+    public long getExecutionTime() {
+        return executionTime;
+    }
+
     public List<QueryResult> getResults() {
-        if(results == null) {
+        if (results == null) {
             results = new ArrayList<>();
         }
         return results;

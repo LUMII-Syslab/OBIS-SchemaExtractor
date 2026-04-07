@@ -1,5 +1,7 @@
 package lv.lumii.obis.schema.services.common;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -113,10 +115,10 @@ public class SparqlEndpointProcessor {
 
     @Nonnull
     private QueryResponse read(@Nonnull SparqlEndpointConfig request, @Nonnull SparqlQueryBuilder queryBuilder, boolean withRetry) {
-        QueryResponse response = new QueryResponse();
 
         String query = queryBuilder.build();
         if (query == null) {
+            QueryResponse response = new QueryResponse();
             response.setHasErrors(true);
             return response;
         }
@@ -125,21 +127,14 @@ public class SparqlEndpointProcessor {
             log.info(queryBuilder.getQueryName() + (request.getTimeout() != null ? " (timeout: " + request.getTimeout() + "s)" : "") + "\n" + queryBuilder.getQueryString());
         }
 
-        List<QueryResult> results = requestData(request, queryBuilder.getQueryName(), queryBuilder.getQueryString(), request.getTimeout(), 1, withRetry);
-        if (results != null) {
-            response.setHasErrors(false);
-            response.setResults(results);
-        } else {
-            response.setHasErrors(true);
-            response.setResults(new ArrayList<>());
-        }
-
-        return response;
+        return requestData(request, queryBuilder.getQueryName(), queryBuilder.getQueryString(), request.getTimeout(), 1, withRetry);
     }
 
-    @Nullable
-    private List<QueryResult> requestData(@Nonnull SparqlEndpointConfig request, @Nonnull String queryName, @Nonnull String sparqlQuery, @Nullable Long timeout,
-                                          int attempt, boolean withRetry) {
+    @Nonnull
+    private QueryResponse requestData(@Nonnull SparqlEndpointConfig request, @Nonnull String queryName, @Nonnull String sparqlQuery, @Nullable Long timeout,
+                                      int attempt, boolean withRetry) {
+        LocalDateTime startTime = LocalDateTime.now();
+        QueryResponse response = new QueryResponse();
         List<QueryResult> queryResults = null;
         ResultSet resultSet;
         QueryExecutionHTTP queryExecutor = getQueryExecutor(request.getEndpointUrl(), request.getGraphName(), sparqlQuery, request.isPostRequest(), timeout);
@@ -172,7 +167,20 @@ public class SparqlEndpointProcessor {
         } finally {
             queryExecutor.close();
         }
-        return queryResults;
+
+        LocalDateTime endTime = LocalDateTime.now();
+        long executionTimeInSeconds = Duration.between(startTime, endTime).getSeconds();
+        response.setExecutionTime(executionTimeInSeconds);
+
+        if (queryResults != null) {
+            response.setHasErrors(false);
+            response.setResults(queryResults);
+        } else {
+            response.setHasErrors(true);
+            response.setResults(new ArrayList<>());
+        }
+
+        return response;
     }
 
     private void buildQueryResultObject(@Nonnull List<QueryResult> queryResults, List<String> resultVariables, QuerySolution resultItem) {
@@ -261,7 +269,6 @@ public class SparqlEndpointProcessor {
 
     @Nonnull
     private QueryResponse read(@Nonnull SparqlEndpointConfig request, @Nonnull String queryName, @Nonnull String sparqlQuery, boolean withRetry) {
-        QueryResponse response = new QueryResponse();
 
         Query query;
         try {
@@ -269,6 +276,7 @@ public class SparqlEndpointProcessor {
         } catch (Exception e) {
             log.error(String.format("SPARQL query syntax or formatting exception for the query %s", queryName));
             log.error("\n" + sparqlQuery);
+            QueryResponse response = new QueryResponse();
             response.setHasErrors(true);
             return response;
         }
@@ -277,16 +285,7 @@ public class SparqlEndpointProcessor {
             log.info(queryName + "\n" + sparqlQuery);
         }
 
-        List<QueryResult> results = requestData(request, queryName, sparqlQuery, null, 1, withRetry);
-        if (results != null) {
-            response.setHasErrors(false);
-            response.setResults(results);
-        } else {
-            response.setHasErrors(true);
-            response.setResults(new ArrayList<>());
-        }
-
-        return response;
+        return requestData(request, queryName, sparqlQuery, null, 1, withRetry);
     }
 
 }

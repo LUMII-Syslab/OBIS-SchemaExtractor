@@ -1806,7 +1806,9 @@ public class SchemaExtractor {
                     break;
                 } else if (queryResponse.hasErrors()) {
                     schema.getErrors().add(new SchemaExtractorError(INFO, property.getPropertyName(), FIND_CLOSED_DOMAIN_FOR_PROPERTY.name(), queryBuilder.getQueryString()));
-                    property.setClosedSourceAssertedSize(-1);
+                    if (queryResponse.getExecutionTime() > 45) {
+                        property.setClosedSourceAssertedSize(-1);
+                    }
                 }
             }
         }
@@ -1830,7 +1832,9 @@ public class SchemaExtractor {
                     break;
                 } else if (queryResponse.hasErrors()) {
                     schema.getErrors().add(new SchemaExtractorError(INFO, property.getPropertyName(), FIND_CLOSED_RANGE_FOR_PROPERTY.name(), queryBuilder.getQueryString()));
-                    property.setClosedTargetAssertedSize(-1);
+                    if (queryResponse.getExecutionTime() > 45) {
+                        property.setClosedTargetAssertedSize(-1);
+                    }
                 }
             }
         }
@@ -1857,7 +1861,9 @@ public class SchemaExtractor {
                         break;
                     } else if (queryResponse.hasErrors()) {
                         schema.getErrors().add(new SchemaExtractorError(INFO, property.getPropertyName(), FIND_CLOSED_RANGE_FOR_PROPERTY_AND_CLASS.name(), queryBuilder.getQueryString()));
-                        sourceClass.setClosedTargetAssertedSize(-1);
+                        if (queryResponse.getExecutionTime() > 45) {
+                            sourceClass.setClosedTargetAssertedSize(-1);
+                        }
                     }
                 }
             });
@@ -1885,7 +1891,9 @@ public class SchemaExtractor {
                         break;
                     } else if (queryResponse.hasErrors()) {
                         schema.getErrors().add(new SchemaExtractorError(INFO, property.getPropertyName(), FIND_CLOSED_DOMAIN_FOR_PROPERTY_AND_CLASS.name(), queryBuilder.getQueryString()));
-                        targetClass.setClosedSourceAssertedSize(-1);
+                        if (queryResponse.getExecutionTime() > 45) {
+                            targetClass.setClosedSourceAssertedSize(-1);
+                        }
                     }
                 }
             });
@@ -2379,7 +2387,9 @@ public class SchemaExtractor {
             if (queryResponse.hasErrors()) {
                 schema.getErrors().add(new SchemaExtractorError(INFO, property.getPropertyName(), FIND_PROPERTY_MIN_CARDINALITY.name(), queryBuilder.getQueryString()));
                 sourceClass.setMinCardinality(0);
-                sourceClass.setMinCardinalityAssertionSize(-1);
+                if (queryResponse.getExecutionTime() > 45) {
+                    sourceClass.setMinCardinalityAssertionSize(-1);
+                }
             }
         });
     }
@@ -2398,7 +2408,9 @@ public class SchemaExtractor {
         if (queryResponse.hasErrors()) {
             schema.getErrors().add(new SchemaExtractorError(INFO, property.getPropertyName(), FIND_PROPERTY_MAX_CARDINALITY.name(), queryBuilder.getQueryString()));
             property.setMaxCardinality(-1);
-            property.setMaxCardinalityAssertionSize(-1);
+            if (queryResponse.getExecutionTime() > 45) {
+                property.setMaxCardinalityAssertionSize(-1);
+            }
         }
     }
 
@@ -2419,7 +2431,9 @@ public class SchemaExtractor {
                 if (queryResponse.hasErrors()) {
                     schema.getErrors().add(new SchemaExtractorError(INFO, property.getPropertyName(), FIND_PROPERTY_MAX_CARDINALITY_FOR_SOURCE.name(), queryBuilder.getQueryString()));
                     sourceClass.setMaxCardinality(-1);
-                    sourceClass.setMaxCardinalityAssertionSize(-1);
+                    if (queryResponse.getExecutionTime() > 45) {
+                        sourceClass.setMaxCardinalityAssertionSize(-1);
+                    }
                 }
             }
         });
@@ -2440,7 +2454,9 @@ public class SchemaExtractor {
         if (queryResponse.hasErrors()) {
             schema.getErrors().add(new SchemaExtractorError(INFO, property.getPropertyName(), FIND_INVERSE_PROPERTY_MAX_CARDINALITY.name(), queryBuilder.getQueryString()));
             property.setMaxInverseCardinality(-1);
-            property.setMaxInverseCardinalityAssertionSize(-1);
+            if (queryResponse.getExecutionTime() > 45) {
+                property.setMaxInverseCardinalityAssertionSize(-1);
+            }
         }
     }
 
@@ -2457,7 +2473,9 @@ public class SchemaExtractor {
             if (queryResponse.hasErrors()) {
                 schema.getErrors().add(new SchemaExtractorError(INFO, property.getPropertyName(), FIND_INVERSE_PROPERTY_MAX_CARDINALITY_FOR_TARGET.name(), queryBuilder.getQueryString()));
                 targetClass.setMaxInverseCardinality(-1);
-                targetClass.setMaxInverseCardinalityAssertionSize(-1);
+                if (queryResponse.getExecutionTime() > 45) {
+                    targetClass.setMaxInverseCardinalityAssertionSize(-1);
+                }
             }
             targetClass.setMaxInverseCardinality(queryResponse.getResults().isEmpty() ? 1 : DEFAULT_MAX_CARDINALITY);
         });
@@ -2476,7 +2494,9 @@ public class SchemaExtractor {
             if (queryResponse.hasErrors()) {
                 schema.getErrors().add(new SchemaExtractorError(INFO, property.getPropertyName(), FIND_INVERSE_PROPERTY_MIN_CARDINALITY.name(), queryBuilder.getQueryString()));
                 targetClass.setMinInverseCardinality(0);
-                targetClass.setMinInverseCardinalityAssertionSize(-1);
+                if (queryResponse.getExecutionTime() > 45) {
+                    targetClass.setMinInverseCardinalityAssertionSize(-1);
+                }
             }
             targetClass.setMinInverseCardinality(!queryResponse.getResults().isEmpty() ? DEFAULT_MIN_CARDINALITY : 1);
         });
@@ -2631,7 +2651,9 @@ public class SchemaExtractor {
         QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
         if (queryResponse.hasErrors()) {
             schema.getErrors().add(new SchemaExtractorError(WARNING, propertyName, CHECK_DOMAIN_FOR_PROPERTY.name(), queryBuilder.getQueryString()));
-            potentialDomain.setSourcePrincipalAssertedSize(-1);
+            if (queryResponse.getExecutionTime() > 45) {
+                potentialDomain.setSourcePrincipalAssertedSize(-1);
+            }
         }
         isDomainClass = !queryResponse.hasErrors() && queryResponse.getResults().isEmpty();
         return isDomainClass;
@@ -2648,7 +2670,9 @@ public class SchemaExtractor {
         QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
         if (queryResponse.hasErrors()) {
             schema.getErrors().add(new SchemaExtractorError(WARNING, propertyName, CHECK_RANGE_FOR_PROPERTY.name(), queryBuilder.getQueryString()));
-            potentialRange.setTargetPrincipalAssertedSize(-1);
+            if (queryResponse.getExecutionTime() > 45) {
+                potentialRange.setTargetPrincipalAssertedSize(-1);
+            }
         }
         isRangeClass = !queryResponse.hasErrors() && queryResponse.getResults().isEmpty();
         return isRangeClass;
@@ -2668,7 +2692,9 @@ public class SchemaExtractor {
         QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
         if (queryResponse.hasErrors()) {
             schema.getErrors().add(new SchemaExtractorError(WARNING, propertyName, CHECK_RANGE_FOR_PAIR_SOURCE.name(), queryBuilder.getQueryString()));
-            potentialRange.setTargetPrincipalAssertedSize(-1);
+            if (queryResponse.getExecutionTime() > 45) {
+                potentialRange.setTargetPrincipalAssertedSize(-1);
+            }
         }
         isRangeClass = !queryResponse.hasErrors() && queryResponse.getResults().isEmpty();
         return isRangeClass;
@@ -2688,7 +2714,9 @@ public class SchemaExtractor {
         QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
         if (queryResponse.hasErrors()) {
             schema.getErrors().add(new SchemaExtractorError(WARNING, propertyName, CHECK_DOMAIN_FOR_PAIR_TARGET.name(), queryBuilder.getQueryString()));
-            potentialDomain.setSourcePrincipalAssertedSize(-1);
+            if (queryResponse.getExecutionTime() > 45) {
+                potentialDomain.setSourcePrincipalAssertedSize(-1);
+            }
         }
         isDomainClass = !queryResponse.hasErrors() && queryResponse.getResults().isEmpty();
         return isDomainClass;
