@@ -96,7 +96,7 @@ public class Schema {
 
     @Nonnull
     public Boolean getHasWarnings() {
-        hasWarnings = hasErrorFlag(SchemaExtractorError.ErrorLevel.WARNING);
+        hasWarnings = hasErrorFlag(SchemaExtractorError.ErrorLevel.WARNING) || hasErrorFlag(SchemaExtractorError.ErrorLevel.WARNING_LOW);
         return hasWarnings;
     }
 

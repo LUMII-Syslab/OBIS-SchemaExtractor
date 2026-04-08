@@ -8,7 +8,7 @@ import org.apache.commons.lang3.StringUtils;
 @Getter
 public class SchemaExtractorError {
 
-    public enum ErrorLevel {ERROR, WARNING, INFO, OK}
+    public enum ErrorLevel {ERROR, WARNING, WARNING_LOW, INFO, OK}
 
     private ErrorLevel errorLevel;
     private String entity;
