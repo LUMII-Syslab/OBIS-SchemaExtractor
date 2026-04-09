@@ -27,7 +27,7 @@ public class SchemaExtractorRequestNew {
 
     public enum BlankNodeMode {no, targetsOnly, full}
 
-    public enum PropertyRelationsCheckMode {none, limits, details}
+    public enum PropertyRelationsCheckMode {none, limits, detailsBase, details}
 
     public enum NoClassesLoggingOptions {yes, no, sourcesOnly}
 
