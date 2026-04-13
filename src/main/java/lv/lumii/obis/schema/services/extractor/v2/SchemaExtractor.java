@@ -1923,33 +1923,38 @@ public class SchemaExtractor {
         if (queryResponse.hasErrors()) {
             schema.getErrors().add(new SchemaExtractorError(WARNING, property.getPropertyName(), query.name(), queryBuilder.getQueryString()));
         }
+        boolean hasEmptyDataType = false;
         for (QueryResult queryResult : queryResponse.getResults()) {
             String resultDataType = queryResult.getValue(SPARQL_QUERY_BINDING_NAME_DATA_TYPE);
             Long tripleCount = SchemaUtil.getLongValueFromString(queryResult.getValue(SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
             if (StringUtils.isNotEmpty(resultDataType)) {
                 property.getDataTypes().add(new SchemaExtractorDataTypeInfo(SchemaUtil.parseDataType(resultDataType), tripleCount, tripleCountBase));
+            } else {
+                hasEmptyDataType = true;
             }
         }
 
         // find language tag
-        query = selectQuery(request.getExactCountCalculations(), FIND_PROPERTY_DATA_TYPE_LANG_STRING, FIND_PROPERTY_DATA_TYPE_LANG_STRING_DISTINCT);
-        if (tripleCountBase == null) {
-            queryBuilder = new SparqlQueryBuilder(request.getQueries().get(query.name()), query)
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false);
-        } else {
-            query = selectQuery(request.getExactCountCalculations(), FIND_PROPERTY_DATA_TYPE_LANG_STRING_WITH_LIMITS, FIND_PROPERTY_DATA_TYPE_LANG_STRING_WITH_LIMITS_DISTINCT);
-            queryBuilder = new SparqlQueryBuilder(request.getQueries().get(query.name()), query)
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false)
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_LIMIT, tripleCountBase.toString());
-        }
-        queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
-        if (queryResponse.hasErrors()) {
-            schema.getErrors().add(new SchemaExtractorError(WARNING, property.getPropertyName(), query.name(), queryBuilder.getQueryString()));
-        }
-        if (!queryResponse.getResults().isEmpty()) {
-            Long tripleCount = SchemaUtil.getLongValueFromString(queryResponse.getResults().get(0).getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
-            if (tripleCount > 0L) {
-                property.getDataTypes().add(new SchemaExtractorDataTypeInfo(DATA_TYPE_RDF_LANG_STRING, tripleCount, tripleCountBase));
+        if (hasEmptyDataType) {
+            query = selectQuery(request.getExactCountCalculations(), FIND_PROPERTY_DATA_TYPE_LANG_STRING, FIND_PROPERTY_DATA_TYPE_LANG_STRING_DISTINCT);
+            if (tripleCountBase == null) {
+                queryBuilder = new SparqlQueryBuilder(request.getQueries().get(query.name()), query)
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false);
+            } else {
+                query = selectQuery(request.getExactCountCalculations(), FIND_PROPERTY_DATA_TYPE_LANG_STRING_WITH_LIMITS, FIND_PROPERTY_DATA_TYPE_LANG_STRING_WITH_LIMITS_DISTINCT);
+                queryBuilder = new SparqlQueryBuilder(request.getQueries().get(query.name()), query)
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false)
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_LIMIT, tripleCountBase.toString());
+            }
+            queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
+            if (queryResponse.hasErrors()) {
+                schema.getErrors().add(new SchemaExtractorError(WARNING, property.getPropertyName(), query.name(), queryBuilder.getQueryString()));
+            }
+            if (!queryResponse.getResults().isEmpty()) {
+                Long tripleCount = SchemaUtil.getLongValueFromString(queryResponse.getResults().get(0).getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
+                if (tripleCount > 0L) {
+                    property.getDataTypes().add(new SchemaExtractorDataTypeInfo(DATA_TYPE_RDF_LANG_STRING, tripleCount, tripleCountBase));
+                }
             }
         }
     }
@@ -1985,36 +1990,41 @@ public class SchemaExtractor {
             if (queryResponse.hasErrors()) {
                 schema.getErrors().add(new SchemaExtractorError(WARNING, property.getPropertyName(), query.name(), queryBuilder.getQueryString()));
             }
+            boolean hasEmptyDataType = false;
             for (QueryResult queryResult : queryResponse.getResults()) {
                 String resultDataType = queryResult.getValue(SPARQL_QUERY_BINDING_NAME_DATA_TYPE);
                 Long tripleCount = SchemaUtil.getLongValueFromString(queryResult.getValue(SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
                 if (StringUtils.isNotEmpty(resultDataType)) {
                     sourceClass.getDataTypes().add(new SchemaExtractorDataTypeInfo(SchemaUtil.parseDataType(resultDataType), tripleCount, finalTripleCountBase));
+                } else {
+                    hasEmptyDataType = true;
                 }
             }
             // find language tag
-            query = selectQuery(request.getExactCountCalculations(), FIND_PROPERTY_DATA_TYPE_LANG_STRING_FOR_SOURCE, FIND_PROPERTY_DATA_TYPE_LANG_STRING_FOR_SOURCE_DISTINCT);
-            if (finalTripleCountBase == null) {
-                queryBuilder = new SparqlQueryBuilder(request.getQueries().get(query.name()), query)
-                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL, sourceClass.getClassName(), sourceClass.getIsLiteral())
-                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, sourceClass.getClassificationProperty())
-                        .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false);
-            } else {
-                query = selectQuery(request.getExactCountCalculations(), FIND_PROPERTY_DATA_TYPE_LANG_STRING_FOR_SOURCE_WITH_LIMITS, FIND_PROPERTY_DATA_TYPE_LANG_STRING_FOR_SOURCE_WITH_LIMITS_DISTINCT);
-                queryBuilder = new SparqlQueryBuilder(request.getQueries().get(query.name()), query)
-                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL, sourceClass.getClassName(), sourceClass.getIsLiteral())
-                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, sourceClass.getClassificationProperty())
-                        .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false)
-                        .withContextParam(SPARQL_QUERY_BINDING_NAME_LIMIT, finalTripleCountBase.toString());
-            }
-            queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
-            if (!queryResponse.getResults().isEmpty()) {
-                Long tripleCount = SchemaUtil.getLongValueFromString(queryResponse.getResults().get(0).getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
-                if (tripleCount > 0L) {
-                    sourceClass.getDataTypes().add(new SchemaExtractorDataTypeInfo(DATA_TYPE_RDF_LANG_STRING, tripleCount, finalTripleCountBase));
+            if (hasEmptyDataType) {
+                query = selectQuery(request.getExactCountCalculations(), FIND_PROPERTY_DATA_TYPE_LANG_STRING_FOR_SOURCE, FIND_PROPERTY_DATA_TYPE_LANG_STRING_FOR_SOURCE_DISTINCT);
+                if (finalTripleCountBase == null) {
+                    queryBuilder = new SparqlQueryBuilder(request.getQueries().get(query.name()), query)
+                            .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL, sourceClass.getClassName(), sourceClass.getIsLiteral())
+                            .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, sourceClass.getClassificationProperty())
+                            .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false);
+                } else {
+                    query = selectQuery(request.getExactCountCalculations(), FIND_PROPERTY_DATA_TYPE_LANG_STRING_FOR_SOURCE_WITH_LIMITS, FIND_PROPERTY_DATA_TYPE_LANG_STRING_FOR_SOURCE_WITH_LIMITS_DISTINCT);
+                    queryBuilder = new SparqlQueryBuilder(request.getQueries().get(query.name()), query)
+                            .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL, sourceClass.getClassName(), sourceClass.getIsLiteral())
+                            .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, sourceClass.getClassificationProperty())
+                            .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false)
+                            .withContextParam(SPARQL_QUERY_BINDING_NAME_LIMIT, finalTripleCountBase.toString());
                 }
-            } else if (queryResponse.hasErrors()) {
-                schema.getErrors().add(new SchemaExtractorError(WARNING, property.getPropertyName(), query.name(), queryBuilder.getQueryString()));
+                queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
+                if (!queryResponse.getResults().isEmpty()) {
+                    Long tripleCount = SchemaUtil.getLongValueFromString(queryResponse.getResults().get(0).getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
+                    if (tripleCount > 0L) {
+                        sourceClass.getDataTypes().add(new SchemaExtractorDataTypeInfo(DATA_TYPE_RDF_LANG_STRING, tripleCount, finalTripleCountBase));
+                    }
+                } else if (queryResponse.hasErrors()) {
+                    schema.getErrors().add(new SchemaExtractorError(WARNING, property.getPropertyName(), query.name(), queryBuilder.getQueryString()));
+                }
             }
         });
     }
