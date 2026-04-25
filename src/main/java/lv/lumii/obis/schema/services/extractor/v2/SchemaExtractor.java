@@ -45,6 +45,8 @@ public class SchemaExtractor {
     private enum LinkedClassType {SOURCE, TARGET, PAIR_SOURCE, PAIR_TARGET}
 
     private static final List<Long> sampleLimits = List.of(1000000L, 100000L, 10000L, 1000L);
+
+    private static final List<Long> limitsLarge = List.of(10000000L, 1000000L, 100000L, 10000L, 1000L);
     private static final List<Long> sampleLimitsSmall = List.of(300L, 100L, 30L, 10L);
 
     private static final String PROPERTY_PROCESSING = " - processing property %d/%d [%s]";
@@ -2131,7 +2133,7 @@ public class SchemaExtractor {
         while (isTrue(retry)) {
 
             Long finalTripleCountLimit = tripleCountLimit;
-            Long newLimit = sampleLimits.stream()
+            Long newLimit = limitsLarge.stream()
                     .filter(limit -> (finalTripleCountLimit == null || limit < finalTripleCountLimit) && limit <= property.getTripleCount()).findFirst().orElse(null);
             if (newLimit != null) {
                 tripleCountLimit = newLimit;
@@ -2291,7 +2293,7 @@ public class SchemaExtractor {
         boolean retry = true;
         Long tripleCountLimit = null;
         SparqlQueryBuilder queryBuilder = null;
-        List<Long> sampleLimitsReversed = Lists.reverse(sampleLimits);
+        List<Long> sampleLimitsReversed = Lists.reverse(limitsLarge);
 
         while (isTrue(retry)) {
 
@@ -2368,7 +2370,7 @@ public class SchemaExtractor {
         boolean retry = true;
         Long tripleCountLimit = null;
         SparqlQueryBuilder queryBuilder = null;
-        List<Long> sampleLimitsReversed = Lists.reverse(sampleLimits);
+        List<Long> sampleLimitsReversed = Lists.reverse(limitsLarge);
 
         while (isTrue(retry)) {
 
