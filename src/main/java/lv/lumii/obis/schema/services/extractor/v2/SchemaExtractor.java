@@ -2090,6 +2090,9 @@ public class SchemaExtractor {
             if (SchemaExtractorRequestDto.PropertyRelationsCheckMode.limits.equals(request.getPropertyPropertyLinkCheckBackupMode())) {
                 return executeLimitQueries(request, schema, properties, property, relatedProperties, linkType, queryWithLimit);
             }
+            if (SchemaExtractorRequestDto.PropertyRelationsCheckMode.limitsPlusSimple.equals(request.getPropertyPropertyLinkCheckBackupMode())) {
+                return executeLimitPlusSimpleQueries(request, schema, properties, property, relatedProperties, linkType, queryWithLimit, queryCheck);
+            }
             if (SchemaExtractorRequestDto.PropertyRelationsCheckMode.detailsBase.equals(request.getPropertyPropertyLinkCheckBackupMode())) {
                 return executeDetailsQueriesOption1(request, schema, properties, property, relatedProperties, linkType, queryCheckCount, queryCheck, queryCheckCountLimit);
             }
@@ -2157,6 +2160,60 @@ public class SchemaExtractor {
         schema.getErrors().add(new SchemaExtractorError(WARNING, property.getPropertyName(), queryWithLimit.name(),
                 (queryBuilder != null ? queryBuilder.getQueryString() : "no applicable limit value was found")));
         return 0;
+    }
+
+    private Integer executeLimitPlusSimpleQueries(@Nonnull SchemaExtractorRequestDto request, @Nonnull Schema schema, @Nonnull Map<String, SchemaExtractorPropertyNodeInfo> properties,
+                                                  @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull List<SchemaExtractorPropertyRelatedPropertyInfo> relatedProperties,
+                                                  @Nonnull SchemaExtractorPropertyRelatedPropertyInfo.LinkType linkType,
+                                                  @Nonnull SchemaExtractorQueries queryWithLimit, @Nonnull SchemaExtractorQueries queryCheck) {
+
+        Integer resultQuality = executeLimitQueries(request, schema, properties, property, relatedProperties, linkType, queryWithLimit);
+
+        List<String> processedProperties = relatedProperties.stream().map(SchemaExtractorPropertyRelatedPropertyInfo::getPropertyName)
+                .collect(Collectors.toList());
+
+        // find triple count base from the regular limit queries
+        Long tripleCountBase = null;
+        SchemaExtractorPropertyRelatedPropertyInfo exampleProperty = relatedProperties.stream().findFirst().orElse(null);
+        if (exampleProperty != null && exampleProperty.getTripleCountBase() != null) {
+            tripleCountBase = exampleProperty.getTripleCountBase();
+        }
+
+        for (Map.Entry<String, SchemaExtractorPropertyNodeInfo> entry : properties.entrySet()) {
+            SchemaExtractorPropertyNodeInfo property2 = entry.getValue();
+
+            // Step 0: Skip properties which were already processed in regular limit queries
+            if (processedProperties.contains(property2.getPropertyName())) {
+                continue;
+            }
+
+            // Step 1: Execute queryCheck (lightweight existence check)
+            SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(queryCheck.name()), queryCheck)
+                    .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false)
+                    .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY2_FULL, property2.getPropertyName(), false);
+            QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
+
+            if (!queryResponse.hasErrors() && queryResponse.getResults().isEmpty()) {
+                // No data exists for this pair — skip entirely
+                continue;
+            }
+
+            // Step 2: Data exists — add candidate
+            if (!queryResponse.hasErrors()) {
+                SchemaExtractorPropertyRelatedPropertyInfo candidate = new SchemaExtractorPropertyRelatedPropertyInfo(property2.getPropertyName(), null, null, linkType);
+                if (tripleCountBase != null) {
+                    candidate.setTripleCount(0L);
+                    candidate.setTripleCountBase(tripleCountBase);
+                }
+                relatedProperties.add(candidate);
+            } else {
+                // queryCheck itself failed with errors
+                SchemaExtractorError checkQueryError = new SchemaExtractorError(WARNING, property.getPropertyName(), queryCheck.name(), queryBuilder.getQueryString());
+                schema.getErrors().add(checkQueryError);
+            }
+        }
+
+        return resultQuality;
     }
 
     private Integer executeDetailsQueriesOption1(@Nonnull SchemaExtractorRequestDto request, @Nonnull Schema schema, @Nonnull Map<String, SchemaExtractorPropertyNodeInfo> properties,
