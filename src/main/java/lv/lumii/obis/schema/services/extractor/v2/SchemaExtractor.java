@@ -152,7 +152,7 @@ public class SchemaExtractor {
                                 break;
                             }
                         } else {
-                            schema.getErrors().add(new SchemaExtractorError(ERROR, "findInstanceCountForClass", query.name(), queryBuilder.getQueryString()));
+                            schema.getErrors().add(new SchemaExtractorError(ERROR, includedClass.getClassName(), query.name(), queryBuilder.getQueryString()));
                         }
                     }
 
@@ -365,7 +365,7 @@ public class SchemaExtractor {
                 return true;
             }
         } else {
-            schema.getErrors().add(new SchemaExtractorError(ERROR, "findInstanceCountForClass", query.name(), queryBuilder.getQueryString()));
+            schema.getErrors().add(new SchemaExtractorError(ERROR, classNameObject.getValue(), query.name(), queryBuilder.getQueryString()));
         }
         return false;
     }
@@ -382,7 +382,7 @@ public class SchemaExtractor {
                 clazz.setDistinctInstances(distinctCount);
             }
         } else {
-            schema.getErrors().add(new SchemaExtractorError(WARNING, "findDistinctInstanceCountForClass", FIND_INSTANCE_COUNT_FOR_CLASS_DISTINCT.name(), queryBuilder.getQueryString()));
+            schema.getErrors().add(new SchemaExtractorError(WARNING, clazz.getFullName(), FIND_INSTANCE_COUNT_FOR_CLASS_DISTINCT.name(), queryBuilder.getQueryString()));
         }
     }
 
@@ -466,7 +466,7 @@ public class SchemaExtractor {
                             addProperty(includedProperty.getPropertyName(), instancesCountStr, properties, request);
                         }
                     } else {
-                        schema.getErrors().add(new SchemaExtractorError(ERROR, "findInstanceCountForProperty", query.name(), queryBuilder.getQueryString()));
+                        schema.getErrors().add(new SchemaExtractorError(ERROR, includedProperty.getPropertyName(), query.name(), queryBuilder.getQueryString()));
                     }
                 }
             }
@@ -606,7 +606,7 @@ public class SchemaExtractor {
             QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
 
             if (queryResponse.hasErrors() || queryResponse.getResults().isEmpty()) {
-                schema.getErrors().add(new SchemaExtractorError(WARNING, "findPropertiesForClassWithoutLimit", FIND_PROPERTIES_FOR_CLASS.name(), queryBuilder.getQueryString()));
+                schema.getErrors().add(new SchemaExtractorError(WARNING, clazz.getFullName(), FIND_PROPERTIES_FOR_CLASS.name(), queryBuilder.getQueryString()));
                 for (Long limit : sampleLimits) {
                     queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_PROPERTIES_FOR_CLASS_WITH_LIMIT.name()), FIND_PROPERTIES_FOR_CLASS_WITH_LIMIT)
                             .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL, clazz.getFullName(), clazz.getIsLiteral())
@@ -614,7 +614,7 @@ public class SchemaExtractor {
                             .withContextParam(SPARQL_QUERY_BINDING_NAME_LIMIT, limit.toString());
                     queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
                     if (queryResponse.hasErrors() || queryResponse.getResults().isEmpty()) {
-                        schema.getErrors().add(new SchemaExtractorError(WARNING, "findPropertiesForClassWithLimit" + limit, FIND_PROPERTIES_FOR_CLASS_WITH_LIMIT.name(), queryBuilder.getQueryString()));
+                        schema.getErrors().add(new SchemaExtractorError(WARNING, clazz.getFullName(), FIND_PROPERTIES_FOR_CLASS_WITH_LIMIT.name(), queryBuilder.getQueryString()));
                         continue;
                     }
                     properties = addPropertyNames(queryResponse.getResults(), schema);
@@ -657,7 +657,7 @@ public class SchemaExtractor {
             }
         } else {
             addProperty(propertyName, "0", properties, request);
-            schema.getErrors().add(new SchemaExtractorError(ERROR, "findTripleCountForProperty", FIND_TRIPLE_COUNT_FOR_PROPERTY.name(), queryBuilder.getQueryString()));
+            schema.getErrors().add(new SchemaExtractorError(ERROR, propertyName, FIND_TRIPLE_COUNT_FOR_PROPERTY.name(), queryBuilder.getQueryString()));
         }
     }
 
@@ -672,7 +672,7 @@ public class SchemaExtractor {
                 property.setDistinctTriples(distinctCount);
             }
         } else {
-            schema.getErrors().add(new SchemaExtractorError(WARNING, "findTripleCountForProperty", FIND_TRIPLE_COUNT_FOR_PROPERTY_DISTINCT.name(), queryBuilder.getQueryString()));
+            schema.getErrors().add(new SchemaExtractorError(WARNING, property.getPropertyName(), FIND_TRIPLE_COUNT_FOR_PROPERTY_DISTINCT.name(), queryBuilder.getQueryString()));
         }
     }
 
@@ -1518,7 +1518,7 @@ public class SchemaExtractor {
                     long blankNodeCount = SchemaUtil.getLongValueFromString(queryResponse.getResults().get(0).getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
                     clazz.setBlankNodeCount(blankNodeCount);
                 } else {
-                    schema.getErrors().add(new SchemaExtractorError(WARNING, "determineBlankValuesForClass", COUNT_BLANK_INSTANCES_FOR_CLASS.name(), queryBuilder.getQueryString()));
+                    schema.getErrors().add(new SchemaExtractorError(WARNING, clazz.getFullName(), COUNT_BLANK_INSTANCES_FOR_CLASS.name(), queryBuilder.getQueryString()));
                 }
             }
         }
