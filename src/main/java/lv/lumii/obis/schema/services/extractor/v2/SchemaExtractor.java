@@ -2182,12 +2182,24 @@ public class SchemaExtractor {
         for (Map.Entry<String, SchemaExtractorPropertyNodeInfo> entry : properties.entrySet()) {
             SchemaExtractorPropertyNodeInfo property2 = entry.getValue();
 
-            // Step 0: Skip properties which were already processed in regular limit queries
+            // Step 0: Skip current property
+            if (property2.getPropertyName().equals(property.getPropertyName())) continue;
+
+            // Step 1: Skip properties which were already processed in regular LIMIT queries
             if (processedProperties.contains(property2.getPropertyName())) {
                 continue;
             }
 
-            // Step 1: Execute queryCheck (lightweight existence check)
+            // Step 2: Skip property2 if it was already processed and relationship with property was already identified (incoming/outgoing)
+            SchemaExtractorPropertyRelatedPropertyInfo potentialCandidate = connectionFound(property, property2, linkType);
+            if (potentialCandidate != null) {
+                if (potentialCandidate.getPropertyName() != null) {
+                    relatedProperties.add(potentialCandidate);
+                }
+                continue;
+            }
+
+            // Step 3: Execute queryCheck (lightweight existence check)
             SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(queryCheck.name()), queryCheck)
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false)
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY2_FULL, property2.getPropertyName(), false);
@@ -2198,7 +2210,7 @@ public class SchemaExtractor {
                 continue;
             }
 
-            // Step 2: Data exists — add candidate
+            // Step 4: Data exists — add candidate
             if (!queryResponse.hasErrors()) {
                 SchemaExtractorPropertyRelatedPropertyInfo candidate = new SchemaExtractorPropertyRelatedPropertyInfo(property2.getPropertyName(), null, null, linkType);
                 if (tripleCountBase != null) {
@@ -2228,6 +2240,8 @@ public class SchemaExtractor {
         for (Map.Entry<String, SchemaExtractorPropertyNodeInfo> entry : properties.entrySet()) {
             SchemaExtractorPropertyNodeInfo property2 = entry.getValue();
 
+            if (property2.getPropertyName().equals(property.getPropertyName())) continue;
+
             SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(queryCheckCount.name()), queryCheckCount)
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false)
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY2_FULL, property2.getPropertyName(), false);
@@ -2239,22 +2253,29 @@ public class SchemaExtractor {
                     relatedProperties.add(new SchemaExtractorPropertyRelatedPropertyInfo(property2.getPropertyName(), tripleCount, null, linkType));
                 }
             } else {
-                SchemaExtractorError checkQueryError = new SchemaExtractorError(WARNING, property.getPropertyName(), queryCheckCount.name(), queryBuilder.getQueryString());
+                SchemaExtractorError queryCheckCountError = new SchemaExtractorError(WARNING, property.getPropertyName(), queryCheckCount.name(), queryBuilder.getQueryString());
 
-                queryBuilder = new SparqlQueryBuilder(request.getQueries().get(queryCheck.name()), queryCheck)
-                        .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false)
-                        .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY2_FULL, property2.getPropertyName(), false);
-                queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
+                SchemaExtractorPropertyRelatedPropertyInfo potentialCandidate = connectionFound(property, property2, linkType);
+                if (potentialCandidate == null) {
+                    queryBuilder = new SparqlQueryBuilder(request.getQueries().get(queryCheck.name()), queryCheck)
+                            .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false)
+                            .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY2_FULL, property2.getPropertyName(), false);
+                    queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
 
-                if (!queryResponse.hasErrors() && queryResponse.getResults().isEmpty()) {
+                    if (!queryResponse.hasErrors() && queryResponse.getResults().isEmpty()) {
+                        continue;
+                    }
+                } else if (potentialCandidate.getPropertyName() == null) {
+                    // No data exists for this pair — skip entirely
                     continue;
                 }
-                schema.getErrors().add(checkQueryError);
+
+                schema.getErrors().add(queryCheckCountError);
                 completeData = false;
 
                 SchemaExtractorPropertyRelatedPropertyInfo candidate = new SchemaExtractorPropertyRelatedPropertyInfo(property2.getPropertyName(), null, null, linkType);
 
-                if (!queryResponse.hasErrors()) {
+                if (!queryResponse.hasErrors() || potentialCandidate != null) {
                     executeDetailsQueryBlockA(request, schema, property, candidate, linkType, queryCheckCountLimit);
                     relatedProperties.add(candidate);
                 } else {
@@ -2271,8 +2292,7 @@ public class SchemaExtractor {
         }
         if (completeData) return 5;
         if (completeDataWithCheck) return 3;
-        if (finalResultWithLimits != null) return finalResultWithLimits;
-        return 0;
+        return finalResultWithLimits;
     }
 
     private Integer executeDetailsQueriesOption2(@Nonnull SchemaExtractorRequestDto request, @Nonnull Schema schema, @Nonnull Map<String, SchemaExtractorPropertyNodeInfo> properties,
@@ -2287,18 +2307,29 @@ public class SchemaExtractor {
         for (Map.Entry<String, SchemaExtractorPropertyNodeInfo> entry : properties.entrySet()) {
             SchemaExtractorPropertyNodeInfo property2 = entry.getValue();
 
-            // Step 1: Execute queryCheck first (lightweight existence check)
-            SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(queryCheck.name()), queryCheck)
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false)
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY2_FULL, property2.getPropertyName(), false);
-            QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
+            if (property2.getPropertyName().equals(property.getPropertyName())) continue;
 
-            if (!queryResponse.hasErrors() && queryResponse.getResults().isEmpty()) {
+            SchemaExtractorPropertyRelatedPropertyInfo potentialCandidate = connectionFound(property, property2, linkType);
+            QueryResponse queryResponse = null;
+            SparqlQueryBuilder queryBuilder = null;
+
+            if (potentialCandidate == null) {
+                // Step 1: Execute queryCheck first (lightweight existence check)
+                queryBuilder = new SparqlQueryBuilder(request.getQueries().get(queryCheck.name()), queryCheck)
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false)
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY2_FULL, property2.getPropertyName(), false);
+                queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
+
+                if (!queryResponse.hasErrors() && queryResponse.getResults().isEmpty()) {
+                    // No data exists for this pair — skip entirely
+                    continue;
+                }
+            } else if (potentialCandidate.getPropertyName() == null) {
                 // No data exists for this pair — skip entirely
                 continue;
             }
 
-            if (!queryResponse.hasErrors()) {
+            if ((queryResponse != null && !queryResponse.hasErrors()) || potentialCandidate != null) {
                 // Step 2: Data exists — proceed with queryCheckCount to get the exact count
                 SparqlQueryBuilder countQueryBuilder = new SparqlQueryBuilder(request.getQueries().get(queryCheckCount.name()), queryCheckCount)
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false)
@@ -2339,8 +2370,44 @@ public class SchemaExtractor {
         }
         if (completeData) return 5;
         if (completeDataWithCheck) return 3;
-        if (finalResultWithLimits != null) return finalResultWithLimits;
-        return 0;
+        return finalResultWithLimits;
+    }
+
+    // Return candidate object if the connection was found
+    // Return candidate object with empty property name if the connection was not found and confirmed
+    // Return null when connection was not identified yet
+    private SchemaExtractorPropertyRelatedPropertyInfo connectionFound(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorPropertyNodeInfo property2,
+                                                                       @Nonnull SchemaExtractorPropertyRelatedPropertyInfo.LinkType linkType) {
+
+        if (SchemaExtractorPropertyRelatedPropertyInfo.LinkType.follower.equals(linkType)) {
+            return null;
+        }
+
+        List<SchemaExtractorPropertyRelatedPropertyInfo> property2Relations = new ArrayList<>();
+        Integer property2RelationQuality = null;
+        if (SchemaExtractorPropertyRelatedPropertyInfo.LinkType.incoming.equals(linkType)) {
+            property2Relations = property2.getIncomingProperties();
+            property2RelationQuality = property2.getHasIncomingPropertiesOK();
+        } else if (SchemaExtractorPropertyRelatedPropertyInfo.LinkType.outgoing.equals(linkType)) {
+            property2Relations = property2.getOutgoingProperties();
+            property2RelationQuality = property2.getHasOutgoingPropertiesOK();
+        }
+        boolean connectionFound = false;
+        for (SchemaExtractorPropertyRelatedPropertyInfo p : property2Relations) {
+            if (p.getPropertyName().equals(property.getPropertyName())) {
+                connectionFound = true;
+                break;
+            }
+        }
+        if (connectionFound) {
+            SchemaExtractorPropertyRelatedPropertyInfo candidate = new SchemaExtractorPropertyRelatedPropertyInfo(
+                    property2.getPropertyName(), null, null, linkType);
+            return candidate;
+        }
+        if (property2RelationQuality != null && property2RelationQuality.equals(5)) {
+            return new SchemaExtractorPropertyRelatedPropertyInfo(null, null, null, null);
+        }
+        return null;
     }
 
     private boolean executeDetailsQueryBlockA(@Nonnull SchemaExtractorRequestDto request, @Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property,
