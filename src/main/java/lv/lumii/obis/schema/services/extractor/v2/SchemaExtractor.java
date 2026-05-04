@@ -49,6 +49,7 @@ public class SchemaExtractor {
     private static final List<Long> limitsLarge = List.of(10000000L, 1000000L, 100000L, 10000L, 1000L);
     private static final List<Long> sampleLimitsSmall = List.of(300L, 100L, 30L, 10L);
 
+    private static final String PROPERTY_TYPE_PROCESSING = " - calculating property type %d/%d [%s]";
     private static final String PROPERTY_PROCESSING = " - processing property %d/%d [%s]";
 
     @Autowired
@@ -708,7 +709,6 @@ public class SchemaExtractor {
     protected void enrichProperties(@Nonnull Map<String, SchemaExtractorPropertyNodeInfo> properties, @Nonnull Schema schema,
                                     @Nonnull Map<String, SchemaExtractorClassNodeInfo> graphOfClasses, @Nonnull SchemaExtractorRequestDto request) {
         int totalCountOfProperties = properties.size();
-        int currentPropertyInd = 1;
 
         Map<String, Long> subjectsMap = null, objectsMap = null, blankNodeObjects = null, blankNodeSubjects = null;
 
@@ -731,15 +731,25 @@ public class SchemaExtractor {
             }
         }
 
+        // calculate property type separately (this information later is needed in other calculations)
+        int currentPropertyInd = 1;
+        for (Map.Entry<String, SchemaExtractorPropertyNodeInfo> entry : properties.entrySet()) {
+
+            SchemaExtractorPropertyNodeInfo property = entry.getValue();
+
+            log.info(request.getCorrelationId() + String.format(PROPERTY_TYPE_PROCESSING, currentPropertyInd++, totalCountOfProperties, property.getPropertyName()));
+
+            determinePropertyObjectTripleCount(schema, property, request, totalCountOfProperties);
+            determinePropertyDataTripleCount(schema, property, request, totalCountOfProperties);
+            determinePropertyType(property, request);
+        }
+        // enrich property with detailed information
+        currentPropertyInd = 1;
         for (Map.Entry<String, SchemaExtractorPropertyNodeInfo> entry : properties.entrySet()) {
 
             SchemaExtractorPropertyNodeInfo property = entry.getValue();
 
             log.info(request.getCorrelationId() + String.format(PROPERTY_PROCESSING, currentPropertyInd++, totalCountOfProperties, property.getPropertyName()));
-
-            determinePropertyObjectTripleCount(schema, property, request, totalCountOfProperties);
-            determinePropertyDataTripleCount(schema, property, request, totalCountOfProperties);
-            determinePropertyType(property, request);
 
             boolean foundSources = determinePropertySourcesWithTripleCount(schema, property, request);
             if (!foundSources) {
@@ -2194,6 +2204,11 @@ public class SchemaExtractor {
             // Step 0: Skip current property
             if (property2.getPropertyName().equals(property.getPropertyName())) continue;
 
+            // Step 0: skip data type properties for incoming relations
+            if (SchemaExtractorPropertyRelatedPropertyInfo.LinkType.incoming.equals(linkType) && !property2.getIsObjectProperty()) {
+                continue;
+            }
+
             // Step 1: Skip properties which were already processed in regular LIMIT queries
             if (processedProperties.contains(property2.getPropertyName())) {
                 continue;
@@ -2250,6 +2265,11 @@ public class SchemaExtractor {
             SchemaExtractorPropertyNodeInfo property2 = entry.getValue();
 
             if (property2.getPropertyName().equals(property.getPropertyName())) continue;
+
+            // skip data type properties for incoming relations
+            if (SchemaExtractorPropertyRelatedPropertyInfo.LinkType.incoming.equals(linkType) && !property2.getIsObjectProperty()) {
+                continue;
+            }
 
             SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(queryCheckCount.name()), queryCheckCount)
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false)
@@ -2317,6 +2337,11 @@ public class SchemaExtractor {
             SchemaExtractorPropertyNodeInfo property2 = entry.getValue();
 
             if (property2.getPropertyName().equals(property.getPropertyName())) continue;
+
+            // skip data type properties for incoming relations
+            if (SchemaExtractorPropertyRelatedPropertyInfo.LinkType.incoming.equals(linkType) && !property2.getIsObjectProperty()) {
+                continue;
+            }
 
             SchemaExtractorPropertyRelatedPropertyInfo potentialCandidate = connectionFound(property, property2, linkType);
             QueryResponse queryResponse = null;
