@@ -1396,6 +1396,9 @@ public class SchemaExtractor {
                         }
                     }
                 }
+                if (queryResponse.hasErrors()) {
+                    schema.getErrors().add(new SchemaExtractorError(INFO, property.getPropertyName(), query.name(), queryBuilder.getQueryString()));
+                }
             }
         }
 
@@ -1426,6 +1429,7 @@ public class SchemaExtractor {
                         }
                     } else {
                         // endpoint was not able to return class pairs with direct query, so trying to match each source and target class combination
+                        schema.getErrors().add(new SchemaExtractorError(INFO, property.getPropertyName(), query.name(), queryBuilder.getQueryString()));
                         log.info(request.getCorrelationId() + " - determinePropertySourceTargetPairsForEachSourceAndTargetCombination [" + property.getPropertyName() + "]");
                         property.getTargetClasses().forEach(targetClass -> {
                             SchemaExtractorQueries pairQuery = selectQuery(request.getExactCountCalculations(), FIND_PROPERTY_SOURCE_TARGET_PAIRS_FOR_SPECIFIC_CLASSES, FIND_PROPERTY_SOURCE_TARGET_PAIRS_FOR_SPECIFIC_CLASSES_DISTINCT);
@@ -2085,18 +2089,23 @@ public class SchemaExtractor {
             return 5;
         } else {
             if (SchemaExtractorRequestDto.PropertyRelationsCheckMode.none.equals(request.getPropertyPropertyLinkCheckBackupMode())) {
+                schema.getErrors().add(new SchemaExtractorError(WARNING, property.getPropertyName(), queryWithoutLimit.name(), queryBuilder.getQueryString()));
                 return 0;
             }
             if (SchemaExtractorRequestDto.PropertyRelationsCheckMode.limits.equals(request.getPropertyPropertyLinkCheckBackupMode())) {
+                schema.getErrors().add(new SchemaExtractorError(WARNING, property.getPropertyName(), queryWithoutLimit.name(), queryBuilder.getQueryString()));
                 return executeLimitQueries(request, schema, properties, property, relatedProperties, linkType, queryWithLimit);
             }
             if (SchemaExtractorRequestDto.PropertyRelationsCheckMode.limitsPlusSimple.equals(request.getPropertyPropertyLinkCheckBackupMode())) {
+                schema.getErrors().add(new SchemaExtractorError(WARNING, property.getPropertyName(), queryWithoutLimit.name(), queryBuilder.getQueryString()));
                 return executeLimitPlusSimpleQueries(request, schema, properties, property, relatedProperties, linkType, queryWithLimit, queryCheck);
             }
             if (SchemaExtractorRequestDto.PropertyRelationsCheckMode.detailsBase.equals(request.getPropertyPropertyLinkCheckBackupMode())) {
+                schema.getErrors().add(new SchemaExtractorError(INFO, property.getPropertyName(), queryWithoutLimit.name(), queryBuilder.getQueryString()));
                 return executeDetailsQueriesOption1(request, schema, properties, property, relatedProperties, linkType, queryCheckCount, queryCheck, queryCheckCountLimit);
             }
             if (SchemaExtractorRequestDto.PropertyRelationsCheckMode.details.equals(request.getPropertyPropertyLinkCheckBackupMode())) {
+                schema.getErrors().add(new SchemaExtractorError(INFO, property.getPropertyName(), queryWithoutLimit.name(), queryBuilder.getQueryString()));
                 return executeDetailsQueriesOption2(request, schema, properties, property, relatedProperties, linkType, queryCheckCount, queryCheck, queryCheckCountLimit);
             }
         }
