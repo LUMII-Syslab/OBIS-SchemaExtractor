@@ -411,10 +411,10 @@ public enum SchemaExtractorQueries {
     ),
 
     FIND_LABEL(
-            "SELECT (STR(?z) as ?value) (LANG(?z) as ?language) WHERE { ?x ?y ?z. FILTER(?x = <resource1>) FILTER(?y = <resource2>) }", QueryType.LARGE
+            "SELECT (STR(?z) as ?value) (LANG(?z) as ?language) WHERE { ?x ?y ?z. FILTER(?x = <resource1>) FILTER(?y = <resource2>) }", QueryType.SMALL
     ),
     FIND_LABEL_WITH_LANG(
-            "SELECT (STR(?z) as ?value) (LANG(?z) as ?language) WHERE { ?x ?y ?z. FILTER(?x = <resource1>) FILTER(?y = <resource2>) FILTER (customFilter) }", QueryType.LARGE
+            "SELECT (STR(?z) as ?value) (LANG(?z) as ?language) WHERE { ?x ?y ?z. FILTER(?x = <resource1>) FILTER(?y = <resource2>) FILTER (customFilter) }", QueryType.SMALL
     ),
 
     FIND_INSTANCE_NAMESPACES(

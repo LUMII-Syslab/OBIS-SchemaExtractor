@@ -42,15 +42,9 @@ public class SparqlEndpointProcessor {
      */
     @Nonnull
     public QueryResponse read(@Nonnull SchemaExtractorRequestDto request, @Nonnull SparqlQueryBuilder queryBuilder) {
-        return read(request, queryBuilder, true);
-    }
-
-    @Nonnull
-    public QueryResponse read(@Nonnull SchemaExtractorRequestDto request, @Nonnull SparqlQueryBuilder queryBuilder, boolean withRetry) {
         Long timeout = calculateTimeout(request, queryBuilder);
         return read(new SparqlEndpointConfig(request.getCorrelationId(), request.getEndpointUrl(), request.getGraphName(), request.getEnableLogging(),
-                        request.getPostMethod(), timeout, request.getDelayOnFailure(), request.getWaitingTimeForEndpoint()),
-                queryBuilder, withRetry);
+                        request.getPostMethod(), timeout, request.getDelayOnFailure(), request.getWaitingTimeForEndpoint()), queryBuilder);
     }
 
     public boolean checkEndpointHealthAndStopExecutionOnError(@Nonnull SparqlEndpointConfig request, boolean applyWaiting) {
@@ -101,7 +95,7 @@ public class SparqlEndpointProcessor {
 
     public boolean checkEndpointHealthQuery(@Nonnull SparqlEndpointConfig request) {
         SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(ENDPOINT_HEALTH_CHECK.getSparqlQuery(), ENDPOINT_HEALTH_CHECK);
-        QueryResponse response = read(new SparqlEndpointConfig(request.getCorrelationId(), request.getEndpointUrl(), request.getGraphName(), request.isEnableLogging(), request.isPostRequest(), null, null, null), queryBuilder, false);
+        QueryResponse response = read(new SparqlEndpointConfig(request.getCorrelationId(), request.getEndpointUrl(), request.getGraphName(), request.isEnableLogging(), request.isPostRequest(), null, null, null), queryBuilder);
         return !response.hasErrors() && !response.getResults().isEmpty();
     }
 
@@ -117,7 +111,7 @@ public class SparqlEndpointProcessor {
     }
 
     @Nonnull
-    private QueryResponse read(@Nonnull SparqlEndpointConfig request, @Nonnull SparqlQueryBuilder queryBuilder, boolean withRetry) {
+    private QueryResponse read(@Nonnull SparqlEndpointConfig request, @Nonnull SparqlQueryBuilder queryBuilder) {
 
         String query = queryBuilder.build();
         if (query == null) {
@@ -130,12 +124,12 @@ public class SparqlEndpointProcessor {
             log.info(queryBuilder.getQueryName() + (request.getTimeout() != null ? " (timeout: " + request.getTimeout() + "s)" : "") + "\n" + queryBuilder.getQueryString());
         }
 
-        return requestData(request, queryBuilder.getQueryName(), queryBuilder.getQueryString(), queryBuilder.getQueryType(), request.getTimeout(), 1, withRetry);
+        return requestData(request, queryBuilder.getQueryName(), queryBuilder.getQueryString(), queryBuilder.getQueryType(), request.getTimeout(), 1);
     }
 
     @Nonnull
     private QueryResponse requestData(@Nonnull SparqlEndpointConfig request, @Nonnull String queryName, @Nonnull String sparqlQuery, @Nullable QueryType queryType,
-                                      @Nullable Long timeout, int attempt, boolean withRetry) {
+                                      @Nullable Long timeout, int attempt) {
         LocalDateTime startTime = LocalDateTime.now();
         QueryResponse response = new QueryResponse();
         List<QueryResult> queryResults = null;
@@ -154,20 +148,15 @@ public class SparqlEndpointProcessor {
                 }
             }
         } catch (Exception e) {
-            if (withRetry) {
-                log.error(String.format("SPARQL Endpoint Exception status '%s'. This was attempt number %d for the query %s", e.getMessage(), attempt, queryName));
-                log.error("\n" + sparqlQuery);
-                if (attempt < RETRY_COUNT) {
-                    log.warn(String.format("SPARQL queries encountered errors, running validation queries to check the endpoint availability - [ %s ]",
-                            SchemaUtil.getEndpointLinkText(request.getEndpointUrl(), request.getGraphName())));
-                    boolean endpointIsHealthyWithoutRetries = checkEndpointHealthAndStopExecutionOnError(request, true);
-                    if (!endpointIsHealthyWithoutRetries || !QueryType.SMALL.equals(queryType)) {
-                        return requestData(request, queryName, sparqlQuery, queryType, timeout, ++attempt, withRetry);
-                    }
+            log.error(String.format("SPARQL Endpoint Exception status '%s'. This was attempt number %d for the query %s", e.getMessage(), attempt, queryName));
+            log.error("\n" + sparqlQuery);
+            if (attempt < RETRY_COUNT) {
+                log.warn(String.format("SPARQL queries encountered errors, running validation queries to check the endpoint availability - [ %s ]",
+                        SchemaUtil.getEndpointLinkText(request.getEndpointUrl(), request.getGraphName())));
+                boolean endpointIsHealthyWithoutRetries = checkEndpointHealthAndStopExecutionOnError(request, true);
+                if (!endpointIsHealthyWithoutRetries || !QueryType.SMALL.equals(queryType)) {
+                    return requestData(request, queryName, sparqlQuery, queryType, timeout, ++attempt);
                 }
-            } else {
-                log.error(String.format("SPARQL Endpoint Exception status '%s' for the query %s", e.getMessage(), queryName));
-                log.error("\n" + sparqlQuery);
             }
         } finally {
             queryExecutor.close();
@@ -290,7 +279,7 @@ public class SparqlEndpointProcessor {
             log.info(queryName + "\n" + sparqlQuery);
         }
 
-        return requestData(request, queryName, sparqlQuery, null, null, 1, withRetry);
+        return requestData(request, queryName, sparqlQuery, null, null, 1);
     }
 
 }
