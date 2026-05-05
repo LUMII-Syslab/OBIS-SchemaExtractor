@@ -48,8 +48,11 @@ public class SchemaExtractorRequestBuilder {
         requestDto.setValidateClassesList(request.getValidateClassesList());
         requestDto.setValidatePropertiesList(request.getValidatePropertiesList());
         requestDto.setCalculatePropertyPropertyRelations(request.getCalculatePropertyPropertyRelations());
+        requestDto.setPropertyPropertyLinkCheckBackupMode(Enums.getIfPresent(SchemaExtractorRequestDto.PropertyRelationsCheckMode.class, request.getPropertyPropertyLinkCheckBackupMode().name()).orNull());
         requestDto.setCalculateSourceAndTargetPairs(request.getCalculateSourceAndTargetPairs());
         requestDto.setCalculateDomainsAndRanges(request.getCalculateDomainsAndRanges());
+        requestDto.setIncludeDistinctSubjectsAndObjects(Enums.getIfPresent(SchemaExtractorRequestDto.DistinctSubjectsAndObjectsMode.class, request.getIncludeDistinctSubjectsAndObjects().name()).orNull());
+        requestDto.setComputeBlankNodeStatistics(Enums.getIfPresent(SchemaExtractorRequestDto.BlankNodeMode.class, request.getComputeBlankNodeStatistics().name()).orNull());
         requestDto.setCalculateImportanceIndexes(Enums.getIfPresent(SchemaExtractorRequestDto.ImportantIndexesMode.class, request.getCalculateImportanceIndexes().name()).orNull());
         requestDto.setCalculateClosedClassSets(request.getCalculateClosedClassSets());
         requestDto.setCalculateCardinalities(Enums.getIfPresent(SchemaExtractorRequestDto.CalculatePropertyFeatureMode.class, request.getCalculateCardinalities().name()).orNull());
@@ -66,6 +69,7 @@ public class SchemaExtractorRequestBuilder {
         requestDto.setClassificationPropertiesWithConnectionsOnly(applyClassificationProperties(request.getClassificationPropertiesWithConnectionsOnly(), false));
         requestDto.setSimpleClassificationProperties(applyClassificationProperties(request.getSimpleClassificationProperties(), false));
         requestDto.setExactCountCalculations(Enums.getIfPresent(SchemaExtractorRequestDto.DistinctQueryMode.class, request.getExactCountCalculations().name()).orNull());
+        requestDto.setCalculateDistinctTriples(request.getCalculateDistinctTriples());
         requestDto.setMaxInstanceLimitForExactCount(request.getMaxInstanceLimitForExactCount());
         requestDto.setExcludedNamespaces(request.getExcludedNamespaces());
         requestDto.setLargeQueryTimeout(request.getLargeQueryTimeout());

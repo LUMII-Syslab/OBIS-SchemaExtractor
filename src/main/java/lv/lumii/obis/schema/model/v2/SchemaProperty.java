@@ -15,15 +15,26 @@ import java.util.Set;
 public class SchemaProperty extends SchemaElement {
 
     private Integer maxCardinality;
+    private Integer maxCardinalityAssertionSize;
     private Integer maxInverseCardinality;
+    private Integer maxInverseCardinalityAssertionSize;
     private Long tripleCount;
+    private Long distinctTriples;
     private Long dataTripleCount;
     private Long objectTripleCount;
+    private Long blankNodeObjects;
+    private Long blankNodeSubjects;
+    private Long distinctSubjectsCount;
+    private Long distinctObjectsCount;
     private Boolean closedDomain;
+    private Integer closedSourceAssertedSize;
     private Boolean closedRange;
-    private Boolean hasOutgoingPropertiesOK;
-    private Boolean hasIncomingPropertiesOK;
-    private Boolean hasFollowersOK;
+    private Integer closedTargetAssertedSize;
+    private Integer sourceClassesOK;
+    private Integer targetClassesOK;
+    private Integer hasOutgoingPropertiesOK;
+    private Integer hasIncomingPropertiesOK;
+    private Integer hasFollowersOK;
 
     @JsonProperty("DataTypes")
     private List<DataType> dataTypes;

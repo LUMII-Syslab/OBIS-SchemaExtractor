@@ -6,8 +6,11 @@ requireClasses: true
 validateClassesList: true
 validatePropertiesList: true
 calculatePropertyPropertyRelations: false
+propertyPropertyLinkCheckBackupMode: "details"
 calculateSourceAndTargetPairs: true
 calculateDomainsAndRanges: true
+includeDistinctSubjectsAndObjects: "no"
+computeBlankNodeStatistics: "no"
 calculateImportanceIndexes: "basic"
 calculateClosedClassSets: true
 calculateDataTypes: "propertyLevelAndClassContext"
@@ -18,6 +21,7 @@ sampleLimitForInstanceNamespacesCalculation: 1000
 minimalAnalyzedClassSize: 1
 addIntersectionClasses: "yes"
 exactCountCalculations: "no"
+calculateDistinctTriples: true
 maxInstanceLimitForExactCount: 1000000
 principalClassificationProperties:
 - "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"

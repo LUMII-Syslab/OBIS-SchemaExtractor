@@ -18,6 +18,9 @@ public class SchemaExtractorPropertyLinkedClassInfo {
 
     private Boolean isLiteral;
 
+    private Integer sourcePrincipalAssertedSize;
+    private Integer targetPrincipalAssertedSize;
+
     @Nonnull
     public Long getClassTotalTripleCount() {
         if (classTotalTripleCount == null) {

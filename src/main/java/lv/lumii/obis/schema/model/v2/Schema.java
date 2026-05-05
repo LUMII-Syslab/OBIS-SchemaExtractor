@@ -48,6 +48,11 @@ public class Schema {
     @JsonProperty("HasNotes")
     private Boolean hasNotes;
 
+    @JsonIgnore
+    private Boolean hasBlankNodeObjects;
+    @JsonIgnore
+    private Boolean hasBlankNodeSubjects;
+
     @JsonProperty("Errors")
     private List<SchemaExtractorError> errors;
 
@@ -91,7 +96,7 @@ public class Schema {
 
     @Nonnull
     public Boolean getHasWarnings() {
-        hasWarnings = hasErrorFlag(SchemaExtractorError.ErrorLevel.WARNING);
+        hasWarnings = hasErrorFlag(SchemaExtractorError.ErrorLevel.WARNING) || hasErrorFlag(SchemaExtractorError.ErrorLevel.WARNING_LOW);
         return hasWarnings;
     }
 

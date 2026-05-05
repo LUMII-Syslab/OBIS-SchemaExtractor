@@ -23,6 +23,12 @@ public class SchemaExtractorRequestNew {
 
     public enum InstanceNamespacesMode {no, detailed, overview}
 
+    public enum DistinctSubjectsAndObjectsMode {no, propertyLevel, yes}
+
+    public enum BlankNodeMode {no, targetsOnly, full}
+
+    public enum PropertyRelationsCheckMode {none, limits, limitsPlus, limitsPlusSimple, detailsBase, details}
+
     public enum NoClassesLoggingOptions {yes, no, sourcesOnly}
 
     @ApiParam(access = "10", value = "SPARQL Endpoint URL, for example, http://localhost:8890/sparql", required = true)
@@ -51,11 +57,20 @@ public class SchemaExtractorRequestNew {
     @ApiParam(access = "40", value = "Calculate property-property adjacency (following properties, same subject, same object). Useful for auto-completion. Currently not used in schema visualization. Can be time consuming for larger schemas", defaultValue = "true", required = true)
     private Boolean calculatePropertyPropertyRelations;
 
+    @ApiParam(access = "41", value = "Set backup validation queries to calculate property-property relations", defaultValue = "details", required = true)
+    private PropertyRelationsCheckMode propertyPropertyLinkCheckBackupMode;
+
     @ApiParam(access = "50", value = "Calculate pairs of source and target classes for properties (creates finer-grained schemas; used as a source of statistics in visual schema diagrams)", defaultValue = "true", required = true)
     private Boolean calculateSourceAndTargetPairs;
 
     @ApiParam(access = "60", value = "Calculate domain and range classes for properties", defaultValue = "true", required = true)
     private Boolean calculateDomainsAndRanges;
+
+    @ApiParam(hidden = true, access = "61", value = "Calculate distinct subjects and objects count for property and/or for property source and target classes", defaultValue = "propertyLevel", required = true)
+    private DistinctSubjectsAndObjectsMode includeDistinctSubjectsAndObjects;
+
+    @ApiParam(hidden = true, access = "62", value = "Calculate blank node statistics", defaultValue = "no", required = true)
+    private BlankNodeMode computeBlankNodeStatistics;
 
     @ApiParam(access = "70", value = "Calculate ascription points (principal classes) for properties (strongly recommended, if schema diagrams are envisaged). Use 'class coverage', if all class-to-property connections are to be marked for the class itself, or some its superclass or subclass (can make a difference in the case of overlapping classes)", defaultValue = "basic", required = true)
     private ImportantIndexesMode calculateImportanceIndexes;
@@ -95,6 +110,8 @@ public class SchemaExtractorRequestNew {
 
     @ApiParam(hidden = true, access = "210", value = "Add DISTINCT in queries (can be used for classes and properties of less than 10M size, if entity/triple duplications are observed otherwise in the schemas)", defaultValue = "no", required = true)
     private DistinctQueryMode exactCountCalculations;
+    @ApiParam(hidden = true, access = "211", value = "Calculate distinct triples count for classes and properties)", defaultValue = "yes", required = true)
+    private Boolean calculateDistinctTriples;
 
     @ApiParam(hidden = true, access = "220", value = "Total instance count limit for exact count calculations", defaultValue = "10000000", required = false)
     private Long maxInstanceLimitForExactCount;
@@ -151,6 +168,20 @@ public class SchemaExtractorRequestNew {
             calculateDomainsAndRanges = Boolean.FALSE;
         }
         return calculateDomainsAndRanges;
+    }
+
+    public DistinctSubjectsAndObjectsMode getIncludeDistinctSubjectsAndObjects() {
+        if (includeDistinctSubjectsAndObjects == null) {
+            includeDistinctSubjectsAndObjects = DistinctSubjectsAndObjectsMode.propertyLevel;
+        }
+        return includeDistinctSubjectsAndObjects;
+    }
+
+    public BlankNodeMode getComputeBlankNodeStatistics() {
+        if (computeBlankNodeStatistics == null) {
+            computeBlankNodeStatistics = BlankNodeMode.no;
+        }
+        return computeBlankNodeStatistics;
     }
 
     public Boolean getCalculateClosedClassSets() {
@@ -253,6 +284,14 @@ public class SchemaExtractorRequestNew {
     }
 
     @Nonnull
+    public Boolean getCalculateDistinctTriples() {
+        if (calculateDistinctTriples == null) {
+            calculateDistinctTriples = Boolean.TRUE;
+        }
+        return calculateDistinctTriples;
+    }
+
+    @Nonnull
     public Boolean getRequireClasses() {
         if (requireClasses == null) {
             requireClasses = Boolean.TRUE;
@@ -282,5 +321,13 @@ public class SchemaExtractorRequestNew {
             crossCheckTargetClassesOnNonLiteralPropertyObjectCheckFailure = Boolean.FALSE;
         }
         return crossCheckTargetClassesOnNonLiteralPropertyObjectCheckFailure;
+    }
+
+    @Nonnull
+    public PropertyRelationsCheckMode getPropertyPropertyLinkCheckBackupMode() {
+        if (propertyPropertyLinkCheckBackupMode == null) {
+            propertyPropertyLinkCheckBackupMode = PropertyRelationsCheckMode.details;
+        }
+        return propertyPropertyLinkCheckBackupMode;
     }
 }

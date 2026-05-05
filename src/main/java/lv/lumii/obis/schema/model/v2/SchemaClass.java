@@ -26,6 +26,10 @@ public class SchemaClass extends SchemaElement {
 
     private Long instanceCount;
 
+    private Long distinctInstances;
+
+    private Long blankNodeCount;
+
     private Long incomingTripleCount;
 
     private String dataType;
@@ -35,6 +39,9 @@ public class SchemaClass extends SchemaElement {
     private Boolean propertiesInSchema;
 
     private String classificationProperty;
+
+    private Integer incomingPropertiesOK;
+    private Integer outgoingPropertiesOK;
 
     @JsonProperty("InstanceNamespaces")
     private List<InstanceNamespace> instanceNamespaces;

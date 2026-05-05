@@ -44,6 +44,12 @@ public class SchemaExtractorRequestDto {
 
     public enum InstanceNamespacesMode {no, detailed, overview}
 
+    public enum DistinctSubjectsAndObjectsMode {no, propertyLevel, yes}
+
+    public enum BlankNodeMode {no, targetsOnly, full}
+
+    public enum PropertyRelationsCheckMode {none, limits, limitsPlus, limitsPlusSimple, detailsBase, details}
+
     public enum NoClassesLoggingOptions {yes, no, sourcesOnly}
 
     private String correlationId;
@@ -57,8 +63,11 @@ public class SchemaExtractorRequestDto {
     private Boolean validateClassesList;
     private Boolean validatePropertiesList;
     private Boolean calculatePropertyPropertyRelations;
+    private PropertyRelationsCheckMode propertyPropertyLinkCheckBackupMode;
     private Boolean calculateSourceAndTargetPairs;
     private Boolean calculateDomainsAndRanges;
+    private DistinctSubjectsAndObjectsMode includeDistinctSubjectsAndObjects;
+    private BlankNodeMode computeBlankNodeStatistics;
     private ImportantIndexesMode calculateImportanceIndexes;
     private Boolean calculateClosedClassSets;
     private CalculatePropertyFeatureMode calculateCardinalities;
@@ -78,6 +87,7 @@ public class SchemaExtractorRequestDto {
     private List<String> simpleClassificationProperties;
     private ShowIntersectionClassesMode addIntersectionClasses;
     private DistinctQueryMode exactCountCalculations;
+    private Boolean calculateDistinctTriples;
     @JsonIgnore
     private Long maxInstanceLimitForExactCount;
     private List<SchemaExtractorRequestedLabelDto> includedLabels;
