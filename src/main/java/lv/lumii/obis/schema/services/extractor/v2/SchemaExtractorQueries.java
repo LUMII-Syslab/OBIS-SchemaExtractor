@@ -28,11 +28,15 @@ public enum SchemaExtractorQueries {
                     + "?x <classificationPropertyB> ?classB." + "\n\t"
                     + "FILTER (?classA = <sourceClass>)" + "\n\t"
                     + "FILTER (?classA != ?classB)" + "\n"
-                    + "} GROUP BY ?classB", QueryType.SMALL
+                    + "} GROUP BY ?classB", QueryType.LARGE
     ),
 
     CHECK_CLASS_INTERSECTION(
             "SELECT (COUNT(DISTINCT ?x) as ?instances) where {?x <classificationPropertyA> <classA>. ?x <classificationPropertyB> <classB>}", QueryType.SMALL
+    ),
+
+    CHECK_CLASS_INTERSECTION_PLAIN(
+            "SELECT ?x where { ?x <classificationPropertyA> <classA>. ?x <classificationPropertyB> <classB> } LIMIT 1", QueryType.SMALL
     ),
 
     CHECK_SUPERCLASS(

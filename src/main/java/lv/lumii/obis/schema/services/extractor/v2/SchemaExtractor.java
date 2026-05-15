@@ -41,6 +41,7 @@ import static lv.lumii.obis.schema.services.extractor.dto.SchemaExtractorError.E
 public class SchemaExtractor {
 
     private static final Comparator<String> nullSafeStringComparator = Comparator.nullsLast(String::compareTo);
+    private static final Comparator<Long> nullSafeLongComparator = Comparator.nullsLast(Long::compareTo);
 
     private enum LinkedClassType {SOURCE, TARGET, PAIR_SOURCE, PAIR_TARGET}
 
@@ -3626,7 +3627,8 @@ public class SchemaExtractor {
                                                                   @Nonnull Map<String, SchemaExtractorClassNodeInfo> graphOfClasses, @Nonnull SchemaExtractorRequestDto request) {
         QueryResponse queryResponse;
         // order classes by instance count ascending
-        List<SchemaClass> sortedClasses = sortClassesByTripleCountDesc(classes, graphOfClasses);
+        List<SchemaClass> sortedClasses = sortClassesByTripleCountAsc(classes);
+        Map<String, List<String>> processedClasses = new HashMap<>();
         for (SchemaClass classA : sortedClasses) {
             boolean hasErrors = false;
             for (String classificationProperty : request.getPrincipalClassificationProperties()) {
@@ -3641,40 +3643,95 @@ public class SchemaExtractor {
                     queryBuilder.withContextParam(SPARQL_QUERY_BINDING_NAME_VALUES, StringUtils.EMPTY);
                 }
                 queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
-                if (!queryResponse.getResults().isEmpty()) {
+                if (!queryResponse.hasErrors() && !queryResponse.getResults().isEmpty()) {
                     updateGraphOfClassesWithNeighbors(schema, classA.getFullName(), queryResponse.getResults(), graphOfClasses, request);
                     queryResponse.getResults().clear();
+                    hasErrors = false;
+                    break;
                 }
                 if (isFalse(hasErrors)) {
                     hasErrors = queryResponse.hasErrors();
                 }
             }
+            if (isFalse(hasErrors)) {
+                updateProcessedClasses(processedClasses, classA, null);
+            }
 
             if (hasErrors) {
-                classes.forEach(classB -> {
-                    if (!classA.getFullName().equals(classB.getFullName())
-                            && isNotExcludedResource(classB.getFullName(), request.getExcludedNamespaces())
-                            && (isNotFalse(classA.getPropertiesInSchema()) || isNotFalse(classB.getPropertiesInSchema()))
-                    ) {
-                        SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_CLASS_INTERSECTION.name()), CHECK_CLASS_INTERSECTION)
+                for (SchemaClass classB : sortedClasses) {
+                    // skip the same class
+                    if (classA.getFullName().equals(classB.getFullName())) continue;
+                    // skip the class which was already successfully processed from the opposite direction
+                    if (processedClasses.containsKey(classB.getFullName())) {
+                        if (processedClasses.get(classB.getFullName()) == null || processedClasses.get(classB.getFullName()).contains(classA.getFullName())) {
+                            continue;
+                        }
+                    }
+                    if (isNotExcludedResource(classB.getFullName(), request.getExcludedNamespaces())
+                            && (isNotFalse(classA.getPropertiesInSchema()) || isNotFalse(classB.getPropertiesInSchema()))) {
+                        SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_CLASS_INTERSECTION_PLAIN.name()), CHECK_CLASS_INTERSECTION_PLAIN)
                                 .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_A_FULL, classA.getFullName(), classA.getIsLiteral())
                                 .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_B_FULL, classB.getFullName(), classB.getIsLiteral())
                                 .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_A, classA.getClassificationProperty())
                                 .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_B, classB.getClassificationProperty());
                         QueryResponse checkQueryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
+                        if (!checkQueryResponse.hasErrors()) {
+                            updateProcessedClasses(processedClasses, classA, classB);
+                        } else {
+                            // Error message: Check class intersection failed. Assume no intersection
+                            schema.getErrors().add(new SchemaExtractorError(WARNING, classA.getFullName(), CHECK_CLASS_INTERSECTION_PLAIN.name(), queryBuilder.getQueryString()));
+                        }
                         if (!checkQueryResponse.hasErrors() && !checkQueryResponse.getResults().isEmpty()) {
-                            if (graphOfClasses.containsKey(classA.getFullName())) {
-                                Long intersectionCount = SchemaUtil.getLongValueFromString(checkQueryResponse.getResults().get(0).getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
-                                if (intersectionCount > 0L) {
-                                    graphOfClasses.get(classA.getFullName()).getNeighbors().add(new SchemaExtractorIntersectionClassDto(classB.getFullName(), intersectionCount));
-                                }
+                            queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_CLASS_INTERSECTION.name()), CHECK_CLASS_INTERSECTION)
+                                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_A_FULL, classA.getFullName(), classA.getIsLiteral())
+                                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_B_FULL, classB.getFullName(), classB.getIsLiteral())
+                                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_A, classA.getClassificationProperty())
+                                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_B, classB.getClassificationProperty());
+                            QueryResponse countQueryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
+                            if (!countQueryResponse.hasErrors() && !countQueryResponse.getResults().isEmpty()) {
+                                Long intersectionCount = SchemaUtil.getLongValueFromString(countQueryResponse.getResults().get(0).getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
+                                addNeighbor(graphOfClasses, classA.getFullName(), classB.getFullName(), intersectionCount);
+                            } else if (countQueryResponse.hasErrors()) {
+                                // Error message: Check class intersection: Unable to obtain statistics
+                                schema.getErrors().add(new SchemaExtractorError(WARNING, classA.getFullName(), CHECK_CLASS_INTERSECTION.name(), queryBuilder.getQueryString()));
                             }
-                        } else if (checkQueryResponse.hasErrors()) {
-                            schema.getErrors().add(new SchemaExtractorError(ERROR, classA.getFullName(), CHECK_CLASS_INTERSECTION.name(), queryBuilder.getQueryString()));
                         }
                     }
-                });
+                }
             }
+        }
+    }
+
+    private void updateProcessedClasses(@Nonnull Map<String, List<String>> processedClasses, @Nonnull SchemaClass key, @Nullable SchemaClass neighbor) {
+        String keyName = key.getFullName();
+        if (neighbor == null) {
+            processedClasses.put(keyName, null);
+            return;
+        }
+        processedClasses.computeIfAbsent(keyName, k -> new ArrayList<>()).add(neighbor.getFullName());
+    }
+
+    private void addNeighbor(@Nonnull Map<String, SchemaExtractorClassNodeInfo> graphOfClasses, @Nonnull String classA, @Nonnull String classB,
+                             @Nonnull Long intersectionCount) {
+
+        if (intersectionCount <= 0L) {
+            return;
+        }
+
+        SchemaExtractorClassNodeInfo nodeA = graphOfClasses.get(classA);
+        SchemaExtractorClassNodeInfo nodeB = graphOfClasses.get(classB);
+        if (nodeA == null || nodeB == null) {
+            return;
+        }
+
+        addNeighborIfAbsent(nodeA, classB, intersectionCount);
+        addNeighborIfAbsent(nodeB, classA, intersectionCount);
+    }
+
+    private void addNeighborIfAbsent(@Nonnull SchemaExtractorClassNodeInfo node, @Nonnull String neighborClassName, @Nonnull Long intersectionCount) {
+        boolean exists = node.getNeighbors().stream().anyMatch(n -> neighborClassName.equals(n.getClassName()));
+        if (!exists) {
+            node.getNeighbors().add(new SchemaExtractorIntersectionClassDto(neighborClassName, intersectionCount));
         }
     }
 
@@ -3689,9 +3746,7 @@ public class SchemaExtractor {
                     && (includedClasses.isEmpty() || includedClasses.contains(classB))
                     && findClass(schema.getClasses(), classB) != null) {
                 Long intersectionCount = SchemaUtil.getLongValueFromString(queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
-                if (graphOfClasses.containsKey(sourceClass)) {
-                    graphOfClasses.get(sourceClass).getNeighbors().add(new SchemaExtractorIntersectionClassDto(classB, intersectionCount));
-                }
+                addNeighbor(graphOfClasses, sourceClass, classB, intersectionCount);
             }
         }
     }
@@ -3754,6 +3809,21 @@ public class SchemaExtractor {
                     int compareResult = neighborInstances2.compareTo(neighborInstances1);
                     if (compareResult == 0) {
                         return nullSafeStringComparator.compare(class1.getClassName(), class2.getClassName());
+                    } else {
+                        return compareResult;
+                    }
+                })
+                .collect(Collectors.toList());
+    }
+
+    @Nonnull
+    protected List<SchemaClass> sortClassesByTripleCountAsc(@Nonnull List<SchemaClass> classes) {
+        // sort classes by triple count (ascending)
+        return classes.stream()
+                .sorted((c1, c2) -> {
+                    int compareResult = nullSafeLongComparator.compare(c1.getInstanceCount(), c2.getInstanceCount());
+                    if (compareResult == 0) {
+                        return nullSafeStringComparator.compare(c1.getFullName(), c2.getFullName());
                     } else {
                         return compareResult;
                     }
@@ -3879,6 +3949,7 @@ public class SchemaExtractor {
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_B, neighborClassInfo.getClassificationProperty());
             QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
             if (queryResponse.hasErrors()) {
+                // Error message: Check superclass failed. Assume no superclass relation.
                 schema.getErrors().add(new SchemaExtractorError(WARNING, currentClass.getFullName(), CHECK_SUPERCLASS.name(), queryBuilder.getQueryString()));
             }
             if (!queryResponse.getResults().isEmpty()) {
