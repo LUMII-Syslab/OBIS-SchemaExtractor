@@ -275,6 +275,9 @@ public enum SchemaExtractorQueries {
     FIND_PROPERTY_SOURCE_TARGET_PAIRS_FOR_SPECIFIC_CLASSES_DISTINCT(
             "SELECT (COUNT(?x) as ?instances) WHERE { {SELECT DISTINCT ?x ?y WHERE {?x <property> ?y. ?x <classificationPropertySource> <sourceClass>. ?y <classificationPropertyTarget> <targetClass>.}}}", QueryType.SMALL
     ),
+    CHECK_PROPERTY_SOURCE_TARGET_PAIR(
+            "SELECT * WHERE {?x <property> ?y. ?x <classificationPropertySource> <sourceClass>. ?y <classificationPropertyTarget> <targetClass>.} LIMIT 1", QueryType.SMALL
+    ),
 
     COUNT_PROPERTY_URL_VALUES(
             "SELECT (COUNT(?x) as ?instances) WHERE {?x <property> ?y. FILTER(!isLiteral(?y)) }", QueryType.LARGE

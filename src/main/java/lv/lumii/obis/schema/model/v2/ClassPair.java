@@ -4,37 +4,42 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import lombok.Setter;
 
-@Setter @Getter
+@Setter
+@Getter
 public class ClassPair {
-	
-	@JsonProperty("SourceClass")
-	private String sourceClass;
 
-	@JsonProperty("TargetClass")
-	private String targetClass;
+    @JsonProperty("SourceClass")
+    private String sourceClass;
 
-	private Long tripleCount;
+    @JsonProperty("TargetClass")
+    private String targetClass;
 
-	private Boolean isPrincipalSource;
-	private Integer sourcePrincipalAssertedSize;
+    private Long tripleCount;
 
-	private Integer sourceImportanceIndex;
+    private Boolean isPrincipalSource;
+    private Integer sourcePrincipalAssertedSize;
 
-	private Boolean isPrincipalTarget;
-	private Integer targetPrincipalAssertedSize;
+    private Integer sourceImportanceIndex;
 
-	private Integer targetImportanceIndex;
-	
-	public ClassPair(String sourceClass, String targetClass, Long tripleCount, Boolean isPrincipalSource, Integer sourcePrincipalAssertedSize,
-					 Integer sourceImportanceIndex, Boolean isPrincipalTarget, Integer targetPrincipalAssertedSize, Integer targetImportanceIndex) {
-		this.sourceClass = sourceClass;
-		this.targetClass = targetClass;
-		this.tripleCount = tripleCount;
-		this.isPrincipalSource = isPrincipalSource;
-		this.sourcePrincipalAssertedSize = sourcePrincipalAssertedSize;
-		this.sourceImportanceIndex = sourceImportanceIndex;
-		this.isPrincipalTarget = isPrincipalTarget;
-		this.targetPrincipalAssertedSize = targetPrincipalAssertedSize;
-		this.targetImportanceIndex = targetImportanceIndex;
-	}
+    private Boolean isPrincipalTarget;
+    private Integer targetPrincipalAssertedSize;
+
+    private Integer targetImportanceIndex;
+
+    private Boolean isAssumed;
+
+    public ClassPair(String sourceClass, String targetClass, Long tripleCount, Boolean isPrincipalSource, Integer sourcePrincipalAssertedSize,
+                     Integer sourceImportanceIndex, Boolean isPrincipalTarget, Integer targetPrincipalAssertedSize, Integer targetImportanceIndex,
+                     Boolean isAssumed) {
+        this.sourceClass = sourceClass;
+        this.targetClass = targetClass;
+        this.tripleCount = tripleCount;
+        this.isPrincipalSource = isPrincipalSource;
+        this.sourcePrincipalAssertedSize = sourcePrincipalAssertedSize;
+        this.sourceImportanceIndex = sourceImportanceIndex;
+        this.isPrincipalTarget = isPrincipalTarget;
+        this.targetPrincipalAssertedSize = targetPrincipalAssertedSize;
+        this.targetImportanceIndex = targetImportanceIndex;
+        this.isAssumed = isAssumed;
+    }
 }

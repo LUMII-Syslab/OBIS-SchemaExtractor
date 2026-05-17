@@ -13,6 +13,7 @@ public class SchemaExtractorSourceTargetInfo {
 
     private Boolean validSource;
     private Boolean validTarget;
+    private Boolean isAssumed;
 
     private Boolean isPrincipalSource;
     private Integer sourcePrincipalAssertedSize;

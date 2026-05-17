@@ -1458,7 +1458,29 @@ public class SchemaExtractor {
                                             sourceClass.getClassName(), targetClass.getClassName(), tripleCountForPair, sourceClass.getClassificationProperty(), targetClass.getClassificationProperty()));
                                 }
                             } else if (pairQueryResponse.hasErrors()) {
-                                schema.getErrors().add(new SchemaExtractorError(WARNING, property.getPropertyName(), pairQuery.name(), pairQueryBuilder.getQueryString()));
+                                // check if there is at least a relation between the given source and target
+                                SchemaExtractorQueries checkQuery = selectQuery(request.getExactCountCalculations(), CHECK_PROPERTY_SOURCE_TARGET_PAIR, CHECK_PROPERTY_SOURCE_TARGET_PAIR);
+                                SparqlQueryBuilder checkQueryBuilder = new SparqlQueryBuilder(request.getQueries().get(checkQuery.name()), checkQuery)
+                                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL, sourceClass.getClassName(), sourceClass.getIsLiteral())
+                                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_TARGET_FULL, targetClass.getClassName(), targetClass.getIsLiteral())
+                                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_SOURCE, sourceClass.getClassificationProperty())
+                                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_TARGET, targetClass.getClassificationProperty())
+                                        .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false);
+                                QueryResponse checkQueryResponse = sparqlEndpointProcessor.read(request, checkQueryBuilder);
+                                // if the relation is found then create source-target pair but without the triple count
+                                if (!checkQueryResponse.getResults().isEmpty() && checkQueryResponse.getResults().get(0) != null) {
+                                    // Error message: Count information not available for property source and target pair. WARNING 3
+                                    schema.getErrors().add(new SchemaExtractorError(WARNING, property.getPropertyName(), checkQuery.name(), checkQueryBuilder.getQueryString()));
+                                    property.getSourceAndTargetPairs().add(new SchemaExtractorSourceTargetInfo(
+                                            sourceClass.getClassName(), targetClass.getClassName(), null, sourceClass.getClassificationProperty(), targetClass.getClassificationProperty()));
+                                } else if (checkQueryResponse.hasErrors()) {
+                                    // Error message: Property source and target pair can not be checked. Source and target pair possibility is assumed for property. WARNING 4
+                                    schema.getErrors().add(new SchemaExtractorError(WARNING, property.getPropertyName(), checkQuery.name(), checkQueryBuilder.getQueryString()));
+                                    SchemaExtractorSourceTargetInfo assumedPair = new SchemaExtractorSourceTargetInfo(
+                                            sourceClass.getClassName(), targetClass.getClassName(), null, sourceClass.getClassificationProperty(), targetClass.getClassificationProperty());
+                                    assumedPair.setIsAssumed(true);
+                                    property.getSourceAndTargetPairs().add(assumedPair);
+                                }
                             }
                         });
                     }
@@ -3346,7 +3368,7 @@ public class SchemaExtractor {
                 if (isFalse(isDuplicatePair(property.getClassPairs(), pair.getSourceClass(), pair.getTargetClass()))) {
                     property.getClassPairs().add(new ClassPair(pair.getSourceClass(), pair.getTargetClass(),
                             pair.getTripleCount(), pair.getIsPrincipalSource(), pair.getSourcePrincipalAssertedSize(), pair.getSourceImportanceIndex(),
-                            pair.getIsPrincipalTarget(), pair.getTargetPrincipalAssertedSize(), pair.getTargetImportanceIndex()));
+                            pair.getIsPrincipalTarget(), pair.getTargetPrincipalAssertedSize(), pair.getTargetImportanceIndex(), pair.getIsAssumed()));
                 }
             });
             property.getFollowers().addAll(convertInternalLinkedPropertyToApiDto(propertyData.getFollowers()));
