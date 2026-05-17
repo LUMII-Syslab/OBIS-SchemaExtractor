@@ -29,29 +29,32 @@ public class SchemaUtil {
     }
 
     public static String parseDataType(String dataType) {
-        String resultDataType = dataType;
-
-        int lastIndex = dataType.lastIndexOf("#");
-        if (lastIndex == -1) {
-            lastIndex = dataType.lastIndexOf("/");
+        // Handle xsd: and xsd_ prefixes
+        if (dataType.startsWith("xsd:")) {
+            return dataType;
         }
-        if (lastIndex != -1 && lastIndex < dataType.length()) {
-            resultDataType = dataType.substring(lastIndex + 1);
+        if (dataType.startsWith("xsd_")) {
+            return dataType.replaceFirst("xsd_", "xsd:");
         }
 
-        if (!resultDataType.startsWith("xsd") && dataType.startsWith(XSD_NAMESPACE)) {
-            resultDataType = "xsd:" + resultDataType;
-        } else if (!resultDataType.startsWith("rdf") && dataType.startsWith(RDF_NAMESPACE)) {
-            resultDataType = "rdf:" + resultDataType;
-        } else if (!resultDataType.startsWith("rdfs") && dataType.startsWith(RDFS_NAMESPACE)) {
-            resultDataType = "rdfs:" + resultDataType;
-        } else if (resultDataType.equalsIgnoreCase(DATA_TYPE_LITERAL)) {
-            resultDataType = "rdfs:" + resultDataType;
+        // Extract local part after # or /
+        int lastIndex = Math.max(dataType.lastIndexOf("#"), dataType.lastIndexOf("/"));
+        String localPart = (lastIndex >= 0 && lastIndex < dataType.length() - 1)
+                ? dataType.substring(lastIndex + 1)
+                : dataType;
+
+        // Apply namespace-based prefix
+        if (dataType.startsWith(XSD_NAMESPACE)) {
+            return "xsd:" + localPart;
+        } else if (dataType.startsWith(RDF_NAMESPACE)) {
+            return "rdf:" + localPart;
+        } else if (dataType.startsWith(RDFS_NAMESPACE)) {
+            return "rdfs:" + localPart;
+        } else if (localPart.equalsIgnoreCase(DATA_TYPE_LITERAL)) {
+            return "rdfs:" + localPart;
         } else {
-            resultDataType = "xsd:" + resultDataType;
+            return "xsd:" + localPart;
         }
-
-        return resultDataType;
     }
 
     @Nonnull
