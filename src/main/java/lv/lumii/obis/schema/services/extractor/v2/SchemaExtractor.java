@@ -1469,13 +1469,13 @@ public class SchemaExtractor {
                                 QueryResponse checkQueryResponse = sparqlEndpointProcessor.read(request, checkQueryBuilder);
                                 // if the relation is found then create source-target pair but without the triple count
                                 if (!checkQueryResponse.getResults().isEmpty() && checkQueryResponse.getResults().get(0) != null) {
-                                    // Error message: Count information not available for property source and target pair. WARNING 3
-                                    schema.getErrors().add(new SchemaExtractorError(WARNING, property.getPropertyName(), checkQuery.name(), checkQueryBuilder.getQueryString()));
+                                    schema.getErrors().add(new SchemaExtractorError(WARNING, "Count information not available for property source and target pair",
+                                            property.getPropertyName(), null, checkQuery.name(), checkQueryBuilder.getQueryString()));
                                     property.getSourceAndTargetPairs().add(new SchemaExtractorSourceTargetInfo(
                                             sourceClass.getClassName(), targetClass.getClassName(), null, sourceClass.getClassificationProperty(), targetClass.getClassificationProperty()));
                                 } else if (checkQueryResponse.hasErrors()) {
-                                    // Error message: Property source and target pair can not be checked. Source and target pair possibility is assumed for property. WARNING 4
-                                    schema.getErrors().add(new SchemaExtractorError(WARNING, property.getPropertyName(), checkQuery.name(), checkQueryBuilder.getQueryString()));
+                                    schema.getErrors().add(new SchemaExtractorError(WARNING, "Property source and target pair can not be checked. Source and target pair possibility is assumed for property.",
+                                            property.getPropertyName(), null, checkQuery.name(), checkQueryBuilder.getQueryString()));
                                     SchemaExtractorSourceTargetInfo assumedPair = new SchemaExtractorSourceTargetInfo(
                                             sourceClass.getClassName(), targetClass.getClassName(), null, sourceClass.getClassificationProperty(), targetClass.getClassificationProperty());
                                     assumedPair.setIsAssumed(true);
@@ -2200,7 +2200,7 @@ public class SchemaExtractor {
             }
         }
         schema.getErrors().add(new SchemaExtractorError(WARNING, property.getPropertyName(), queryWithLimit.name(),
-                (queryBuilder != null ? queryBuilder.getQueryString() : "no applicable limit value was found")));
+                (queryBuilder != null ? queryBuilder.getQueryString() : "No query - no applicable limit value was found")));
         return 0;
     }
 
@@ -2502,9 +2502,9 @@ public class SchemaExtractor {
         }
         if (candidate.getTripleCount() != null) {
             if (candidate.getTripleCount() == 0) {
-                schema.getErrors().add(new SchemaExtractorError(WARNING, property.getPropertyName(), queryCheckCountLimit.name(),
-                        "property " + candidate.getLinkType().name() + " [" + candidate.getPropertyName() + "] statistics not available",
-                        (queryBuilder != null ? queryBuilder.getQueryString() : "no applicable limit value was found")));
+                schema.getErrors().add(new SchemaExtractorError(WARNING, "Property " + candidate.getLinkType().name() + " statistics not available",
+                        property.getPropertyName(), candidate.getPropertyName(), queryCheckCountLimit.name(),
+                        (queryBuilder != null ? queryBuilder.getQueryString() : "No query - no applicable limit value was found")));
                 return false;
             } else {
                 return true;
@@ -2534,9 +2534,9 @@ public class SchemaExtractor {
                 }
             }
             if (candidate.getTripleCount() == null || candidate.getTripleCount() == 0) {
-                schema.getErrors().add(new SchemaExtractorError(WARNING, property.getPropertyName(), queryCheckCountLimit.name(),
-                        "property " + candidate.getLinkType().name() + " [ " + candidate.getPropertyName() + "] statistics not available",
-                        (queryBuilder != null ? queryBuilder.getQueryString() : "no applicable limit value was found")));
+                schema.getErrors().add(new SchemaExtractorError(WARNING, "Property " + candidate.getLinkType().name() + " statistics not available",
+                        property.getPropertyName(), candidate.getPropertyName(), queryCheckCountLimit.name(),
+                        (queryBuilder != null ? queryBuilder.getQueryString() : "No query - no applicable limit value was found")));
                 return false;
             } else {
                 return true;
@@ -2579,13 +2579,13 @@ public class SchemaExtractor {
         }
         if (candidate.getTripleCount() != null) {
             if (candidate.getTripleCount() == 0) {
-                schema.getErrors().add(new SchemaExtractorError(INFO, property.getPropertyName(), queryCheckCountLimit.name(),
-                        "property " + candidate.getLinkType().name() + " [ " + candidate.getPropertyName() + "] non-existence confirmed",
-                        (queryBuilder != null ? queryBuilder.getQueryString() : "no applicable limit value was found")));
+                schema.getErrors().add(new SchemaExtractorError(INFO, "Property " + candidate.getLinkType().name() + " non-existence confirmed",
+                        property.getPropertyName(), candidate.getPropertyName(), queryCheckCountLimit.name(),
+                        (queryBuilder != null ? queryBuilder.getQueryString() : "No query - no applicable limit value was found")));
             } else {
-                schema.getErrors().add(new SchemaExtractorError(INFO, property.getPropertyName(), queryCheckCountLimit.name(),
-                        "property " + candidate.getLinkType().name() + " [" + candidate.getPropertyName() + "] information recovered",
-                        (queryBuilder != null ? queryBuilder.getQueryString() : "no applicable limit value was found")));
+                schema.getErrors().add(new SchemaExtractorError(INFO, "Property " + candidate.getLinkType().name() + " information recovered",
+                        property.getPropertyName(), candidate.getPropertyName(), queryCheckCountLimit.name(),
+                        (queryBuilder != null ? queryBuilder.getQueryString() : "No query - no applicable limit value was found")));
             }
         } else {
             retry = true;
@@ -2614,13 +2614,13 @@ public class SchemaExtractor {
 
             if (candidate.getTripleCount() != null) {
                 if (candidate.getTripleCount() == 0) {
-                    schema.getErrors().add(new SchemaExtractorError(INFO, property.getPropertyName(), queryCheckCountLimit.name(),
-                            "property " + candidate.getLinkType().name() + " [ " + candidate.getPropertyName() + "] non-existence confirmed",
-                            (queryBuilder != null ? queryBuilder.getQueryString() : "no applicable limit value was found")));
+                    schema.getErrors().add(new SchemaExtractorError(INFO, "Property " + candidate.getLinkType().name() + " non-existence confirmed",
+                            property.getPropertyName(), candidate.getPropertyName(), queryCheckCountLimit.name(),
+                            (queryBuilder != null ? queryBuilder.getQueryString() : "No query - no applicable limit value was found")));
                 } else {
-                    schema.getErrors().add(new SchemaExtractorError(INFO, property.getPropertyName(), queryCheckCountLimit.name(),
-                            "property " + candidate.getLinkType().name() + " [" + candidate.getPropertyName() + "] information recovered",
-                            (queryBuilder != null ? queryBuilder.getQueryString() : "no applicable limit value was found")));
+                    schema.getErrors().add(new SchemaExtractorError(INFO, "Property " + candidate.getLinkType().name() + " information recovered",
+                            property.getPropertyName(), candidate.getPropertyName(), queryCheckCountLimit.name(),
+                            (queryBuilder != null ? queryBuilder.getQueryString() : "No query - no applicable limit value was found")));
                 }
             }
         }
@@ -3700,8 +3700,8 @@ public class SchemaExtractor {
                         if (!checkQueryResponse.hasErrors()) {
                             updateProcessedClasses(processedClasses, classA, classB);
                         } else {
-                            // Error message: Check class intersection failed. Assume no intersection
-                            schema.getErrors().add(new SchemaExtractorError(WARNING, classA.getFullName(), CHECK_CLASS_INTERSECTION_PLAIN.name(), queryBuilder.getQueryString()));
+                            schema.getErrors().add(new SchemaExtractorError(WARNING, "Check class intersection failed. Assume no intersection",
+                                    classA.getFullName(), null, CHECK_CLASS_INTERSECTION_PLAIN.name(), queryBuilder.getQueryString()));
                         }
                         if (!checkQueryResponse.hasErrors() && !checkQueryResponse.getResults().isEmpty()) {
                             queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_CLASS_INTERSECTION.name()), CHECK_CLASS_INTERSECTION)
@@ -3714,8 +3714,8 @@ public class SchemaExtractor {
                                 Long intersectionCount = SchemaUtil.getLongValueFromString(countQueryResponse.getResults().get(0).getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
                                 addNeighbor(graphOfClasses, classA.getFullName(), classB.getFullName(), intersectionCount);
                             } else if (countQueryResponse.hasErrors()) {
-                                // Error message: Check class intersection: Unable to obtain statistics
-                                schema.getErrors().add(new SchemaExtractorError(WARNING, classA.getFullName(), CHECK_CLASS_INTERSECTION.name(), queryBuilder.getQueryString()));
+                                schema.getErrors().add(new SchemaExtractorError(WARNING, "Check class intersection: Unable to obtain statistics",
+                                        classA.getFullName(), null, CHECK_CLASS_INTERSECTION.name(), queryBuilder.getQueryString()));
                             }
                         }
                     }
@@ -3971,8 +3971,8 @@ public class SchemaExtractor {
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_B, neighborClassInfo.getClassificationProperty());
             QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
             if (queryResponse.hasErrors()) {
-                // Error message: Check superclass failed. Assume no superclass relation.
-                schema.getErrors().add(new SchemaExtractorError(WARNING, currentClass.getFullName(), CHECK_SUPERCLASS.name(), queryBuilder.getQueryString()));
+                schema.getErrors().add(new SchemaExtractorError(WARNING, "Check superclass failed. Assume no superclass relation.",
+                        currentClass.getFullName(), null, CHECK_SUPERCLASS.name(), queryBuilder.getQueryString()));
             }
             if (!queryResponse.getResults().isEmpty()) {
                 continue;

@@ -233,11 +233,8 @@ public class SchemaExtractorControllerV2 {
         }
 
         if (!schema.getErrors().isEmpty()) {
-            StringBuilder errors = new StringBuilder("");
-            schema.getErrors().forEach(error -> {
-                errors.append(error.toString()).append(System.lineSeparator());
-            });
-            writeDataToFile(requestDto.getCorrelationId() + "-errors.log", errors.toString());
+            String errors = objectConversionService.getJsonFromObject(schema.getErrors());
+            writeDataToFile(requestDto.getCorrelationId() + "-errors.json", errors);
         }
 
         return resultSchema;
