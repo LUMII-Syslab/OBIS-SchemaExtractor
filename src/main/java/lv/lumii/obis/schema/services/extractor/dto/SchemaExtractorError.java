@@ -29,9 +29,4 @@ public class SchemaExtractorError {
         this.message = message;
         this.relatedEntity = relatedEntity;
     }
-
-    @Override
-    public String toString() {
-        return errorLevel + " [" + entity + "] - " + queryName + (StringUtils.isNotEmpty(message) ? " - " + message : "") + " - " + query;
-    }
 }

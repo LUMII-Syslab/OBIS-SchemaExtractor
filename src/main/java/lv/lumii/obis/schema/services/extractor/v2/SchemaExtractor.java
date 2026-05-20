@@ -53,6 +53,8 @@ public class SchemaExtractor {
     private static final String PROPERTY_TYPE_PROCESSING = " - calculating property type %d/%d [%s]";
     private static final String PROPERTY_PROCESSING = " - processing property %d/%d [%s]";
 
+    private static final String INVALID_URI = "invalidURI";
+
     @Autowired
     @Setter
     @Getter
@@ -132,7 +134,8 @@ public class SchemaExtractor {
             for (SchemaExtractorRequestedClassDto includedClass : request.getIncludedClasses()) {
                 if (!SchemaUtil.isValidURI(includedClass.getClassName())) {
                     log.error(request.getCorrelationId() + " - invalid class URI will not be processed - " + includedClass.getClassName());
-                    schema.getErrors().add(new SchemaExtractorError(ERROR, "invalidURI", includedClass.getClassName(), ""));
+                    schema.getErrors().add(new SchemaExtractorError(ERROR, "Invalid class URI in the input request", includedClass.getClassName(),
+                            null, INVALID_URI, null));
                     continue;
                 }
                 if (!isNotExcludedResource(includedClass.getClassName(), request.getExcludedNamespaces())) {
@@ -232,7 +235,7 @@ public class SchemaExtractor {
             QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
             boolean foundClassWithInstanceCounts = true;
             if (queryResponse.hasErrors() && queryResponse.getResults().isEmpty()) {
-                schema.getErrors().add(new SchemaExtractorError(WARNING, "allClassesWithInstanceCounts", query.name(), queryBuilder.getQueryString()));
+                schema.getErrors().add(new SchemaExtractorError(WARNING, "Error reading all classes with instance counts", null, null, query.name(), queryBuilder.getQueryString()));
                 foundClassWithInstanceCounts = false;
             } else {
                 List<SchemaClass> resultClasses = processClassesWithEndpointData(queryResponse.getResults(), request, classificationProperty, schema);
@@ -250,7 +253,8 @@ public class SchemaExtractor {
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, classificationProperty);
                 queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
                 if (queryResponse.hasErrors() && queryResponse.getResults().isEmpty()) {
-                    schema.getErrors().add(new SchemaExtractorError(ERROR, "allClasses", FIND_CLASSES.name(), queryBuilder.getQueryString()));
+                    schema.getErrors().add(new SchemaExtractorError(ERROR, "Error reading all classes without instance counts", null, null,
+                            FIND_CLASSES.name(), queryBuilder.getQueryString()));
                 } else {
                     int totalClasses = 0;
                     for (QueryResult queryResult : queryResponse.getResults()) {
@@ -260,7 +264,8 @@ public class SchemaExtractor {
                         }
                         if (!classNameObject.getIsLiteral() && !SchemaUtil.isValidURI(classNameObject.getValue())) {
                             log.error(request.getCorrelationId() + " - invalid class URI will not be processed - " + classNameObject.getValue());
-                            schema.getErrors().add(new SchemaExtractorError(ERROR, "invalidURI", classNameObject.getValue(), ""));
+                            schema.getErrors().add(new SchemaExtractorError(ERROR, "Invalid class URI returned from the endpoint", classNameObject.getValue(),
+                                    null, INVALID_URI, null));
                             continue;
                         }
                         if (!isNotExcludedResource(classNameObject.getValue(), request.getExcludedNamespaces())) {
@@ -287,7 +292,7 @@ public class SchemaExtractor {
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, classificationProperty);
             QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
             if (queryResponse.hasErrors() && queryResponse.getResults().isEmpty()) {
-                schema.getErrors().add(new SchemaExtractorError(INFO, "calculateDistinctInstancesForClasses", FIND_CLASSES_WITH_INSTANCE_COUNT_DISTINCT.name(), queryBuilder.getQueryString()));
+                schema.getErrors().add(new SchemaExtractorError(INFO, null, FIND_CLASSES_WITH_INSTANCE_COUNT_DISTINCT.name(), queryBuilder.getQueryString()));
                 foundClassWithInstanceCounts = false;
             } else {
                 for (QueryResult queryResult : queryResponse.getResults()) {
@@ -323,7 +328,7 @@ public class SchemaExtractor {
 
         // if cannot find all classes then use the classes found by statistics query
         if (queryResponse.hasErrors() && queryResponse.getResults().isEmpty()) {
-            schema.getErrors().add(new SchemaExtractorError(ERROR, "allClasses", FIND_CLASSES.name(), queryBuilder.getQueryString()));
+            schema.getErrors().add(new SchemaExtractorError(ERROR, null, FIND_CLASSES.name(), queryBuilder.getQueryString()));
             log.info(request.getCorrelationId() + String.format(" - found total %d classes with classification property %s", classesCountFromStatisticsQuery, classificationProperty));
         } else {
             // combine results of both queries
@@ -346,7 +351,8 @@ public class SchemaExtractor {
                 }
             }
             if (classesFromSimpleQuery > 0) {
-                schema.getErrors().add(new SchemaExtractorError(WARNING, "validateClasses", FIND_CLASSES.name(), "found " + classesFromSimpleQuery + " more classes than FIND_CLASSES_WITH_INSTANCE_COUNT"));
+                schema.getErrors().add(new SchemaExtractorError(WARNING, "Found " + classesFromSimpleQuery + " more classes than FIND_CLASSES_WITH_INSTANCE_COUNT",
+                        null, null, FIND_CLASSES.name(), queryBuilder.getQueryString()));
                 log.info(request.getCorrelationId() + String.format(" - FIND_CLASSES found %d more classes than FIND_CLASSES_WITH_INSTANCE_COUNT for classification property %s", classesFromSimpleQuery, classificationProperty));
             }
             log.info(request.getCorrelationId() + String.format(" - found total %d classes with classification property %s", classesCountFromStatisticsQuery + classesFromSimpleQuery, classificationProperty));
@@ -398,7 +404,8 @@ public class SchemaExtractor {
             }
             if (!classNameObject.getIsLiteral() && !SchemaUtil.isValidURI(classNameObject.getValue())) {
                 log.error(request.getCorrelationId() + " - invalid class URI will not be processed - " + classNameObject.getValue());
-                schema.getErrors().add(new SchemaExtractorError(ERROR, "invalidURI", classNameObject.getValue(), ""));
+                schema.getErrors().add(new SchemaExtractorError(ERROR, "Invalid class URI returned from the endpoint", classNameObject.getValue(),
+                        null, INVALID_URI, null));
                 continue;
             }
             if (!isNotExcludedResource(classNameObject.getValue(), request.getExcludedNamespaces())) {
@@ -452,7 +459,8 @@ public class SchemaExtractor {
             for (SchemaExtractorRequestedPropertyDto includedProperty : request.getIncludedProperties()) {
                 if (!SchemaUtil.isValidURI(includedProperty.getPropertyName())) {
                     log.error(request.getCorrelationId() + " - invalid property URI will not be processed - " + includedProperty.getPropertyName());
-                    schema.getErrors().add(new SchemaExtractorError(ERROR, "invalidURI", includedProperty.getPropertyName(), ""));
+                    schema.getErrors().add(new SchemaExtractorError(ERROR, "Invalid property URI in the input request", includedProperty.getPropertyName(),
+                            null, INVALID_URI, null));
                     continue;
                 }
                 if (SchemaUtil.getLongValueFromString(includedProperty.getInstanceCount()) > 0L) {
@@ -501,7 +509,7 @@ public class SchemaExtractor {
         QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
         boolean foundPropertiesWithTripleCounts = true;
         if (queryResponse.hasErrors() && queryResponse.getResults().isEmpty()) {
-            schema.getErrors().add(new SchemaExtractorError(WARNING, "allPropertiesWithTripleCounts", query.name(), queryBuilder.getQueryString()));
+            schema.getErrors().add(new SchemaExtractorError(WARNING, null, query.name(), queryBuilder.getQueryString()));
             foundPropertiesWithTripleCounts = false;
         } else {
             properties.putAll(processPropertiesWithEndpointData(queryResponse.getResults(), request, schema));
@@ -517,7 +525,7 @@ public class SchemaExtractor {
             queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_PROPERTIES.name()), FIND_PROPERTIES);
             queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
             if (queryResponse.hasErrors() || queryResponse.getResults().isEmpty()) {
-                schema.getErrors().add(new SchemaExtractorError(WARNING, "allProperties", FIND_PROPERTIES.name(), queryBuilder.getQueryString()));
+                schema.getErrors().add(new SchemaExtractorError(WARNING, null, FIND_PROPERTIES.name(), queryBuilder.getQueryString()));
                 propertiesList = readPropertiesForClasses(request, schema);
             } else {
                 propertiesList = addPropertyNames(queryResponse.getResults(), schema);
@@ -542,7 +550,7 @@ public class SchemaExtractor {
         QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
         boolean foundPropertiesWithTripleCounts = true;
         if (queryResponse.hasErrors() && queryResponse.getResults().isEmpty()) {
-            schema.getErrors().add(new SchemaExtractorError(INFO, "calculateDistinctTriplesForAllProperties", FIND_PROPERTIES_WITH_TRIPLE_COUNT_DISTINCT.name(), queryBuilder.getQueryString()));
+            schema.getErrors().add(new SchemaExtractorError(INFO, null, FIND_PROPERTIES_WITH_TRIPLE_COUNT_DISTINCT.name(), queryBuilder.getQueryString()));
             foundPropertiesWithTripleCounts = false;
         } else {
             for (QueryResult queryResult : queryResponse.getResults()) {
@@ -575,7 +583,7 @@ public class SchemaExtractor {
         QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
         // if cannot find all properties then use the properties found by statistics query
         if (queryResponse.hasErrors() && queryResponse.getResults().isEmpty()) {
-            schema.getErrors().add(new SchemaExtractorError(WARNING, "allProperties", FIND_PROPERTIES.name(), queryBuilder.getQueryString()));
+            schema.getErrors().add(new SchemaExtractorError(WARNING, null, FIND_PROPERTIES.name(), queryBuilder.getQueryString()));
         } else {
             // combine results of both queries
             int propertiesFromSimpleQuery = 0;
@@ -591,7 +599,8 @@ public class SchemaExtractor {
                 }
             }
             if (propertiesFromSimpleQuery > 0) {
-                schema.getErrors().add(new SchemaExtractorError(WARNING, "validateProperties", FIND_PROPERTIES.name(), "found " + propertiesFromSimpleQuery + "more properties than FIND_PROPERTIES_WITH_TRIPLE_COUNT"));
+                schema.getErrors().add(new SchemaExtractorError(WARNING, "Found " + propertiesFromSimpleQuery + " more properties than FIND_PROPERTIES_WITH_TRIPLE_COUNT",
+                        null, null, FIND_PROPERTIES.name(), queryBuilder.getQueryString()));
                 log.info(request.getCorrelationId() + String.format(" - FIND_PROPERTIES found %d more properties than FIND_PROPERTIES_WITH_TRIPLE_COUNT", propertiesFromSimpleQuery));
             }
         }
@@ -639,7 +648,8 @@ public class SchemaExtractor {
             if (SchemaUtil.isValidURI(propertyName)) {
                 properties.add(propertyName);
             } else {
-                schema.getErrors().add(new SchemaExtractorError(ERROR, "invalidURI", propertyName, ""));
+                schema.getErrors().add(new SchemaExtractorError(ERROR, "Invalid property URI returned from the endpoint", propertyName,
+                        null, INVALID_URI, null));
             }
         }
         return properties;
@@ -686,7 +696,8 @@ public class SchemaExtractor {
             String propertyName = queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY);
             if (!SchemaUtil.isValidURI(propertyName)) {
                 log.error(request.getCorrelationId() + " - invalid property URI will not be processed - " + propertyName);
-                schema.getErrors().add(new SchemaExtractorError(ERROR, "invalidURI", propertyName, ""));
+                schema.getErrors().add(new SchemaExtractorError(ERROR, "Invalid property URI returned from the endpoint", propertyName,
+                        null, INVALID_URI, null));
                 continue;
             }
             String instancesCountStr = queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT);
@@ -945,7 +956,7 @@ public class SchemaExtractor {
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false);
             QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
             if (queryResponse.hasErrors()) {
-                schema.getErrors().add(new SchemaExtractorError(INFO, property.getPropertyName() + " - Endpoint Error", query.name(), queryBuilder.getQueryString()));
+                schema.getErrors().add(new SchemaExtractorError(INFO, "Endpoint Error", property.getPropertyName(), null, query.name(), queryBuilder.getQueryString()));
                 continue;
             } else {
                 property.setSourceClassesOK(5);
@@ -953,7 +964,8 @@ public class SchemaExtractor {
             if (queryResponse.getResults().isEmpty()) {
                 if (SchemaExtractorRequestDto.NoClassesLoggingOptions.yes.equals(request.getLogNoClassesForProperty())
                         || SchemaExtractorRequestDto.NoClassesLoggingOptions.sourcesOnly.equals(request.getLogNoClassesForProperty())) {
-                    schema.getErrors().add(new SchemaExtractorError(INFO, property.getPropertyName() + " - No source class for a property", query.name(), queryBuilder.getQueryString()));
+                    schema.getErrors().add(new SchemaExtractorError(INFO, "No source class for a property", property.getPropertyName(),
+                            null, query.name(), queryBuilder.getQueryString()));
                 }
                 continue;
             }
@@ -1239,14 +1251,14 @@ public class SchemaExtractor {
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false);
             QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
             if (queryResponse.hasErrors()) {
-                schema.getErrors().add(new SchemaExtractorError(INFO, property.getPropertyName() + " - Endpoint Error", query.name(), queryBuilder.getQueryString()));
+                schema.getErrors().add(new SchemaExtractorError(INFO, "Endpoint Error", property.getPropertyName(), null, query.name(), queryBuilder.getQueryString()));
                 continue;
             } else {
                 property.setTargetClassesOK(5);
             }
             if (queryResponse.getResults().isEmpty()) {
                 if (SchemaExtractorRequestDto.NoClassesLoggingOptions.yes.equals(request.getLogNoClassesForProperty())) {
-                    schema.getErrors().add(new SchemaExtractorError(INFO, property.getPropertyName() + " - No target class for a property", query.name(), queryBuilder.getQueryString()));
+                    schema.getErrors().add(new SchemaExtractorError(INFO, "No target class for a property", property.getPropertyName(), null, query.name(), queryBuilder.getQueryString()));
                 }
                 continue;
             }
@@ -1519,7 +1531,7 @@ public class SchemaExtractor {
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, classificationProperty);
             QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
             if (queryResponse.hasErrors()) {
-                schema.getErrors().add(new SchemaExtractorError(WARNING, "determineBlankValuesForClasses", COUNT_BLANK_INSTANCES_FOR_CLASSES.name(), queryBuilder.getQueryString()));
+                schema.getErrors().add(new SchemaExtractorError(WARNING, null, COUNT_BLANK_INSTANCES_FOR_CLASSES.name(), queryBuilder.getQueryString()));
                 classificationPropertiesWithError.add(classificationProperty);
             } else {
                 for (QueryResult queryResult : queryResponse.getResults()) {
@@ -1584,7 +1596,7 @@ public class SchemaExtractor {
                 }
             }
         } else if (queryResponse.hasErrors()) {
-            schema.getErrors().add(new SchemaExtractorError(INFO, "determineBlankNodeSubjectsForAllProperties", COUNT_SOURCE_BLANK_VALUES_FOR_PROPERTIES.name(), queryBuilder.getQueryString()));
+            schema.getErrors().add(new SchemaExtractorError(INFO, null, COUNT_SOURCE_BLANK_VALUES_FOR_PROPERTIES.name(), queryBuilder.getQueryString()));
         }
         return blankNodeMap;
     }
@@ -1612,7 +1624,7 @@ public class SchemaExtractor {
                 }
             }
         } else if (queryResponse.hasErrors()) {
-            schema.getErrors().add(new SchemaExtractorError(INFO, "determineBlankNodeObjectsForAllProperties", COUNT_TARGET_BLANK_VALUES_FOR_PROPERTIES.name(), queryBuilder.getQueryString()));
+            schema.getErrors().add(new SchemaExtractorError(INFO, null, COUNT_TARGET_BLANK_VALUES_FOR_PROPERTIES.name(), queryBuilder.getQueryString()));
         }
         return blankNodeMap;
     }
@@ -1660,7 +1672,7 @@ public class SchemaExtractor {
                 }
             }
         } else if (queryResponse.hasErrors()) {
-            schema.getErrors().add(new SchemaExtractorError(INFO, "distinctSubjectsForAllProperties", COUNT_DISTINCT_SUBJECTS_FOR_PROPERTIES.name(), queryBuilder.getQueryString()));
+            schema.getErrors().add(new SchemaExtractorError(INFO, null, COUNT_DISTINCT_SUBJECTS_FOR_PROPERTIES.name(), queryBuilder.getQueryString()));
         }
         return subjectsMap;
     }
@@ -1680,7 +1692,7 @@ public class SchemaExtractor {
                 }
             }
         } else if (queryResponse.hasErrors()) {
-            schema.getErrors().add(new SchemaExtractorError(INFO, "distinctObjectsForAllProperties", COUNT_DISTINCT_OBJECTS_FOR_PROPERTIES.name(), queryBuilder.getQueryString()));
+            schema.getErrors().add(new SchemaExtractorError(INFO, null, COUNT_DISTINCT_OBJECTS_FOR_PROPERTIES.name(), queryBuilder.getQueryString()));
         }
         return objectsMap;
     }
