@@ -20,6 +20,7 @@ import org.apache.jena.rdf.model.Literal;
 import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.Resource;
 
+import org.apache.jena.riot.WebContent;
 import org.apache.jena.sparql.exec.http.QueryExecutionHTTP;
 import org.apache.jena.sparql.exec.http.QueryExecutionHTTPBuilder;
 import org.apache.jena.sparql.exec.http.QuerySendMode;
@@ -219,7 +220,8 @@ public class SparqlEndpointProcessor {
     }
 
     private QueryExecutionHTTP getQueryExecutor(@Nonnull String endpointUrl, @Nullable String graphName, @Nonnull String query, boolean isPostMethod, @Nullable Long timeout) {
-        QueryExecutionHTTPBuilder builder = QueryExecutionHTTP.create().endpoint(endpointUrl).queryString(query);
+        QueryExecutionHTTPBuilder builder = QueryExecutionHTTP.create().endpoint(endpointUrl).queryString(query)
+                .acceptHeader(WebContent.contentTypeResultsJSON);
         if (StringUtils.isNotEmpty(graphName)) {
             builder = builder.addDefaultGraphURI(graphName);
         }
