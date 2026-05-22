@@ -4068,14 +4068,12 @@ public class SchemaExtractor {
                 }
             }
 
-            // 2. one of the neighbors is THING, so no need to perform additional validation
-            // because correct assignment was selected in processSuperclasses method
             SchemaExtractorClassNodeInfo classInfo = classesGraph.get(currentClass.getFullName());
-            if (classInfo == null || classInfo.getNeighbors().size() <= 2) {
+            if (classInfo == null) {
                 continue;
             }
 
-            // 3. validate whether all neighbors are accessible
+            // 2. validate whether all neighbors are accessible
             int maxCounter = classInfo.getNeighbors().size() + 1;
             boolean accessible = validateAllNeighbors(schema, currentClass, classInfo, classes, classesGraph, request);
             while (!accessible && maxCounter != 0) {
