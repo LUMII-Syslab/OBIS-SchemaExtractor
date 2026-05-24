@@ -135,6 +135,13 @@ public class SchemaExtractorRequestNew {
     @ApiParam(hidden = true, access = "239", value = "The level of logging when the property does not have associated classes", defaultValue = "sourcesOnly", required = true)
     private NoClassesLoggingOptions logNoClassesForProperty;
 
+    @ApiParam(access = "234",
+            value = "MIME type sent in the HTTP Accept header for SPARQL query results. Leave empty to use the SPARQL client default content negotiation. " +
+                    "Set a value if an endpoint requires a specific format (e.g., nomisma.org needs application/sparql-results+json)",
+            allowableValues = "application/sparql-results+json,application/sparql-results+xml,text/csv",
+            allowEmptyValue = true)
+    private String acceptHeaderForSparqlResults;
+
     public Boolean getCalculateSubClassRelations() {
         if (calculateSubClassRelations == null) {
             calculateSubClassRelations = Boolean.TRUE;

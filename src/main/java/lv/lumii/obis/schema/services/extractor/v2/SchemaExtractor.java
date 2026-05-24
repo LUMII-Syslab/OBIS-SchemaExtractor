@@ -93,6 +93,7 @@ public class SchemaExtractor {
     protected void validateEndpointHealth(@Nonnull SchemaExtractorRequestDto request) {
         // validate GET health check query
         SparqlEndpointConfig requestConfig = new SparqlEndpointConfig(request.getCorrelationId(), request.getEndpointUrl(), request.getGraphName(), request.getEnableLogging(), false, null);
+        requestConfig.setAcceptHeaderForSparqlResults(request.getAcceptHeaderForSparqlResults());
         boolean isEndpointHealthy = sparqlEndpointProcessor.checkEndpointHealthQuery(requestConfig);
         if (isEndpointHealthy) {
             request.setPostMethod(Boolean.FALSE);

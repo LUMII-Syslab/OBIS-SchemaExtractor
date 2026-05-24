@@ -55,6 +55,10 @@ largeQueryTimeout: 0
 smallQueryTimeout: 0
 delayOnFailure: 0
 waitingTimeForEndpoint: 60
+# MIME type for the HTTP Accept header of SPARQL result requests.
+# Leave empty for the SPARQL client default; set one of:
+# application/sparql-results+json | application/sparql-results+xml | text/csv
+acceptHeaderForSparqlResults: ""
 enableLogging: true
 logNoClassesForProperty: sourcesOnly
 crossCheckTargetClassesOnNonLiteralPropertyObjectCheckFailure: false

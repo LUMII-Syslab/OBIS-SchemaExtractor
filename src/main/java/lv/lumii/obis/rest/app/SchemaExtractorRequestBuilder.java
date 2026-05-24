@@ -78,6 +78,7 @@ public class SchemaExtractorRequestBuilder {
         requestDto.setWaitingTimeForEndpoint(request.getWaitingTimeForEndpoint());
         requestDto.setLogNoClassesForProperty(Enums.getIfPresent(SchemaExtractorRequestDto.NoClassesLoggingOptions.class, request.getLogNoClassesForProperty().name()).orNull());
         requestDto.setCrossCheckTargetClassesOnNonLiteralPropertyObjectCheckFailure(request.getCrossCheckTargetClassesOnNonLiteralPropertyObjectCheckFailure());
+        requestDto.setAcceptHeaderForSparqlResults(request.getAcceptHeaderForSparqlResults());
         return requestDto;
     }
 

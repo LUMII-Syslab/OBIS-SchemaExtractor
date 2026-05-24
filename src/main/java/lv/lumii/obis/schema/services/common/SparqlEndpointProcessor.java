@@ -20,7 +20,6 @@ import org.apache.jena.rdf.model.Literal;
 import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.Resource;
 
-import org.apache.jena.riot.WebContent;
 import org.apache.jena.sparql.exec.http.QueryExecutionHTTP;
 import org.apache.jena.sparql.exec.http.QueryExecutionHTTPBuilder;
 import org.apache.jena.sparql.exec.http.QuerySendMode;
@@ -45,7 +44,7 @@ public class SparqlEndpointProcessor {
     public QueryResponse read(@Nonnull SchemaExtractorRequestDto request, @Nonnull SparqlQueryBuilder queryBuilder) {
         Long timeout = calculateTimeout(request, queryBuilder);
         return read(new SparqlEndpointConfig(request.getCorrelationId(), request.getEndpointUrl(), request.getGraphName(), request.getEnableLogging(),
-                request.getPostMethod(), timeout, request.getDelayOnFailure(), request.getWaitingTimeForEndpoint()), queryBuilder, true);
+                request.getPostMethod(), timeout, request.getDelayOnFailure(), request.getWaitingTimeForEndpoint(), request.getAcceptHeaderForSparqlResults()), queryBuilder, true);
     }
 
     public boolean checkEndpointHealthAndStopExecutionOnError(@Nonnull SparqlEndpointConfig request, boolean applyWaiting) {
@@ -96,7 +95,7 @@ public class SparqlEndpointProcessor {
 
     public boolean checkEndpointHealthQuery(@Nonnull SparqlEndpointConfig request) {
         SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(ENDPOINT_HEALTH_CHECK.getSparqlQuery(), ENDPOINT_HEALTH_CHECK);
-        QueryResponse response = read(new SparqlEndpointConfig(request.getCorrelationId(), request.getEndpointUrl(), request.getGraphName(), request.isEnableLogging(), request.isPostRequest(), null, null, null), queryBuilder, false);
+        QueryResponse response = read(new SparqlEndpointConfig(request.getCorrelationId(), request.getEndpointUrl(), request.getGraphName(), request.isEnableLogging(), request.isPostRequest(), null, null, null, request.getAcceptHeaderForSparqlResults()), queryBuilder, false);
         return !response.hasErrors() && !response.getResults().isEmpty();
     }
 
@@ -135,7 +134,7 @@ public class SparqlEndpointProcessor {
         QueryResponse response = new QueryResponse();
         List<QueryResult> queryResults = null;
         ResultSet resultSet;
-        QueryExecutionHTTP queryExecutor = getQueryExecutor(request.getEndpointUrl(), request.getGraphName(), sparqlQuery, request.isPostRequest(), timeout);
+        QueryExecutionHTTP queryExecutor = getQueryExecutor(request.getEndpointUrl(), request.getGraphName(), sparqlQuery, request.isPostRequest(), timeout, request.getAcceptHeaderForSparqlResults());
         try {
             resultSet = queryExecutor.execSelect();
             if (attempt > 1) {
@@ -219,9 +218,13 @@ public class SparqlEndpointProcessor {
         queryResults.add(queryResult);
     }
 
-    private QueryExecutionHTTP getQueryExecutor(@Nonnull String endpointUrl, @Nullable String graphName, @Nonnull String query, boolean isPostMethod, @Nullable Long timeout) {
-        QueryExecutionHTTPBuilder builder = QueryExecutionHTTP.create().endpoint(endpointUrl).queryString(query)
-                .acceptHeader(WebContent.contentTypeResultsJSON);
+    private QueryExecutionHTTP getQueryExecutor(@Nonnull String endpointUrl, @Nullable String graphName, @Nonnull String query, boolean isPostMethod,
+                                                @Nullable Long timeout, @Nullable String acceptHeaderForSparqlResults) {
+        QueryExecutionHTTPBuilder builder = QueryExecutionHTTP.create().endpoint(endpointUrl).queryString(query);
+        // If no MIME type is configured, leave the Accept header unset so the SPARQL client uses its default content negotiation.
+        if (StringUtils.isNotEmpty(acceptHeaderForSparqlResults)) {
+            builder = builder.acceptHeader(acceptHeaderForSparqlResults);
+        }
         if (StringUtils.isNotEmpty(graphName)) {
             builder = builder.addDefaultGraphURI(graphName);
         }
@@ -259,8 +262,9 @@ public class SparqlEndpointProcessor {
 
     @Nonnull
     public List<QueryResult> read(@Nonnull SchemaExtractorRequestDto request, @Nonnull String queryName, @Nonnull String sparqlQuery) {
-        return read(new SparqlEndpointConfig(request.getCorrelationId(), request.getEndpointUrl(), request.getGraphName(), request.getEnableLogging(), request.getPostMethod(), null),
-                queryName, sparqlQuery);
+        SparqlEndpointConfig config = new SparqlEndpointConfig(request.getCorrelationId(), request.getEndpointUrl(), request.getGraphName(), request.getEnableLogging(), request.getPostMethod(), null);
+        config.setAcceptHeaderForSparqlResults(request.getAcceptHeaderForSparqlResults());
+        return read(config, queryName, sparqlQuery);
     }
 
     @Nonnull

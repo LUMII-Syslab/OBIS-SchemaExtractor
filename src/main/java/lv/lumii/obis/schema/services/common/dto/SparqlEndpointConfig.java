@@ -16,8 +16,11 @@ public class SparqlEndpointConfig {
     private Long delayOnFailure;
     private Long waitingTimeForEndpoint;
 
+    // MIME type for the HTTP Accept header; null/empty means use the SPARQL client default.
+    private String acceptHeaderForSparqlResults;
+
     public SparqlEndpointConfig(String correlationId, String endpointUrl, String graphName, boolean enableLogging, boolean isPostRequest,
-                                Long timeout, Long delayOnFailure, Long waitingTimeForEndpoint) {
+                                Long timeout, Long delayOnFailure, Long waitingTimeForEndpoint, String acceptHeaderForSparqlResults) {
         this.correlationId = correlationId;
         this.endpointUrl = endpointUrl;
         this.graphName = graphName;
@@ -26,6 +29,7 @@ public class SparqlEndpointConfig {
         this.timeout = timeout;
         this.delayOnFailure = delayOnFailure;
         this.waitingTimeForEndpoint = waitingTimeForEndpoint;
+        this.acceptHeaderForSparqlResults = acceptHeaderForSparqlResults;
     }
 
     public SparqlEndpointConfig(String correlationId, String endpointUrl, String graphName, boolean enableLogging,

@@ -102,6 +102,10 @@ public class SchemaExtractorRequestDto {
     private Long delayOnFailure;
     private Long waitingTimeForEndpoint;
 
+    // MIME type sent in the HTTP Accept header for SPARQL query results.
+    // If null/empty, Jena's default Accept header is used (default behavior).
+    private String acceptHeaderForSparqlResults;
+
     private Boolean enableLogging;
 
     private NoClassesLoggingOptions logNoClassesForProperty;
