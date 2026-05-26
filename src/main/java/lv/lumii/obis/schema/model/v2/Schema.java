@@ -39,6 +39,11 @@ public class Schema {
     @JsonProperty("EndDateTime")
     private String endTime;
 
+    @JsonProperty("HasBlankNodeObjects")
+    private Boolean hasBlankNodeObjects;
+    @JsonProperty("HasBlankNodeSubjects")
+    private Boolean hasBlankNodeSubjects;
+
     @JsonProperty("HasErrors")
     private Boolean hasErrors;
 
@@ -47,11 +52,6 @@ public class Schema {
 
     @JsonProperty("HasNotes")
     private Boolean hasNotes;
-
-    @JsonIgnore
-    private Boolean hasBlankNodeObjects;
-    @JsonIgnore
-    private Boolean hasBlankNodeSubjects;
 
     @JsonProperty("Errors")
     private List<SchemaExtractorError> errors;
