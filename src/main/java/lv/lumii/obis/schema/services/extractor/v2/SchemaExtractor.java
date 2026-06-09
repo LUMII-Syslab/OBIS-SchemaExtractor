@@ -1532,7 +1532,7 @@ public class SchemaExtractor {
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, classificationProperty);
             QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
             if (queryResponse.hasErrors()) {
-                schema.getErrors().add(new SchemaExtractorError(WARNING, null, COUNT_BLANK_INSTANCES_FOR_CLASSES.name(), queryBuilder.getQueryString()));
+                schema.getErrors().add(new SchemaExtractorError(INFO, null, COUNT_BLANK_INSTANCES_FOR_CLASSES.name(), queryBuilder.getQueryString()));
                 classificationPropertiesWithError.add(classificationProperty);
             } else {
                 for (QueryResult queryResult : queryResponse.getResults()) {
@@ -1564,9 +1564,13 @@ public class SchemaExtractor {
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_FULL, clazz.getFullName(), clazz.getIsLiteral())
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, clazz.getClassificationProperty());
                 QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
-                if (!queryResponse.hasErrors() && !queryResponse.getResults().isEmpty() && queryResponse.getResults().get(0) != null) {
-                    long blankNodeCount = SchemaUtil.getLongValueFromString(queryResponse.getResults().get(0).getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
-                    clazz.setBlankNodeCount(blankNodeCount);
+                if (!queryResponse.hasErrors()) {
+                    if (!queryResponse.getResults().isEmpty() && queryResponse.getResults().get(0) != null) {
+                        long blankNodeCount = SchemaUtil.getLongValueFromString(queryResponse.getResults().get(0).getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
+                        clazz.setBlankNodeCount(blankNodeCount);
+                    } else {
+                        clazz.setBlankNodeCount(0L);
+                    }
                 } else {
                     schema.getErrors().add(new SchemaExtractorError(WARNING, clazz.getFullName(), COUNT_BLANK_INSTANCES_FOR_CLASS.name(), queryBuilder.getQueryString()));
                 }
@@ -1636,9 +1640,13 @@ public class SchemaExtractor {
         SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(COUNT_SOURCE_BLANK_VALUES_FOR_PROPERTY.name()), COUNT_SOURCE_BLANK_VALUES_FOR_PROPERTY)
                 .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false);
         QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
-        if (!queryResponse.hasErrors() && !queryResponse.getResults().isEmpty() && queryResponse.getResults().get(0) != null) {
-            long blankNodeCount = SchemaUtil.getLongValueFromString(queryResponse.getResults().get(0).getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
-            property.setBlankNodeSubjects(blankNodeCount);
+        if (!queryResponse.hasErrors()) {
+            if (!queryResponse.getResults().isEmpty() && queryResponse.getResults().get(0) != null) {
+                long blankNodeCount = SchemaUtil.getLongValueFromString(queryResponse.getResults().get(0).getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
+                property.setBlankNodeSubjects(blankNodeCount);
+            } else {
+                property.setBlankNodeSubjects(0L);
+            }
         } else if (queryResponse.hasErrors()) {
             schema.getErrors().add(new SchemaExtractorError(WARNING, property.getPropertyName(), COUNT_SOURCE_BLANK_VALUES_FOR_PROPERTY.name(), queryBuilder.getQueryString()));
         }
@@ -1650,9 +1658,13 @@ public class SchemaExtractor {
         SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(COUNT_TARGET_BLANK_VALUES_FOR_PROPERTY.name()), COUNT_TARGET_BLANK_VALUES_FOR_PROPERTY)
                 .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false);
         QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
-        if (!queryResponse.hasErrors() && !queryResponse.getResults().isEmpty() && queryResponse.getResults().get(0) != null) {
-            long blankNodeCount = SchemaUtil.getLongValueFromString(queryResponse.getResults().get(0).getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
-            property.setBlankNodeObjects(blankNodeCount);
+        if (!queryResponse.hasErrors()) {
+            if (!queryResponse.getResults().isEmpty() && queryResponse.getResults().get(0) != null) {
+                long blankNodeCount = SchemaUtil.getLongValueFromString(queryResponse.getResults().get(0).getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
+                property.setBlankNodeObjects(blankNodeCount);
+            } else {
+                property.setBlankNodeObjects(0L);
+            }
         } else if (queryResponse.hasErrors()) {
             schema.getErrors().add(new SchemaExtractorError(WARNING, property.getPropertyName(), COUNT_TARGET_BLANK_VALUES_FOR_PROPERTY.name(), queryBuilder.getQueryString()));
         }
