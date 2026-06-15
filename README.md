@@ -1,14 +1,14 @@
 # OBIS-SchemaExtractor
 
-OBIS Schema Extractor is Java based web application - REST controller to process data schema extraction from SPARQL endpoints or OWL/RDF files.
-The structure of the response JSON data schema format is described at http://viziquer.lumii.lv/schema-extractor.
+OBIS Schema Extractor (v2) is Java based web application - REST controller to process data schema extraction from SPARQL endpoints. 
+Information on execution parameters, example execution information and use of the created created schemas in data visualization and analysis pipeline is provided in [OBIS Schema Extractor wiki](https://github.com/LUMII-Syslab/OBIS-SchemaExtractor/wiki).
 
 **Contents**
 - [Deployment and Running](#deployment-and-running)
 - [Available Services and Documentation](#available-services-and-documentation)
-  - [SPARQL Endpoint Usage V1](#sparql-endpoint-usage-v1)
+  - Legacy: [SPARQL Endpoint Usage V1](#sparql-endpoint-usage-v1)
   - [SPARQL Endpoint Usage V2](#sparql-endpoint-usage-v2)
-  - [RDF/OWL File Usage](#rdfowl-file-usage)
+  - Legacy: [RDF/OWL File Usage](#rdfowl-file-usage)
 - [Development](#development)
 
 ## Deployment and Running
@@ -16,10 +16,10 @@ The structure of the response JSON data schema format is described at http://viz
 OBIS Schema Extractor artifact is packaged executable JAR file and needs [Java 17](https://www.java.com/en/) to run.
 
 1. install Java
-2. copy [build/schema-extractor-exec.jar](build/schema-extractor-exec.jar) to any folder
+2. copy [build/schema-extractor-exec.jar](build/schema-extractor-exec.jar) to any folder, together with other files in the `build` folder.
 3. run executable JAR file `java -jar schema-extractor-exec.jar`
 4. navigate to http://server:port/swagger-ui.html (default URL - http://localhost:8080/swagger-ui.html)
-5. configure the parameters, as described on the browser page
+5. configure the parameters, as described on the browser page, or use a configuration file.
 
 If you need different port, run executable JAR file `java -jar schema-extractor-exec.jar --server.port=1234`
 
@@ -33,7 +33,7 @@ Schema Extractor RESTful APIs are expressed using JSON services and described in
 | [V1 OWL/RDF File](#rdfowl-file-usage) | Extract and analyze schema from OWL ontology file and then enhance with data from SPARQL endpoint (if provided)  |
 | [V2 SPARQL Endpoint](#sparql-endpoint-usage-v2) | Extract and analyze data from SPARQL endpoint and build full schema model (version 2)  |
 
-### SPARQL Endpoint Usage V1
+### (Legacy) SPARQL Endpoint Usage V1
 
 GET http://server:port/schema-extractor-rest/v1/endpoint/buildFullSchema
 
@@ -51,7 +51,7 @@ curl -X POST "http://localhost:8080/schema-extractor-rest/v2/endpoint/buildFullS
 ```
 Example JSON response - [SampleExtractedSchemaV2.json](build/SampleExtractedSchemaV2.json)
 
-### RDF/OWL File Usage
+### (Legacy) RDF/OWL File Usage
 
 POST http://server:port/schema-extractor-rest/v1/owlFile/buildFullSchema
 
