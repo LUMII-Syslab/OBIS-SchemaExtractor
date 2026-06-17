@@ -22,6 +22,9 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.ws.rs.core.MediaType;
 import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -250,20 +253,10 @@ public class SchemaExtractorControllerV2 {
         if (StringUtils.isEmpty(fileContent)) {
             return;
         }
-        BufferedWriter writer = null;
         try {
-            writer = new BufferedWriter(new FileWriter(fileName));
-            writer.write(fileContent);
+            Files.writeString(Paths.get(fileName), fileContent, StandardCharsets.UTF_8);
         } catch (IOException e) {
             log.error("Cannot write the data to the file " + fileName);
-        } finally {
-            if (writer != null) {
-                try {
-                    writer.close();
-                } catch (IOException e) {
-                    log.error("Cannot close output stream while writing the data in the file" + fileName);
-                }
-            }
         }
     }
 
