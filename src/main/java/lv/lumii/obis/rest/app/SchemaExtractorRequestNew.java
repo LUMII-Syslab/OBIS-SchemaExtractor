@@ -69,7 +69,7 @@ public class SchemaExtractorRequestNew {
     @ApiParam(hidden = true, access = "61", value = "Calculate distinct subjects and objects count for property and/or for property source and target classes", defaultValue = "propertyLevel", required = true)
     private DistinctSubjectsAndObjectsMode includeDistinctSubjectsAndObjects;
 
-    @ApiParam(hidden = true, access = "62", value = "Calculate blank node statistics", defaultValue = "no", required = true)
+    @ApiParam(hidden = true, access = "62", value = "Calculate blank node statistics", defaultValue = "full", required = true)
     private BlankNodeMode computeBlankNodeStatistics;
 
     @ApiParam(access = "70", value = "Calculate ascription points (principal classes) for properties (strongly recommended, if schema diagrams are envisaged). Use 'class coverage', if all class-to-property connections are to be marked for the class itself, or some its superclass or subclass (can make a difference in the case of overlapping classes)", defaultValue = "basic", required = true)
@@ -132,7 +132,7 @@ public class SchemaExtractorRequestNew {
     @ApiParam(hidden = true, access = "238", value = "Waiting time for the endpoint availability (in minutes). If 0 - then wait forever", defaultValue = "60", required = false)
     private Long waitingTimeForEndpoint;
 
-    @ApiParam(hidden = true, access = "239", value = "The level of logging when the property does not have associated classes", defaultValue = "sourcesOnly", required = true)
+    @ApiParam(hidden = true, access = "239", value = "The level of logging when the property does not have associated classes", defaultValue = "no", required = true)
     private NoClassesLoggingOptions logNoClassesForProperty;
 
     public Boolean getCalculateSubClassRelations() {
@@ -179,7 +179,7 @@ public class SchemaExtractorRequestNew {
 
     public BlankNodeMode getComputeBlankNodeStatistics() {
         if (computeBlankNodeStatistics == null) {
-            computeBlankNodeStatistics = BlankNodeMode.no;
+            computeBlankNodeStatistics = BlankNodeMode.full;
         }
         return computeBlankNodeStatistics;
     }
@@ -201,7 +201,7 @@ public class SchemaExtractorRequestNew {
     @Nonnull
     public NoClassesLoggingOptions getLogNoClassesForProperty() {
         if (logNoClassesForProperty == null) {
-            logNoClassesForProperty = NoClassesLoggingOptions.sourcesOnly;
+            logNoClassesForProperty = NoClassesLoggingOptions.no;
         }
         return logNoClassesForProperty;
     }

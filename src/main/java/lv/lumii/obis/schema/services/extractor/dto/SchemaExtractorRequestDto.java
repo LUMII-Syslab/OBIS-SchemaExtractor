@@ -410,7 +410,7 @@ public class SchemaExtractorRequestDto {
     @Nonnull
     public NoClassesLoggingOptions getLogNoClassesForProperty() {
         if (logNoClassesForProperty == null) {
-            logNoClassesForProperty = NoClassesLoggingOptions.sourcesOnly;
+            logNoClassesForProperty = NoClassesLoggingOptions.no;
         }
         return logNoClassesForProperty;
     }
