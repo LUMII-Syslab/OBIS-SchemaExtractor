@@ -10,6 +10,7 @@ import java.util.List;
 public class QueryResponse {
 
     private boolean hasErrors;
+    private QueryResponseError queryResponseError;
 
     private long executionTime;
 
@@ -28,5 +29,9 @@ public class QueryResponse {
             results = new ArrayList<>();
         }
         return results;
+    }
+
+    public QueryResponseError getQueryResponseError() {
+        return queryResponseError;
     }
 }

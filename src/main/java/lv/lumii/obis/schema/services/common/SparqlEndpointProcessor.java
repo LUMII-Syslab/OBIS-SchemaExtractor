@@ -9,10 +9,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.extern.slf4j.Slf4j;
 import lv.lumii.obis.schema.services.SchemaUtil;
 import lv.lumii.obis.schema.services.SparqlEndpointException;
-import lv.lumii.obis.schema.services.common.dto.QueryResponse;
-import lv.lumii.obis.schema.services.common.dto.QueryResult;
-import lv.lumii.obis.schema.services.common.dto.QueryResultObject;
-import lv.lumii.obis.schema.services.common.dto.SparqlEndpointConfig;
+import lv.lumii.obis.schema.services.common.dto.*;
 import lv.lumii.obis.schema.services.extractor.dto.SchemaExtractorRequestDto;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.jena.query.*;
@@ -20,6 +17,7 @@ import org.apache.jena.rdf.model.Literal;
 import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.Resource;
 
+import org.apache.jena.sparql.engine.http.QueryExceptionHTTP;
 import org.apache.jena.sparql.exec.http.QueryExecutionHTTP;
 import org.apache.jena.sparql.exec.http.QueryExecutionHTTPBuilder;
 import org.apache.jena.sparql.exec.http.QuerySendMode;
@@ -37,6 +35,15 @@ public class SparqlEndpointProcessor {
 
     private static final int RETRY_COUNT = 2;
 
+    private static final String[] FALLBACK_ACCEPT_HEADERS = {
+            "application/sparql-results+json",
+            "application/sparql-results+xml",
+            "text/tab-separated-values",
+            "text/csv",
+            "application/json",
+            "application/xml"
+    };
+
     /**
      * Actual methods for SchemaExtractor V2
      */
@@ -44,7 +51,7 @@ public class SparqlEndpointProcessor {
     public QueryResponse read(@Nonnull SchemaExtractorRequestDto request, @Nonnull SparqlQueryBuilder queryBuilder) {
         Long timeout = calculateTimeout(request, queryBuilder);
         return read(new SparqlEndpointConfig(request.getCorrelationId(), request.getEndpointUrl(), request.getGraphName(), request.getEnableLogging(),
-                request.getPostMethod(), timeout, request.getDelayOnFailure(), request.getWaitingTimeForEndpoint()), queryBuilder, true);
+                request.getPostMethod(), request.getAcceptHeaderForSparqlResults(), timeout, request.getDelayOnFailure(), request.getWaitingTimeForEndpoint()), queryBuilder, true);
     }
 
     public boolean checkEndpointHealthAndStopExecutionOnError(@Nonnull SparqlEndpointConfig request, boolean applyWaiting) {
@@ -93,9 +100,43 @@ public class SparqlEndpointProcessor {
         return endpointIsHealthyWithoutRetries;
     }
 
-    public boolean checkEndpointHealthQuery(@Nonnull SparqlEndpointConfig request) {
+    public boolean checkEndpointHealthQuery(@Nonnull SchemaExtractorRequestDto request) {
         SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(ENDPOINT_HEALTH_CHECK.getSparqlQuery(), ENDPOINT_HEALTH_CHECK);
-        QueryResponse response = read(new SparqlEndpointConfig(request.getCorrelationId(), request.getEndpointUrl(), request.getGraphName(), request.isEnableLogging(), request.isPostRequest(), null, null, null), queryBuilder, false);
+        SparqlEndpointConfig config = new SparqlEndpointConfig(request.getCorrelationId(), request.getEndpointUrl(), request.getGraphName(), request.getEnableLogging(),
+                request.getPostMethod(), request.getAcceptHeaderForSparqlResults(), null, null, null);
+
+        QueryResponse response = read(config, queryBuilder, false);
+
+        if (isNotAcceptable(response)) {
+            log.error("The endpoint does not support multi-value Accept headers");
+            for (String acceptHeader : FALLBACK_ACCEPT_HEADERS) {
+                log.info("Checking endpoint availability with Accept header = " + acceptHeader);
+                config.setAcceptHeaderForSparqlResults(acceptHeader);
+                response = read(config, queryBuilder, false);
+                if (!isNotAcceptable(response)) {
+                    break;
+                }
+            }
+        }
+
+        if (!response.hasErrors() && StringUtils.isNotEmpty(config.getAcceptHeaderForSparqlResults())) {
+            request.setAcceptHeaderForSparqlResults(config.getAcceptHeaderForSparqlResults());
+            log.info("The endpoint is using Accept header = " + request.getAcceptHeaderForSparqlResults());
+        }
+
+        return !response.hasErrors() && !response.getResults().isEmpty();
+    }
+
+    private boolean isNotAcceptable(QueryResponse response) {
+        return response.hasErrors()
+                && response.getQueryResponseError() != null
+                && response.getQueryResponseError().getErrorStatusCode() == QueryResponseError.NOT_ACCEPTABLE_CODE
+                && QueryResponseError.NOT_ACCEPTABLE_MSG.equals(response.getQueryResponseError().getResponseMessage());
+    }
+
+    private boolean checkEndpointHealthQuery(@Nonnull SparqlEndpointConfig config) {
+        SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(ENDPOINT_HEALTH_CHECK.getSparqlQuery(), ENDPOINT_HEALTH_CHECK);
+        QueryResponse response = read(config, queryBuilder, false);
         return !response.hasErrors() && !response.getResults().isEmpty();
     }
 
@@ -134,7 +175,8 @@ public class SparqlEndpointProcessor {
         QueryResponse response = new QueryResponse();
         List<QueryResult> queryResults = null;
         ResultSet resultSet;
-        QueryExecutionHTTP queryExecutor = getQueryExecutor(request.getEndpointUrl(), request.getGraphName(), sparqlQuery, request.isPostRequest(), timeout);
+        QueryExecutionHTTP queryExecutor = getQueryExecutor(request.getEndpointUrl(), request.getGraphName(), sparqlQuery, request.isPostRequest(),
+                request.getAcceptHeaderForSparqlResults(), timeout);
         try {
             resultSet = queryExecutor.execSelect();
             if (attempt > 1) {
@@ -148,6 +190,11 @@ public class SparqlEndpointProcessor {
                 }
             }
         } catch (Exception e) {
+            if (e instanceof QueryExceptionHTTP) {
+                response.setQueryResponseError(new QueryResponseError(((QueryExceptionHTTP) e).getStatusCode(), ((QueryExceptionHTTP) e).getResponseMessage()));
+            } else {
+                response.setQueryResponseError(new QueryResponseError(500, e.getMessage()));
+            }
             if (withRetry) {
                 log.error(String.format("SPARQL Endpoint Exception status '%s'. This was attempt number %d for the query %s", e.getMessage(), attempt, queryName));
                 log.error("\n" + sparqlQuery);
@@ -218,8 +265,15 @@ public class SparqlEndpointProcessor {
         queryResults.add(queryResult);
     }
 
-    private QueryExecutionHTTP getQueryExecutor(@Nonnull String endpointUrl, @Nullable String graphName, @Nonnull String query, boolean isPostMethod, @Nullable Long timeout) {
+    private QueryExecutionHTTP getQueryExecutor(@Nonnull String endpointUrl, @Nullable String graphName, @Nonnull String query, boolean isPostMethod,
+                                                @Nullable String acceptHeaderForSparqlResults, @Nullable Long timeout) {
+
         QueryExecutionHTTPBuilder builder = QueryExecutionHTTP.create().endpoint(endpointUrl).queryString(query);
+
+        // If no MIME type is configured, leave the Accept header unset so the SPARQL client uses its default content negotiation.
+        if (StringUtils.isNotEmpty(acceptHeaderForSparqlResults)) {
+            builder = builder.acceptHeader(acceptHeaderForSparqlResults);
+        }
         if (StringUtils.isNotEmpty(graphName)) {
             builder = builder.addDefaultGraphURI(graphName);
         }
@@ -257,8 +311,9 @@ public class SparqlEndpointProcessor {
 
     @Nonnull
     public List<QueryResult> read(@Nonnull SchemaExtractorRequestDto request, @Nonnull String queryName, @Nonnull String sparqlQuery) {
-        return read(new SparqlEndpointConfig(request.getCorrelationId(), request.getEndpointUrl(), request.getGraphName(), request.getEnableLogging(), request.getPostMethod(), null),
-                queryName, sparqlQuery);
+        SparqlEndpointConfig config = new SparqlEndpointConfig(request.getCorrelationId(), request.getEndpointUrl(), request.getGraphName(), request.getEnableLogging(), request.getPostMethod(), null);
+        config.setAcceptHeaderForSparqlResults(request.getAcceptHeaderForSparqlResults());
+        return read(config, queryName, sparqlQuery);
     }
 
     @Nonnull

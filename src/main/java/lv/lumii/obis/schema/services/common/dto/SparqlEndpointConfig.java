@@ -3,7 +3,8 @@ package lv.lumii.obis.schema.services.common.dto;
 import lombok.Getter;
 import lombok.Setter;
 
-@Setter @Getter
+@Setter
+@Getter
 public class SparqlEndpointConfig {
 
     private String correlationId;
@@ -11,18 +12,19 @@ public class SparqlEndpointConfig {
     private String graphName;
     private boolean enableLogging;
     private boolean isPostRequest;
+    private String acceptHeaderForSparqlResults;
     private Long timeout;
-
     private Long delayOnFailure;
     private Long waitingTimeForEndpoint;
 
     public SparqlEndpointConfig(String correlationId, String endpointUrl, String graphName, boolean enableLogging, boolean isPostRequest,
-                                Long timeout, Long delayOnFailure, Long waitingTimeForEndpoint) {
+                                String acceptHeaderForSparqlResults, Long timeout, Long delayOnFailure, Long waitingTimeForEndpoint) {
         this.correlationId = correlationId;
         this.endpointUrl = endpointUrl;
         this.graphName = graphName;
         this.enableLogging = enableLogging;
         this.isPostRequest = isPostRequest;
+        this.acceptHeaderForSparqlResults = acceptHeaderForSparqlResults;
         this.timeout = timeout;
         this.delayOnFailure = delayOnFailure;
         this.waitingTimeForEndpoint = waitingTimeForEndpoint;

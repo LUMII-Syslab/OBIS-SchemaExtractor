@@ -14,7 +14,6 @@ import lv.lumii.obis.schema.services.common.SparqlQueryBuilder;
 import lv.lumii.obis.schema.services.common.dto.QueryResponse;
 import lv.lumii.obis.schema.services.common.dto.QueryResult;
 import lv.lumii.obis.schema.services.common.dto.QueryResultObject;
-import lv.lumii.obis.schema.services.common.dto.SparqlEndpointConfig;
 import lv.lumii.obis.schema.services.extractor.dto.*;
 import lv.lumii.obis.schema.services.extractor.v2.dto.*;
 import org.apache.commons.lang3.BooleanUtils;
@@ -92,20 +91,18 @@ public class SchemaExtractor {
 
     protected void validateEndpointHealth(@Nonnull SchemaExtractorRequestDto request) {
         // validate GET health check query
-        SparqlEndpointConfig requestConfig = new SparqlEndpointConfig(request.getCorrelationId(), request.getEndpointUrl(), request.getGraphName(), request.getEnableLogging(), false, null);
-        boolean isEndpointHealthy = sparqlEndpointProcessor.checkEndpointHealthQuery(requestConfig);
+        request.setPostMethod(Boolean.FALSE);
+        boolean isEndpointHealthy = sparqlEndpointProcessor.checkEndpointHealthQuery(request);
         if (isEndpointHealthy) {
-            request.setPostMethod(Boolean.FALSE);
             log.info(String.format("The endpoint [ %s ] is available and in working state - schema extractor execution [ %s ] is in progress with GET requests",
                     SchemaUtil.getEndpointLinkText(request.getEndpointUrl(), request.getGraphName()), request.getCorrelationId()));
             return;
         }
 
         // validate POST health check query
-        requestConfig.setPostRequest(true);
-        isEndpointHealthy = sparqlEndpointProcessor.checkEndpointHealthQuery(requestConfig);
+        request.setPostMethod(Boolean.TRUE);
+        isEndpointHealthy = sparqlEndpointProcessor.checkEndpointHealthQuery(request);
         if (isEndpointHealthy) {
-            request.setPostMethod(Boolean.TRUE);
             log.info(String.format("The endpoint [ %s ] is available and in working state - schema extractor execution [ %s ] is in progress with POST requests",
                     SchemaUtil.getEndpointLinkText(request.getEndpointUrl(), request.getGraphName()), request.getCorrelationId()));
             return;

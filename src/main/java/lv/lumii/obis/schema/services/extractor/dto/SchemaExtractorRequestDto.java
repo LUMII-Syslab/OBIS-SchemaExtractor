@@ -118,6 +118,8 @@ public class SchemaExtractorRequestDto {
 
     @JsonIgnore
     private Boolean postMethod;
+    @JsonIgnore
+    private String acceptHeaderForSparqlResults;
 
     /**
      * DEPRECATED properties for old services
