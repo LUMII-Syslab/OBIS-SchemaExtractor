@@ -15,33 +15,56 @@ import springfox.documentation.swagger2.annotations.EnableSwagger2;
  * Swagger 2 configuration for the Spring REST web services.
  * It describes and documents RESTful APIs.
  * Swagger UI is used for user interactions with the Swagger-generated API resources.
- *
+ * <p>
  * REST API docs - http://<server>:<port>/v2/api-docs
  * Swagger UI - http://<server>:<port>/swagger-ui.html
- *
  */
 @Configuration
 @EnableSwagger2
 public class SwaggerConfig {
 
     @Bean
-    public Docket api() {
+    public Docket currentApi() {
         return new Docket(DocumentationType.SWAGGER_2)
+                .groupName("Schema Extractor API - Current V2")
                 .select()
                 .apis(RequestHandlerSelectors.basePackage("lv.lumii.obis.rest.app"))
-                .paths(PathSelectors.any())
+                .paths(PathSelectors.regex("/schema-extractor-rest/v2/.*"))
                 .build()
                 .useDefaultResponseMessages(false)
-                .apiInfo(apiEndPointsInfo())
-                .tags(new Tag("Services V1", ""), new Tag("Services V2", ""));
+                .apiInfo(currentApiInfo())
+                .tags(new Tag("Services V2", ""));
     }
 
-    private ApiInfo apiEndPointsInfo() {
+    @Bean
+    public Docket archivedApi() {
+        return new Docket(DocumentationType.SWAGGER_2)
+                .groupName("Schema Extractor API - Deprecated V1")
+                .select()
+                .apis(RequestHandlerSelectors.basePackage("lv.lumii.obis.rest.app"))
+                .paths(PathSelectors.regex("/schema-extractor-rest/v1/.*"))
+                .build()
+                .useDefaultResponseMessages(false)
+                .apiInfo(archiveApiInfo())
+                .tags(new Tag("Services V1", ""));
+    }
+
+    private ApiInfo currentApiInfo() {
         return new ApiInfoBuilder()
-                .title("Schema Extractor REST Services API")
+                .title("Schema Extractor REST Services API - V2")
                 .license("Apache 2.0")
                 .licenseUrl("http://www.apache.org/licenses/LICENSE-2.0.html")
-                .version("v1")
+                .version("2.0")
+                .build();
+    }
+
+    private ApiInfo archiveApiInfo() {
+        return new ApiInfoBuilder()
+                .title("Schema Extractor REST Services API - V1 - Deprecated")
+                .description("Deprecated/Archived Schema Extractor API documentation (V1). Use V2 services instead.")
+                .license("Apache 2.0")
+                .licenseUrl("http://www.apache.org/licenses/LICENSE-2.0.html")
+                .version("1.0")
                 .build();
     }
 

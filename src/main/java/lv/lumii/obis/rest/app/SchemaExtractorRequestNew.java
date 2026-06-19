@@ -162,21 +162,21 @@ public class SchemaExtractorRequestNew {
 
     public Boolean getCalculatePropertyPropertyRelations() {
         if (calculatePropertyPropertyRelations == null) {
-            calculatePropertyPropertyRelations = Boolean.FALSE;
+            calculatePropertyPropertyRelations = Boolean.TRUE;
         }
         return calculatePropertyPropertyRelations;
     }
 
     public Boolean getCalculateSourceAndTargetPairs() {
         if (calculateSourceAndTargetPairs == null) {
-            calculateSourceAndTargetPairs = Boolean.FALSE;
+            calculateSourceAndTargetPairs = Boolean.TRUE;
         }
         return calculateSourceAndTargetPairs;
     }
 
     public Boolean getCalculateDomainsAndRanges() {
         if (calculateDomainsAndRanges == null) {
-            calculateDomainsAndRanges = Boolean.FALSE;
+            calculateDomainsAndRanges = Boolean.TRUE;
         }
         return calculateDomainsAndRanges;
     }
