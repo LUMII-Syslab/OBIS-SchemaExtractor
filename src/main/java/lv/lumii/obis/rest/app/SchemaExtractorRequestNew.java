@@ -34,16 +34,19 @@ public class SchemaExtractorRequestNew {
     @ApiParam(access = "10", value = "SPARQL Endpoint URL, for example, http://localhost:8890/sparql", required = true)
     private String endpointUrl;
 
-    @ApiParam(access = "20", value = "Named Graph (optional, recommended). If no graph name provided, the search will involve all graphs from the endpoint", allowEmptyValue = true)
+    @ApiParam(access = "20", value = "Named Graph (optional). If no graph name provided, the search will involve all graphs from the endpoint", allowEmptyValue = true)
     private String graphName;
 
     @ApiParam(access = "30", value = "Calculate subclass relation (strongly recommended)", defaultValue = "true", required = true)
     private Boolean calculateSubClassRelations;
 
-    @ApiParam(access = "31", value = "Include multiple inheritance check (strongly recommended, can be skipped for performance reasons for very large endpoints)", defaultValue = "true", required = true)
+    @ApiParam(access = "31", value = "Include multiple inheritance check, strongly recommended. If set to false, no more than a single direct super-class for a class shall be found. " +
+            "Set false only for very large endpoints, if the processing of subclass relations is stuck in the extractor for a longer time.", defaultValue = "true", required = true)
     private Boolean calculateMultipleInheritanceSuperclasses;
 
-    @ApiParam(access = "32", value = "Minimal Analyzed Class Size (if 1, all classes should be analyzed). Values above 1 (e.g., 10 or 100) may be essential for endpoints with above 500 classes", defaultValue = "1", required = true)
+    @ApiParam(access = "32", value = "Minimal analyzed class size. The classes below the specified size shall be included in the schema, " +
+            "still they shall not be considered as possible super-classes of other classes and their links to properties shall not be analyzed individually. " +
+            "If 1, all classes should be analyzed. Values above 1, e.g. 10 or 100, may be essential for endpoints with more than several thousand classes.", defaultValue = "1", required = true)
     private Integer minimalAnalyzedClassSize;
 
     @ApiParam(access = "33", value = "At least 1 class is required for the schema extraction, if no classes found - the extractor work is aborted", defaultValue = "true", required = true)
@@ -54,16 +57,22 @@ public class SchemaExtractorRequestNew {
     @ApiParam(hidden = true, access = "35", value = "Validate the list of properties with simple and statistics queries ", defaultValue = "true", required = true)
     private Boolean validatePropertiesList;
 
-    @ApiParam(access = "40", value = "Calculate property-property adjacency (following properties, same subject, same object). Useful for auto-completion. Currently not used in schema visualization. Can be time consuming for larger schemas", defaultValue = "true", required = true)
+    @ApiParam(access = "40", value = "Calculate property-property adjacency: following properties, same subject, same object. " +
+            "Important for visual and textual query auto-completion use case; can be used in schema visualization if property sources and targets are considered as potential nodes (work in progress). " +
+            "Can be time-consuming for larger schemas, consider appropriate propertyPropertyLinkCheckBackupMode", defaultValue = "true", required = true)
     private Boolean calculatePropertyPropertyRelations;
 
-    @ApiParam(access = "41", value = "Set backup validation queries to calculate property-property relations", defaultValue = "details", required = true)
+    @ApiParam(access = "41", value = "Set backup validation queries to calculate property-property relations in the case of a failing property co-occurrence query for a given base property. " +
+            "details, limitsPlus and limitsPlusSimple guarantee trying a single-line pattern of two property co-occurrence, if larger patterns fail. " +
+            "details gives exact statistics for two property co-occurrence, whenever possible. " +
+            "limitsPlus attempts at least a limit-based estimate, limitsPlusSimple can stay with yes/no answer for co-occurrence for performance reasons (with some count information imputed at later schema import steps). " +
+            "none and limits are faster, but can result in partially incomplete structure information.", defaultValue = "details", required = true)
     private PropertyRelationsCheckMode propertyPropertyLinkCheckBackupMode;
 
     @ApiParam(access = "50", value = "Calculate pairs of source and target classes for properties (creates finer-grained schemas; used as a source of statistics in visual schema diagrams)", defaultValue = "true", required = true)
     private Boolean calculateSourceAndTargetPairs;
 
-    @ApiParam(access = "60", value = "Calculate domain and range classes for properties", defaultValue = "true", required = true)
+    @ApiParam(access = "60", value = "Calculate domain and range classes for properties (in the strict, ontological sense)", defaultValue = "true", required = true)
     private Boolean calculateDomainsAndRanges;
 
     @ApiParam(hidden = true, access = "61", value = "Calculate distinct subjects and objects count for property and/or for property source and target classes", defaultValue = "propertyLevel", required = true)
@@ -75,28 +84,30 @@ public class SchemaExtractorRequestNew {
     @ApiParam(access = "70", value = "Calculate ascription points (principal classes) for properties (strongly recommended, if schema diagrams are envisaged). Use 'class coverage', if all class-to-property connections are to be marked for the class itself, or some its superclass or subclass (can make a difference in the case of overlapping classes)", defaultValue = "basic", required = true)
     private ImportantIndexesMode calculateImportanceIndexes;
 
-    @ApiParam(access = "80", value = "Check property source and target class set closure (essential for SHACL export (to be developed))", defaultValue = "true", required = true)
+    @ApiParam(access = "80", value = "Check, if the property source and target class set sets cover all non-literal property subjects and objects; " +
+            "essential for future SHACL export, can be used in advanced schema diagrams.", defaultValue = "true", required = true)
     private Boolean calculateClosedClassSets;
 
-    @ApiParam(access = "90", value = "Calculate min and max cardinalities for properties", defaultValue = "propertyLevelAndClassContext", required = true)
+    @ApiParam(access = "90", value = "Calculate minimum and maximum cardinalities for properties. May consider propertyLevelOnly for larger schemas.", defaultValue = "propertyLevelAndClassContext", required = true)
     private CalculatePropertyFeatureMode calculateCardinalities;
 
-    @ApiParam(access = "100", value = "Calculate data types for attributes", defaultValue = "propertyLevelAndClassContext", required = true)
+    @ApiParam(access = "100", value = "Calculate data types for attributes. May consider propertyLevelOnly for larger schemas.", defaultValue = "propertyLevelAndClassContext", required = true)
     private CalculatePropertyFeatureMode calculateDataTypes;
 
-    @ApiParam(access = "110", value = "Instance sample size for data type calculation", required = false)
+    @ApiParam(access = "110", value = "Instance sample size for datatype calculation. It is recommended to provide a constraint (e.g., 100K or 1M) for larger data sets " +
+            "as the exact data set information can be less essential in the schemas and attempts to obtain exact data type usage statistics may take unreasonably long time.", required = false)
     private Long sampleLimitForDataTypeCalculation;
 
-    @ApiParam(access = "140", value = "Calculate instance namespace URIs", defaultValue = "no", required = true)
+    @ApiParam(hidden = true, access = "140", value = "Calculate instance namespace URIs", defaultValue = "no", required = true)
     private InstanceNamespacesMode calculateInstanceNamespaces;
 
-    @ApiParam(access = "141", value = "Limit of instances to use in namespace calculation (no value or 0 means all data will be used)", defaultValue = "1000", required = false)
+    @ApiParam(hidden = true, access = "141", value = "Limit of instances to use in namespace calculation (no value or 0 means all data will be used)", defaultValue = "1000", required = false)
     private Long sampleLimitForInstanceNamespacesCalculation;
 
     @ApiParam(access = "150", value = "Properties for class and property labels. rdfs:label and skos:prefLabel assumed by default. For labels in specific languages use @{en,de} notation after the label property iri or short form. To exclude a default labeling property, use property@{-} notation.", allowEmptyValue = true)
     private List<String> addedLabels;
 
-    @ApiParam(access = "170", value = "Add intersection classes to the result schema", defaultValue = "yes", required = true)
+    @ApiParam(access = "170", value = "Record intersection class information in the extracted schema", defaultValue = "yes", required = true)
     private ShowIntersectionClassesMode addIntersectionClasses;
 
     @ApiParam(hidden = true, access = "180", value = "List of properties defining the class structure; the classifier values (objects of these property triples) can be superclasses of other classes/classifiers and are checked for being sources and targets for other properties (default property is rdf:type)", allowEmptyValue = true)
