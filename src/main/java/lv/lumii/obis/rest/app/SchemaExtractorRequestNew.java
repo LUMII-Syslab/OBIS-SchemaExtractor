@@ -98,7 +98,8 @@ public class SchemaExtractorRequestNew {
             "as the exact data set information can be less essential in the schemas and attempts to obtain exact data type usage statistics may take unreasonably long time.", required = false)
     private Long sampleLimitForDataTypeCalculation;
 
-    @ApiParam(hidden = true, access = "140", value = "Calculate instance namespace URIs", defaultValue = "no", required = true)
+    @ApiParam(hidden = true, access = "140", value = "Calculate instance namespace URIs. Mode 'details' will retrieve namespaces for all classes and " +
+            "for subjects and objects of all properties. Mode 'overview' will retrieve for limited data set (use parameter sampleLimitForInstanceNamespacesCalculation).", defaultValue = "no", required = true)
     private InstanceNamespacesMode calculateInstanceNamespaces;
 
     @ApiParam(hidden = true, access = "141", value = "Limit of instances to use in namespace calculation (no value or 0 means all data will be used)", defaultValue = "1000", required = false)
@@ -121,7 +122,7 @@ public class SchemaExtractorRequestNew {
 
     @ApiParam(hidden = true, access = "210", value = "Add DISTINCT in queries (can be used for classes and properties of less than 10M size, if entity/triple duplications are observed otherwise in the schemas)", defaultValue = "no", required = true)
     private DistinctQueryMode exactCountCalculations;
-    @ApiParam(hidden = true, access = "211", value = "Calculate distinct triples count for classes and properties)", defaultValue = "yes", required = true)
+    @ApiParam(hidden = true, access = "211", value = "Calculate distinct triples count for classes and properties)", defaultValue = "true", required = true)
     private Boolean calculateDistinctTriples;
 
     @ApiParam(hidden = true, access = "220", value = "Total instance count limit for exact count calculations", defaultValue = "10000000", required = false)
@@ -133,17 +134,20 @@ public class SchemaExtractorRequestNew {
     @ApiParam(access = "230", value = "List of excluded namespaces (e.g., http://www.openlinksw.com/schemas/virtrdf#)", allowEmptyValue = true)
     private List<String> excludedNamespaces;
 
-    @ApiParam(hidden = true, access = "235", value = "Large Query Timeout (in seconds). Default value 600 seconds (set 0 to execute without timeout)", defaultValue = "0", required = false)
+    @ApiParam(hidden = true, access = "235", value = "Timeout for large SPARQL queries, in seconds. 0 or null means execute without timeout (default = 0). " +
+            "Some typical values can be 600 or 1200.", defaultValue = "0", required = false)
     private Long largeQueryTimeout;
-    @ApiParam(hidden = true, access = "236", value = "Small Query Timeout (in seconds). Default value 60 seconds (set 0 to execute without timeout)", defaultValue = "0", required = false)
+    @ApiParam(hidden = true, access = "236", value = "Timeout for small SPARQL queries, in seconds. 0 or null means execute without timeout (default = 0). " +
+            "A typical value can be 60.", defaultValue = "0", required = false)
     private Long smallQueryTimeout;
 
-    @ApiParam(hidden = true, access = "237", value = "Query Delay Timeout in case of failure (in seconds)", defaultValue = "0", required = false)
+    @ApiParam(hidden = true, access = "237", value = "Delay after query/endpoint failure, in seconds. 0 or null means no delay (default = 0). " +
+            "Can be useful in rare occasions, if the endpoint responds positively to Health check query (cached), but not real data queries.", defaultValue = "0", required = false)
     private Long delayOnFailure;
-    @ApiParam(hidden = true, access = "238", value = "Waiting time for the endpoint availability (in minutes). If 0 - then wait forever", defaultValue = "60", required = false)
+    @ApiParam(hidden = true, access = "238", value = "Waiting time for endpoint recovery, in minutes. 0 or null means wait forever (default = 0)", defaultValue = "60", required = false)
     private Long waitingTimeForEndpoint;
 
-    @ApiParam(hidden = true, access = "239", value = "The level of logging when the property does not have associated classes", defaultValue = "no", required = true)
+    @ApiParam(hidden = true, access = "239", value = "Controls logging when a property has no source or target (for properties with non-literal objects) classes (default = no)", defaultValue = "no", required = true)
     private NoClassesLoggingOptions logNoClassesForProperty;
 
     public Boolean getCalculateSubClassRelations() {

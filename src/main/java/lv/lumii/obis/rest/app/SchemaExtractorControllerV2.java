@@ -182,7 +182,7 @@ public class SchemaExtractorControllerV2 {
         try {
             requestDto = objectConversionService.getObjectFromYamlStream(configurationFile.getInputStream(), SchemaExtractorRequestDto.class);
         } catch (Exception e) {
-            log.error(SCHEMA_EXTRACT_EXCEPTION_NO_CONFIG_FILE);
+            log.error(SCHEMA_EXTRACT_EXCEPTION_NO_CONFIG_FILE, e);
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, SCHEMA_EXTRACT_EXCEPTION_NO_CONFIG_FILE, e);
         }
         if (requestDto == null) {

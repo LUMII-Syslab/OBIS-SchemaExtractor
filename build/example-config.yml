@@ -1,60 +1,371 @@
+# ============================================================
+# Schema Extractor Configuration
+# ============================================================
+
+
+# ------------------------------------------------------------
+# ENDPOINT & GRAPH
+# ------------------------------------------------------------
+
+# Description: SPARQL Endpoint URL
+# Required: true
+# Default: (none)
+# Allowed values: string value
 endpointUrl: "http://localhost:8890/sparql"
-graphName: "MiniUniv"
+
+# Description: Named Graph (optional). If no graph name provided, the search will involve all graphs from the endpoint
+# Required: false
+# Default: (none — searches all graphs)
+# Allowed values: string value
+graphName: ""
+
+# ------------------------------------------------------------
+# CLASS ANALYSIS
+# ------------------------------------------------------------
+
+# Description: Calculate subclass relation (strongly recommended)
+# Required: true
+# Default: true
+# Allowed values: [true, false]
 calculateSubClassRelations: true
+
+# Description: Include multiple inheritance check, strongly recommended. If set to false, no more than a single direct
+# super-class for a class shall be found. Set false only for very large endpoints, if the processing of subclass
+# relations is stuck in the extractor for a longer time.
+# Required: true
+# Default: true
+# Allowed values: [true, false]
 calculateMultipleInheritanceSuperclasses: true
-requireClasses: true
-validateClassesList: true
-validatePropertiesList: true
-calculatePropertyPropertyRelations: false
-propertyPropertyLinkCheckBackupMode: "details"
-calculateSourceAndTargetPairs: true
-calculateDomainsAndRanges: true
-includeDistinctSubjectsAndObjects: "no"
-computeBlankNodeStatistics: "full"
-calculateImportanceIndexes: "basic"
-calculateClosedClassSets: true
-calculateDataTypes: "propertyLevelAndClassContext"
-calculateCardinalities: "propertyLevelAndClassContext"
-sampleLimitForDataTypeCalculation: 0
-calculateInstanceNamespaces: "overview"
-sampleLimitForInstanceNamespacesCalculation: 1000
+
+# Description: Minimal analyzed class size. The classes below the specified size shall be included in the schema,
+# still they shall not be considered as possible super-classes of other classes and their links to properties shall
+# not be analyzed individually. If 1, all classes should be analyzed. Values above 1, e.g. 10 or 100, may be
+# essential for endpoints with more than several thousand classes.
+# Required: true
+# Default: 1
+# Allowed values: any positive integer
 minimalAnalyzedClassSize: 1
+
+# Description: At least 1 class is required for the schema extraction, if no classes found - the extractor work is aborted
+# Required: true
+# Default: true
+# Allowed values: [true, false]
+requireClasses: true
+
+# Description: Validate the list of classes with simple and statistics queries
+# Required: true
+# Default: true
+# Allowed values: [true, false]
+validateClassesList: true
+
+# Description: Validate the list of properties with simple and statistics queries
+# Required: true
+# Default: true
+# Allowed values: [true, false]
+validatePropertiesList: true
+
+# ------------------------------------------------------------
+# PROPERTY-PROPERTY RELATIONS
+# ------------------------------------------------------------
+
+# Description: Calculate property-property adjacency: following properties, same subject, same object.
+# Important for visual and textual query auto-completion use case; can be used in schema visualization if property
+# sources and targets are considered as potential nodes (work in progress). Can be time-consuming for larger schemas,
+# consider appropriate propertyPropertyLinkCheckBackupMode.
+# Required: true
+# Default: true
+# Allowed values: [true, false]
+calculatePropertyPropertyRelations: true
+
+# Description: Set backup validation queries to calculate property-property relations in the case of a failing
+# property co-occurrence query for a given base property. details, limitsPlus and limitsPlusSimple guarantee trying
+# a single-line pattern of two property co-occurrence, if larger patterns fail. details gives exact statistics for
+# two property co-occurrence, whenever possible. limitsPlus attempts at least a limit-based estimate,
+# limitsPlusSimple can stay with yes/no answer for co-occurrence for performance reasons (with some count information
+# imputed at later schema import steps). none and limits are faster, but can result in partially incomplete structure
+# information.
+# Required: true
+# Default: details
+# Allowed values: [none, limits, limitsPlus, limitsPlusSimple, detailsBase, details]
+propertyPropertyLinkCheckBackupMode: "details"
+
+# ------------------------------------------------------------
+# SOURCE/TARGET & DOMAIN/RANGE
+# ------------------------------------------------------------
+
+# Description: Calculate pairs of source and target classes for properties (creates finer-grained schemas; used as a
+# source of statistics in visual schema diagrams)
+# Required: true
+# Default: true
+# Allowed values: [true, false]
+calculateSourceAndTargetPairs: true
+
+# Description: Calculate domain and range classes for properties (in the strict, ontological sense)
+# Required: true
+# Default: true
+# Allowed values: [true, false]
+calculateDomainsAndRanges: true
+
+# Description: Calculate distinct subjects and objects count for property and/or for property source and target classes
+# Required: true
+# Default: propertyLevel
+# Allowed values: [no, propertyLevel, yes]
+includeDistinctSubjectsAndObjects: "propertyLevel"
+
+# Description: Calculate blank node statistics
+# Required: true
+# Default: full
+# Allowed values: [no, targetsOnly, full]
+computeBlankNodeStatistics: "full"
+
+# ------------------------------------------------------------
+# IMPORTANCE INDEXES
+# ------------------------------------------------------------
+
+# Description: Calculate ascription points (principal classes) for properties (strongly recommended, if schema
+# diagrams are envisaged). Use 'class coverage', if all class-to-property connections are to be marked for the class
+# itself, or some its superclass or subclass (can make a difference in the case of overlapping classes).
+# Required: true
+# Default: basic
+# Allowed values: [basic, unionBased, classCoverage, no]
+calculateImportanceIndexes: "basic"
+
+# ------------------------------------------------------------
+# CLOSED CLASS SETS
+# ------------------------------------------------------------
+
+# Description: Check, if the property source and target class set sets cover all non-literal property subjects and
+# objects; essential for future SHACL export, can be used in advanced schema diagrams.
+# Required: true
+# Default: true
+# Allowed values: [true, false]
+calculateClosedClassSets: true
+
+# ------------------------------------------------------------
+# CARDINALITIES & DATA TYPES
+# ------------------------------------------------------------
+
+# Description: Calculate minimum and maximum cardinalities for properties. May consider propertyLevelOnly for larger schemas.
+# Required: true
+# Default: propertyLevelAndClassContext
+# Allowed values: [none, propertyLevelOnly, propertyLevelAndClassContext]
+calculateCardinalities: "propertyLevelAndClassContext"
+
+# Description: Calculate data types for attributes. May consider propertyLevelOnly for larger schemas.
+# Required: true
+# Default: propertyLevelAndClassContext
+# Allowed values: [none, propertyLevelOnly, propertyLevelAndClassContext]
+calculateDataTypes: "propertyLevelAndClassContext"
+
+# Description: Instance sample size for datatype calculation. It is recommended to provide a constraint (e.g., 100000
+# or 1000000) for larger data sets as the exact data set information can be less essential in the schemas and attempts
+# to obtain exact data type usage statistics may take unreasonably long time. If 0 or not provided then no limit is applied.
+# Required: false
+# Default: (none — no limit applied)
+# Allowed values: 0 or any positive integer
+sampleLimitForDataTypeCalculation: 0
+
+# ------------------------------------------------------------
+# INSTANCE NAMESPACES
+# ------------------------------------------------------------
+
+# Description: Calculate instance namespace URIs. Mode 'details' will retrieve namespaces for all classes and for subjects and objects 
+# of all properties. Mode 'overview' will retrieve for limited data set (use parameter sampleLimitForInstanceNamespacesCalculation).
+# Required: true
+# Default: no
+# Allowed values: [no, detailed, overview]
+calculateInstanceNamespaces: "no"
+
+# Description: Limit of instances to use in namespace calculation (no value or 0 means all data will be used)
+# Required: false
+# Default: 1000
+# Allowed values: 0 or any positive integer
+sampleLimitForInstanceNamespacesCalculation: 1000
+
+# ------------------------------------------------------------
+# INTERSECTION CLASSES
+# ------------------------------------------------------------
+
+# Description: Record intersection class information in the extracted schema
+# Required: true
+# Default: yes
+# Allowed values: [yes, no]
 addIntersectionClasses: "yes"
-exactCountCalculations: "no"
-calculateDistinctTriples: true
-maxInstanceLimitForExactCount: 1000000
+
+# ------------------------------------------------------------
+# CLASSIFICATION PROPERTIES
+# ------------------------------------------------------------
+
+# Description: List of properties defining the class structure; the classifier values (objects of these property
+# triples) can be superclasses of other classes/classifiers and are checked for being sources and targets for other
+# properties (default property is rdf:type).
+# Required: false
+# Default: (none — rdf:type used by default)
+# Allowed values: list of string values
+# Example values below:
+#   - "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
 principalClassificationProperties:
-- "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
+
+# Description: List of properties defining the classifiers whose values can define subsets of principal property
+# classifiers (classes) and that are checked for being sources and targets for other properties.
+# Required: false
+# Default: (none)
+# Allowed values: list of string values
 classificationPropertiesWithConnectionsOnly:
-- "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
+
+# Description: List of properties defining simple classifiers (their values can define subsets of principal
+# classifiers (classes)), not checked for being sources and targets for other properties.
+# Required: false
+# Default: (none)
+# Allowed values: list of string values
 simpleClassificationProperties:
-- "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
-includedLabels:
-- labelPropertyFullOrPrefix: "rdfs:label"
-  languages:
-  - "en"
-- labelPropertyFullOrPrefix: "skos:prefLabel"
-  languages: []
-- labelPropertyFullOrPrefix: "http://www.w3.org/2004/02/skos/core#altLabel"
-  languages: []
-includedClasses:
-- className: "http://lumii.lv/ontologies/UnivExample_hasMark.owl#AcademicProgram"
-  instanceCount: null
-includedProperties:
-- propertyName: "http://lumii.lv/ontologies/UnivExample_hasMark.owl#programName"
-  instanceCount: null
-excludedNamespaces:
-- "http://www.openlinksw.com/schemas/virtrdf"
-predefinedNamespaces:
-  Prefixes:
-  - prefix: ":"
-    namespace: "http://lumii.lv/ontologies/UnivExample_hasMark.owl#"
-  - prefix: "rdfs:"
-    namespace: "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-largeQueryTimeout: 0
-smallQueryTimeout: 0
-delayOnFailure: 0
-waitingTimeForEndpoint: 60
-enableLogging: true
-logNoClassesForProperty: no
+
+# ------------------------------------------------------------
+# DISTINCT / EXACT COUNT
+# ------------------------------------------------------------
+
+# Description: Add DISTINCT in queries (can be used for classes and properties of less than 10M size, if
+# entity/triple duplications are observed otherwise in the schemas).
+# Required: true
+# Default: no
+# Allowed values: [yes, no]
+exactCountCalculations: "no"
+
+# Description: Calculate distinct triples count for classes and properties.
+# Required: true
+# Default: true
+# Allowed values: [true, false]
+calculateDistinctTriples: true
+
+# Description: Total instance count limit for exact count calculations.
+# Required: false
+# Default: 10000000
+# Allowed values: 0 or any positive integer
+maxInstanceLimitForExactCount: 10000000
+
+# Description: Cross check target classes on non-literal property object check failure.
+# Required: false
+# Default: false
+# Allowed values: [true, false]
 crossCheckTargetClassesOnNonLiteralPropertyObjectCheckFailure: false
+
+# ------------------------------------------------------------
+# EXCLUDED NAMESPACES
+# ------------------------------------------------------------
+
+# Description: List of excluded namespaces
+# Required: false
+# Default: (none — no namespaces excluded)
+# Allowed values: list of string values
+# Example values below:
+#   - "http://www.openlinksw.com/schemas/virtrdf#"
+excludedNamespaces:
+
+# ------------------------------------------------------------
+# TIMEOUTS & DELAYS
+# ------------------------------------------------------------
+
+# Description: Timeout for large SPARQL queries, in seconds. 0 or null means execute without timeout (default = 0).
+# Some typical values can be 600 or 1200.
+# Required: false
+# Default: 0 (no timeout)
+# Allowed values: 0 or any positive integer
+largeQueryTimeout: 0
+
+# Description: Timeout for small SPARQL queries, in seconds. 0 or null means execute without timeout (default = 0).
+# A typical value can be 60.
+# Required: false
+# Default: 0 (no timeout)
+# Allowed values: 0 or any positive integer
+smallQueryTimeout: 0
+
+# Description: Delay after query/endpoint failure, in seconds. 0 or null means no delay (default = 0). 
+# Can be useful in rare occasions, if the endpoint responds positively to Health check query (cached), but not real data queries.
+# Required: false
+# Default: 0 (no delay)
+# Allowed values: 0 or any positive integer
+delayOnFailure: 0
+
+# Description: Waiting time for endpoint recovery, in minutes. 0 or null means wait forever (default = 60 min)
+# Required: false
+# Default: 60
+# Allowed values: 0 or any positive integer
+waitingTimeForEndpoint: 60
+
+# ------------------------------------------------------------
+# LOGGING
+# ------------------------------------------------------------
+
+# Description: Controls logging when a property has no source or target (for properties with non-literal objects) classes (default = no)
+# Required: true
+# Default: no
+# Allowed values: [yes, no, sourcesOnly]
+logNoClassesForProperty: "no"
+
+# ------------------------------------------------------------
+# FILE INPUTS
+# ------------------------------------------------------------
+
+# Description: Optional list of classes to include. If omitted or empty, classes are discovered from the endpoint.
+# Required: false
+# Default: none
+# Allowed values: list of classes with 2 attributes:
+# 		className - class URI to include
+#		instanceCount - optional known instance count for the class. If absent or not positive, the count is queried from the endpoint
+# Example values below:
+# 	- className: "http://schema.org/Person"
+# 	- className: "http://schema.org/Organization"
+#	  instanceCount: 10
+includedClasses:
+
+# Description: Optional list of properties to include. If omitted or empty, properties are discovered from the endpoint.
+# Required: false
+# Default: none
+# Allowed values: list of properties with 2 attributes:
+# 		propertyName - property URI to include
+#		instanceCount - optional known triple/property instance count. If absent or not positive, the count is queried from the endpoint
+# Example values below:
+# 	- propertyName: "http://schema.org/name"
+#	  instanceCount: 100
+# 	- propertyName: "http://schema.org/knows"
+includedProperties:
+
+# Description: Optional list of Label properties to use for classes and properties. Each object has labelPropertyFullOrPrefix and languages. 
+# Required: false
+# Default: none
+# Allowed values: list of labels with 2 attributes:
+# 		labelPropertyFullOrPrefix - full IRI or known prefix form of a label property, e.g. rdfs:label, skos:prefLabel, or http://www.w3.org/2004/02/skos/core#altLabel
+#		languages - optional list of language tags for a label property, e.g. ["en"]. Empty list means no language restriction
+# Example values below:
+# 	- labelPropertyFullOrPrefix: "rdfs:label"
+# 	  languages:
+# 	  - "en"
+# 	- labelPropertyFullOrPrefix: "skos:prefLabel"
+# 	  languages: []
+# 	- labelPropertyFullOrPrefix: "http://www.w3.org/2004/02/skos/core#altLabel"
+# 	  languages: []
+includedLabels:
+
+# Description: Optional list of predefined namespaces.
+# Required: false
+# Default: none
+# Allowed values: root element "Prefixes" with list of namespace items with 2 attributes:
+# 		prefix - namespace prefix
+#		namespace - full URI
+# Example values below:
+#   Prefixes:
+#   - prefix: "xsd:"
+#     namespace: "http://www.w3.org/2001/XMLSchema#"
+#   - prefix: "rdfs:"
+#     namespace: "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+predefinedNamespaces:
+
+# ------------------------------------------------------------
+# SERVER-SIDE OPTIONS
+# ------------------------------------------------------------
+
+# Description: Enable SPARQL query logging to file on the server.
+# Required: false
+# Default: true
+# Allowed values: [true, false]
+enableLogging: true
