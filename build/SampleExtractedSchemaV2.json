@@ -2,158 +2,484 @@
   "SchemaName": "MiniUniv_Schema",
   "Classes": [
     {
-      "localName": "AcademicProgram",
-      "namespace": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#",
-      "fullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#AcademicProgram",
-      "instanceCount": 2,
+      "localName": "Property",
+      "namespace": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+      "fullName": "http://www.w3.org/1999/02/22-rdf-syntax-ns#Property",
+      "instanceCount": 27,
+      "distinctInstances": 27,
+      "isLiteral": false,
       "propertiesInSchema": true,
-      "SuperClasses": [
-        "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing"
-      ]
+      "classificationProperty": "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
+      "outgoingPropertiesOK": 5,
+      "Labels": [],
+      "SuperClasses": [],
+      "IntersectionClasses": [],
+      "InstanceNamespaces": []
     },
     {
       "localName": "FacultyLevel",
       "namespace": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#",
       "fullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#FacultyLevel",
       "instanceCount": 3,
+      "distinctInstances": 3,
+      "incomingTripleCount": 3,
+      "isLiteral": false,
       "propertiesInSchema": true,
+      "classificationProperty": "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
+      "incomingPropertiesOK": 5,
+      "outgoingPropertiesOK": 5,
+      "Labels": [],
       "SuperClasses": [
         "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing"
-      ]
+      ],
+      "IntersectionClasses": [
+        {
+          "className": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing",
+          "instanceCount": 3
+        }
+      ],
+      "InstanceNamespaces": []
     },
     {
       "localName": "Nationality",
       "namespace": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#",
       "fullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Nationality",
       "instanceCount": 7,
+      "distinctInstances": 7,
+      "incomingTripleCount": 8,
+      "isLiteral": false,
       "propertiesInSchema": true,
+      "classificationProperty": "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
+      "incomingPropertiesOK": 5,
+      "outgoingPropertiesOK": 5,
+      "Labels": [],
       "SuperClasses": [
         "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing"
-      ]
+      ],
+      "IntersectionClasses": [
+        {
+          "className": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing",
+          "instanceCount": 7
+        }
+      ],
+      "InstanceNamespaces": []
+    },
+    {
+      "localName": "AcademicProgram",
+      "namespace": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#",
+      "fullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#AcademicProgram",
+      "instanceCount": 2,
+      "distinctInstances": 2,
+      "incomingTripleCount": 7,
+      "isLiteral": false,
+      "propertiesInSchema": true,
+      "classificationProperty": "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
+      "incomingPropertiesOK": 5,
+      "outgoingPropertiesOK": 5,
+      "Labels": [],
+      "SuperClasses": [
+        "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing"
+      ],
+      "IntersectionClasses": [
+        {
+          "className": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing",
+          "instanceCount": 2
+        }
+      ],
+      "InstanceNamespaces": []
     },
     {
       "localName": "Teacher",
       "namespace": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#",
       "fullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Teacher",
       "instanceCount": 3,
+      "distinctInstances": 3,
+      "isLiteral": false,
       "propertiesInSchema": true,
+      "classificationProperty": "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
+      "outgoingPropertiesOK": 5,
+      "Labels": [],
       "SuperClasses": [
         "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Person"
-      ]
-    },
-    {
-      "localName": "Property",
-      "namespace": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
-      "fullName": "http://www.w3.org/1999/02/22-rdf-syntax-ns#Property",
-      "instanceCount": 27,
-      "propertiesInSchema": true,
-      "SuperClasses": []
-    },
-    {
-      "localName": "Assistant",
-      "namespace": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#",
-      "fullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Assistant",
-      "instanceCount": 1,
-      "propertiesInSchema": true,
-      "SuperClasses": [
-        "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Teacher"
-      ]
-    },
-    {
-      "localName": "CompletedRegistration",
-      "namespace": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#",
-      "fullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#CompletedRegistration",
-      "instanceCount": 10,
-      "propertiesInSchema": true,
-      "SuperClasses": [
-        "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Registration"
-      ]
-    },
-    {
-      "localName": "MandatoryCourse",
-      "namespace": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#",
-      "fullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#MandatoryCourse",
-      "instanceCount": 2,
-      "propertiesInSchema": true,
-      "SuperClasses": [
-        "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Course"
-      ]
-    },
-    {
-      "localName": "OptionalCourse",
-      "namespace": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#",
-      "fullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#OptionalCourse",
-      "instanceCount": 3,
-      "propertiesInSchema": true,
-      "SuperClasses": [
-        "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Course"
-      ]
-    },
-    {
-      "localName": "Professor",
-      "namespace": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#",
-      "fullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Professor",
-      "instanceCount": 2,
-      "propertiesInSchema": true,
-      "SuperClasses": [
-        "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Teacher"
-      ]
+      ],
+      "IntersectionClasses": [
+        {
+          "className": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Assistant",
+          "instanceCount": 1
+        },
+        {
+          "className": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Professor",
+          "instanceCount": 2
+        },
+        {
+          "className": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing",
+          "instanceCount": 3
+        },
+        {
+          "className": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Person",
+          "instanceCount": 3
+        }
+      ],
+      "InstanceNamespaces": []
     },
     {
       "localName": "Thing",
       "namespace": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#",
       "fullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing",
       "instanceCount": 41,
+      "distinctInstances": 41,
+      "incomingTripleCount": 91,
+      "isLiteral": false,
       "propertiesInSchema": true,
-      "SuperClasses": []
+      "classificationProperty": "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
+      "incomingPropertiesOK": 5,
+      "outgoingPropertiesOK": 5,
+      "Labels": [],
+      "SuperClasses": [],
+      "IntersectionClasses": [
+        {
+          "className": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Assistant",
+          "instanceCount": 1
+        },
+        {
+          "className": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#AcademicProgram",
+          "instanceCount": 2
+        },
+        {
+          "className": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#MandatoryCourse",
+          "instanceCount": 2
+        },
+        {
+          "className": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Professor",
+          "instanceCount": 2
+        },
+        {
+          "className": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#FacultyLevel",
+          "instanceCount": 3
+        },
+        {
+          "className": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#OptionalCourse",
+          "instanceCount": 3
+        },
+        {
+          "className": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Teacher",
+          "instanceCount": 3
+        },
+        {
+          "className": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Course",
+          "instanceCount": 5
+        },
+        {
+          "className": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Nationality",
+          "instanceCount": 7
+        },
+        {
+          "className": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Student",
+          "instanceCount": 7
+        },
+        {
+          "className": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#CompletedRegistration",
+          "instanceCount": 10
+        },
+        {
+          "className": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Person",
+          "instanceCount": 10
+        },
+        {
+          "className": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Registration",
+          "instanceCount": 14
+        }
+      ],
+      "InstanceNamespaces": []
+    },
+    {
+      "localName": "CompletedRegistration",
+      "namespace": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#",
+      "fullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#CompletedRegistration",
+      "instanceCount": 10,
+      "distinctInstances": 10,
+      "incomingTripleCount": 10,
+      "isLiteral": false,
+      "propertiesInSchema": true,
+      "classificationProperty": "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
+      "incomingPropertiesOK": 5,
+      "outgoingPropertiesOK": 5,
+      "Labels": [],
+      "SuperClasses": [
+        "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Registration"
+      ],
+      "IntersectionClasses": [
+        {
+          "className": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Registration",
+          "instanceCount": 10
+        },
+        {
+          "className": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing",
+          "instanceCount": 10
+        }
+      ],
+      "InstanceNamespaces": []
+    },
+    {
+      "localName": "OptionalCourse",
+      "namespace": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#",
+      "fullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#OptionalCourse",
+      "instanceCount": 3,
+      "distinctInstances": 3,
+      "incomingTripleCount": 27,
+      "isLiteral": false,
+      "propertiesInSchema": true,
+      "classificationProperty": "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
+      "incomingPropertiesOK": 5,
+      "outgoingPropertiesOK": 5,
+      "Labels": [],
+      "SuperClasses": [
+        "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Course"
+      ],
+      "IntersectionClasses": [
+        {
+          "className": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Course",
+          "instanceCount": 3
+        },
+        {
+          "className": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing",
+          "instanceCount": 3
+        }
+      ],
+      "InstanceNamespaces": []
+    },
+    {
+      "localName": "MandatoryCourse",
+      "namespace": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#",
+      "fullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#MandatoryCourse",
+      "instanceCount": 2,
+      "distinctInstances": 2,
+      "incomingTripleCount": 18,
+      "isLiteral": false,
+      "propertiesInSchema": true,
+      "classificationProperty": "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
+      "incomingPropertiesOK": 5,
+      "outgoingPropertiesOK": 5,
+      "Labels": [],
+      "SuperClasses": [
+        "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Course"
+      ],
+      "IntersectionClasses": [
+        {
+          "className": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Course",
+          "instanceCount": 2
+        },
+        {
+          "className": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing",
+          "instanceCount": 2
+        }
+      ],
+      "InstanceNamespaces": []
+    },
+    {
+      "localName": "Professor",
+      "namespace": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#",
+      "fullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Professor",
+      "instanceCount": 2,
+      "distinctInstances": 2,
+      "isLiteral": false,
+      "propertiesInSchema": true,
+      "classificationProperty": "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
+      "outgoingPropertiesOK": 5,
+      "Labels": [],
+      "SuperClasses": [
+        "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Teacher"
+      ],
+      "IntersectionClasses": [
+        {
+          "className": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Teacher",
+          "instanceCount": 2
+        },
+        {
+          "className": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing",
+          "instanceCount": 2
+        },
+        {
+          "className": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Person",
+          "instanceCount": 2
+        }
+      ],
+      "InstanceNamespaces": []
+    },
+    {
+      "localName": "Assistant",
+      "namespace": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#",
+      "fullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Assistant",
+      "instanceCount": 1,
+      "distinctInstances": 1,
+      "isLiteral": false,
+      "propertiesInSchema": true,
+      "classificationProperty": "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
+      "outgoingPropertiesOK": 5,
+      "Labels": [],
+      "SuperClasses": [
+        "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Teacher"
+      ],
+      "IntersectionClasses": [
+        {
+          "className": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Teacher",
+          "instanceCount": 1
+        },
+        {
+          "className": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing",
+          "instanceCount": 1
+        },
+        {
+          "className": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Person",
+          "instanceCount": 1
+        }
+      ],
+      "InstanceNamespaces": []
     },
     {
       "localName": "Class",
       "namespace": "http://www.w3.org/2000/01/rdf-schema#",
       "fullName": "http://www.w3.org/2000/01/rdf-schema#Class",
       "instanceCount": 14,
+      "distinctInstances": 14,
+      "incomingTripleCount": 110,
+      "isLiteral": false,
       "propertiesInSchema": true,
-      "SuperClasses": []
-    },
-    {
-      "localName": "Course",
-      "namespace": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#",
-      "fullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Course",
-      "instanceCount": 5,
-      "propertiesInSchema": true,
-      "SuperClasses": [
-        "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing"
-      ]
-    },
-    {
-      "localName": "Person",
-      "namespace": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#",
-      "fullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Person",
-      "instanceCount": 10,
-      "propertiesInSchema": true,
-      "SuperClasses": [
-        "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing"
-      ]
+      "classificationProperty": "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
+      "incomingPropertiesOK": 5,
+      "outgoingPropertiesOK": 5,
+      "Labels": [],
+      "SuperClasses": [],
+      "IntersectionClasses": [],
+      "InstanceNamespaces": []
     },
     {
       "localName": "Registration",
       "namespace": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#",
       "fullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Registration",
       "instanceCount": 14,
+      "distinctInstances": 14,
+      "incomingTripleCount": 14,
+      "isLiteral": false,
       "propertiesInSchema": true,
+      "classificationProperty": "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
+      "incomingPropertiesOK": 5,
+      "outgoingPropertiesOK": 5,
+      "Labels": [],
       "SuperClasses": [
         "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing"
-      ]
+      ],
+      "IntersectionClasses": [
+        {
+          "className": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#CompletedRegistration",
+          "instanceCount": 10
+        },
+        {
+          "className": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing",
+          "instanceCount": 14
+        }
+      ],
+      "InstanceNamespaces": []
+    },
+    {
+      "localName": "Course",
+      "namespace": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#",
+      "fullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Course",
+      "instanceCount": 5,
+      "distinctInstances": 5,
+      "incomingTripleCount": 45,
+      "isLiteral": false,
+      "propertiesInSchema": true,
+      "classificationProperty": "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
+      "incomingPropertiesOK": 5,
+      "outgoingPropertiesOK": 5,
+      "Labels": [],
+      "SuperClasses": [
+        "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing"
+      ],
+      "IntersectionClasses": [
+        {
+          "className": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#MandatoryCourse",
+          "instanceCount": 2
+        },
+        {
+          "className": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#OptionalCourse",
+          "instanceCount": 3
+        },
+        {
+          "className": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing",
+          "instanceCount": 5
+        }
+      ],
+      "InstanceNamespaces": []
+    },
+    {
+      "localName": "Person",
+      "namespace": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#",
+      "fullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Person",
+      "instanceCount": 10,
+      "distinctInstances": 10,
+      "incomingTripleCount": 14,
+      "isLiteral": false,
+      "propertiesInSchema": true,
+      "classificationProperty": "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
+      "incomingPropertiesOK": 5,
+      "outgoingPropertiesOK": 5,
+      "Labels": [],
+      "SuperClasses": [
+        "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing"
+      ],
+      "IntersectionClasses": [
+        {
+          "className": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Assistant",
+          "instanceCount": 1
+        },
+        {
+          "className": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Professor",
+          "instanceCount": 2
+        },
+        {
+          "className": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Teacher",
+          "instanceCount": 3
+        },
+        {
+          "className": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Student",
+          "instanceCount": 7
+        },
+        {
+          "className": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing",
+          "instanceCount": 10
+        }
+      ],
+      "InstanceNamespaces": []
     },
     {
       "localName": "Student",
       "namespace": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#",
       "fullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Student",
       "instanceCount": 7,
+      "distinctInstances": 7,
+      "incomingTripleCount": 14,
+      "isLiteral": false,
       "propertiesInSchema": true,
+      "classificationProperty": "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
+      "incomingPropertiesOK": 5,
+      "outgoingPropertiesOK": 5,
+      "Labels": [],
       "SuperClasses": [
         "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Person"
-      ]
+      ],
+      "IntersectionClasses": [
+        {
+          "className": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing",
+          "instanceCount": 7
+        },
+        {
+          "className": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Person",
+          "instanceCount": 7
+        }
+      ],
+      "InstanceNamespaces": []
     }
   ],
   "Properties": [
@@ -164,10 +490,19 @@
       "maxCardinality": 1,
       "maxInverseCardinality": -1,
       "tripleCount": 14,
+      "distinctTriples": 14,
       "dataTripleCount": 0,
       "objectTripleCount": 14,
+      "distinctSubjectsCount": 14,
+      "distinctObjectsCount": 5,
       "closedDomain": true,
       "closedRange": true,
+      "sourceClassesOK": 5,
+      "targetClassesOK": 5,
+      "hasOutgoingPropertiesOK": 5,
+      "hasIncomingPropertiesOK": 5,
+      "hasFollowersOK": 5,
+      "Labels": [],
       "DataTypes": [],
       "SourceClasses": [
         {
@@ -176,6 +511,7 @@
           "dataTripleCount": 0,
           "objectTripleCount": 14,
           "closedRange": true,
+          "isPrincipal": true,
           "importanceIndex": 1,
           "minCardinality": 1,
           "maxCardinality": 1
@@ -186,6 +522,7 @@
           "dataTripleCount": 0,
           "objectTripleCount": 14,
           "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 0,
           "maxCardinality": 1
@@ -196,6 +533,7 @@
           "dataTripleCount": 0,
           "objectTripleCount": 10,
           "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 1,
           "maxCardinality": 1
@@ -206,6 +544,7 @@
           "classFullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Course",
           "tripleCount": 14,
           "closedDomain": true,
+          "isPrincipal": true,
           "importanceIndex": 1,
           "minInverseCardinality": 1,
           "maxInverseCardinality": -1
@@ -214,6 +553,7 @@
           "classFullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing",
           "tripleCount": 14,
           "closedDomain": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minInverseCardinality": 0,
           "maxInverseCardinality": -1
@@ -222,6 +562,7 @@
           "classFullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#OptionalCourse",
           "tripleCount": 8,
           "closedDomain": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minInverseCardinality": 1,
           "maxInverseCardinality": -1
@@ -230,6 +571,7 @@
           "classFullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#MandatoryCourse",
           "tripleCount": 6,
           "closedDomain": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minInverseCardinality": 1,
           "maxInverseCardinality": -1
@@ -238,84 +580,108 @@
       "ClassPairs": [
         {
           "tripleCount": 7,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#CompletedRegistration",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#OptionalCourse"
         },
         {
           "tripleCount": 10,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#CompletedRegistration",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing"
         },
         {
           "tripleCount": 14,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing"
         },
         {
           "tripleCount": 6,
+          "isPrincipalSource": true,
           "sourceImportanceIndex": 1,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Registration",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#MandatoryCourse"
         },
         {
           "tripleCount": 14,
+          "isPrincipalSource": true,
           "sourceImportanceIndex": 1,
+          "isPrincipalTarget": true,
           "targetImportanceIndex": 1,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Registration",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Course"
         },
         {
           "tripleCount": 14,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": true,
           "targetImportanceIndex": 1,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Course"
         },
         {
           "tripleCount": 3,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#CompletedRegistration",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#MandatoryCourse"
         },
         {
           "tripleCount": 10,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": true,
           "targetImportanceIndex": 1,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#CompletedRegistration",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Course"
         },
         {
           "tripleCount": 8,
+          "isPrincipalSource": true,
           "sourceImportanceIndex": 1,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Registration",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#OptionalCourse"
         },
         {
           "tripleCount": 14,
+          "isPrincipalSource": true,
           "sourceImportanceIndex": 1,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Registration",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing"
         },
         {
           "tripleCount": 8,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#OptionalCourse"
         },
         {
           "tripleCount": 6,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#MandatoryCourse"
@@ -324,23 +690,23 @@
       "Followers": [
         {
           "propertyName": "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
-          "tripleCount": 42
+          "tripleCount": 15
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#courseCode",
-          "tripleCount": 14
+          "tripleCount": 5
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#courseCredits",
-          "tripleCount": 14
+          "tripleCount": 5
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#courseExtInfo",
-          "tripleCount": 14
+          "tripleCount": 5
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#courseName",
-          "tripleCount": 14
+          "tripleCount": 5
         }
       ],
       "OutgoingProperties": [
@@ -371,22 +737,24 @@
       ],
       "IncomingProperties": [
         {
-          "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#course",
-          "tripleCount": 48
+          "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#teaches",
+          "tripleCount": 15
         },
         {
-          "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#teaches",
-          "tripleCount": 42
+          "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#course",
+          "tripleCount": 14
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#takes",
-          "tripleCount": 39
+          "tripleCount": 11
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#includes",
-          "tripleCount": 14
+          "tripleCount": 5
         }
-      ]
+      ],
+      "SubjectInstanceNamespaces": [],
+      "ObjectInstanceNamespaces": []
     },
     {
       "localName": "nationality",
@@ -395,10 +763,19 @@
       "maxCardinality": 1,
       "maxInverseCardinality": -1,
       "tripleCount": 8,
+      "distinctTriples": 8,
       "dataTripleCount": 0,
       "objectTripleCount": 8,
+      "distinctSubjectsCount": 8,
+      "distinctObjectsCount": 4,
       "closedDomain": true,
       "closedRange": true,
+      "sourceClassesOK": 5,
+      "targetClassesOK": 5,
+      "hasOutgoingPropertiesOK": 5,
+      "hasIncomingPropertiesOK": 5,
+      "hasFollowersOK": 5,
+      "Labels": [],
       "DataTypes": [],
       "SourceClasses": [
         {
@@ -407,6 +784,7 @@
           "dataTripleCount": 0,
           "objectTripleCount": 8,
           "closedRange": true,
+          "isPrincipal": true,
           "importanceIndex": 1,
           "minCardinality": 0,
           "maxCardinality": 1
@@ -417,6 +795,7 @@
           "dataTripleCount": 0,
           "objectTripleCount": 8,
           "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 0,
           "maxCardinality": 1
@@ -427,6 +806,18 @@
           "dataTripleCount": 0,
           "objectTripleCount": 6,
           "closedRange": true,
+          "isPrincipal": false,
+          "importanceIndex": 0,
+          "minCardinality": 0,
+          "maxCardinality": 1
+        },
+        {
+          "classFullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Teacher",
+          "tripleCount": 2,
+          "dataTripleCount": 0,
+          "objectTripleCount": 2,
+          "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 0,
           "maxCardinality": 1
@@ -437,18 +828,9 @@
           "dataTripleCount": 0,
           "objectTripleCount": 2,
           "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 1,
-          "maxCardinality": 1
-        },
-        {
-          "classFullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Teacher",
-          "tripleCount": 2,
-          "dataTripleCount": 0,
-          "objectTripleCount": 2,
-          "closedRange": true,
-          "importanceIndex": 0,
-          "minCardinality": 0,
           "maxCardinality": 1
         }
       ],
@@ -457,6 +839,7 @@
           "classFullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Nationality",
           "tripleCount": 8,
           "closedDomain": true,
+          "isPrincipal": true,
           "importanceIndex": 1,
           "minInverseCardinality": 0,
           "maxInverseCardinality": -1
@@ -465,6 +848,7 @@
           "classFullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing",
           "tripleCount": 8,
           "closedDomain": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minInverseCardinality": 0,
           "maxInverseCardinality": -1
@@ -473,70 +857,90 @@
       "ClassPairs": [
         {
           "tripleCount": 8,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing"
         },
         {
           "tripleCount": 8,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": true,
           "targetImportanceIndex": 1,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Nationality"
         },
         {
           "tripleCount": 6,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Student",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing"
         },
         {
           "tripleCount": 8,
+          "isPrincipalSource": true,
           "sourceImportanceIndex": 1,
+          "isPrincipalTarget": true,
           "targetImportanceIndex": 1,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Person",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Nationality"
         },
         {
           "tripleCount": 8,
+          "isPrincipalSource": true,
           "sourceImportanceIndex": 1,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Person",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing"
         },
         {
           "tripleCount": 2,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": true,
           "targetImportanceIndex": 1,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Teacher",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Nationality"
         },
         {
           "tripleCount": 2,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Teacher",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing"
         },
         {
           "tripleCount": 2,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": true,
           "targetImportanceIndex": 1,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Professor",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Nationality"
         },
         {
           "tripleCount": 2,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Professor",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing"
         },
         {
           "tripleCount": 6,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": true,
           "targetImportanceIndex": 1,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Student",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Nationality"
@@ -545,15 +949,15 @@
       "Followers": [
         {
           "propertyName": "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
-          "tripleCount": 16
+          "tripleCount": 8
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#nCode",
-          "tripleCount": 8
+          "tripleCount": 4
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#nValue",
-          "tripleCount": 8
+          "tripleCount": 4
         }
       ],
       "OutgoingProperties": [
@@ -617,9 +1021,11 @@
       "IncomingProperties": [
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#nationality",
-          "tripleCount": 22
+          "tripleCount": 8
         }
-      ]
+      ],
+      "SubjectInstanceNamespaces": [],
+      "ObjectInstanceNamespaces": []
     },
     {
       "localName": "takes",
@@ -628,10 +1034,19 @@
       "maxCardinality": -1,
       "maxInverseCardinality": -1,
       "tripleCount": 11,
+      "distinctTriples": 6,
       "dataTripleCount": 0,
       "objectTripleCount": 11,
+      "distinctSubjectsCount": 6,
+      "distinctObjectsCount": 4,
       "closedDomain": true,
       "closedRange": true,
+      "sourceClassesOK": 5,
+      "targetClassesOK": 5,
+      "hasOutgoingPropertiesOK": 5,
+      "hasIncomingPropertiesOK": 5,
+      "hasFollowersOK": 5,
+      "Labels": [],
       "DataTypes": [],
       "SourceClasses": [
         {
@@ -640,17 +1055,8 @@
           "dataTripleCount": 0,
           "objectTripleCount": 11,
           "closedRange": true,
+          "isPrincipal": true,
           "importanceIndex": 1,
-          "minCardinality": 0,
-          "maxCardinality": -1
-        },
-        {
-          "classFullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Person",
-          "tripleCount": 11,
-          "dataTripleCount": 0,
-          "objectTripleCount": 11,
-          "closedRange": true,
-          "importanceIndex": 0,
           "minCardinality": 0,
           "maxCardinality": -1
         },
@@ -660,6 +1066,18 @@
           "dataTripleCount": 0,
           "objectTripleCount": 11,
           "closedRange": true,
+          "isPrincipal": false,
+          "importanceIndex": 0,
+          "minCardinality": 0,
+          "maxCardinality": -1
+        },
+        {
+          "classFullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Person",
+          "tripleCount": 11,
+          "dataTripleCount": 0,
+          "objectTripleCount": 11,
+          "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 0,
           "maxCardinality": -1
@@ -670,6 +1088,7 @@
           "classFullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Course",
           "tripleCount": 11,
           "closedDomain": true,
+          "isPrincipal": true,
           "importanceIndex": 1,
           "minInverseCardinality": 0,
           "maxInverseCardinality": -1
@@ -678,6 +1097,7 @@
           "classFullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing",
           "tripleCount": 11,
           "closedDomain": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minInverseCardinality": 0,
           "maxInverseCardinality": -1
@@ -686,6 +1106,7 @@
           "classFullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#OptionalCourse",
           "tripleCount": 7,
           "closedDomain": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minInverseCardinality": 1,
           "maxInverseCardinality": -1
@@ -694,6 +1115,7 @@
           "classFullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#MandatoryCourse",
           "tripleCount": 4,
           "closedDomain": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minInverseCardinality": 0,
           "maxInverseCardinality": -1
@@ -702,84 +1124,108 @@
       "ClassPairs": [
         {
           "tripleCount": 11,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing"
         },
         {
           "tripleCount": 4,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Person",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#MandatoryCourse"
         },
         {
           "tripleCount": 11,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": true,
           "targetImportanceIndex": 1,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Person",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Course"
         },
         {
           "tripleCount": 11,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Person",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing"
         },
         {
           "tripleCount": 11,
+          "isPrincipalSource": true,
           "sourceImportanceIndex": 1,
+          "isPrincipalTarget": true,
           "targetImportanceIndex": 1,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Student",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Course"
         },
         {
           "tripleCount": 11,
+          "isPrincipalSource": true,
           "sourceImportanceIndex": 1,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Student",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing"
         },
         {
           "tripleCount": 11,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": true,
           "targetImportanceIndex": 1,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Course"
         },
         {
           "tripleCount": 4,
+          "isPrincipalSource": true,
           "sourceImportanceIndex": 1,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Student",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#MandatoryCourse"
         },
         {
           "tripleCount": 7,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Person",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#OptionalCourse"
         },
         {
           "tripleCount": 7,
+          "isPrincipalSource": true,
           "sourceImportanceIndex": 1,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Student",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#OptionalCourse"
         },
         {
           "tripleCount": 7,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#OptionalCourse"
         },
         {
           "tripleCount": 4,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#MandatoryCourse"
@@ -788,85 +1234,87 @@
       "Followers": [
         {
           "propertyName": "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
-          "tripleCount": 33
+          "tripleCount": 12
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#courseCode",
-          "tripleCount": 11
+          "tripleCount": 4
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#courseCredits",
-          "tripleCount": 11
+          "tripleCount": 4
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#courseExtInfo",
-          "tripleCount": 11
+          "tripleCount": 4
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#courseName",
-          "tripleCount": 11
+          "tripleCount": 4
         }
       ],
       "OutgoingProperties": [
         {
-          "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#r",
-          "tripleCount": 33
+          "propertyName": "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
+          "tripleCount": 18
         },
         {
-          "propertyName": "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
-          "tripleCount": 33
+          "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#r",
+          "tripleCount": 14
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#takes",
-          "tripleCount": 27
+          "tripleCount": 11
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#hasMark",
-          "tripleCount": 24
+          "tripleCount": 9
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#enrolled",
-          "tripleCount": 11
+          "tripleCount": 6
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#nationality",
-          "tripleCount": 11
+          "tripleCount": 6
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#personID",
-          "tripleCount": 11
+          "tripleCount": 6
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#personName",
-          "tripleCount": 11
+          "tripleCount": 6
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#studentName",
-          "tripleCount": 11
+          "tripleCount": 6
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#studentNumber",
-          "tripleCount": 11
+          "tripleCount": 6
         }
       ],
       "IncomingProperties": [
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#course",
-          "tripleCount": 39
-        },
-        {
-          "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#takes",
-          "tripleCount": 33
+          "tripleCount": 13
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#teaches",
-          "tripleCount": 33
+          "tripleCount": 12
+        },
+        {
+          "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#takes",
+          "tripleCount": 11
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#includes",
-          "tripleCount": 11
+          "tripleCount": 4
         }
-      ]
+      ],
+      "SubjectInstanceNamespaces": [],
+      "ObjectInstanceNamespaces": []
     },
     {
       "localName": "facultyLevel",
@@ -875,10 +1323,19 @@
       "maxCardinality": 1,
       "maxInverseCardinality": -1,
       "tripleCount": 3,
+      "distinctTriples": 3,
       "dataTripleCount": 0,
       "objectTripleCount": 3,
+      "distinctSubjectsCount": 3,
+      "distinctObjectsCount": 2,
       "closedDomain": true,
       "closedRange": true,
+      "sourceClassesOK": 5,
+      "targetClassesOK": 5,
+      "hasOutgoingPropertiesOK": 5,
+      "hasIncomingPropertiesOK": 5,
+      "hasFollowersOK": 5,
+      "Labels": [],
       "DataTypes": [],
       "SourceClasses": [
         {
@@ -887,18 +1344,9 @@
           "dataTripleCount": 0,
           "objectTripleCount": 3,
           "closedRange": true,
+          "isPrincipal": true,
           "importanceIndex": 1,
           "minCardinality": 1,
-          "maxCardinality": 1
-        },
-        {
-          "classFullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Person",
-          "tripleCount": 3,
-          "dataTripleCount": 0,
-          "objectTripleCount": 3,
-          "closedRange": true,
-          "importanceIndex": 0,
-          "minCardinality": 0,
           "maxCardinality": 1
         },
         {
@@ -907,6 +1355,18 @@
           "dataTripleCount": 0,
           "objectTripleCount": 3,
           "closedRange": true,
+          "isPrincipal": false,
+          "importanceIndex": 0,
+          "minCardinality": 0,
+          "maxCardinality": 1
+        },
+        {
+          "classFullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Person",
+          "tripleCount": 3,
+          "dataTripleCount": 0,
+          "objectTripleCount": 3,
+          "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 0,
           "maxCardinality": 1
@@ -917,6 +1377,7 @@
           "dataTripleCount": 0,
           "objectTripleCount": 2,
           "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 1,
           "maxCardinality": 1
@@ -927,6 +1388,7 @@
           "dataTripleCount": 0,
           "objectTripleCount": 1,
           "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 1,
           "maxCardinality": 1
@@ -937,6 +1399,7 @@
           "classFullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#FacultyLevel",
           "tripleCount": 3,
           "closedDomain": true,
+          "isPrincipal": true,
           "importanceIndex": 1,
           "minInverseCardinality": 0,
           "maxInverseCardinality": -1
@@ -945,6 +1408,7 @@
           "classFullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing",
           "tripleCount": 3,
           "closedDomain": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minInverseCardinality": 0,
           "maxInverseCardinality": -1
@@ -953,70 +1417,90 @@
       "ClassPairs": [
         {
           "tripleCount": 3,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing"
         },
         {
           "tripleCount": 1,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": true,
           "targetImportanceIndex": 1,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Assistant",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#FacultyLevel"
         },
         {
           "tripleCount": 1,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Assistant",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing"
         },
         {
           "tripleCount": 3,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": true,
           "targetImportanceIndex": 1,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Person",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#FacultyLevel"
         },
         {
           "tripleCount": 3,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Person",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing"
         },
         {
           "tripleCount": 3,
+          "isPrincipalSource": true,
           "sourceImportanceIndex": 1,
+          "isPrincipalTarget": true,
           "targetImportanceIndex": 1,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Teacher",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#FacultyLevel"
         },
         {
           "tripleCount": 3,
+          "isPrincipalSource": true,
           "sourceImportanceIndex": 1,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Teacher",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing"
         },
         {
           "tripleCount": 2,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": true,
           "targetImportanceIndex": 1,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Professor",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#FacultyLevel"
         },
         {
           "tripleCount": 2,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Professor",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing"
         },
         {
           "tripleCount": 3,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": true,
           "targetImportanceIndex": 1,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#FacultyLevel"
@@ -1025,11 +1509,11 @@
       "Followers": [
         {
           "propertyName": "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
-          "tripleCount": 6
+          "tripleCount": 4
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#acadTitle",
-          "tripleCount": 3
+          "tripleCount": 2
         }
       ],
       "OutgoingProperties": [
@@ -1069,9 +1553,11 @@
       "IncomingProperties": [
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#facultyLevel",
-          "tripleCount": 5
+          "tripleCount": 3
         }
-      ]
+      ],
+      "SubjectInstanceNamespaces": [],
+      "ObjectInstanceNamespaces": []
     },
     {
       "localName": "programName",
@@ -1079,9 +1565,15 @@
       "fullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#programName",
       "maxCardinality": 1,
       "tripleCount": 2,
+      "distinctTriples": 2,
       "dataTripleCount": 2,
       "objectTripleCount": 0,
+      "distinctSubjectsCount": 2,
+      "distinctObjectsCount": 2,
       "closedDomain": true,
+      "sourceClassesOK": 5,
+      "hasOutgoingPropertiesOK": 5,
+      "Labels": [],
       "DataTypes": [
         {
           "dataType": "xsd:string",
@@ -1095,6 +1587,7 @@
           "dataTripleCount": 2,
           "objectTripleCount": 0,
           "closedRange": true,
+          "isPrincipal": true,
           "importanceIndex": 1,
           "minCardinality": 1,
           "maxCardinality": 1,
@@ -1111,6 +1604,7 @@
           "dataTripleCount": 2,
           "objectTripleCount": 0,
           "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 0,
           "maxCardinality": 1,
@@ -1139,7 +1633,9 @@
           "tripleCount": 2
         }
       ],
-      "IncomingProperties": []
+      "IncomingProperties": [],
+      "SubjectInstanceNamespaces": [],
+      "ObjectInstanceNamespaces": []
     },
     {
       "localName": "r",
@@ -1148,10 +1644,19 @@
       "maxCardinality": -1,
       "maxInverseCardinality": 1,
       "tripleCount": 14,
+      "distinctTriples": 6,
       "dataTripleCount": 0,
       "objectTripleCount": 14,
+      "distinctSubjectsCount": 6,
+      "distinctObjectsCount": 14,
       "closedDomain": true,
       "closedRange": true,
+      "sourceClassesOK": 5,
+      "targetClassesOK": 5,
+      "hasOutgoingPropertiesOK": 5,
+      "hasIncomingPropertiesOK": 5,
+      "hasFollowersOK": 5,
+      "Labels": [],
       "DataTypes": [],
       "SourceClasses": [
         {
@@ -1160,17 +1665,8 @@
           "dataTripleCount": 0,
           "objectTripleCount": 14,
           "closedRange": true,
+          "isPrincipal": true,
           "importanceIndex": 1,
-          "minCardinality": 0,
-          "maxCardinality": -1
-        },
-        {
-          "classFullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Person",
-          "tripleCount": 14,
-          "dataTripleCount": 0,
-          "objectTripleCount": 14,
-          "closedRange": true,
-          "importanceIndex": 0,
           "minCardinality": 0,
           "maxCardinality": -1
         },
@@ -1180,6 +1676,18 @@
           "dataTripleCount": 0,
           "objectTripleCount": 14,
           "closedRange": true,
+          "isPrincipal": false,
+          "importanceIndex": 0,
+          "minCardinality": 0,
+          "maxCardinality": -1
+        },
+        {
+          "classFullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Person",
+          "tripleCount": 14,
+          "dataTripleCount": 0,
+          "objectTripleCount": 14,
+          "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 0,
           "maxCardinality": -1
@@ -1190,6 +1698,7 @@
           "classFullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Registration",
           "tripleCount": 14,
           "closedDomain": true,
+          "isPrincipal": true,
           "importanceIndex": 1,
           "minInverseCardinality": 1,
           "maxInverseCardinality": 1
@@ -1198,6 +1707,7 @@
           "classFullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing",
           "tripleCount": 14,
           "closedDomain": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minInverseCardinality": 0,
           "maxInverseCardinality": 1
@@ -1206,6 +1716,7 @@
           "classFullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#CompletedRegistration",
           "tripleCount": 10,
           "closedDomain": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minInverseCardinality": 1,
           "maxInverseCardinality": 1
@@ -1214,63 +1725,81 @@
       "ClassPairs": [
         {
           "tripleCount": 14,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing"
         },
         {
           "tripleCount": 10,
+          "isPrincipalSource": true,
           "sourceImportanceIndex": 1,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Student",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#CompletedRegistration"
         },
         {
           "tripleCount": 14,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Person",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing"
         },
         {
           "tripleCount": 14,
+          "isPrincipalSource": true,
           "sourceImportanceIndex": 1,
+          "isPrincipalTarget": true,
           "targetImportanceIndex": 1,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Student",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Registration"
         },
         {
           "tripleCount": 14,
+          "isPrincipalSource": true,
           "sourceImportanceIndex": 1,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Student",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing"
         },
         {
           "tripleCount": 14,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": true,
           "targetImportanceIndex": 1,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Registration"
         },
         {
           "tripleCount": 10,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#CompletedRegistration"
         },
         {
           "tripleCount": 14,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": true,
           "targetImportanceIndex": 1,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Person",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Registration"
         },
         {
           "tripleCount": 10,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Person",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#CompletedRegistration"
@@ -1304,44 +1833,44 @@
       ],
       "OutgoingProperties": [
         {
-          "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#r",
-          "tripleCount": 42
+          "propertyName": "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
+          "tripleCount": 18
         },
         {
-          "propertyName": "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
-          "tripleCount": 42
+          "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#r",
+          "tripleCount": 14
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#takes",
-          "tripleCount": 33
+          "tripleCount": 11
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#hasMark",
-          "tripleCount": 30
+          "tripleCount": 9
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#enrolled",
-          "tripleCount": 14
+          "tripleCount": 6
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#nationality",
-          "tripleCount": 14
+          "tripleCount": 6
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#personID",
-          "tripleCount": 14
+          "tripleCount": 6
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#personName",
-          "tripleCount": 14
+          "tripleCount": 6
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#studentName",
-          "tripleCount": 14
+          "tripleCount": 6
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#studentNumber",
-          "tripleCount": 14
+          "tripleCount": 6
         }
       ],
       "IncomingProperties": [
@@ -1349,7 +1878,9 @@
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#r",
           "tripleCount": 14
         }
-      ]
+      ],
+      "SubjectInstanceNamespaces": [],
+      "ObjectInstanceNamespaces": []
     },
     {
       "localName": "hasMark",
@@ -1357,9 +1888,15 @@
       "fullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#hasMark",
       "maxCardinality": -1,
       "tripleCount": 9,
+      "distinctTriples": 5,
       "dataTripleCount": 9,
       "objectTripleCount": 0,
+      "distinctSubjectsCount": 5,
+      "distinctObjectsCount": 6,
       "closedDomain": true,
+      "sourceClassesOK": 5,
+      "hasOutgoingPropertiesOK": 5,
+      "Labels": [],
       "DataTypes": [
         {
           "dataType": "xsd:integer",
@@ -1373,23 +1910,8 @@
           "dataTripleCount": 9,
           "objectTripleCount": 0,
           "closedRange": true,
+          "isPrincipal": true,
           "importanceIndex": 1,
-          "minCardinality": 0,
-          "maxCardinality": -1,
-          "DataTypes": [
-            {
-              "dataType": "xsd:integer",
-              "tripleCount": 9
-            }
-          ]
-        },
-        {
-          "classFullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Person",
-          "tripleCount": 9,
-          "dataTripleCount": 9,
-          "objectTripleCount": 0,
-          "closedRange": true,
-          "importanceIndex": 0,
           "minCardinality": 0,
           "maxCardinality": -1,
           "DataTypes": [
@@ -1405,6 +1927,24 @@
           "dataTripleCount": 9,
           "objectTripleCount": 0,
           "closedRange": true,
+          "isPrincipal": false,
+          "importanceIndex": 0,
+          "minCardinality": 0,
+          "maxCardinality": -1,
+          "DataTypes": [
+            {
+              "dataType": "xsd:integer",
+              "tripleCount": 9
+            }
+          ]
+        },
+        {
+          "classFullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Person",
+          "tripleCount": 9,
+          "dataTripleCount": 9,
+          "objectTripleCount": 0,
+          "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 0,
           "maxCardinality": -1,
@@ -1421,47 +1961,49 @@
       "Followers": [],
       "OutgoingProperties": [
         {
-          "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#r",
-          "tripleCount": 30
+          "propertyName": "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
+          "tripleCount": 15
         },
         {
-          "propertyName": "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
-          "tripleCount": 27
+          "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#r",
+          "tripleCount": 13
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#takes",
-          "tripleCount": 24
+          "tripleCount": 10
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#hasMark",
-          "tripleCount": 23
+          "tripleCount": 9
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#enrolled",
-          "tripleCount": 9
+          "tripleCount": 5
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#nationality",
-          "tripleCount": 9
+          "tripleCount": 5
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#personID",
-          "tripleCount": 9
+          "tripleCount": 5
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#personName",
-          "tripleCount": 9
+          "tripleCount": 5
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#studentName",
-          "tripleCount": 9
+          "tripleCount": 5
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#studentNumber",
-          "tripleCount": 9
+          "tripleCount": 5
         }
       ],
-      "IncomingProperties": []
+      "IncomingProperties": [],
+      "SubjectInstanceNamespaces": [],
+      "ObjectInstanceNamespaces": []
     },
     {
       "localName": "courseCredits",
@@ -1469,9 +2011,15 @@
       "fullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#courseCredits",
       "maxCardinality": 1,
       "tripleCount": 5,
+      "distinctTriples": 5,
       "dataTripleCount": 5,
       "objectTripleCount": 0,
+      "distinctSubjectsCount": 5,
+      "distinctObjectsCount": 2,
       "closedDomain": true,
+      "sourceClassesOK": 5,
+      "hasOutgoingPropertiesOK": 5,
+      "Labels": [],
       "DataTypes": [
         {
           "dataType": "xsd:integer",
@@ -1485,6 +2033,7 @@
           "dataTripleCount": 5,
           "objectTripleCount": 0,
           "closedRange": true,
+          "isPrincipal": true,
           "importanceIndex": 1,
           "minCardinality": 1,
           "maxCardinality": 1,
@@ -1501,6 +2050,7 @@
           "dataTripleCount": 5,
           "objectTripleCount": 0,
           "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 0,
           "maxCardinality": 1,
@@ -1517,6 +2067,7 @@
           "dataTripleCount": 3,
           "objectTripleCount": 0,
           "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 1,
           "maxCardinality": 1,
@@ -1533,6 +2084,7 @@
           "dataTripleCount": 2,
           "objectTripleCount": 0,
           "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 1,
           "maxCardinality": 1,
@@ -1569,7 +2121,9 @@
           "tripleCount": 5
         }
       ],
-      "IncomingProperties": []
+      "IncomingProperties": [],
+      "SubjectInstanceNamespaces": [],
+      "ObjectInstanceNamespaces": []
     },
     {
       "localName": "includes",
@@ -1578,10 +2132,19 @@
       "maxCardinality": -1,
       "maxInverseCardinality": 1,
       "tripleCount": 5,
+      "distinctTriples": 2,
       "dataTripleCount": 0,
       "objectTripleCount": 5,
+      "distinctSubjectsCount": 2,
+      "distinctObjectsCount": 5,
       "closedDomain": true,
       "closedRange": true,
+      "sourceClassesOK": 5,
+      "targetClassesOK": 5,
+      "hasOutgoingPropertiesOK": 5,
+      "hasIncomingPropertiesOK": 5,
+      "hasFollowersOK": 5,
+      "Labels": [],
       "DataTypes": [],
       "SourceClasses": [
         {
@@ -1590,6 +2153,7 @@
           "dataTripleCount": 0,
           "objectTripleCount": 5,
           "closedRange": true,
+          "isPrincipal": true,
           "importanceIndex": 1,
           "minCardinality": 1,
           "maxCardinality": -1
@@ -1600,6 +2164,7 @@
           "dataTripleCount": 0,
           "objectTripleCount": 5,
           "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 0,
           "maxCardinality": -1
@@ -1610,6 +2175,7 @@
           "classFullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Course",
           "tripleCount": 5,
           "closedDomain": true,
+          "isPrincipal": true,
           "importanceIndex": 1,
           "minInverseCardinality": 1,
           "maxInverseCardinality": 1
@@ -1618,6 +2184,7 @@
           "classFullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing",
           "tripleCount": 5,
           "closedDomain": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minInverseCardinality": 0,
           "maxInverseCardinality": 1
@@ -1626,6 +2193,7 @@
           "classFullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#OptionalCourse",
           "tripleCount": 3,
           "closedDomain": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minInverseCardinality": 1,
           "maxInverseCardinality": 1
@@ -1634,6 +2202,7 @@
           "classFullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#MandatoryCourse",
           "tripleCount": 2,
           "closedDomain": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minInverseCardinality": 1,
           "maxInverseCardinality": 1
@@ -1642,56 +2211,72 @@
       "ClassPairs": [
         {
           "tripleCount": 5,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing"
         },
         {
           "tripleCount": 5,
+          "isPrincipalSource": true,
           "sourceImportanceIndex": 1,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#AcademicProgram",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing"
         },
         {
           "tripleCount": 5,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": true,
           "targetImportanceIndex": 1,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Course"
         },
         {
           "tripleCount": 5,
+          "isPrincipalSource": true,
           "sourceImportanceIndex": 1,
+          "isPrincipalTarget": true,
           "targetImportanceIndex": 1,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#AcademicProgram",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Course"
         },
         {
           "tripleCount": 2,
+          "isPrincipalSource": true,
           "sourceImportanceIndex": 1,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#AcademicProgram",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#MandatoryCourse"
         },
         {
           "tripleCount": 3,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#OptionalCourse"
         },
         {
           "tripleCount": 3,
+          "isPrincipalSource": true,
           "sourceImportanceIndex": 1,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#AcademicProgram",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#OptionalCourse"
         },
         {
           "tripleCount": 2,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#MandatoryCourse"
@@ -1722,15 +2307,15 @@
       "OutgoingProperties": [
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#includes",
-          "tripleCount": 13
+          "tripleCount": 5
         },
         {
           "propertyName": "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
-          "tripleCount": 10
+          "tripleCount": 4
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#programName",
-          "tripleCount": 5
+          "tripleCount": 2
         }
       ],
       "IncomingProperties": [
@@ -1750,7 +2335,9 @@
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#includes",
           "tripleCount": 5
         }
-      ]
+      ],
+      "SubjectInstanceNamespaces": [],
+      "ObjectInstanceNamespaces": []
     },
     {
       "localName": "mark",
@@ -1758,9 +2345,15 @@
       "fullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#mark",
       "maxCardinality": 1,
       "tripleCount": 10,
+      "distinctTriples": 10,
       "dataTripleCount": 10,
       "objectTripleCount": 0,
+      "distinctSubjectsCount": 10,
+      "distinctObjectsCount": 6,
       "closedDomain": true,
+      "sourceClassesOK": 5,
+      "hasOutgoingPropertiesOK": 5,
+      "Labels": [],
       "DataTypes": [
         {
           "dataType": "xsd:integer",
@@ -1774,24 +2367,9 @@
           "dataTripleCount": 10,
           "objectTripleCount": 0,
           "closedRange": true,
+          "isPrincipal": true,
           "importanceIndex": 1,
           "minCardinality": 1,
-          "maxCardinality": 1,
-          "DataTypes": [
-            {
-              "dataType": "xsd:integer",
-              "tripleCount": 10
-            }
-          ]
-        },
-        {
-          "classFullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Registration",
-          "tripleCount": 10,
-          "dataTripleCount": 10,
-          "objectTripleCount": 0,
-          "closedRange": true,
-          "importanceIndex": 0,
-          "minCardinality": 0,
           "maxCardinality": 1,
           "DataTypes": [
             {
@@ -1806,6 +2384,24 @@
           "dataTripleCount": 10,
           "objectTripleCount": 0,
           "closedRange": true,
+          "isPrincipal": false,
+          "importanceIndex": 0,
+          "minCardinality": 0,
+          "maxCardinality": 1,
+          "DataTypes": [
+            {
+              "dataType": "xsd:integer",
+              "tripleCount": 10
+            }
+          ]
+        },
+        {
+          "classFullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Registration",
+          "tripleCount": 10,
+          "dataTripleCount": 10,
+          "objectTripleCount": 0,
+          "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 0,
           "maxCardinality": 1,
@@ -1846,7 +2442,9 @@
           "tripleCount": 10
         }
       ],
-      "IncomingProperties": []
+      "IncomingProperties": [],
+      "SubjectInstanceNamespaces": [],
+      "ObjectInstanceNamespaces": []
     },
     {
       "localName": "student",
@@ -1855,10 +2453,19 @@
       "maxCardinality": 1,
       "maxInverseCardinality": -1,
       "tripleCount": 14,
+      "distinctTriples": 14,
       "dataTripleCount": 0,
       "objectTripleCount": 14,
+      "distinctSubjectsCount": 14,
+      "distinctObjectsCount": 6,
       "closedDomain": true,
       "closedRange": true,
+      "sourceClassesOK": 5,
+      "targetClassesOK": 5,
+      "hasOutgoingPropertiesOK": 5,
+      "hasIncomingPropertiesOK": 5,
+      "hasFollowersOK": 5,
+      "Labels": [],
       "DataTypes": [],
       "SourceClasses": [
         {
@@ -1867,6 +2474,7 @@
           "dataTripleCount": 0,
           "objectTripleCount": 14,
           "closedRange": true,
+          "isPrincipal": true,
           "importanceIndex": 1,
           "minCardinality": 1,
           "maxCardinality": 1
@@ -1877,6 +2485,7 @@
           "dataTripleCount": 0,
           "objectTripleCount": 14,
           "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 0,
           "maxCardinality": 1
@@ -1887,6 +2496,7 @@
           "dataTripleCount": 0,
           "objectTripleCount": 10,
           "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 1,
           "maxCardinality": 1
@@ -1897,15 +2507,8 @@
           "classFullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Student",
           "tripleCount": 14,
           "closedDomain": true,
+          "isPrincipal": true,
           "importanceIndex": 1,
-          "minInverseCardinality": 0,
-          "maxInverseCardinality": -1
-        },
-        {
-          "classFullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Person",
-          "tripleCount": 14,
-          "closedDomain": true,
-          "importanceIndex": 0,
           "minInverseCardinality": 0,
           "maxInverseCardinality": -1
         },
@@ -1913,6 +2516,16 @@
           "classFullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing",
           "tripleCount": 14,
           "closedDomain": true,
+          "isPrincipal": false,
+          "importanceIndex": 0,
+          "minInverseCardinality": 0,
+          "maxInverseCardinality": -1
+        },
+        {
+          "classFullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Person",
+          "tripleCount": 14,
+          "closedDomain": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minInverseCardinality": 0,
           "maxInverseCardinality": -1
@@ -1921,63 +2534,81 @@
       "ClassPairs": [
         {
           "tripleCount": 10,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#CompletedRegistration",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing"
         },
         {
           "tripleCount": 14,
+          "isPrincipalSource": true,
           "sourceImportanceIndex": 1,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Registration",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Person"
         },
         {
           "tripleCount": 14,
+          "isPrincipalSource": true,
           "sourceImportanceIndex": 1,
+          "isPrincipalTarget": true,
           "targetImportanceIndex": 1,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Registration",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Student"
         },
         {
           "tripleCount": 14,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Person"
         },
         {
           "tripleCount": 14,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing"
         },
         {
           "tripleCount": 10,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": true,
           "targetImportanceIndex": 1,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#CompletedRegistration",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Student"
         },
         {
           "tripleCount": 14,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": true,
           "targetImportanceIndex": 1,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Student"
         },
         {
           "tripleCount": 10,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#CompletedRegistration",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Person"
         },
         {
           "tripleCount": 14,
+          "isPrincipalSource": true,
           "sourceImportanceIndex": 1,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Registration",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing"
@@ -1985,44 +2616,44 @@
       ],
       "Followers": [
         {
-          "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#r",
-          "tripleCount": 42
+          "propertyName": "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
+          "tripleCount": 18
         },
         {
-          "propertyName": "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
-          "tripleCount": 42
+          "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#r",
+          "tripleCount": 14
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#takes",
-          "tripleCount": 33
+          "tripleCount": 11
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#hasMark",
-          "tripleCount": 30
+          "tripleCount": 9
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#enrolled",
-          "tripleCount": 14
+          "tripleCount": 6
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#nationality",
-          "tripleCount": 14
+          "tripleCount": 6
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#personID",
-          "tripleCount": 14
+          "tripleCount": 6
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#personName",
-          "tripleCount": 14
+          "tripleCount": 6
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#studentName",
-          "tripleCount": 14
+          "tripleCount": 6
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#studentNumber",
-          "tripleCount": 14
+          "tripleCount": 6
         }
       ],
       "OutgoingProperties": [
@@ -2054,9 +2685,11 @@
       "IncomingProperties": [
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#student",
-          "tripleCount": 42
+          "tripleCount": 14
         }
-      ]
+      ],
+      "SubjectInstanceNamespaces": [],
+      "ObjectInstanceNamespaces": []
     },
     {
       "localName": "courseName",
@@ -2064,9 +2697,15 @@
       "fullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#courseName",
       "maxCardinality": 1,
       "tripleCount": 5,
+      "distinctTriples": 5,
       "dataTripleCount": 5,
       "objectTripleCount": 0,
+      "distinctSubjectsCount": 5,
+      "distinctObjectsCount": 5,
       "closedDomain": true,
+      "sourceClassesOK": 5,
+      "hasOutgoingPropertiesOK": 5,
+      "Labels": [],
       "DataTypes": [
         {
           "dataType": "xsd:string",
@@ -2080,6 +2719,7 @@
           "dataTripleCount": 5,
           "objectTripleCount": 0,
           "closedRange": true,
+          "isPrincipal": true,
           "importanceIndex": 1,
           "minCardinality": 1,
           "maxCardinality": 1,
@@ -2096,6 +2736,7 @@
           "dataTripleCount": 5,
           "objectTripleCount": 0,
           "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 0,
           "maxCardinality": 1,
@@ -2112,6 +2753,7 @@
           "dataTripleCount": 3,
           "objectTripleCount": 0,
           "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 1,
           "maxCardinality": 1,
@@ -2128,6 +2770,7 @@
           "dataTripleCount": 2,
           "objectTripleCount": 0,
           "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 1,
           "maxCardinality": 1,
@@ -2164,7 +2807,9 @@
           "tripleCount": 5
         }
       ],
-      "IncomingProperties": []
+      "IncomingProperties": [],
+      "SubjectInstanceNamespaces": [],
+      "ObjectInstanceNamespaces": []
     },
     {
       "localName": "studentNumber",
@@ -2172,9 +2817,15 @@
       "fullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#studentNumber",
       "maxCardinality": 1,
       "tripleCount": 7,
+      "distinctTriples": 7,
       "dataTripleCount": 7,
       "objectTripleCount": 0,
+      "distinctSubjectsCount": 7,
+      "distinctObjectsCount": 7,
       "closedDomain": true,
+      "sourceClassesOK": 5,
+      "hasOutgoingPropertiesOK": 5,
+      "Labels": [],
       "DataTypes": [
         {
           "dataType": "xsd:string",
@@ -2188,24 +2839,9 @@
           "dataTripleCount": 7,
           "objectTripleCount": 0,
           "closedRange": true,
+          "isPrincipal": true,
           "importanceIndex": 1,
           "minCardinality": 1,
-          "maxCardinality": 1,
-          "DataTypes": [
-            {
-              "dataType": "xsd:string",
-              "tripleCount": 7
-            }
-          ]
-        },
-        {
-          "classFullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Person",
-          "tripleCount": 7,
-          "dataTripleCount": 7,
-          "objectTripleCount": 0,
-          "closedRange": true,
-          "importanceIndex": 0,
-          "minCardinality": 0,
           "maxCardinality": 1,
           "DataTypes": [
             {
@@ -2220,6 +2856,24 @@
           "dataTripleCount": 7,
           "objectTripleCount": 0,
           "closedRange": true,
+          "isPrincipal": false,
+          "importanceIndex": 0,
+          "minCardinality": 0,
+          "maxCardinality": 1,
+          "DataTypes": [
+            {
+              "dataType": "xsd:string",
+              "tripleCount": 7
+            }
+          ]
+        },
+        {
+          "classFullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Person",
+          "tripleCount": 7,
+          "dataTripleCount": 7,
+          "objectTripleCount": 0,
+          "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 0,
           "maxCardinality": 1,
@@ -2276,7 +2930,9 @@
           "tripleCount": 6
         }
       ],
-      "IncomingProperties": []
+      "IncomingProperties": [],
+      "SubjectInstanceNamespaces": [],
+      "ObjectInstanceNamespaces": []
     },
     {
       "localName": "datePaid",
@@ -2284,9 +2940,15 @@
       "fullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#datePaid",
       "maxCardinality": 1,
       "tripleCount": 12,
+      "distinctTriples": 12,
       "dataTripleCount": 12,
       "objectTripleCount": 0,
+      "distinctSubjectsCount": 12,
+      "distinctObjectsCount": 9,
       "closedDomain": true,
+      "sourceClassesOK": 5,
+      "hasOutgoingPropertiesOK": 5,
+      "Labels": [],
       "DataTypes": [
         {
           "dataType": "xsd:dateTime",
@@ -2300,6 +2962,7 @@
           "dataTripleCount": 12,
           "objectTripleCount": 0,
           "closedRange": true,
+          "isPrincipal": true,
           "importanceIndex": 1,
           "minCardinality": 0,
           "maxCardinality": 1,
@@ -2316,6 +2979,7 @@
           "dataTripleCount": 12,
           "objectTripleCount": 0,
           "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 0,
           "maxCardinality": 1,
@@ -2332,6 +2996,7 @@
           "dataTripleCount": 10,
           "objectTripleCount": 0,
           "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 1,
           "maxCardinality": 1,
@@ -2372,7 +3037,9 @@
           "tripleCount": 10
         }
       ],
-      "IncomingProperties": []
+      "IncomingProperties": [],
+      "SubjectInstanceNamespaces": [],
+      "ObjectInstanceNamespaces": []
     },
     {
       "localName": "salary",
@@ -2380,9 +3047,15 @@
       "fullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#salary",
       "maxCardinality": 1,
       "tripleCount": 3,
+      "distinctTriples": 3,
       "dataTripleCount": 3,
       "objectTripleCount": 0,
+      "distinctSubjectsCount": 3,
+      "distinctObjectsCount": 3,
       "closedDomain": true,
+      "sourceClassesOK": 5,
+      "hasOutgoingPropertiesOK": 5,
+      "Labels": [],
       "DataTypes": [
         {
           "dataType": "xsd:integer",
@@ -2396,24 +3069,9 @@
           "dataTripleCount": 3,
           "objectTripleCount": 0,
           "closedRange": true,
+          "isPrincipal": true,
           "importanceIndex": 1,
           "minCardinality": 1,
-          "maxCardinality": 1,
-          "DataTypes": [
-            {
-              "dataType": "xsd:integer",
-              "tripleCount": 3
-            }
-          ]
-        },
-        {
-          "classFullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Person",
-          "tripleCount": 3,
-          "dataTripleCount": 3,
-          "objectTripleCount": 0,
-          "closedRange": true,
-          "importanceIndex": 0,
-          "minCardinality": 0,
           "maxCardinality": 1,
           "DataTypes": [
             {
@@ -2428,6 +3086,24 @@
           "dataTripleCount": 3,
           "objectTripleCount": 0,
           "closedRange": true,
+          "isPrincipal": false,
+          "importanceIndex": 0,
+          "minCardinality": 0,
+          "maxCardinality": 1,
+          "DataTypes": [
+            {
+              "dataType": "xsd:integer",
+              "tripleCount": 3
+            }
+          ]
+        },
+        {
+          "classFullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Person",
+          "tripleCount": 3,
+          "dataTripleCount": 3,
+          "objectTripleCount": 0,
+          "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 0,
           "maxCardinality": 1,
@@ -2444,6 +3120,7 @@
           "dataTripleCount": 2,
           "objectTripleCount": 0,
           "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 1,
           "maxCardinality": 1,
@@ -2460,6 +3137,7 @@
           "dataTripleCount": 1,
           "objectTripleCount": 0,
           "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 1,
           "maxCardinality": 1,
@@ -2508,7 +3186,9 @@
           "tripleCount": 2
         }
       ],
-      "IncomingProperties": []
+      "IncomingProperties": [],
+      "SubjectInstanceNamespaces": [],
+      "ObjectInstanceNamespaces": []
     },
     {
       "localName": "teaches",
@@ -2517,10 +3197,19 @@
       "maxCardinality": -1,
       "maxInverseCardinality": -1,
       "tripleCount": 15,
+      "distinctTriples": 3,
       "dataTripleCount": 0,
       "objectTripleCount": 15,
+      "distinctSubjectsCount": 3,
+      "distinctObjectsCount": 5,
       "closedDomain": true,
       "closedRange": true,
+      "sourceClassesOK": 5,
+      "targetClassesOK": 5,
+      "hasOutgoingPropertiesOK": 5,
+      "hasIncomingPropertiesOK": 5,
+      "hasFollowersOK": 5,
+      "Labels": [],
       "DataTypes": [],
       "SourceClasses": [
         {
@@ -2529,18 +3218,9 @@
           "dataTripleCount": 0,
           "objectTripleCount": 15,
           "closedRange": true,
+          "isPrincipal": true,
           "importanceIndex": 1,
           "minCardinality": 1,
-          "maxCardinality": -1
-        },
-        {
-          "classFullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Person",
-          "tripleCount": 15,
-          "dataTripleCount": 0,
-          "objectTripleCount": 15,
-          "closedRange": true,
-          "importanceIndex": 0,
-          "minCardinality": 0,
           "maxCardinality": -1
         },
         {
@@ -2549,6 +3229,18 @@
           "dataTripleCount": 0,
           "objectTripleCount": 15,
           "closedRange": true,
+          "isPrincipal": false,
+          "importanceIndex": 0,
+          "minCardinality": 0,
+          "maxCardinality": -1
+        },
+        {
+          "classFullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Person",
+          "tripleCount": 15,
+          "dataTripleCount": 0,
+          "objectTripleCount": 15,
+          "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 0,
           "maxCardinality": -1
@@ -2559,6 +3251,7 @@
           "dataTripleCount": 0,
           "objectTripleCount": 10,
           "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 1,
           "maxCardinality": -1
@@ -2569,6 +3262,7 @@
           "dataTripleCount": 0,
           "objectTripleCount": 5,
           "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 1,
           "maxCardinality": -1
@@ -2579,6 +3273,7 @@
           "classFullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Course",
           "tripleCount": 15,
           "closedDomain": true,
+          "isPrincipal": true,
           "importanceIndex": 1,
           "minInverseCardinality": 1,
           "maxInverseCardinality": -1
@@ -2587,6 +3282,7 @@
           "classFullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing",
           "tripleCount": 15,
           "closedDomain": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minInverseCardinality": 0,
           "maxInverseCardinality": -1
@@ -2595,6 +3291,7 @@
           "classFullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#OptionalCourse",
           "tripleCount": 9,
           "closedDomain": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minInverseCardinality": 1,
           "maxInverseCardinality": -1
@@ -2603,6 +3300,7 @@
           "classFullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#MandatoryCourse",
           "tripleCount": 6,
           "closedDomain": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minInverseCardinality": 1,
           "maxInverseCardinality": -1
@@ -2611,140 +3309,180 @@
       "ClassPairs": [
         {
           "tripleCount": 15,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing"
         },
         {
           "tripleCount": 5,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": true,
           "targetImportanceIndex": 1,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Assistant",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Course"
         },
         {
           "tripleCount": 3,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Assistant",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#OptionalCourse"
         },
         {
           "tripleCount": 5,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Assistant",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing"
         },
         {
           "tripleCount": 6,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Person",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#MandatoryCourse"
         },
         {
           "tripleCount": 2,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Assistant",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#MandatoryCourse"
         },
         {
           "tripleCount": 15,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": true,
           "targetImportanceIndex": 1,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Person",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Course"
         },
         {
           "tripleCount": 15,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Person",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing"
         },
         {
           "tripleCount": 10,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": true,
           "targetImportanceIndex": 1,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Professor",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Course"
         },
         {
           "tripleCount": 10,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Professor",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing"
         },
         {
           "tripleCount": 15,
+          "isPrincipalSource": true,
           "sourceImportanceIndex": 1,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Teacher",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing"
         },
         {
           "tripleCount": 15,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": true,
           "targetImportanceIndex": 1,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Course"
         },
         {
           "tripleCount": 6,
+          "isPrincipalSource": true,
           "sourceImportanceIndex": 1,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Teacher",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#MandatoryCourse"
         },
         {
           "tripleCount": 9,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Person",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#OptionalCourse"
         },
         {
           "tripleCount": 6,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Professor",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#OptionalCourse"
         },
         {
           "tripleCount": 15,
+          "isPrincipalSource": true,
           "sourceImportanceIndex": 1,
+          "isPrincipalTarget": true,
           "targetImportanceIndex": 1,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Teacher",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Course"
         },
         {
           "tripleCount": 9,
+          "isPrincipalSource": true,
           "sourceImportanceIndex": 1,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Teacher",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#OptionalCourse"
         },
         {
           "tripleCount": 9,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#OptionalCourse"
         },
         {
           "tripleCount": 4,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Professor",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#MandatoryCourse"
         },
         {
           "tripleCount": 6,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#MandatoryCourse"
@@ -2753,77 +3491,79 @@
       "Followers": [
         {
           "propertyName": "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
-          "tripleCount": 45
+          "tripleCount": 15
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#courseCode",
-          "tripleCount": 15
+          "tripleCount": 5
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#courseCredits",
-          "tripleCount": 15
+          "tripleCount": 5
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#courseExtInfo",
-          "tripleCount": 15
+          "tripleCount": 5
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#courseName",
-          "tripleCount": 15
+          "tripleCount": 5
         }
       ],
       "OutgoingProperties": [
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#teaches",
-          "tripleCount": 75
+          "tripleCount": 15
         },
         {
           "propertyName": "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
-          "tripleCount": 60
+          "tripleCount": 12
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#facultyLevel",
-          "tripleCount": 15
+          "tripleCount": 3
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#personID",
-          "tripleCount": 15
+          "tripleCount": 3
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#personName",
-          "tripleCount": 15
+          "tripleCount": 3
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#salary",
-          "tripleCount": 15
+          "tripleCount": 3
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#teacherName",
-          "tripleCount": 15
+          "tripleCount": 3
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#nationality",
-          "tripleCount": 10
+          "tripleCount": 2
         }
       ],
       "IncomingProperties": [
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#teaches",
-          "tripleCount": 45
+          "tripleCount": 15
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#course",
-          "tripleCount": 42
+          "tripleCount": 14
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#takes",
-          "tripleCount": 33
+          "tripleCount": 11
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#includes",
-          "tripleCount": 15
+          "tripleCount": 5
         }
-      ]
+      ],
+      "SubjectInstanceNamespaces": [],
+      "ObjectInstanceNamespaces": []
     },
     {
       "localName": "studentName",
@@ -2831,9 +3571,15 @@
       "fullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#studentName",
       "maxCardinality": 1,
       "tripleCount": 7,
+      "distinctTriples": 7,
       "dataTripleCount": 7,
       "objectTripleCount": 0,
+      "distinctSubjectsCount": 7,
+      "distinctObjectsCount": 7,
       "closedDomain": true,
+      "sourceClassesOK": 5,
+      "hasOutgoingPropertiesOK": 5,
+      "Labels": [],
       "DataTypes": [
         {
           "dataType": "xsd:string",
@@ -2847,8 +3593,26 @@
           "dataTripleCount": 7,
           "objectTripleCount": 0,
           "closedRange": true,
+          "isPrincipal": true,
           "importanceIndex": 1,
           "minCardinality": 1,
+          "maxCardinality": 1,
+          "DataTypes": [
+            {
+              "dataType": "xsd:string",
+              "tripleCount": 7
+            }
+          ]
+        },
+        {
+          "classFullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing",
+          "tripleCount": 7,
+          "dataTripleCount": 7,
+          "objectTripleCount": 0,
+          "closedRange": true,
+          "isPrincipal": false,
+          "importanceIndex": 0,
+          "minCardinality": 0,
           "maxCardinality": 1,
           "DataTypes": [
             {
@@ -2863,22 +3627,7 @@
           "dataTripleCount": 7,
           "objectTripleCount": 0,
           "closedRange": true,
-          "importanceIndex": 0,
-          "minCardinality": 0,
-          "maxCardinality": 1,
-          "DataTypes": [
-            {
-              "dataType": "xsd:string",
-              "tripleCount": 7
-            }
-          ]
-        },
-        {
-          "classFullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing",
-          "tripleCount": 7,
-          "dataTripleCount": 7,
-          "objectTripleCount": 0,
-          "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 0,
           "maxCardinality": 1,
@@ -2935,7 +3684,9 @@
           "tripleCount": 6
         }
       ],
-      "IncomingProperties": []
+      "IncomingProperties": [],
+      "SubjectInstanceNamespaces": [],
+      "ObjectInstanceNamespaces": []
     },
     {
       "localName": "personName",
@@ -2943,9 +3694,15 @@
       "fullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#personName",
       "maxCardinality": 1,
       "tripleCount": 10,
+      "distinctTriples": 10,
       "dataTripleCount": 10,
       "objectTripleCount": 0,
+      "distinctSubjectsCount": 10,
+      "distinctObjectsCount": 9,
       "closedDomain": true,
+      "sourceClassesOK": 5,
+      "hasOutgoingPropertiesOK": 5,
+      "Labels": [],
       "DataTypes": [
         {
           "dataType": "xsd:string",
@@ -2959,6 +3716,7 @@
           "dataTripleCount": 10,
           "objectTripleCount": 0,
           "closedRange": true,
+          "isPrincipal": true,
           "importanceIndex": 1,
           "minCardinality": 1,
           "maxCardinality": 1,
@@ -2975,6 +3733,7 @@
           "dataTripleCount": 10,
           "objectTripleCount": 0,
           "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 0,
           "maxCardinality": 1,
@@ -2991,6 +3750,7 @@
           "dataTripleCount": 7,
           "objectTripleCount": 0,
           "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 1,
           "maxCardinality": 1,
@@ -3007,6 +3767,7 @@
           "dataTripleCount": 3,
           "objectTripleCount": 0,
           "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 1,
           "maxCardinality": 1,
@@ -3023,6 +3784,7 @@
           "dataTripleCount": 2,
           "objectTripleCount": 0,
           "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 1,
           "maxCardinality": 1,
@@ -3039,6 +3801,7 @@
           "dataTripleCount": 1,
           "objectTripleCount": 0,
           "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 1,
           "maxCardinality": 1,
@@ -3111,7 +3874,9 @@
           "tripleCount": 3
         }
       ],
-      "IncomingProperties": []
+      "IncomingProperties": [],
+      "SubjectInstanceNamespaces": [],
+      "ObjectInstanceNamespaces": []
     },
     {
       "localName": "nValue",
@@ -3119,9 +3884,15 @@
       "fullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#nValue",
       "maxCardinality": 1,
       "tripleCount": 7,
+      "distinctTriples": 7,
       "dataTripleCount": 7,
       "objectTripleCount": 0,
+      "distinctSubjectsCount": 7,
+      "distinctObjectsCount": 7,
       "closedDomain": true,
+      "sourceClassesOK": 5,
+      "hasOutgoingPropertiesOK": 5,
+      "Labels": [],
       "DataTypes": [
         {
           "dataType": "xsd:string",
@@ -3135,6 +3906,7 @@
           "dataTripleCount": 7,
           "objectTripleCount": 0,
           "closedRange": true,
+          "isPrincipal": true,
           "importanceIndex": 1,
           "minCardinality": 1,
           "maxCardinality": 1,
@@ -3151,6 +3923,7 @@
           "dataTripleCount": 7,
           "objectTripleCount": 0,
           "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 0,
           "maxCardinality": 1,
@@ -3179,7 +3952,9 @@
           "tripleCount": 7
         }
       ],
-      "IncomingProperties": []
+      "IncomingProperties": [],
+      "SubjectInstanceNamespaces": [],
+      "ObjectInstanceNamespaces": []
     },
     {
       "localName": "enrolled",
@@ -3188,10 +3963,19 @@
       "maxCardinality": 1,
       "maxInverseCardinality": -1,
       "tripleCount": 7,
+      "distinctTriples": 7,
       "dataTripleCount": 0,
       "objectTripleCount": 7,
+      "distinctSubjectsCount": 7,
+      "distinctObjectsCount": 2,
       "closedDomain": true,
       "closedRange": true,
+      "sourceClassesOK": 5,
+      "targetClassesOK": 5,
+      "hasOutgoingPropertiesOK": 5,
+      "hasIncomingPropertiesOK": 5,
+      "hasFollowersOK": 5,
+      "Labels": [],
       "DataTypes": [],
       "SourceClasses": [
         {
@@ -3200,18 +3984,9 @@
           "dataTripleCount": 0,
           "objectTripleCount": 7,
           "closedRange": true,
+          "isPrincipal": true,
           "importanceIndex": 1,
           "minCardinality": 1,
-          "maxCardinality": 1
-        },
-        {
-          "classFullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Person",
-          "tripleCount": 7,
-          "dataTripleCount": 0,
-          "objectTripleCount": 7,
-          "closedRange": true,
-          "importanceIndex": 0,
-          "minCardinality": 0,
           "maxCardinality": 1
         },
         {
@@ -3220,6 +3995,18 @@
           "dataTripleCount": 0,
           "objectTripleCount": 7,
           "closedRange": true,
+          "isPrincipal": false,
+          "importanceIndex": 0,
+          "minCardinality": 0,
+          "maxCardinality": 1
+        },
+        {
+          "classFullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Person",
+          "tripleCount": 7,
+          "dataTripleCount": 0,
+          "objectTripleCount": 7,
+          "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 0,
           "maxCardinality": 1
@@ -3230,6 +4017,7 @@
           "classFullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#AcademicProgram",
           "tripleCount": 7,
           "closedDomain": true,
+          "isPrincipal": true,
           "importanceIndex": 1,
           "minInverseCardinality": 1,
           "maxInverseCardinality": -1
@@ -3238,6 +4026,7 @@
           "classFullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing",
           "tripleCount": 7,
           "closedDomain": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minInverseCardinality": 0,
           "maxInverseCardinality": -1
@@ -3246,42 +4035,54 @@
       "ClassPairs": [
         {
           "tripleCount": 7,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing"
         },
         {
           "tripleCount": 7,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": true,
           "targetImportanceIndex": 1,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Person",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#AcademicProgram"
         },
         {
           "tripleCount": 7,
+          "isPrincipalSource": true,
           "sourceImportanceIndex": 1,
+          "isPrincipalTarget": true,
           "targetImportanceIndex": 1,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Student",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#AcademicProgram"
         },
         {
           "tripleCount": 7,
+          "isPrincipalSource": true,
           "sourceImportanceIndex": 1,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Student",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing"
         },
         {
           "tripleCount": 7,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Person",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing"
         },
         {
           "tripleCount": 7,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": true,
           "targetImportanceIndex": 1,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing",
           "TargetClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#AcademicProgram"
@@ -3290,15 +4091,15 @@
       "Followers": [
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#includes",
-          "tripleCount": 19
+          "tripleCount": 5
         },
         {
           "propertyName": "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
-          "tripleCount": 14
+          "tripleCount": 4
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#programName",
-          "tripleCount": 7
+          "tripleCount": 2
         }
       ],
       "OutgoingProperties": [
@@ -3346,9 +4147,11 @@
       "IncomingProperties": [
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#enrolled",
-          "tripleCount": 29
+          "tripleCount": 7
         }
-      ]
+      ],
+      "SubjectInstanceNamespaces": [],
+      "ObjectInstanceNamespaces": []
     },
     {
       "localName": "nCode",
@@ -3356,9 +4159,15 @@
       "fullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#nCode",
       "maxCardinality": 1,
       "tripleCount": 7,
+      "distinctTriples": 7,
       "dataTripleCount": 7,
       "objectTripleCount": 0,
+      "distinctSubjectsCount": 7,
+      "distinctObjectsCount": 7,
       "closedDomain": true,
+      "sourceClassesOK": 5,
+      "hasOutgoingPropertiesOK": 5,
+      "Labels": [],
       "DataTypes": [
         {
           "dataType": "xsd:string",
@@ -3372,6 +4181,7 @@
           "dataTripleCount": 7,
           "objectTripleCount": 0,
           "closedRange": true,
+          "isPrincipal": true,
           "importanceIndex": 1,
           "minCardinality": 1,
           "maxCardinality": 1,
@@ -3388,6 +4198,7 @@
           "dataTripleCount": 7,
           "objectTripleCount": 0,
           "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 0,
           "maxCardinality": 1,
@@ -3416,7 +4227,9 @@
           "tripleCount": 7
         }
       ],
-      "IncomingProperties": []
+      "IncomingProperties": [],
+      "SubjectInstanceNamespaces": [],
+      "ObjectInstanceNamespaces": []
     },
     {
       "localName": "courseCode",
@@ -3424,9 +4237,15 @@
       "fullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#courseCode",
       "maxCardinality": 1,
       "tripleCount": 5,
+      "distinctTriples": 5,
       "dataTripleCount": 5,
       "objectTripleCount": 0,
+      "distinctSubjectsCount": 5,
+      "distinctObjectsCount": 5,
       "closedDomain": true,
+      "sourceClassesOK": 5,
+      "hasOutgoingPropertiesOK": 5,
+      "Labels": [],
       "DataTypes": [
         {
           "dataType": "xsd:string",
@@ -3440,6 +4259,7 @@
           "dataTripleCount": 5,
           "objectTripleCount": 0,
           "closedRange": true,
+          "isPrincipal": true,
           "importanceIndex": 1,
           "minCardinality": 1,
           "maxCardinality": 1,
@@ -3456,6 +4276,7 @@
           "dataTripleCount": 5,
           "objectTripleCount": 0,
           "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 0,
           "maxCardinality": 1,
@@ -3472,6 +4293,7 @@
           "dataTripleCount": 3,
           "objectTripleCount": 0,
           "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 1,
           "maxCardinality": 1,
@@ -3488,6 +4310,7 @@
           "dataTripleCount": 2,
           "objectTripleCount": 0,
           "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 1,
           "maxCardinality": 1,
@@ -3524,7 +4347,9 @@
           "tripleCount": 5
         }
       ],
-      "IncomingProperties": []
+      "IncomingProperties": [],
+      "SubjectInstanceNamespaces": [],
+      "ObjectInstanceNamespaces": []
     },
     {
       "localName": "courseExtInfo",
@@ -3532,9 +4357,15 @@
       "fullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#courseExtInfo",
       "maxCardinality": 1,
       "tripleCount": 5,
+      "distinctTriples": 5,
       "dataTripleCount": 5,
       "objectTripleCount": 0,
+      "distinctSubjectsCount": 5,
+      "distinctObjectsCount": 5,
       "closedDomain": true,
+      "sourceClassesOK": 5,
+      "hasOutgoingPropertiesOK": 5,
+      "Labels": [],
       "DataTypes": [
         {
           "dataType": "xsd:string",
@@ -3548,6 +4379,7 @@
           "dataTripleCount": 5,
           "objectTripleCount": 0,
           "closedRange": true,
+          "isPrincipal": true,
           "importanceIndex": 1,
           "minCardinality": 1,
           "maxCardinality": 1,
@@ -3564,6 +4396,7 @@
           "dataTripleCount": 5,
           "objectTripleCount": 0,
           "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 0,
           "maxCardinality": 1,
@@ -3580,6 +4413,7 @@
           "dataTripleCount": 3,
           "objectTripleCount": 0,
           "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 1,
           "maxCardinality": 1,
@@ -3596,6 +4430,7 @@
           "dataTripleCount": 2,
           "objectTripleCount": 0,
           "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 1,
           "maxCardinality": 1,
@@ -3632,7 +4467,9 @@
           "tripleCount": 5
         }
       ],
-      "IncomingProperties": []
+      "IncomingProperties": [],
+      "SubjectInstanceNamespaces": [],
+      "ObjectInstanceNamespaces": []
     },
     {
       "localName": "teacherName",
@@ -3640,9 +4477,15 @@
       "fullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#teacherName",
       "maxCardinality": 1,
       "tripleCount": 3,
+      "distinctTriples": 3,
       "dataTripleCount": 3,
       "objectTripleCount": 0,
+      "distinctSubjectsCount": 3,
+      "distinctObjectsCount": 3,
       "closedDomain": true,
+      "sourceClassesOK": 5,
+      "hasOutgoingPropertiesOK": 5,
+      "Labels": [],
       "DataTypes": [
         {
           "dataType": "xsd:string",
@@ -3656,8 +4499,26 @@
           "dataTripleCount": 3,
           "objectTripleCount": 0,
           "closedRange": true,
+          "isPrincipal": true,
           "importanceIndex": 1,
           "minCardinality": 1,
+          "maxCardinality": 1,
+          "DataTypes": [
+            {
+              "dataType": "xsd:string",
+              "tripleCount": 3
+            }
+          ]
+        },
+        {
+          "classFullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing",
+          "tripleCount": 3,
+          "dataTripleCount": 3,
+          "objectTripleCount": 0,
+          "closedRange": true,
+          "isPrincipal": false,
+          "importanceIndex": 0,
+          "minCardinality": 0,
           "maxCardinality": 1,
           "DataTypes": [
             {
@@ -3672,22 +4533,7 @@
           "dataTripleCount": 3,
           "objectTripleCount": 0,
           "closedRange": true,
-          "importanceIndex": 0,
-          "minCardinality": 0,
-          "maxCardinality": 1,
-          "DataTypes": [
-            {
-              "dataType": "xsd:string",
-              "tripleCount": 3
-            }
-          ]
-        },
-        {
-          "classFullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing",
-          "tripleCount": 3,
-          "dataTripleCount": 3,
-          "objectTripleCount": 0,
-          "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 0,
           "maxCardinality": 1,
@@ -3704,6 +4550,7 @@
           "dataTripleCount": 2,
           "objectTripleCount": 0,
           "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 1,
           "maxCardinality": 1,
@@ -3720,6 +4567,7 @@
           "dataTripleCount": 1,
           "objectTripleCount": 0,
           "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 1,
           "maxCardinality": 1,
@@ -3768,7 +4616,9 @@
           "tripleCount": 2
         }
       ],
-      "IncomingProperties": []
+      "IncomingProperties": [],
+      "SubjectInstanceNamespaces": [],
+      "ObjectInstanceNamespaces": []
     },
     {
       "localName": "personID",
@@ -3776,9 +4626,15 @@
       "fullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#personID",
       "maxCardinality": 1,
       "tripleCount": 10,
+      "distinctTriples": 10,
       "dataTripleCount": 10,
       "objectTripleCount": 0,
+      "distinctSubjectsCount": 10,
+      "distinctObjectsCount": 9,
       "closedDomain": true,
+      "sourceClassesOK": 5,
+      "hasOutgoingPropertiesOK": 5,
+      "Labels": [],
       "DataTypes": [
         {
           "dataType": "xsd:string",
@@ -3792,6 +4648,7 @@
           "dataTripleCount": 10,
           "objectTripleCount": 0,
           "closedRange": true,
+          "isPrincipal": true,
           "importanceIndex": 1,
           "minCardinality": 1,
           "maxCardinality": 1,
@@ -3808,6 +4665,7 @@
           "dataTripleCount": 10,
           "objectTripleCount": 0,
           "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 0,
           "maxCardinality": 1,
@@ -3824,6 +4682,7 @@
           "dataTripleCount": 7,
           "objectTripleCount": 0,
           "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 1,
           "maxCardinality": 1,
@@ -3840,6 +4699,7 @@
           "dataTripleCount": 3,
           "objectTripleCount": 0,
           "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 1,
           "maxCardinality": 1,
@@ -3856,6 +4716,7 @@
           "dataTripleCount": 2,
           "objectTripleCount": 0,
           "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 1,
           "maxCardinality": 1,
@@ -3872,6 +4733,7 @@
           "dataTripleCount": 1,
           "objectTripleCount": 0,
           "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 1,
           "maxCardinality": 1,
@@ -3944,7 +4806,9 @@
           "tripleCount": 3
         }
       ],
-      "IncomingProperties": []
+      "IncomingProperties": [],
+      "SubjectInstanceNamespaces": [],
+      "ObjectInstanceNamespaces": []
     },
     {
       "localName": "dateCompleted",
@@ -3952,9 +4816,15 @@
       "fullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#dateCompleted",
       "maxCardinality": 1,
       "tripleCount": 10,
+      "distinctTriples": 10,
       "dataTripleCount": 10,
       "objectTripleCount": 0,
+      "distinctSubjectsCount": 10,
+      "distinctObjectsCount": 4,
       "closedDomain": true,
+      "sourceClassesOK": 5,
+      "hasOutgoingPropertiesOK": 5,
+      "Labels": [],
       "DataTypes": [
         {
           "dataType": "xsd:dateTime",
@@ -3968,8 +4838,26 @@
           "dataTripleCount": 10,
           "objectTripleCount": 0,
           "closedRange": true,
+          "isPrincipal": true,
           "importanceIndex": 1,
           "minCardinality": 1,
+          "maxCardinality": 1,
+          "DataTypes": [
+            {
+              "dataType": "xsd:dateTime",
+              "tripleCount": 10
+            }
+          ]
+        },
+        {
+          "classFullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing",
+          "tripleCount": 10,
+          "dataTripleCount": 10,
+          "objectTripleCount": 0,
+          "closedRange": true,
+          "isPrincipal": false,
+          "importanceIndex": 0,
+          "minCardinality": 0,
           "maxCardinality": 1,
           "DataTypes": [
             {
@@ -3984,22 +4872,7 @@
           "dataTripleCount": 10,
           "objectTripleCount": 0,
           "closedRange": true,
-          "importanceIndex": 0,
-          "minCardinality": 0,
-          "maxCardinality": 1,
-          "DataTypes": [
-            {
-              "dataType": "xsd:dateTime",
-              "tripleCount": 10
-            }
-          ]
-        },
-        {
-          "classFullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing",
-          "tripleCount": 10,
-          "dataTripleCount": 10,
-          "objectTripleCount": 0,
-          "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 0,
           "maxCardinality": 1,
@@ -4040,7 +4913,9 @@
           "tripleCount": 10
         }
       ],
-      "IncomingProperties": []
+      "IncomingProperties": [],
+      "SubjectInstanceNamespaces": [],
+      "ObjectInstanceNamespaces": []
     },
     {
       "localName": "acadTitle",
@@ -4048,9 +4923,15 @@
       "fullName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#acadTitle",
       "maxCardinality": 1,
       "tripleCount": 3,
+      "distinctTriples": 3,
       "dataTripleCount": 3,
       "objectTripleCount": 0,
+      "distinctSubjectsCount": 3,
+      "distinctObjectsCount": 3,
       "closedDomain": true,
+      "sourceClassesOK": 5,
+      "hasOutgoingPropertiesOK": 5,
+      "Labels": [],
       "DataTypes": [
         {
           "dataType": "xsd:string",
@@ -4064,6 +4945,7 @@
           "dataTripleCount": 3,
           "objectTripleCount": 0,
           "closedRange": true,
+          "isPrincipal": true,
           "importanceIndex": 1,
           "minCardinality": 1,
           "maxCardinality": 1,
@@ -4080,6 +4962,7 @@
           "dataTripleCount": 3,
           "objectTripleCount": 0,
           "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 0,
           "maxCardinality": 1,
@@ -4104,7 +4987,9 @@
           "tripleCount": 3
         }
       ],
-      "IncomingProperties": []
+      "IncomingProperties": [],
+      "SubjectInstanceNamespaces": [],
+      "ObjectInstanceNamespaces": []
     },
     {
       "localName": "type",
@@ -4113,10 +4998,19 @@
       "maxCardinality": -1,
       "maxInverseCardinality": -1,
       "tripleCount": 151,
+      "distinctTriples": 82,
       "dataTripleCount": 0,
       "objectTripleCount": 151,
+      "distinctSubjectsCount": 82,
+      "distinctObjectsCount": 16,
       "closedDomain": true,
       "closedRange": false,
+      "sourceClassesOK": 5,
+      "targetClassesOK": 5,
+      "hasOutgoingPropertiesOK": 5,
+      "hasIncomingPropertiesOK": 5,
+      "hasFollowersOK": 5,
+      "Labels": [],
       "DataTypes": [],
       "SourceClasses": [
         {
@@ -4125,6 +5019,7 @@
           "dataTripleCount": 0,
           "objectTripleCount": 110,
           "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 1,
           "minCardinality": 1,
           "maxCardinality": -1
@@ -4135,6 +5030,7 @@
           "dataTripleCount": 0,
           "objectTripleCount": 27,
           "closedRange": false,
+          "isPrincipal": false,
           "importanceIndex": 2,
           "minCardinality": 1,
           "maxCardinality": 1
@@ -4145,6 +5041,7 @@
           "dataTripleCount": 0,
           "objectTripleCount": 38,
           "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 1,
           "maxCardinality": -1
@@ -4155,6 +5052,7 @@
           "dataTripleCount": 0,
           "objectTripleCount": 33,
           "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 1,
           "maxCardinality": -1
@@ -4165,6 +5063,7 @@
           "dataTripleCount": 0,
           "objectTripleCount": 30,
           "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 1,
           "maxCardinality": -1
@@ -4175,6 +5074,7 @@
           "dataTripleCount": 0,
           "objectTripleCount": 21,
           "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 1,
           "maxCardinality": -1
@@ -4185,6 +5085,7 @@
           "dataTripleCount": 0,
           "objectTripleCount": 15,
           "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 1,
           "maxCardinality": -1
@@ -4195,6 +5096,7 @@
           "dataTripleCount": 0,
           "objectTripleCount": 14,
           "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 1,
           "maxCardinality": -1
@@ -4205,6 +5107,7 @@
           "dataTripleCount": 0,
           "objectTripleCount": 14,
           "closedRange": false,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 1,
           "maxCardinality": 1
@@ -4215,6 +5118,7 @@
           "dataTripleCount": 0,
           "objectTripleCount": 12,
           "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 1,
           "maxCardinality": -1
@@ -4225,6 +5129,7 @@
           "dataTripleCount": 0,
           "objectTripleCount": 9,
           "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 1,
           "maxCardinality": -1
@@ -4235,6 +5140,7 @@
           "dataTripleCount": 0,
           "objectTripleCount": 8,
           "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 1,
           "maxCardinality": -1
@@ -4245,6 +5151,7 @@
           "dataTripleCount": 0,
           "objectTripleCount": 6,
           "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 1,
           "maxCardinality": -1
@@ -4255,6 +5162,7 @@
           "dataTripleCount": 0,
           "objectTripleCount": 6,
           "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 1,
           "maxCardinality": -1
@@ -4265,6 +5173,7 @@
           "dataTripleCount": 0,
           "objectTripleCount": 4,
           "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 1,
           "maxCardinality": -1
@@ -4275,6 +5184,7 @@
           "dataTripleCount": 0,
           "objectTripleCount": 4,
           "closedRange": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minCardinality": 1,
           "maxCardinality": -1
@@ -4285,6 +5195,7 @@
           "classFullName": "http://www.w3.org/2000/01/rdf-schema#Class",
           "tripleCount": 110,
           "closedDomain": true,
+          "isPrincipal": false,
           "importanceIndex": 0,
           "minInverseCardinality": 1,
           "maxInverseCardinality": -1
@@ -4293,98 +5204,126 @@
       "ClassPairs": [
         {
           "tripleCount": 110,
+          "isPrincipalSource": true,
           "sourceImportanceIndex": 1,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Thing",
           "TargetClass": "http://www.w3.org/2000/01/rdf-schema#Class"
         },
         {
           "tripleCount": 6,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#MandatoryCourse",
           "TargetClass": "http://www.w3.org/2000/01/rdf-schema#Class"
         },
         {
           "tripleCount": 21,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Student",
           "TargetClass": "http://www.w3.org/2000/01/rdf-schema#Class"
         },
         {
           "tripleCount": 4,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Assistant",
           "TargetClass": "http://www.w3.org/2000/01/rdf-schema#Class"
         },
         {
           "tripleCount": 12,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Teacher",
           "TargetClass": "http://www.w3.org/2000/01/rdf-schema#Class"
         },
         {
           "tripleCount": 30,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#CompletedRegistration",
           "TargetClass": "http://www.w3.org/2000/01/rdf-schema#Class"
         },
         {
           "tripleCount": 15,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Course",
           "TargetClass": "http://www.w3.org/2000/01/rdf-schema#Class"
         },
         {
           "tripleCount": 6,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#FacultyLevel",
           "TargetClass": "http://www.w3.org/2000/01/rdf-schema#Class"
         },
         {
           "tripleCount": 8,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Professor",
           "TargetClass": "http://www.w3.org/2000/01/rdf-schema#Class"
         },
         {
           "tripleCount": 4,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#AcademicProgram",
           "TargetClass": "http://www.w3.org/2000/01/rdf-schema#Class"
         },
         {
           "tripleCount": 33,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Person",
           "TargetClass": "http://www.w3.org/2000/01/rdf-schema#Class"
         },
         {
           "tripleCount": 38,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Registration",
           "TargetClass": "http://www.w3.org/2000/01/rdf-schema#Class"
         },
         {
           "tripleCount": 9,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#OptionalCourse",
           "TargetClass": "http://www.w3.org/2000/01/rdf-schema#Class"
         },
         {
           "tripleCount": 14,
+          "isPrincipalSource": false,
           "sourceImportanceIndex": 0,
+          "isPrincipalTarget": false,
           "targetImportanceIndex": 0,
           "SourceClass": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#Nationality",
           "TargetClass": "http://www.w3.org/2000/01/rdf-schema#Class"
@@ -4393,173 +5332,205 @@
       "Followers": [
         {
           "propertyName": "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
-          "tripleCount": 110
+          "tripleCount": 14
         }
       ],
       "OutgoingProperties": [
         {
           "propertyName": "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
-          "tripleCount": 351
+          "tripleCount": 151
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#teaches",
-          "tripleCount": 60
-        },
-        {
-          "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#r",
-          "tripleCount": 42
+          "tripleCount": 15
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#course",
-          "tripleCount": 38
+          "tripleCount": 14
+        },
+        {
+          "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#r",
+          "tripleCount": 14
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#student",
-          "tripleCount": 38
+          "tripleCount": 14
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#datePaid",
-          "tripleCount": 34
-        },
-        {
-          "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#personID",
-          "tripleCount": 33
-        },
-        {
-          "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#personName",
-          "tripleCount": 33
+          "tripleCount": 12
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#takes",
-          "tripleCount": 33
+          "tripleCount": 11
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#dateCompleted",
-          "tripleCount": 30
-        },
-        {
-          "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#mark",
-          "tripleCount": 30
-        },
-        {
-          "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#hasMark",
-          "tripleCount": 27
-        },
-        {
-          "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#nationality",
-          "tripleCount": 26
-        },
-        {
-          "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#enrolled",
-          "tripleCount": 21
-        },
-        {
-          "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#studentName",
-          "tripleCount": 21
-        },
-        {
-          "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#studentNumber",
-          "tripleCount": 21
-        },
-        {
-          "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#courseCode",
-          "tripleCount": 15
-        },
-        {
-          "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#courseCredits",
-          "tripleCount": 15
-        },
-        {
-          "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#courseExtInfo",
-          "tripleCount": 15
-        },
-        {
-          "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#courseName",
-          "tripleCount": 15
-        },
-        {
-          "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#nCode",
-          "tripleCount": 14
-        },
-        {
-          "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#nValue",
-          "tripleCount": 14
-        },
-        {
-          "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#facultyLevel",
-          "tripleCount": 12
-        },
-        {
-          "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#salary",
-          "tripleCount": 12
-        },
-        {
-          "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#teacherName",
-          "tripleCount": 12
-        },
-        {
-          "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#includes",
           "tripleCount": 10
         },
         {
+          "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#mark",
+          "tripleCount": 10
+        },
+        {
+          "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#personID",
+          "tripleCount": 10
+        },
+        {
+          "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#personName",
+          "tripleCount": 10
+        },
+        {
+          "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#hasMark",
+          "tripleCount": 9
+        },
+        {
+          "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#nationality",
+          "tripleCount": 8
+        },
+        {
+          "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#enrolled",
+          "tripleCount": 7
+        },
+        {
+          "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#nCode",
+          "tripleCount": 7
+        },
+        {
+          "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#nValue",
+          "tripleCount": 7
+        },
+        {
+          "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#studentName",
+          "tripleCount": 7
+        },
+        {
+          "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#studentNumber",
+          "tripleCount": 7
+        },
+        {
+          "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#courseCode",
+          "tripleCount": 5
+        },
+        {
+          "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#courseCredits",
+          "tripleCount": 5
+        },
+        {
+          "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#courseExtInfo",
+          "tripleCount": 5
+        },
+        {
+          "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#courseName",
+          "tripleCount": 5
+        },
+        {
+          "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#includes",
+          "tripleCount": 5
+        },
+        {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#acadTitle",
-          "tripleCount": 6
+          "tripleCount": 3
+        },
+        {
+          "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#facultyLevel",
+          "tripleCount": 3
+        },
+        {
+          "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#salary",
+          "tripleCount": 3
+        },
+        {
+          "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#teacherName",
+          "tripleCount": 3
         },
         {
           "propertyName": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#programName",
-          "tripleCount": 4
+          "tripleCount": 2
         }
       ],
       "IncomingProperties": [
         {
           "propertyName": "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
-          "tripleCount": 3165
+          "tripleCount": 151
         }
-      ]
+      ],
+      "SubjectInstanceNamespaces": [],
+      "ObjectInstanceNamespaces": []
     }
   ],
-  "Parameters": [
-    {
-      "name": "endpointUrl",
-      "value": "http://localhost:8890/sparql"
-    },
-    {
-      "name": "graphName",
-      "value": "MiniUniv"
-    },
-    {
-      "name": "calculateSubClassRelations",
-      "value": "true"
-    },
-    {
-      "name": "calculateDomainAndRangePairs",
-      "value": "true"
-    },
-    {
-      "name": "calculateDataTypes",
-      "value": "true"
-    },
-    {
-      "name": "calculateCardinalities",
-      "value": "propertyLevelAndClassContext"
-    },
-    {
-      "name": "minimalAnalyzedClassSize",
-      "value": "0"
-    }
-  ],
+  "namespace": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#",
   "Prefixes": [
     {
       "prefix": ":",
       "namespace": "http://lumii.lv/ontologies/UnivExample_hasMark.owl#"
     },
     {
-      "prefix": "x1:",
+      "prefix": "rdf",
       "namespace": "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
     },
     {
-      "prefix": "x2:",
+      "prefix": "rdfs",
       "namespace": "http://www.w3.org/2000/01/rdf-schema#"
     }
-  ]
+  ],
+  "Parameters": {
+    "correlationId": "1039559803638880950",
+    "endpointUrl": "http://localhost:8890/sparql",
+    "graphName": "MiniUniv",
+    "calculateSubClassRelations": true,
+    "calculateMultipleInheritanceSuperclasses": true,
+    "requireClasses": true,
+    "validateClassesList": true,
+    "validatePropertiesList": true,
+    "calculatePropertyPropertyRelations": true,
+    "propertyPropertyLinkCheckBackupMode": "details",
+    "calculateSourceAndTargetPairs": true,
+    "calculateDomainsAndRanges": true,
+    "includeDistinctSubjectsAndObjects": "propertyLevel",
+    "computeBlankNodeStatistics": "full",
+    "calculateImportanceIndexes": "basic",
+    "calculateClosedClassSets": true,
+    "calculateCardinalities": "propertyLevelAndClassContext",
+    "calculateDataTypes": "propertyLevelAndClassContext",
+    "calculateInstanceNamespaces": "no",
+    "sampleLimitForInstanceNamespacesCalculation": 1000,
+    "minimalAnalyzedClassSize": 1,
+    "principalClassificationProperties": [
+      "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
+    ],
+    "classificationPropertiesWithConnectionsOnly": [],
+    "simpleClassificationProperties": [],
+    "addIntersectionClasses": "yes",
+    "exactCountCalculations": "no",
+    "calculateDistinctTriples": true,
+    "includedLabels": [
+      {
+        "labelPropertyFullOrPrefix": "rdfs:label",
+        "languages": []
+      },
+      {
+        "labelPropertyFullOrPrefix": "skos:prefLabel",
+        "languages": []
+      }
+    ],
+    "includedClasses": [],
+    "includedProperties": [],
+    "excludedNamespaces": [],
+    "largeQueryTimeout": 0,
+    "smallQueryTimeout": 0,
+    "delayOnFailure": 0,
+    "waitingTimeForEndpoint": 0,
+    "enableLogging": true,
+    "logNoClassesForProperty": "no",
+    "crossCheckTargetClassesOnNonLiteralPropertyObjectCheckFailure": false
+  },
+  "StartDateTime": "22-06-2026 16:33:34",
+  "EndDateTime": "22-06-2026 16:33:42",
+  "HasBlankNodeObjects": false,
+  "HasBlankNodeSubjects": false,
+  "HasErrors": false,
+  "HasWarnings": false,
+  "HasNotes": false,
+  "Errors": []
 }

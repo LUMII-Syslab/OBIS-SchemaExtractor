@@ -9,11 +9,11 @@ Full documentation, execution parameter descriptions, example runs, and guidance
   - [Option 1: Executable JAR](#option-1-executable-jar)
   - [Option 2: Docker](#option-2-docker)
 - [Available Services](#available-services)
-  - [V2: Build Schema from Endpoint](#v2-build-schema-from-endpoint-post-schema-extractor-restv2endpointbuildfullschema)
-  - [V2: Build Schema from Config File](#v2-build-schema-from-config-file-post-schema-extractor-restv2endpointbuildfullschemafromconfigfile)
+  - [V2: Build Schema from Endpoint](#v2-build-schema-from-endpoint)
+  - [V2: Build Schema from Config File](#v2-build-schema-from-config-file)
 - [Archive / Deprecated (V1 Services)](#archive--deprecated-v1-services)
-  - [V1: SPARQL Endpoint](#v1-sparql-endpoint-get-schema-extractor-restv1endpointbuildfullschema)
-  - [V1: RDF/OWL File](#v1-rdfowl-file-post-schema-extractor-restv1owlfilebuildfullschema)
+  - [V1: SPARQL Endpoint](#v1-sparql-endpoint)
+  - [V1: RDF/OWL File](#v1-rdfowl-file)
 - [Development](#development)
 
 ---
@@ -58,29 +58,34 @@ Once running, Swagger UI is available at [http://localhost:8080/swagger-ui.html]
 
 ## Available Services
 
-All current (V2) services are available under the base path `/schema-extractor-rest/v2` and are documented interactively via Swagger UI at `http://server:port/swagger-ui.html`. The Swagger page describes all request parameters, their types, default values, and expected response models, and allows running requests directly from the browser.
+Services are documented interactively in Swagger UI at `http://server:port/swagger-ui.html`. To view the V2 services, select the **"Schema Extractor API - Current V2"** specification from the dropdown in the top-right corner of the Swagger UI page.
 
-### V2: Build Schema from Endpoint — `POST /schema-extractor-rest/v2/endpoint/buildFullSchema`
+| Service | Method | Endpoint | Description |
+|---|---|---|---|
+| [V2: Build Schema from Endpoint](#v2-build-schema-from-endpoint) | `POST` | `/schema-extractor-rest/v2/endpoint/buildFullSchema` | Extract schema from a SPARQL endpoint using request parameters |
+| [V2: Build Schema from Config File](#v2-build-schema-from-config-file) | `POST` | `/schema-extractor-rest/v2/endpoint/buildFullSchemaFromConfigFile` | Extract schema from a SPARQL endpoint using a YAML config file |
 
-Connects to a SPARQL endpoint, queries it to extract and analyze the RDF data structure, and returns a full schema model as JSON.
+### V2: Build Schema from Endpoint
 
-Key parameters include the endpoint URL, optional graph name, cardinality calculation mode, subclass and property-relation analysis flags, and optional CSV files to restrict which classes or properties are analyzed. When `saveThisConfig=true` (default), the effective configuration is also saved as a YAML file on the server for later reuse.
+Connects to a SPARQL endpoint, extracts and analyzes the RDF data structure, and returns a full schema model as JSON. Parameters are passed as query/form arguments.
+
+Key parameters include the endpoint URL, optional graph name, cardinality calculation mode, subclass and property-relation analysis flags, and optional CSV files to restrict which classes or properties are analyzed. When `saveThisConfig=true` (default), the effective configuration is saved as a YAML file on the server for later reuse.
+
+All parameters and their descriptions are available in Swagger UI under the **"Schema Extractor API - Current V2"** specification.
 
 ```sh
-curl -X POST "http://localhost:8080/schema-extractor-rest/v2/endpoint/buildFullSchema?endpointUrl=http%3A%2F%2Flocalhost%3A8890%2Fsparql&graphName=MiniUniv&calculateSubClassRelations=true&calculatePropertyPropertyRelations=true&calculateDomainAndRangePairs=true&calculateDataTypes=true&calculateCardinalitiesMode=propertyLevelAndClassContext&minimalAnalyzedClassSize=0&enableLogging=true" \
+curl -X POST "http://localhost:8080/schema-extractor-rest/v2/endpoint/buildFullSchema?endpointUrl=http%3A%2F%2Flocalhost%3A8890%2Fsparql&graphName=MiniUniv&calculateSubClassRelations=true&calculateMultipleInheritanceSuperclasses=true&minimalAnalyzedClassSize=1&requireClasses=true&calculatePropertyPropertyRelations=true&propertyPropertyLinkCheckBackupMode=details&calculateSourceAndTargetPairs=true&calculateDomainsAndRanges=true&calculateImportanceIndexes=basic&calculateClosedClassSets=true&calculateCardinalities=propertyLevelAndClassContext&calculateDataTypes=propertyLevelAndClassContext&addIntersectionClasses=yes&enableLogging=true&saveThisConfig=true" \
   -H "accept: application/json" \
   -H "Content-Type: multipart/form-data"
 ```
 
 Example JSON response: [SampleExtractedSchemaV2.json](build/SampleExtractedSchemaV2.json)
 
-All parameters are described in detail in Swagger UI.
+### V2: Build Schema from Config File
 
-### V2: Build Schema from Config File — `POST /schema-extractor-rest/v2/endpoint/buildFullSchemaFromConfigFile`
+Runs the same schema extraction as above, but reads all parameters from an uploaded YAML configuration file instead of individual query parameters. Useful for automating extractions, reproducing a previous run, or managing complex parameter sets.
 
-Runs the same schema extraction as above, but reads all parameters from an uploaded YAML configuration file instead of query parameters. This is useful for automating extractions, reproducing a previous run, or managing complex parameter sets.
-
-Upload a YAML configuration file as `configurationFile`. An example configuration file with all available parameters and their descriptions is provided at [`build/example-config.yml`](build/example-config.yml).
+An example configuration file with all available parameters and their descriptions is provided at [`build/example-config.yml`](build/example-config.yml).
 
 ```sh
 curl -X POST "http://localhost:8080/schema-extractor-rest/v2/endpoint/buildFullSchemaFromConfigFile" \
@@ -92,11 +97,18 @@ curl -X POST "http://localhost:8080/schema-extractor-rest/v2/endpoint/buildFullS
 
 ## Archive / Deprecated (V1 Services)
 
-The V1 services under `/schema-extractor-rest/v1` are deprecated and kept for backwards compatibility only. New integrations should use the V2 services above.
+The V1 services are deprecated and kept for backwards compatibility only. New integrations should use the [V2 services](#available-services) above.
 
-### V1: SPARQL Endpoint — `GET /schema-extractor-rest/v1/endpoint/buildFullSchema`
+To view V1 services in Swagger UI, select the **"Schema Extractor API - Deprecated V1"** specification from the dropdown in the top-right corner of the Swagger UI page.
 
-Extracts and analyzes data from a SPARQL endpoint and builds a full schema model (version 1). All parameters are passed as query string arguments.
+| Service | Method | Endpoint | Description |
+|---|---|---|---|
+| [buildFullSchema (endpoint)](#v1-sparql-endpoint) | `GET` | `/schema-extractor-rest/v1/endpoint/buildFullSchema` | Extract schema from a SPARQL endpoint (version 1) |
+| [buildFullSchema (OWL file)](#v1-rdfowl-file) | `POST` | `/schema-extractor-rest/v1/owlFile/buildFullSchema` | Extract schema from an OWL/RDF file, optionally enhanced with endpoint data |
+
+### V1: SPARQL Endpoint
+
+Extracts and analyzes data from a SPARQL endpoint and builds a full schema model. All parameters are passed as query string arguments.
 
 ```sh
 curl -X GET "http://localhost:8080/schema-extractor-rest/v1/endpoint/buildFullSchema?endpointUrl=http%3A%2F%2Flocalhost%3A8890%2Fsparql&graphName=MiniUniv&version=fewComplexQueries&mode=full&enableLogging=false&excludeSystemClasses=true&excludeMetaDomainClasses=false&excludePropertiesWithoutClasses=true" \
@@ -105,7 +117,7 @@ curl -X GET "http://localhost:8080/schema-extractor-rest/v1/endpoint/buildFullSc
 
 Example JSON response: [SampleExtractedSchemaV1.json](build/SampleExtractedSchemaV1.json)
 
-### V1: RDF/OWL File — `POST /schema-extractor-rest/v1/owlFile/buildFullSchema`
+### V1: RDF/OWL File
 
 Reads an uploaded OWL/RDF ontology file and converts it to JSON schema format. Optionally enhances the result with instance data from a SPARQL endpoint if an `endpointUrl` is provided.
 
