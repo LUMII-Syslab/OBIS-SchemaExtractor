@@ -1,14 +1,12 @@
 package lv.lumii.obis.schema.model.v2;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import lombok.Setter;
-import lv.lumii.obis.schema.services.extractor.dto.SchemaExtractorError;
+import lv.lumii.obis.schema.services.extractor.dto.SchemaExtractorMessage;
 import lv.lumii.obis.schema.services.extractor.dto.SchemaExtractorRequestDto;
 
 import javax.annotation.Nonnull;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -53,8 +51,8 @@ public class Schema {
     @JsonProperty("HasNotes")
     private Boolean hasNotes;
 
-    @JsonProperty("Errors")
-    private List<SchemaExtractorError> errors;
+    @JsonProperty("Messages")
+    private List<SchemaExtractorMessage> messages;
 
     @Nonnull
     public List<SchemaClass> getClasses() {
@@ -81,34 +79,34 @@ public class Schema {
     }
 
     @Nonnull
-    public List<SchemaExtractorError> getErrors() {
-        if (errors == null) {
-            errors = new ArrayList<>();
+    public List<SchemaExtractorMessage> getMessages() {
+        if (messages == null) {
+            messages = new ArrayList<>();
         }
-        return errors;
+        return messages;
     }
 
     @Nonnull
     public Boolean getHasErrors() {
-        hasErrors = hasErrorFlag(SchemaExtractorError.ErrorLevel.ERROR);
+        hasErrors = hasMessageFlag(SchemaExtractorMessage.MessageLevel.ERROR);
         return hasErrors;
     }
 
     @Nonnull
     public Boolean getHasWarnings() {
-        hasWarnings = hasErrorFlag(SchemaExtractorError.ErrorLevel.WARNING) || hasErrorFlag(SchemaExtractorError.ErrorLevel.WARNING_LOW);
+        hasWarnings = hasMessageFlag(SchemaExtractorMessage.MessageLevel.WARNING) || hasMessageFlag(SchemaExtractorMessage.MessageLevel.WARNING_LOW);
         return hasWarnings;
     }
 
     @Nonnull
     public Boolean getHasNotes() {
-        hasNotes = hasErrorFlag(SchemaExtractorError.ErrorLevel.INFO);
+        hasNotes = hasMessageFlag(SchemaExtractorMessage.MessageLevel.INFO);
         return hasNotes;
     }
 
     @Nonnull
-    public Boolean hasErrorFlag(SchemaExtractorError.ErrorLevel errorLevel) {
-        if (getErrors().stream().anyMatch(error -> errorLevel.equals(error.getErrorLevel()))) {
+    public Boolean hasMessageFlag(SchemaExtractorMessage.MessageLevel messageLevel) {
+        if (getMessages().stream().anyMatch(message -> messageLevel.equals(message.getMessageLevel()))) {
             return Boolean.TRUE;
         }
         return Boolean.FALSE;

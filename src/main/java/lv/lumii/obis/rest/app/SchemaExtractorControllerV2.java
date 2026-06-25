@@ -47,7 +47,7 @@ public class SchemaExtractorControllerV2 {
 
     private static final String SCHEMA_EXTRACT_MESSAGE_START = "Starting to read schema from the endpoint with parameters %s";
     private static final String SCHEMA_EXTRACT_MESSAGE_END = "Completed JSON schema extraction in %s from the specified endpoint with parameters %s";
-    private static final String SCHEMA_EXTRACT_MESSAGE_ERROR = "The schema extraction process encountered errors/warnings/notes, please check the errors log file";
+    private static final String SCHEMA_EXTRACT_MESSAGE_ERROR = "The schema extraction process encountered errors/warnings/notes, please check the messages log file";
     private static final String SCHEMA_EXTRACT_MESSAGE_SAVED_FILE = "JSON schema saved in the file %s";
     private static final String SCHEMA_EXTRACT_MESSAGE_FULL_PARAMETERS = "Schema extraction parameters %s";
 
@@ -237,9 +237,9 @@ public class SchemaExtractorControllerV2 {
             log.info(String.format(SCHEMA_EXTRACT_MESSAGE_SAVED_FILE, fileName));
         }
 
-        if (!schema.getErrors().isEmpty()) {
-            String errors = objectConversionService.getJsonFromObject(schema.getErrors());
-            writeDataToFile(requestDto.getCorrelationId() + "-errors.json", errors);
+        if (!schema.getMessages().isEmpty()) {
+            String messages = objectConversionService.getJsonFromObject(schema.getMessages());
+            writeDataToFile(requestDto.getCorrelationId() + "-messages.json", messages);
         }
 
         return resultSchema;
