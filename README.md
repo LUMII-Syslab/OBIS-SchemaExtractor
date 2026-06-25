@@ -142,7 +142,7 @@ Clone the repository and build with Maven:
 git clone https://github.com/LUMII-Syslab/OBIS-SchemaExtractor.git
 cd OBIS-SchemaExtractor
 mvn clean install
-cd target
+cd build
 java -jar schema-extractor-exec.jar
 ```
 
