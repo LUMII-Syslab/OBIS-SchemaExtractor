@@ -665,7 +665,7 @@ public class SchemaExtractor {
                 addProperty(propertyName, instancesCountStr, properties, request);
             }
         } else {
-            addProperty(propertyName, "0", properties, request);
+            addProperty(propertyName, null, properties, request);
             schema.getMessages().add(new SchemaExtractorMessage(ERROR, propertyName, FIND_TRIPLE_COUNT_FOR_PROPERTY.name(), queryBuilder.getQueryString()));
         }
     }
@@ -711,7 +711,9 @@ public class SchemaExtractor {
             }
             SchemaExtractorPropertyNodeInfo property = properties.get(propertyName);
             property.setPropertyName(propertyName);
-            property.setTripleCount(SchemaUtil.getLongValueFromString(instancesCountStr));
+            if (instancesCountStr != null) {
+                property.setTripleCount(SchemaUtil.getLongValueFromString(instancesCountStr));
+            }
         }
     }
 
@@ -805,7 +807,7 @@ public class SchemaExtractor {
                     property.setBlankNodeSubjects(blankNodeSubjects.get(property.getPropertyName()));
                 }
             }
-            if (calculateBlankNodeObjects && property.getObjectTripleCount() != null && property.getObjectTripleCount() > 0) {
+            if (calculateBlankNodeObjects && property.getObjectTripleCount() != null && property.getObjectTripleCount() != 0) {
                 if (blankNodeObjects.isEmpty()) {
                     determinePropertyBlankNodeObjects(schema, property, request);
                 } else {
@@ -820,7 +822,7 @@ public class SchemaExtractor {
                 determinePropertyClosedDomainsOnTargetClassLevel(schema, property, request, totalCountOfProperties);
             }
 
-            if (isFalse(property.getIsObjectProperty())) {
+            if (isNotTrue(property.getIsObjectProperty())) {
                 switch (request.getCalculateDataTypes()) {
                     case propertyLevelOnly:
                         determinePropertyDataTypes(schema, property, request, totalCountOfProperties);
@@ -847,7 +849,7 @@ public class SchemaExtractor {
 
             if (isTrue(request.getCalculatePropertyPropertyRelations())) {
                 determineOutgoingProperties(schema, property, request, properties);
-                if (property.getObjectTripleCount() != null && property.getObjectTripleCount() > 0) {
+                if (property.getObjectTripleCount() != null && property.getObjectTripleCount() != 0) {
                     determineFollowers(schema, property, request, properties);
                     determineIncomingProperties(schema, property, request, properties);
                 }
@@ -856,7 +858,7 @@ public class SchemaExtractor {
             switch (request.getCalculateCardinalities()) {
                 case propertyLevelOnly:
                     determinePropertyMaxCardinality(schema, property, request, totalCountOfProperties);
-                    if (property.getObjectTripleCount() != null && property.getObjectTripleCount() > 0) {
+                    if (property.getObjectTripleCount() != null && property.getObjectTripleCount() != 0) {
                         determinePropertyInverseMaxCardinality(schema, property, request, totalCountOfProperties);
                     }
                     break;
@@ -864,7 +866,7 @@ public class SchemaExtractor {
                     determinePropertyMaxCardinality(schema, property, request, totalCountOfProperties);
                     determinePropertySourceMaxCardinality(schema, property, request, totalCountOfProperties);
                     determinePropertySourceMinCardinality(schema, property, request, totalCountOfProperties);
-                    if (property.getObjectTripleCount() != null && property.getObjectTripleCount() > 0) {
+                    if (property.getObjectTripleCount() != null && property.getObjectTripleCount() != 0) {
                         determinePropertyInverseMaxCardinality(schema, property, request, totalCountOfProperties);
                         determinePropertyTargetsInverseMinCardinality(schema, property, request, totalCountOfProperties);
                         determinePropertyTargetsInverseMaxCardinality(schema, property, request, totalCountOfProperties);
@@ -925,6 +927,8 @@ public class SchemaExtractor {
             if (!checkQueryResponseForLiteralCount.hasErrors()) {
                 if (checkQueryResponseForLiteralCount.getResults().isEmpty()) {
                     property.setDataTripleCount(0L);
+                } else {
+                    property.setDataTripleCount(-1L);
                 }
             } else {
                 schema.getMessages().add(new SchemaExtractorMessage(ERROR, property.getPropertyName(), CHECK_PROPERTY_LITERAL_VALUES.name(), queryBuilder.getQueryString()));
@@ -937,8 +941,11 @@ public class SchemaExtractor {
 
         if (property.getTripleCount() != null && property.getTripleCount().equals(property.getObjectTripleCount())) {
             property.setIsObjectProperty(Boolean.TRUE);
-        } else {
+        }
+        if (property.getTripleCount() != null && property.getTripleCount().equals(property.getDataTripleCount())) {
             property.setIsObjectProperty(Boolean.FALSE);
+        } else {
+            property.setIsObjectProperty(null);
         }
     }
 
@@ -1066,7 +1073,7 @@ public class SchemaExtractor {
             } else {
                 schema.getMessages().add(new SchemaExtractorMessage(WARNING, property.getPropertyName(), query.name(), queryBuilder.getQueryString()));
                 for (Long limit : sampleLimits) {
-                    if (property.getTripleCount() != null && limit <= property.getTripleCount()) {
+                    if (property.getTripleCount() == null || limit <= property.getTripleCount()) {
                         boolean found = determinePropertySourceTripleCountWithLimits(schema, property, sourceClass, request, limit);
                         if (found) break;
                     }
@@ -1359,7 +1366,7 @@ public class SchemaExtractor {
             } else {
                 schema.getMessages().add(new SchemaExtractorMessage(WARNING, property.getPropertyName(), query.name(), queryBuilder.getQueryString()));
                 for (Long limit : sampleLimits) {
-                    if (property.getTripleCount() != null && limit <= property.getTripleCount()) {
+                    if (property.getTripleCount() == null || limit <= property.getTripleCount()) {
                         boolean found = determinePropertyTargetTripleCountWithLimits(schema, property, targetClass, request, totalCountOfProperties, limit);
                         if (found) break;
                     }
@@ -1879,7 +1886,7 @@ public class SchemaExtractor {
 
         // check if there is any triple with URI object but without bound class
         if (property.getTargetClasses().isEmpty()) {
-            property.setIsClosedRange((property.getObjectTripleCount() != null && property.getObjectTripleCount() > 0) ? Boolean.FALSE : null);
+            property.setIsClosedRange((property.getObjectTripleCount() != null && property.getObjectTripleCount() != 0) ? Boolean.FALSE : null);
         } else {
             property.setIsClosedRange(Boolean.TRUE);
             for (String classificationProperty : request.getMainClassificationProperties()) {
@@ -1964,7 +1971,7 @@ public class SchemaExtractor {
         log.info(request.getCorrelationId() + " - determinePropertyDataTypes [" + property.getPropertyName() + "]");
         Long tripleCountBase = null;
         if (request.getSampleLimitForDataTypeCalculation() != null && request.getSampleLimitForDataTypeCalculation() > 0
-                && property.getDataTripleCount() != null && property.getDataTripleCount() > request.getSampleLimitForDataTypeCalculation()) {
+                && (property.getDataTripleCount() == null || property.getDataTripleCount() < 0 || property.getDataTripleCount() > request.getSampleLimitForDataTypeCalculation())) {
             tripleCountBase = request.getSampleLimitForDataTypeCalculation();
         }
         // find data types
@@ -2024,7 +2031,7 @@ public class SchemaExtractor {
 
         Long tripleCountBase = null;
         if (request.getSampleLimitForDataTypeCalculation() != null && request.getSampleLimitForDataTypeCalculation() > 0
-                && property.getDataTripleCount() != null && property.getDataTripleCount() > request.getSampleLimitForDataTypeCalculation()) {
+                && (property.getDataTripleCount() == null || property.getDataTripleCount() < 0 || property.getDataTripleCount() > request.getSampleLimitForDataTypeCalculation())) {
             tripleCountBase = request.getSampleLimitForDataTypeCalculation();
         }
 
@@ -2200,7 +2207,7 @@ public class SchemaExtractor {
 
             Long finalTripleCountLimit = tripleCountLimit;
             Long newLimit = limitsLarge.stream()
-                    .filter(limit -> (finalTripleCountLimit == null || limit < finalTripleCountLimit) && limit <= property.getTripleCount()).findFirst().orElse(null);
+                    .filter(limit -> (finalTripleCountLimit == null || limit < finalTripleCountLimit) && (property.getTripleCount() == null || limit <= property.getTripleCount())).findFirst().orElse(null);
             if (newLimit != null) {
                 tripleCountLimit = newLimit;
                 queryBuilder = new SparqlQueryBuilder(request.getQueries().get(queryWithLimit.name()), queryWithLimit)
@@ -2211,7 +2218,7 @@ public class SchemaExtractor {
 
                 if (isFalse(queryResponse.hasErrors())) {
                     updatedRelatedProperties(request, queryResponse, relatedProperties, linkType, tripleCountLimit);
-                    if (tripleCountLimit >= 10000L || tripleCountLimit >= property.getTripleCount() * 0.1) {
+                    if (tripleCountLimit >= 10000L || (property.getTripleCount() != null && tripleCountLimit >= property.getTripleCount() * 0.1)) {
                         return 2;
                     }
                     return 1;
@@ -2249,7 +2256,7 @@ public class SchemaExtractor {
             if (property2.getPropertyName().equals(property.getPropertyName())) continue;
 
             // Step 0: skip data type properties for incoming relations
-            if (SchemaExtractorPropertyRelatedPropertyInfo.LinkType.incoming.equals(linkType) && !property2.getIsObjectProperty()) {
+            if (SchemaExtractorPropertyRelatedPropertyInfo.LinkType.incoming.equals(linkType) && isFalse(property2.getIsObjectProperty())) {
                 continue;
             }
 
@@ -2311,7 +2318,7 @@ public class SchemaExtractor {
             if (property2.getPropertyName().equals(property.getPropertyName())) continue;
 
             // skip data type properties for incoming relations
-            if (SchemaExtractorPropertyRelatedPropertyInfo.LinkType.incoming.equals(linkType) && !property2.getIsObjectProperty()) {
+            if (SchemaExtractorPropertyRelatedPropertyInfo.LinkType.incoming.equals(linkType) && isFalse(property2.getIsObjectProperty())) {
                 continue;
             }
 
@@ -2383,7 +2390,7 @@ public class SchemaExtractor {
             if (property2.getPropertyName().equals(property.getPropertyName())) continue;
 
             // skip data type properties for incoming relations
-            if (SchemaExtractorPropertyRelatedPropertyInfo.LinkType.incoming.equals(linkType) && !property2.getIsObjectProperty()) {
+            if (SchemaExtractorPropertyRelatedPropertyInfo.LinkType.incoming.equals(linkType) && isFalse(property2.getIsObjectProperty())) {
                 continue;
             }
 
@@ -2501,7 +2508,7 @@ public class SchemaExtractor {
 
             Long finalTripleCountLimit = tripleCountLimit;
             Long newLimit = sampleLimitsReversed.stream()
-                    .filter(limit -> (finalTripleCountLimit == null || limit > finalTripleCountLimit) && limit <= property.getTripleCount()).findFirst().orElse(null);
+                    .filter(limit -> (finalTripleCountLimit == null || limit > finalTripleCountLimit) && (property.getTripleCount() == null || limit <= property.getTripleCount())).findFirst().orElse(null);
             if (newLimit != null) {
                 tripleCountLimit = newLimit;
                 queryBuilder = new SparqlQueryBuilder(request.getQueries().get(queryCheckCountLimit.name()), queryCheckCountLimit)
@@ -2535,7 +2542,7 @@ public class SchemaExtractor {
             while (isTrue(retry)) {
                 Long finalTripleCountLimit = tripleCountLimit;
                 Long newLimit = sampleLimitsSmall.stream()
-                        .filter(limit -> (finalTripleCountLimit == null || limit < finalTripleCountLimit) && limit <= property.getTripleCount()).findFirst().orElse(null);
+                        .filter(limit -> (finalTripleCountLimit == null || limit < finalTripleCountLimit) && (property.getTripleCount() == null || limit <= property.getTripleCount())).findFirst().orElse(null);
                 if (newLimit != null) {
                     tripleCountLimit = newLimit;
                     queryBuilder = new SparqlQueryBuilder(request.getQueries().get(queryCheckCountLimit.name()), queryCheckCountLimit)
@@ -2578,7 +2585,7 @@ public class SchemaExtractor {
 
             Long finalTripleCountLimit = tripleCountLimit;
             Long newLimit = sampleLimitsReversed.stream()
-                    .filter(limit -> (finalTripleCountLimit == null || limit > finalTripleCountLimit) && limit <= property.getTripleCount()).findFirst().orElse(null);
+                    .filter(limit -> (finalTripleCountLimit == null || limit > finalTripleCountLimit) && (property.getTripleCount() == null || limit <= property.getTripleCount())).findFirst().orElse(null);
             if (newLimit != null) {
                 tripleCountLimit = newLimit;
                 queryBuilder = new SparqlQueryBuilder(request.getQueries().get(queryCheckCountLimit.name()), queryCheckCountLimit)
@@ -2613,7 +2620,7 @@ public class SchemaExtractor {
             while (isTrue(retry)) {
                 Long finalTripleCountLimit = tripleCountLimit;
                 Long newLimit = sampleLimitsSmall.stream()
-                        .filter(limit -> (finalTripleCountLimit == null || limit < finalTripleCountLimit) && limit <= property.getTripleCount()).findFirst().orElse(null);
+                        .filter(limit -> (finalTripleCountLimit == null || limit < finalTripleCountLimit) && (property.getTripleCount() == null || limit <= property.getTripleCount())).findFirst().orElse(null);
                 if (newLimit != null) {
                     tripleCountLimit = newLimit;
                     queryBuilder = new SparqlQueryBuilder(request.getQueries().get(queryCheckCountLimit.name()), queryCheckCountLimit)
@@ -2649,7 +2656,7 @@ public class SchemaExtractor {
         if (candidate.getTripleCount() == null) {
             return 0;
         }
-        if (candidate.getTripleCountBase() >= 10000L || candidate.getTripleCountBase() >= property.getTripleCount() * 0.1) {
+        if (candidate.getTripleCountBase() >= 10000L || (property.getTripleCount() != null && candidate.getTripleCountBase() >= property.getTripleCount() * 0.1)) {
             return 2;
         }
         return 1;
@@ -3356,7 +3363,6 @@ public class SchemaExtractor {
         for (Map.Entry<String, SchemaExtractorPropertyNodeInfo> p : properties.entrySet()) {
 
             SchemaExtractorPropertyNodeInfo propertyData = p.getValue();
-
             SchemaProperty property = new SchemaProperty();
             setLocalNameAndNamespace(p.getKey(), property);
             property.setMaxCardinality(propertyData.getMaxCardinality());
@@ -3365,7 +3371,9 @@ public class SchemaExtractor {
             property.setMaxInverseCardinalityAssertionSize(propertyData.getMaxInverseCardinalityAssertionSize());
             property.setTripleCount(propertyData.getTripleCount());
             property.setDistinctTriples(propertyData.getDistinctTriples());
-            property.setDataTripleCount(propertyData.getDataTripleCount());
+            if (propertyData.getDataTripleCount() != null && propertyData.getDataTripleCount() != -1) {
+                property.setDataTripleCount(propertyData.getDataTripleCount());
+            }
             if (propertyData.getObjectTripleCount() != null && propertyData.getObjectTripleCount() != -1) {
                 property.setObjectTripleCount(propertyData.getObjectTripleCount());
             }
