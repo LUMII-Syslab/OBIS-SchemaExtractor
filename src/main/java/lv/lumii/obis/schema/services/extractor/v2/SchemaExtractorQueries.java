@@ -230,6 +230,12 @@ public enum SchemaExtractorQueries {
     CHECK_CLASS_AS_PROPERTY_SOURCE(
             "SELECT ?x WHERE {?x <property> ?y. ?x <classificationProperty> <sourceClass>. } LIMIT 1", QueryType.SMALL
     ),
+    FIND_OUTGOING_PROPERTY_TRIPLE_COUNTS_FOR_CLASS(
+            "SELECT ?property (COUNT(?x) as ?instances) WHERE { <valuesClause> ?x <classificationProperty> <sourceClass> . ?x ?property ?y . } GROUP BY ?property", QueryType.LARGE
+    ),
+    FIND_OUTGOING_PROPERTY_TRIPLE_COUNTS_FOR_CLASS_WITH_LIMITS(
+            "SELECT ?property (COUNT(?x) as ?instances) WHERE { <valuesClause> { SELECT ?x WHERE { ?x <classificationProperty> <sourceClass> } LIMIT <limit> } ?x ?property ?y . } GROUP BY ?property", QueryType.LARGE
+    ),
 
     FIND_PROPERTY_TARGETS_WITH_TRIPLE_COUNT(
             "SELECT ?class (COUNT(?x) as ?instances) WHERE {?x <property> ?y. ?y <classificationProperty> ?class. } GROUP BY ?class", QueryType.LARGE

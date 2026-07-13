@@ -6,10 +6,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import javax.annotation.Nonnull;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 @Setter
 @Getter
@@ -42,6 +39,11 @@ public class SchemaClass extends SchemaElement {
 
     private Integer incomingPropertiesOK;
     private Integer outgoingPropertiesOK;
+
+    @JsonIgnore
+    private Map<String, TripleCount> outgoingProperties;
+    @JsonIgnore
+    private Boolean outgoingPropertiesFullList;
 
     @JsonProperty("InstanceNamespaces")
     private List<InstanceNamespace> instanceNamespaces;
@@ -76,5 +78,13 @@ public class SchemaClass extends SchemaElement {
             instanceNamespaces = new ArrayList<>();
         }
         return instanceNamespaces;
+    }
+
+    @Nonnull
+    public Map<String, TripleCount> getOutgoingProperties() {
+        if (outgoingProperties == null) {
+            outgoingProperties = new HashMap<>();
+        }
+        return outgoingProperties;
     }
 }
