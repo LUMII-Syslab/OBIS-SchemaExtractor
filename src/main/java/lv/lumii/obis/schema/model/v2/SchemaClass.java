@@ -45,6 +45,11 @@ public class SchemaClass extends SchemaElement {
     @JsonIgnore
     private Boolean outgoingPropertiesFullList;
 
+    @JsonIgnore
+    private Map<String, TripleCount> incomingProperties;
+    @JsonIgnore
+    private Boolean incomingPropertiesFullList;
+
     @JsonProperty("InstanceNamespaces")
     private List<InstanceNamespace> instanceNamespaces;
 
@@ -86,5 +91,13 @@ public class SchemaClass extends SchemaElement {
             outgoingProperties = new HashMap<>();
         }
         return outgoingProperties;
+    }
+
+    @Nonnull
+    public Map<String, TripleCount> getIncomingProperties() {
+        if (incomingProperties == null) {
+            incomingProperties = new HashMap<>();
+        }
+        return incomingProperties;
     }
 }
