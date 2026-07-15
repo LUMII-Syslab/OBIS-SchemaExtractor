@@ -1111,7 +1111,7 @@ public class SchemaExtractor {
             clazz.setOutgoingPropertiesFullList(Boolean.TRUE);
             return true;
         } else {
-            schema.getMessages().add(new SchemaExtractorMessage(WARNING_LOW, clazz.getFullName(), FIND_OUTGOING_PROPERTY_TRIPLE_COUNTS_FOR_CLASS.name(), queryBuilder.getQueryString()));
+            schema.getMessages().add(new SchemaExtractorMessage(WARNING, clazz.getFullName(), FIND_OUTGOING_PROPERTY_TRIPLE_COUNTS_FOR_CLASS.name(), queryBuilder.getQueryString()));
             boolean retry = true;
             Long tripleCountLimit = null;
             List<Long> largeLimits = Lists.reverse(limitsLarge);
@@ -1144,8 +1144,6 @@ public class SchemaExtractor {
                 }
             }
             if (tripleCountLimit == null) {
-                schema.getMessages().add(new SchemaExtractorMessage(WARNING, "No query - no applicable limit value was found", clazz.getFullName(), null,
-                        FIND_OUTGOING_PROPERTY_TRIPLE_COUNTS_FOR_CLASS_WITH_LIMITS.name(), null));
                 clazz.setOutgoingPropertiesFullList(Boolean.FALSE);
                 return false;
             }
@@ -1205,7 +1203,7 @@ public class SchemaExtractor {
             clazz.setIncomingPropertiesFullList(Boolean.TRUE);
             return true;
         } else {
-            schema.getMessages().add(new SchemaExtractorMessage(WARNING_LOW, clazz.getFullName(), FIND_INCOMING_PROPERTY_TRIPLE_COUNTS_FOR_CLASS.name(), queryBuilder.getQueryString()));
+            schema.getMessages().add(new SchemaExtractorMessage(WARNING, clazz.getFullName(), FIND_INCOMING_PROPERTY_TRIPLE_COUNTS_FOR_CLASS.name(), queryBuilder.getQueryString()));
             boolean retry = true;
             Long tripleCountLimit = null;
             List<Long> largeLimits = Lists.reverse(limitsLarge);
@@ -1238,8 +1236,6 @@ public class SchemaExtractor {
                 }
             }
             if (tripleCountLimit == null) {
-                schema.getMessages().add(new SchemaExtractorMessage(WARNING, "No query - no applicable limit value was found", clazz.getFullName(), null,
-                        FIND_INCOMING_PROPERTY_TRIPLE_COUNTS_FOR_CLASS_WITH_LIMITS.name(), null));
                 clazz.setIncomingPropertiesFullList(Boolean.FALSE);
                 return false;
             }
