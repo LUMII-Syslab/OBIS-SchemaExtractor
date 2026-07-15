@@ -154,7 +154,7 @@ public class SchemaExtractor {
                                 break;
                             }
                         } else {
-                            schema.getMessages().add(new SchemaExtractorMessage(ERROR, includedClass.getClassName(), query.name(), queryBuilder.getQueryString()));
+                            schema.getMessages().add(new SchemaExtractorMessage(WARNING_HIGH, includedClass.getClassName(), query.name(), queryBuilder.getQueryString()));
                         }
                     }
 
@@ -370,7 +370,7 @@ public class SchemaExtractor {
                 return true;
             }
         } else {
-            schema.getMessages().add(new SchemaExtractorMessage(ERROR, classNameObject.getValue(), query.name(), queryBuilder.getQueryString()));
+            schema.getMessages().add(new SchemaExtractorMessage(WARNING_HIGH, classNameObject.getValue(), query.name(), queryBuilder.getQueryString()));
         }
         return false;
     }
@@ -522,7 +522,7 @@ public class SchemaExtractor {
             queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_PROPERTIES.name()), FIND_PROPERTIES);
             queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
             if (queryResponse.hasErrors() || queryResponse.getResults().isEmpty()) {
-                schema.getMessages().add(new SchemaExtractorMessage(WARNING, null, FIND_PROPERTIES.name(), queryBuilder.getQueryString()));
+                schema.getMessages().add(new SchemaExtractorMessage(ERROR, null, FIND_PROPERTIES.name(), queryBuilder.getQueryString()));
                 propertiesList = readPropertiesForClasses(request, schema);
             } else {
                 propertiesList = addPropertyNames(queryResponse.getResults(), schema);
