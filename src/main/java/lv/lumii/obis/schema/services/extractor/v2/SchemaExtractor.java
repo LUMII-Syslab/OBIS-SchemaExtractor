@@ -1135,7 +1135,7 @@ public class SchemaExtractor {
                     }
                     QueryResponse queryResponseLimit = sparqlEndpointProcessor.read(request, queryBuilder);
                     if (!queryResponseLimit.hasErrors()) {
-                        outgoingPropertiesWithLimits = getClassOutgoingProperties(queryResponse.getResults(), schema, tripleCountLimit, request);
+                        outgoingPropertiesWithLimits = getClassOutgoingProperties(queryResponseLimit.getResults(), schema, tripleCountLimit, request);
                     } else {
                         retry = false;
                     }
@@ -1227,7 +1227,7 @@ public class SchemaExtractor {
                     }
                     QueryResponse queryResponseLimit = sparqlEndpointProcessor.read(request, queryBuilder);
                     if (!queryResponseLimit.hasErrors()) {
-                        incomingPropertiesWithLimits = getClassIncomingProperties(queryResponse.getResults(), schema, tripleCountLimit, request);
+                        incomingPropertiesWithLimits = getClassIncomingProperties(queryResponseLimit.getResults(), schema, tripleCountLimit, request);
                     } else {
                         retry = false;
                     }
@@ -1341,7 +1341,7 @@ public class SchemaExtractor {
         if (queryResponse.hasErrors()) {
             return false;
         }
-        if (!queryResponse.getResults().isEmpty() && queryResponse.getResults().get(0) == null) {
+        if (!queryResponse.getResults().isEmpty() && queryResponse.getResults().get(0) != null) {
             QueryResult queryResult = queryResponse.getResults().get(0);
             sourceClass.setTripleCount(SchemaUtil.getLongValueFromString(queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT)));
             sourceClass.setTripleCountBase(limit);
@@ -1696,7 +1696,7 @@ public class SchemaExtractor {
         if (queryResponse.hasErrors()) {
             return false;
         }
-        if (!queryResponse.getResults().isEmpty() && queryResponse.getResults().get(0) == null) {
+        if (!queryResponse.getResults().isEmpty() && queryResponse.getResults().get(0) != null) {
             QueryResult queryResult = queryResponse.getResults().get(0);
             targetClass.setTripleCount(SchemaUtil.getLongValueFromString(queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT)));
             targetClass.setTripleCountBase(limit);
