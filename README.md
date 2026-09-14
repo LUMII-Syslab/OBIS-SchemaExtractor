@@ -2,7 +2,7 @@
 
 OBIS Schema Extractor is a Java-based web application — a REST service for extracting and analyzing data schemas from SPARQL endpoints. It queries an endpoint, infers the structure of the underlying RDF data, and returns a structured JSON schema model.
 
-Full documentation, execution parameter descriptions, example runs, and guidance on using the produced schemas in data visualization and analysis pipelines is available in the [OBIS Schema Extractor wiki](https://github.com/LUMII-Syslab/OBIS-SchemaExtractor/wiki).
+Consider [extractor wiki](https://github.com/LUMII-Syslab/OBIS-SchemaExtractor/wiki) for user-oriented description and demonstration, usage in SPARQL endpoint schema visualization and analysis pipelines, documentation, execution parameter descriptions and example runs.
 
 **Contents**
 - [Running the Application](#running-the-application)
