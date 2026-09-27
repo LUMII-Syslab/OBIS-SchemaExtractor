@@ -177,15 +177,31 @@ public class SchemaExtractor {
 
         schema.setClasses(classes);
 
+        // check if for all classes distinct triple counts were found
+        boolean allClassesHaveDistinctCounts = false;
+        if (SchemaExtractorRequestDto.DistinctQueryMode.no.equals(request.getExactCountCalculations()) && request.getCalculateDistinctTriples()) {
+            allClassesHaveDistinctCounts = true;
+            for (SchemaClass clazz : classes) {
+                if (clazz.getDistinctInstances() == null) {
+                    allClassesHaveDistinctCounts = false;
+                    break;
+                }
+            }
+        }
+
         if (isTrue(request.getCalculateSubClassRelations())) {
 
             for (SchemaClass c : classes) {
-                graphOfClasses.put(c.getFullName(), new SchemaExtractorClassNodeInfo(c.getFullName(), c.getInstanceCount(), c.getClassificationProperty(), c.getIsLiteral()));
+                Long classInstanceCount = c.getInstanceCount();
+                if (allClassesHaveDistinctCounts) {
+                    classInstanceCount = c.getDistinctInstances();
+                }
+                graphOfClasses.put(c.getFullName(), new SchemaExtractorClassNodeInfo(c.getFullName(), classInstanceCount, c.getClassificationProperty(), c.getIsLiteral()));
             }
 
             // find intersection classes
             log.info(request.getCorrelationId() + " - findIntersectionClassesAndUpdateClassNeighbors");
-            findIntersectionClassesAndUpdateClassNeighbors(schema, classes, graphOfClasses, request);
+            findIntersectionClassesAndUpdateClassNeighbors(schema, classes, graphOfClasses, request, allClassesHaveDistinctCounts);
 
             // sort classes by neighbors  size and instances count (ascending)
             log.info(request.getCorrelationId() + " - sortClassesByNeighborsSizeAndInstanceCountAscending");
@@ -3983,15 +3999,24 @@ public class SchemaExtractor {
     }
 
     protected void findIntersectionClassesAndUpdateClassNeighbors(@Nonnull Schema schema, @Nonnull List<SchemaClass> classes,
-                                                                  @Nonnull Map<String, SchemaExtractorClassNodeInfo> graphOfClasses, @Nonnull SchemaExtractorRequestDto request) {
+                                                                  @Nonnull Map<String, SchemaExtractorClassNodeInfo> graphOfClasses, @Nonnull SchemaExtractorRequestDto request,
+                                                                  boolean allClassesHaveDistinctCounts) {
         QueryResponse queryResponse;
         // order classes by instance count ascending
         List<SchemaClass> sortedClasses = sortClassesByTripleCountAsc(classes);
         Map<String, List<String>> processedClasses = new HashMap<>();
+
+        SchemaExtractorQueries intersectionQuery = FIND_INTERSECTION_CLASSES_FOR_KNOWN_CLASS;
+        SchemaExtractorQueries checkQuery = CHECK_CLASS_INTERSECTION;
+        if (SchemaExtractorRequestDto.DistinctQueryMode.yes.equals(request.getExactCountCalculations()) || allClassesHaveDistinctCounts) {
+            intersectionQuery = FIND_INTERSECTION_CLASSES_FOR_KNOWN_CLASS_DISTINCT;
+            checkQuery = CHECK_CLASS_INTERSECTION_DISTINCT;
+        }
+
         for (SchemaClass classA : sortedClasses) {
             boolean hasErrors = false;
             for (String classificationProperty : request.getPrincipalClassificationProperties()) {
-                SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_INTERSECTION_CLASSES_FOR_KNOWN_CLASS.name()), FIND_INTERSECTION_CLASSES_FOR_KNOWN_CLASS)
+                SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(intersectionQuery.name()), intersectionQuery)
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL, classA.getFullName(), classA.getIsLiteral())
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_A, classA.getClassificationProperty())
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_B, classificationProperty);
@@ -4041,7 +4066,7 @@ public class SchemaExtractor {
                                     classA.getFullName(), null, CHECK_CLASS_INTERSECTION_PLAIN.name(), queryBuilder.getQueryString()));
                         }
                         if (!checkQueryResponse.hasErrors() && !checkQueryResponse.getResults().isEmpty()) {
-                            queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_CLASS_INTERSECTION.name()), CHECK_CLASS_INTERSECTION)
+                            queryBuilder = new SparqlQueryBuilder(request.getQueries().get(checkQuery.name()), checkQuery)
                                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_A_FULL, classA.getFullName(), classA.getIsLiteral())
                                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_B_FULL, classB.getFullName(), classB.getIsLiteral())
                                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_A, classA.getClassificationProperty())
@@ -4052,7 +4077,7 @@ public class SchemaExtractor {
                                 addNeighbor(graphOfClasses, classA.getFullName(), classB.getFullName(), intersectionCount);
                             } else if (countQueryResponse.hasErrors()) {
                                 schema.getMessages().add(new SchemaExtractorMessage(WARNING, "Check class intersection: Unable to obtain statistics",
-                                        classA.getFullName(), null, CHECK_CLASS_INTERSECTION.name(), queryBuilder.getQueryString()));
+                                        classA.getFullName(), null, checkQuery.name(), queryBuilder.getQueryString()));
                             }
                         }
                     }
