@@ -124,7 +124,9 @@ computeBlankNodeStatistics: "full"
 
 # Description: Calculate ascription points (principal classes) for properties (strongly recommended, if schema
 # diagrams are envisaged). Use 'class coverage', if all class-to-property connections are to be marked for the class
-# itself, or some its superclass or subclass (can make a difference in the case of overlapping classes).
+# itself, or some its superclass or subclass (can make a difference in the case of overlapping classes). 
+# 'basic' allows not ascribing a property to a class, if all property-related items in the class are also 
+# elements in some class to which the property is already ascribed.
 # Required: true
 # Default: basic
 # Allowed values: [basic, unionBased, classCoverage, no]
@@ -135,7 +137,7 @@ calculateImportanceIndexes: "basic"
 # ------------------------------------------------------------
 
 # Description: Check, if the property source and target class set sets cover all non-literal property subjects and
-# objects; essential for future SHACL export, can be used in advanced schema diagrams.
+# objects; essential for future SHACL export, can be used in advanced schema diagrams where property-to-property connections are shown.
 # Required: true
 # Default: true
 # Allowed values: [true, false]
@@ -145,7 +147,8 @@ calculateClosedClassSets: true
 # CARDINALITIES & DATA TYPES
 # ------------------------------------------------------------
 
-# Description: Calculate minimum and maximum cardinalities for properties. May consider propertyLevelOnly for larger schemas.
+# Description: Calculate minimum and maximum cardinalities for properties and properties in source/target class context. 
+# May consider propertyLevelOnly for larger schemas.
 # Required: true
 # Default: propertyLevelAndClassContext
 # Allowed values: [none, propertyLevelOnly, propertyLevelAndClassContext]
@@ -231,7 +234,8 @@ simpleClassificationProperties:
 # Allowed values: [yes, no]
 exactCountCalculations: "no"
 
-# Description: Calculate distinct triples count for classes and properties.
+# Description: Calculate distinct instances / triples count for classes and properties 
+# (in addition to non-exact instance and triple count calculation).
 # Required: true
 # Default: true
 # Allowed values: [true, false]
@@ -253,7 +257,8 @@ crossCheckTargetClassesOnNonLiteralPropertyObjectCheckFailure: false
 # EXCLUDED NAMESPACES
 # ------------------------------------------------------------
 
-# Description: List of excluded namespaces
+# Description: List of excluded namespaces. 
+# Can be used for excluding technical system classes/properties, or for any other reason.
 # Required: false
 # Default: (none — no namespaces excluded)
 # Allowed values: list of string values
