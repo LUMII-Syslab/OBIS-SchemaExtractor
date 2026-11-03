@@ -4,6 +4,12 @@ import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.info.License;
 import org.springdoc.core.customizers.OperationCustomizer;
+import org.springdoc.core.properties.SwaggerUiConfigProperties;
+import org.springdoc.core.properties.SwaggerUiOAuthProperties;
+import org.springdoc.core.providers.ObjectMapperProvider;
+import org.springdoc.webmvc.ui.SwaggerIndexPageTransformer;
+import org.springdoc.webmvc.ui.SwaggerIndexTransformer;
+import org.springdoc.webmvc.ui.SwaggerWelcomeCommon;
 import org.springdoc.core.models.GroupedOpenApi;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -11,8 +17,10 @@ import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.resource.TransformedResource;
 
 import java.lang.reflect.Field;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -49,6 +57,27 @@ public class SwaggerConfig {
     @Bean
     public OpenAPI schemaExtractorOpenApi() {
         return new OpenAPI().info(apiInfo("V2", "2.0"));
+    }
+
+    /** Keep the title links out of the UI while retaining the OpenAPI metadata. */
+    @Bean
+    public SwaggerIndexTransformer swaggerUiPresentation(SwaggerUiConfigProperties uiConfig,
+                                                         SwaggerUiOAuthProperties oauthConfig,
+                                                         SwaggerWelcomeCommon welcome,
+                                                         ObjectMapperProvider mapperProvider) {
+        SwaggerIndexPageTransformer defaults = new SwaggerIndexPageTransformer(uiConfig, oauthConfig, welcome, mapperProvider);
+        return (request, resource, chain) -> {
+            var transformed = defaults.transform(request, resource, chain);
+            if (!"index.html".equals(resource.getFilename())) {
+                return transformed;
+            }
+            try (var input = transformed.getInputStream()) {
+                String html = new String(input.readAllBytes(), StandardCharsets.UTF_8);
+                String style = "<style>.swagger-ui .info .main > a, .swagger-ui .info .info__license { display: none; }</style>";
+                return new TransformedResource(transformed,
+                        html.replace("</head>", style + "</head>").getBytes(StandardCharsets.UTF_8));
+            }
+        };
     }
 
     private Info apiInfo(String versionLabel, String version) {
