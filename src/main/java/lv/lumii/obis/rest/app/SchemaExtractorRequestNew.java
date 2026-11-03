@@ -1,6 +1,6 @@
 package lv.lumii.obis.rest.app;
 
-import io.swagger.annotations.ApiParam;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
 import lv.lumii.obis.schema.services.extractor.dto.SchemaExtractorRequestDto;
@@ -31,123 +31,123 @@ public class SchemaExtractorRequestNew {
 
     public enum NoClassesLoggingOptions {yes, no, sourcesOnly}
 
-    @ApiParam(access = "10", value = "SPARQL Endpoint URL, for example, http://localhost:8890/sparql", required = true)
+    @Schema(description = "SPARQL Endpoint URL, for example, http://localhost:8890/sparql", requiredMode = Schema.RequiredMode.REQUIRED)
     private String endpointUrl;
 
-    @ApiParam(access = "20", value = "Named Graph (optional). If no graph name provided, the search will involve all graphs from the endpoint", allowEmptyValue = true)
+    @Schema(description = "Named Graph (optional). If no graph name provided, the search will involve all graphs from the endpoint")
     private String graphName;
 
-    @ApiParam(access = "30", value = "Calculate subclass relation (strongly recommended)", defaultValue = "true", required = true)
+    @Schema(description = "Calculate subclass relation (strongly recommended)", defaultValue = "true", requiredMode = Schema.RequiredMode.REQUIRED)
     private Boolean calculateSubClassRelations;
 
-    @ApiParam(access = "31", value = "Include multiple inheritance check, strongly recommended. If set to false, no more than a single direct super-class for a class shall be found. " +
-            "Set false only for very large endpoints, if the processing of subclass relations is stuck in the extractor for a longer time.", defaultValue = "true", required = true)
+    @Schema(description = "Include multiple inheritance check, strongly recommended. If set to false, no more than a single direct super-class for a class shall be found. " +
+            "Set false only for very large endpoints, if the processing of subclass relations is stuck in the extractor for a longer time.", defaultValue = "true", requiredMode = Schema.RequiredMode.REQUIRED)
     private Boolean calculateMultipleInheritanceSuperclasses;
 
-    @ApiParam(access = "32", value = "Minimal analyzed class size. The classes below the specified size shall be included in the schema, " +
+    @Schema(description = "Minimal analyzed class size. The classes below the specified size shall be included in the schema, " +
             "still they shall not be considered as possible super-classes of other classes and their links to properties shall not be analyzed individually. " +
-            "If 1, all classes should be analyzed. Values above 1, e.g. 10 or 100, may be essential for endpoints with more than several thousand classes.", defaultValue = "1", required = true)
+            "If 1, all classes should be analyzed. Values above 1, e.g. 10 or 100, may be essential for endpoints with more than several thousand classes.", defaultValue = "1", requiredMode = Schema.RequiredMode.REQUIRED)
     private Integer minimalAnalyzedClassSize;
 
-    @ApiParam(access = "33", value = "At least 1 class is required for the schema extraction, if no classes found - the extractor work is aborted", defaultValue = "true", required = true)
+    @Schema(description = "At least 1 class is required for the schema extraction, if no classes found - the extractor work is aborted", defaultValue = "true", requiredMode = Schema.RequiredMode.REQUIRED)
     private Boolean requireClasses;
 
-    @ApiParam(hidden = true, access = "34", value = "Validate the list of classes with simple and statistics queries ", defaultValue = "true", required = true)
+    @Schema(hidden = true, description = "Validate the list of classes with simple and statistics queries ", defaultValue = "true", requiredMode = Schema.RequiredMode.REQUIRED)
     private Boolean validateClassesList;
-    @ApiParam(hidden = true, access = "35", value = "Validate the list of properties with simple and statistics queries ", defaultValue = "true", required = true)
+    @Schema(hidden = true, description = "Validate the list of properties with simple and statistics queries ", defaultValue = "true", requiredMode = Schema.RequiredMode.REQUIRED)
     private Boolean validatePropertiesList;
 
-    @ApiParam(access = "40", value = "Calculate property-property adjacency: following properties, same subject, same object. " +
+    @Schema(description = "Calculate property-property adjacency: following properties, same subject, same object. " +
             "Important for visual and textual query auto-completion use case; can be used in schema visualization if property sources and targets are considered as potential nodes (work in progress). " +
-            "Can be time-consuming for larger schemas, consider appropriate propertyPropertyLinkCheckBackupMode", defaultValue = "true", required = true)
+            "Can be time-consuming for larger schemas, consider appropriate propertyPropertyLinkCheckBackupMode", defaultValue = "true", requiredMode = Schema.RequiredMode.REQUIRED)
     private Boolean calculatePropertyPropertyRelations;
 
-    @ApiParam(access = "41", value = "Set backup validation queries to calculate property-property relations in the case of a failing property co-occurrence query for a given base property. " +
+    @Schema(description = "Set backup validation queries to calculate property-property relations in the case of a failing property co-occurrence query for a given base property. " +
             "details, limitsPlus and limitsPlusSimple guarantee trying a single-line pattern of two property co-occurrence, if larger patterns fail. " +
             "details gives exact statistics for two property co-occurrence, whenever possible. " +
             "limitsPlus attempts at least a limit-based estimate, limitsPlusSimple can stay with yes/no answer for co-occurrence for performance reasons (with some count information imputed at later schema import steps). " +
-            "none and limits are faster, but can result in partially incomplete structure information.", defaultValue = "details", required = true)
+            "none and limits are faster, but can result in partially incomplete structure information.", defaultValue = "details", requiredMode = Schema.RequiredMode.REQUIRED)
     private PropertyRelationsCheckMode propertyPropertyLinkCheckBackupMode;
 
-    @ApiParam(access = "50", value = "Calculate pairs of source and target classes for properties (creates finer-grained schemas; used as a source of statistics in visual schema diagrams)", defaultValue = "true", required = true)
+    @Schema(description = "Calculate pairs of source and target classes for properties (creates finer-grained schemas; used as a source of statistics in visual schema diagrams)", defaultValue = "true", requiredMode = Schema.RequiredMode.REQUIRED)
     private Boolean calculateSourceAndTargetPairs;
 
-    @ApiParam(access = "60", value = "Calculate domain and range classes for properties (in the strict, ontological sense)", defaultValue = "true", required = true)
+    @Schema(description = "Calculate domain and range classes for properties (in the strict, ontological sense)", defaultValue = "true", requiredMode = Schema.RequiredMode.REQUIRED)
     private Boolean calculateDomainsAndRanges;
 
-    @ApiParam(hidden = true, access = "61", value = "Calculate distinct subjects and objects count for property and/or for property source and target classes", defaultValue = "propertyLevel", required = true)
+    @Schema(hidden = true, description = "Calculate distinct subjects and objects count for property and/or for property source and target classes", defaultValue = "propertyLevel", requiredMode = Schema.RequiredMode.REQUIRED)
     private DistinctSubjectsAndObjectsMode includeDistinctSubjectsAndObjects;
 
-    @ApiParam(hidden = true, access = "62", value = "Calculate blank node statistics", defaultValue = "full", required = true)
+    @Schema(hidden = true, description = "Calculate blank node statistics", defaultValue = "full", requiredMode = Schema.RequiredMode.REQUIRED)
     private BlankNodeMode computeBlankNodeStatistics;
 
-    @ApiParam(access = "70", value = "Calculate ascription points (principal classes) for properties (strongly recommended, if schema diagrams are envisaged). Use 'class coverage', if all class-to-property connections are to be marked for the class itself, or some its superclass or subclass (can make a difference in the case of overlapping classes)", defaultValue = "basic", required = true)
+    @Schema(description = "Calculate ascription points (principal classes) for properties (strongly recommended, if schema diagrams are envisaged). Use 'class coverage', if all class-to-property connections are to be marked for the class itself, or some its superclass or subclass (can make a difference in the case of overlapping classes)", defaultValue = "basic", requiredMode = Schema.RequiredMode.REQUIRED)
     private ImportantIndexesMode calculateImportanceIndexes;
 
-    @ApiParam(access = "80", value = "Check, if the property source and target class set sets cover all non-literal property subjects and objects; " +
-            "essential for future SHACL export, can be used in advanced schema diagrams.", defaultValue = "true", required = true)
+    @Schema(description = "Check, if the property source and target class set sets cover all non-literal property subjects and objects; " +
+            "essential for future SHACL export, can be used in advanced schema diagrams.", defaultValue = "true", requiredMode = Schema.RequiredMode.REQUIRED)
     private Boolean calculateClosedClassSets;
 
-    @ApiParam(access = "90", value = "Calculate minimum and maximum cardinalities for properties. May consider propertyLevelOnly for larger schemas.", defaultValue = "propertyLevelAndClassContext", required = true)
+    @Schema(description = "Calculate minimum and maximum cardinalities for properties. May consider propertyLevelOnly for larger schemas.", defaultValue = "propertyLevelAndClassContext", requiredMode = Schema.RequiredMode.REQUIRED)
     private CalculatePropertyFeatureMode calculateCardinalities;
 
-    @ApiParam(access = "100", value = "Calculate data types for attributes. May consider propertyLevelOnly for larger schemas.", defaultValue = "propertyLevelAndClassContext", required = true)
+    @Schema(description = "Calculate data types for attributes. May consider propertyLevelOnly for larger schemas.", defaultValue = "propertyLevelAndClassContext", requiredMode = Schema.RequiredMode.REQUIRED)
     private CalculatePropertyFeatureMode calculateDataTypes;
 
-    @ApiParam(access = "110", value = "Instance sample size for datatype calculation. It is recommended to provide a constraint (e.g., 100K or 1M) for larger data sets " +
-            "as the exact data set information can be less essential in the schemas and attempts to obtain exact data type usage statistics may take unreasonably long time.", required = false)
+    @Schema(description = "Instance sample size for datatype calculation. It is recommended to provide a constraint (e.g., 100K or 1M) for larger data sets " +
+            "as the exact data set information can be less essential in the schemas and attempts to obtain exact data type usage statistics may take unreasonably long time.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     private Long sampleLimitForDataTypeCalculation;
 
-    @ApiParam(hidden = true, access = "140", value = "Calculate instance namespace URIs. Mode 'details' will retrieve namespaces for all classes and " +
-            "for subjects and objects of all properties. Mode 'overview' will retrieve for limited data set (use parameter sampleLimitForInstanceNamespacesCalculation).", defaultValue = "no", required = true)
+    @Schema(hidden = true, description = "Calculate instance namespace URIs. Mode 'details' will retrieve namespaces for all classes and " +
+            "for subjects and objects of all properties. Mode 'overview' will retrieve for limited data set (use parameter sampleLimitForInstanceNamespacesCalculation).", defaultValue = "no", requiredMode = Schema.RequiredMode.REQUIRED)
     private InstanceNamespacesMode calculateInstanceNamespaces;
 
-    @ApiParam(hidden = true, access = "141", value = "Limit of instances to use in namespace calculation (no value or 0 means all data will be used)", defaultValue = "1000", required = false)
+    @Schema(hidden = true, description = "Limit of instances to use in namespace calculation (no value or 0 means all data will be used)", defaultValue = "1000", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     private Long sampleLimitForInstanceNamespacesCalculation;
 
-    @ApiParam(access = "150", value = "Properties for class and property labels. rdfs:label and skos:prefLabel assumed by default. For labels in specific languages use @{en,de} notation after the label property iri or short form. To exclude a default labeling property, use property@{-} notation.", allowEmptyValue = true)
+    @Schema(description = "Properties for class and property labels. rdfs:label and skos:prefLabel assumed by default. For labels in specific languages use @{en,de} notation after the label property iri or short form. To exclude a default labeling property, use property@{-} notation.")
     private List<String> addedLabels;
 
-    @ApiParam(access = "170", value = "Record intersection class information in the extracted schema", defaultValue = "yes", required = true)
+    @Schema(description = "Record intersection class information in the extracted schema", defaultValue = "yes", requiredMode = Schema.RequiredMode.REQUIRED)
     private ShowIntersectionClassesMode addIntersectionClasses;
 
-    @ApiParam(hidden = true, access = "180", value = "List of properties defining the class structure; the classifier values (objects of these property triples) can be superclasses of other classes/classifiers and are checked for being sources and targets for other properties (default property is rdf:type)", allowEmptyValue = true)
+    @Schema(hidden = true, description = "List of properties defining the class structure; the classifier values (objects of these property triples) can be superclasses of other classes/classifiers and are checked for being sources and targets for other properties (default property is rdf:type)")
     private List<String> principalClassificationProperties;
 
-    @ApiParam(hidden = true, access = "190", value = "List of properties defining the classifiers whose values can define subsets of principal property classifiers (classes) and that are checked for being sources and targets for other properties", allowEmptyValue = true)
+    @Schema(hidden = true, description = "List of properties defining the classifiers whose values can define subsets of principal property classifiers (classes) and that are checked for being sources and targets for other properties")
     private List<String> classificationPropertiesWithConnectionsOnly;
 
-    @ApiParam(hidden = true, access = "200", value = "List of properties defining simple classifiers (their values can define subsets of principal classifiers (classes)), not checked for being sources and targets for other properties", allowEmptyValue = true)
+    @Schema(hidden = true, description = "List of properties defining simple classifiers (their values can define subsets of principal classifiers (classes)), not checked for being sources and targets for other properties")
     private List<String> simpleClassificationProperties;
 
-    @ApiParam(hidden = true, access = "210", value = "Add DISTINCT in queries (can be used for classes and properties of less than 10M size, if entity/triple duplications are observed otherwise in the schemas)", defaultValue = "no", required = true)
+    @Schema(hidden = true, description = "Add DISTINCT in queries (can be used for classes and properties of less than 10M size, if entity/triple duplications are observed otherwise in the schemas)", defaultValue = "no", requiredMode = Schema.RequiredMode.REQUIRED)
     private DistinctQueryMode exactCountCalculations;
-    @ApiParam(hidden = true, access = "211", value = "Calculate distinct triples count for classes and properties)", defaultValue = "true", required = true)
+    @Schema(hidden = true, description = "Calculate distinct triples count for classes and properties)", defaultValue = "true", requiredMode = Schema.RequiredMode.REQUIRED)
     private Boolean calculateDistinctTriples;
 
-    @ApiParam(hidden = true, access = "220", value = "Total instance count limit for exact count calculations", defaultValue = "10000000", required = false)
+    @Schema(hidden = true, description = "Total instance count limit for exact count calculations", defaultValue = "10000000", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     private Long maxInstanceLimitForExactCount;
 
-    @ApiParam(hidden = true, access = "221", value = "Cross check target classes on non-literal property object check failure", defaultValue = "false", required = false)
+    @Schema(hidden = true, description = "Cross check target classes on non-literal property object check failure", defaultValue = "false", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     private Boolean crossCheckTargetClassesOnNonLiteralPropertyObjectCheckFailure;
 
-    @ApiParam(access = "230", value = "List of excluded namespaces (e.g., http://www.openlinksw.com/schemas/virtrdf#)", allowEmptyValue = true)
+    @Schema(description = "List of excluded namespaces (e.g., http://www.openlinksw.com/schemas/virtrdf#)")
     private List<String> excludedNamespaces;
 
-    @ApiParam(hidden = true, access = "235", value = "Timeout for large SPARQL queries, in seconds. 0 or null means execute without timeout (default = 0). " +
-            "Some typical values can be 600 or 1200.", defaultValue = "0", required = false)
+    @Schema(hidden = true, description = "Timeout for large SPARQL queries, in seconds. 0 or null means execute without timeout (default = 0). " +
+            "Some typical values can be 600 or 1200.", defaultValue = "0", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     private Long largeQueryTimeout;
-    @ApiParam(hidden = true, access = "236", value = "Timeout for small SPARQL queries, in seconds. 0 or null means execute without timeout (default = 0). " +
-            "A typical value can be 60.", defaultValue = "0", required = false)
+    @Schema(hidden = true, description = "Timeout for small SPARQL queries, in seconds. 0 or null means execute without timeout (default = 0). " +
+            "A typical value can be 60.", defaultValue = "0", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     private Long smallQueryTimeout;
 
-    @ApiParam(hidden = true, access = "237", value = "Delay after query/endpoint failure, in seconds. 0 or null means no delay (default = 0). " +
-            "Can be useful in rare occasions, if the endpoint responds positively to Health check query (cached), but not real data queries.", defaultValue = "0", required = false)
+    @Schema(hidden = true, description = "Delay after query/endpoint failure, in seconds. 0 or null means no delay (default = 0). " +
+            "Can be useful in rare occasions, if the endpoint responds positively to Health check query (cached), but not real data queries.", defaultValue = "0", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     private Long delayOnFailure;
-    @ApiParam(hidden = true, access = "238", value = "Waiting time for endpoint recovery, in minutes. 0 or null means wait forever (default = 0)", defaultValue = "60", required = false)
+    @Schema(hidden = true, description = "Waiting time for endpoint recovery, in minutes. 0 or null means wait forever (default = 0)", defaultValue = "60", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     private Long waitingTimeForEndpoint;
 
-    @ApiParam(hidden = true, access = "239", value = "Controls logging when a property has no source or target (for properties with non-literal objects) classes (default = no)", defaultValue = "no", required = true)
+    @Schema(hidden = true, description = "Controls logging when a property has no source or target (for properties with non-literal objects) classes (default = no)", defaultValue = "no", requiredMode = Schema.RequiredMode.REQUIRED)
     private NoClassesLoggingOptions logNoClassesForProperty;
 
     public Boolean getCalculateSubClassRelations() {

@@ -1,71 +1,99 @@
 package lv.lumii.obis.rest.app;
 
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.info.License;
+import org.springdoc.core.customizers.OperationCustomizer;
+import org.springdoc.core.models.GroupedOpenApi;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import springfox.documentation.builders.ApiInfoBuilder;
-import springfox.documentation.builders.PathSelectors;
-import springfox.documentation.builders.RequestHandlerSelectors;
-import springfox.documentation.service.ApiInfo;
-import springfox.documentation.service.Tag;
-import springfox.documentation.spi.DocumentationType;
-import springfox.documentation.spring.web.plugins.Docket;
-import springfox.documentation.swagger2.annotations.EnableSwagger2;
+import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.multipart.MultipartFile;
 
-/**
- * Swagger 2 configuration for the Spring REST web services.
- * It describes and documents RESTful APIs.
- * Swagger UI is used for user interactions with the Swagger-generated API resources.
- * <p>
- * REST API docs - http://<server>:<port>/v2/api-docs
- * Swagger UI - http://<server>:<port>/swagger-ui.html
- */
+import java.lang.reflect.Field;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+/** OpenAPI documentation and Swagger UI for the current and archived services. */
 @Configuration
-@EnableSwagger2
 public class SwaggerConfig {
-
     @Bean
-    public Docket currentApi() {
-        return new Docket(DocumentationType.SWAGGER_2)
-                .groupName("Schema Extractor API - Current V2")
-                .select()
-                .apis(RequestHandlerSelectors.basePackage("lv.lumii.obis.rest.app"))
-                .paths(PathSelectors.regex("/schema-extractor-rest/v2/.*"))
-                .build()
-                .useDefaultResponseMessages(false)
-                .apiInfo(currentApiInfo())
-                .tags(new Tag("Services V2", ""));
-    }
-
-    @Bean
-    public Docket archivedApi() {
-        return new Docket(DocumentationType.SWAGGER_2)
-                .groupName("Schema Extractor API - Deprecated V1")
-                .select()
-                .apis(RequestHandlerSelectors.basePackage("lv.lumii.obis.rest.app"))
-                .paths(PathSelectors.regex("/schema-extractor-rest/v1/.*"))
-                .build()
-                .useDefaultResponseMessages(false)
-                .apiInfo(archiveApiInfo())
-                .tags(new Tag("Services V1", ""));
-    }
-
-    private ApiInfo currentApiInfo() {
-        return new ApiInfoBuilder()
-                .title("Schema Extractor REST Services API - V2")
-                .license("Apache 2.0")
-                .licenseUrl("http://www.apache.org/licenses/LICENSE-2.0.html")
-                .version("2.0")
+    public GroupedOpenApi currentApi() {
+        return GroupedOpenApi.builder()
+                .group("current-v2")
+                .displayName("Schema Extractor API - Current V2")
+                .packagesToScan("lv.lumii.obis.rest.app")
+                .pathsToMatch("/schema-extractor-rest/v2/**")
+                .addOpenApiCustomizer(api -> api.info(apiInfo("V2", "2.0")))
+                .addOperationCustomizer(requestDocumentation())
                 .build();
     }
 
-    private ApiInfo archiveApiInfo() {
-        return new ApiInfoBuilder()
-                .title("Schema Extractor REST Services API - V1 - Deprecated")
-                .description("Deprecated/Archived Schema Extractor API documentation (V1). Use V2 services instead.")
-                .license("Apache 2.0")
-                .licenseUrl("http://www.apache.org/licenses/LICENSE-2.0.html")
-                .version("1.0")
+    @Bean
+    public GroupedOpenApi archivedApi() {
+        return GroupedOpenApi.builder()
+                .group("deprecated-v1")
+                .displayName("Schema Extractor API - Deprecated V1")
+                .packagesToScan("lv.lumii.obis.rest.app")
+                .pathsToMatch("/schema-extractor-rest/v1/**")
+                .addOpenApiCustomizer(api -> api.info(apiInfo("V1 - Deprecated", "1.0")
+                        .description("Deprecated/Archived Schema Extractor API documentation (V1). Use V2 services instead.")))
+                .addOperationCustomizer(requestDocumentation())
                 .build();
     }
 
+    @Bean
+    public OpenAPI schemaExtractorOpenApi() {
+        return new OpenAPI().info(apiInfo("V2", "2.0"));
+    }
+
+    private Info apiInfo(String versionLabel, String version) {
+        return new Info().title("Schema Extractor REST Services API - " + versionLabel)
+                .version(version)
+                .license(new License().name("Apache 2.0")
+                        .url("https://www.apache.org/licenses/LICENSE-2.0.html"));
+    }
+
+    /** Document file uploads and keep form order without parsing optional numeric metadata. */
+    private OperationCustomizer requestDocumentation() {
+        return (operation, handlerMethod) -> {
+            // Keep accepting existing query/form requests while presenting file controls as multipart in Swagger UI.
+            boolean hasFileUpload = Arrays.stream(handlerMethod.getMethodParameters())
+                    .anyMatch(parameter -> MultipartFile.class.isAssignableFrom(parameter.getParameterType()));
+            if (hasFileUpload && operation.getRequestBody() != null
+                    && operation.getRequestBody().getContent() != null) {
+                operation.getRequestBody().getContent().values().stream()
+                        .filter(content -> content.getSchema() != null)
+                        .findFirst()
+                        .ifPresent(content -> operation.getRequestBody().setContent(
+                                new io.swagger.v3.oas.models.media.Content()
+                                        .addMediaType(MediaType.MULTIPART_FORM_DATA_VALUE, content)));
+            }
+            if (operation.getParameters() == null) {
+                return operation;
+            }
+            Map<String, Integer> order = new LinkedHashMap<>();
+            for (org.springframework.core.MethodParameter parameter : handlerMethod.getMethodParameters()) {
+                if (parameter.hasParameterAnnotation(ModelAttribute.class)) {
+                    for (Field field : parameter.getParameterType().getDeclaredFields()) {
+                        order.putIfAbsent(field.getName(), order.size());
+                    }
+                } else {
+                    RequestParam requestParam = parameter.getParameterAnnotation(RequestParam.class);
+                    String name = requestParam != null && !requestParam.value().isEmpty()
+                            ? requestParam.value() : parameter.getParameterName();
+                    if (name != null) {
+                        order.putIfAbsent(name, order.size());
+                    }
+                }
+            }
+            operation.getParameters().sort(Comparator.comparingInt(
+                    parameter -> order.getOrDefault(parameter.getName(), Integer.MAX_VALUE)));
+            return operation;
+        };
+    }
 }
