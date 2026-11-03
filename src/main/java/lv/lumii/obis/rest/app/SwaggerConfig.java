@@ -59,7 +59,7 @@ public class SwaggerConfig {
         return new OpenAPI().info(apiInfo("V2", "2.0"));
     }
 
-    /** Keep the title links out of the UI while retaining the OpenAPI metadata. */
+    /** Apply the presentation-only adjustments to Swagger UI. */
     @Bean
     public SwaggerIndexTransformer swaggerUiPresentation(SwaggerUiConfigProperties uiConfig,
                                                          SwaggerUiOAuthProperties oauthConfig,
@@ -73,7 +73,19 @@ public class SwaggerConfig {
             }
             try (var input = transformed.getInputStream()) {
                 String html = new String(input.readAllBytes(), StandardCharsets.UTF_8);
-                String style = "<style>.swagger-ui .info .main > a, .swagger-ui .info .info__license { display: none; }</style>";
+                String formSelector = "#operations-Services_V2-buildFullSchemaFromEndpointV2 ";
+                String style = "<style>"
+                        + ".swagger-ui .info .main > a, .swagger-ui .info .info__license { display: none; }"
+                        + ".swagger-ui .opblock:not(:has(.try-out__btn.cancel)) :is(.parameter__default, .parameter__enum) { display: none; }"
+                        + formSelector + ".opblock-section-request-body > .opblock-section-header { display: none; }"
+                        + formSelector + ".opblock-section-request-body > .opblock-description-wrapper { padding: 0; }"
+                        + formSelector + ".parameters-container > .table-container { padding-bottom: 0; }"
+                        + formSelector + ".opblock-section-request-body .table-container { padding-top: 0; }"
+                        + formSelector + ":is(table.parameters, .opblock-section-request-body table) { table-layout: fixed; }"
+                        + formSelector + ".parameters-col_name { width: 34%; overflow-wrap: anywhere; }"
+                        + formSelector + ".parameters-col_description { width: 66%; }"
+                        + formSelector + ".opblock-section-request-body .parameters-col_description p { font-size: 1rem; }"
+                        + "</style>";
                 return new TransformedResource(transformed,
                         html.replace("</head>", style + "</head>").getBytes(StandardCharsets.UTF_8));
             }

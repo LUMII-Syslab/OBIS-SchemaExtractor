@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<configuration scan="true">
+<configuration>
     <contextName>obis-schema-extractor</contextName>
 
     <property name="defaultPattern" value="%d{ISO8601} %5p [%t] [%c{3}] [%X{ipAddress}:%X{user}]: %m%n" />
@@ -19,7 +19,7 @@
             <MaxFileSize>10000KB</MaxFileSize>
         </triggeringPolicy>
         <rollingPolicy class="ch.qos.logback.core.rolling.FixedWindowRollingPolicy">
-            <maxIndex>50</maxIndex>
+            <maxIndex>21</maxIndex>
             <FileNamePattern>logs/schema-extractor.%i.log</FileNamePattern>
         </rollingPolicy>
         <encoder>
