@@ -450,6 +450,10 @@ public class SchemaExtractor {
             } else {
                 classEntry.setPropertiesInSchema(Boolean.TRUE);
             }
+            if (classificationProperty == null) {
+                classificationProperty = request.getPrincipalClassificationProperties().contains(RDF_TYPE)
+                        ? RDF_TYPE : request.getPrincipalClassificationProperties().stream().findFirst().orElse(RDF_TYPE);
+            }
             classEntry.setClassificationProperty(classificationProperty);
             classes.add(classEntry);
         }
