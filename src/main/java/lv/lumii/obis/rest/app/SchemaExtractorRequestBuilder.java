@@ -4,6 +4,7 @@ import com.google.common.base.Enums;
 import lv.lumii.obis.schema.constants.SchemaConstants;
 import lv.lumii.obis.schema.services.CsvFileReaderUtil;
 import lv.lumii.obis.schema.services.ObjectConversionService;
+import lv.lumii.obis.schema.services.RequestCollections;
 import lv.lumii.obis.schema.services.extractor.dto.SchemaExtractorRequestDto;
 import lv.lumii.obis.schema.services.extractor.v2.dto.SchemaExtractorPredefinedNamespaces;
 import lv.lumii.obis.schema.services.extractor.v2.dto.SchemaExtractorRequestedClassDto;
@@ -39,6 +40,7 @@ public class SchemaExtractorRequestBuilder {
     }
 
     public SchemaExtractorRequestDto buildRequest(@Nonnull SchemaExtractorRequestNew request) {
+        RequestCollections.normalize(request);
         SchemaExtractorRequestDto requestDto = new SchemaExtractorRequestDto(generateCorrelationId());
         requestDto.setEndpointUrl(request.getEndpointUrl());
         requestDto.setGraphName(request.getGraphName());
@@ -78,7 +80,7 @@ public class SchemaExtractorRequestBuilder {
         requestDto.setWaitingTimeForEndpoint(request.getWaitingTimeForEndpoint());
         requestDto.setLogNoClassesForProperty(Enums.getIfPresent(SchemaExtractorRequestDto.NoClassesLoggingOptions.class, request.getLogNoClassesForProperty().name()).orNull());
         requestDto.setCrossCheckTargetClassesOnNonLiteralPropertyObjectCheckFailure(request.getCrossCheckTargetClassesOnNonLiteralPropertyObjectCheckFailure());
-        return requestDto;
+        return RequestCollections.normalize(requestDto);
     }
 
     public void applyIncludedClasses(@Nonnull SchemaExtractorRequestDto requestDto, @Nullable InputStream inputStream) {
@@ -118,6 +120,7 @@ public class SchemaExtractorRequestBuilder {
     }
 
     public SchemaExtractorRequestDto buildRequest(@Nonnull SchemaExtractorRequestOld request) {
+        RequestCollections.normalize(request);
         SchemaExtractorRequestDto requestDto = new SchemaExtractorRequestDto(generateCorrelationId());
         requestDto.setEndpointUrl(request.getEndpointUrl());
         requestDto.setGraphName(request.getGraphName());
@@ -127,7 +130,7 @@ public class SchemaExtractorRequestBuilder {
         requestDto.setExcludeMetaDomainClasses(request.getExcludeMetaDomainClasses());
         requestDto.setExcludePropertiesWithoutClasses(request.getExcludePropertiesWithoutClasses());
         requestDto.setEnableLogging(request.getEnableLogging());
-        return requestDto;
+        return RequestCollections.normalize(requestDto);
     }
 
     public static String generateCorrelationId() {

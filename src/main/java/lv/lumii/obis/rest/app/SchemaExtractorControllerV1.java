@@ -105,6 +105,8 @@ public class SchemaExtractorControllerV1 {
     public String buildFullSchemaFromOwl(@RequestParam("file") @Parameter(description = "Upload OWL file", required = true) MultipartFile file,
                                          @Validated @ModelAttribute @ParameterObject @Nonnull OWLOntologyReaderRequest readerRequest,
                                          @Validated @ModelAttribute @ParameterObject @Nonnull OWLOntologyEnhancerRequest enhancerRequest) {
+        RequestCollections.normalize(readerRequest);
+        RequestCollections.normalize(enhancerRequest);
         String correlationId = requestBuilder.generateCorrelationId();
 
         // READ OWL ontology file and convert to Schema JSON format

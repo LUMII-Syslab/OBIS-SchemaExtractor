@@ -191,6 +191,8 @@ public class SchemaExtractorControllerV2 {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, SCHEMA_EXTRACT_EXCEPTION_NO_CONFIG_FILE);
         }
 
+        RequestCollections.normalize(requestDto);
+
         // 2. Validate the main request parameters
         requestDto.setCorrelationId(correlationId);
         if (StringUtils.isEmpty(requestDto.getEndpointUrl())) {
