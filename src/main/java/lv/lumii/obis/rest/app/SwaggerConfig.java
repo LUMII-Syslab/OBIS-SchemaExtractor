@@ -13,6 +13,7 @@ import org.springdoc.webmvc.ui.SwaggerWelcomeCommon;
 import org.springdoc.core.models.GroupedOpenApi;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -68,11 +69,19 @@ public class SwaggerConfig {
         SwaggerIndexPageTransformer defaults = new SwaggerIndexPageTransformer(uiConfig, oauthConfig, welcome, mapperProvider);
         return (request, resource, chain) -> {
             var transformed = defaults.transform(request, resource, chain);
-            if (!"index.html".equals(resource.getFilename())) {
+            if (!"index.html".equals(resource.getFilename()) && !"swagger-initializer.js".equals(resource.getFilename())) {
                 return transformed;
             }
             try (var input = transformed.getInputStream()) {
                 String html = new String(input.readAllBytes(), StandardCharsets.UTF_8);
+                if ("swagger-initializer.js".equals(resource.getFilename())) {
+                    try (var plugin = new ClassPathResource("swagger-ui/string-arrays.js").getInputStream()) {
+                        String script = new String(plugin.readAllBytes(), StandardCharsets.UTF_8);
+                        return new TransformedResource(transformed, (script + "\n" + html.replace(
+                                "SwaggerUIBundle.plugins.DownloadUrl",
+                                "SwaggerUIBundle.plugins.DownloadUrl, ObisStringArraysPlugin")).getBytes(StandardCharsets.UTF_8));
+                    }
+                }
                 String formSelector = "#operations-Services_V2-buildFullSchemaFromEndpointV2 ";
                 String style = "<style>"
                         + ".swagger-ui .info .main > a, .swagger-ui .info .info__license { display: none; }"
