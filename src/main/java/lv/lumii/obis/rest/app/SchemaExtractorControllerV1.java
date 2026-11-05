@@ -1,7 +1,11 @@
 package lv.lumii.obis.rest.app;
 
 import com.google.gson.Gson;
-import io.swagger.annotations.*;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import lv.lumii.obis.schema.services.enhancer.OWLOntologyEnhancer;
@@ -15,6 +19,7 @@ import lv.lumii.obis.schema.model.v1.Schema;
 import lv.lumii.obis.schema.services.*;
 import lv.lumii.obis.schema.services.reader.OWLOntologyReader;
 import org.apache.commons.lang3.StringUtils;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -34,7 +39,7 @@ import static org.apache.commons.lang3.BooleanUtils.isTrue;
  */
 @RestController
 @RequestMapping("/schema-extractor-rest/v1")
-@Api(value = "SchemaExtractorServicesV1", tags = "Services V1")
+@Tag(name = "Services V1")
 @Slf4j
 @Setter
 public class SchemaExtractorControllerV1 {
@@ -64,14 +69,13 @@ public class SchemaExtractorControllerV1 {
     private SchemaExtractorRequestBuilder requestBuilder;
 
     @RequestMapping(value = "/endpoint/buildFullSchema", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON)
-    @ApiOperation(
-            value = "Extract and analyze data from SPARQL endpoint and build full schema model",
-            consumes = MediaType.APPLICATION_JSON,
-            produces = MediaType.APPLICATION_JSON,
-            response = Schema.class
+    @Operation(
+            summary = "Extract and analyze data from SPARQL endpoint and build full schema model",
+            responses = @ApiResponse(responseCode = "200", description = "OK", content = @Content(mediaType = MediaType.APPLICATION_JSON,
+                    schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = Schema.class)))
     )
     @SuppressWarnings("unused")
-    public String buildFullSchemaFromEndpoint(@Validated @ModelAttribute @Nonnull SchemaExtractorRequestOld request) {
+    public String buildFullSchemaFromEndpoint(@Validated @ModelAttribute @ParameterObject @Nonnull SchemaExtractorRequestOld request) {
         SchemaExtractorRequestDto requestDto = requestBuilder.buildRequest(request);
         String requestJson = new Gson().toJson(request);
 
@@ -94,16 +98,15 @@ public class SchemaExtractorControllerV1 {
     }
 
     @RequestMapping(value = "/owlFile/buildFullSchema", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON)
-    @ApiOperation(
-            value = "Extract and analyze schema from OWL ontology file and then enhance with data from SPARQL endpoint (if provided)",
-            consumes = MediaType.MULTIPART_FORM_DATA,
-            produces = MediaType.APPLICATION_JSON,
-            response = Schema.class
+    @Operation(
+            summary = "Extract and analyze schema from OWL ontology file and then enhance with data from SPARQL endpoint (if provided)",
+            responses = @ApiResponse(responseCode = "200", description = "OK", content = @Content(mediaType = MediaType.APPLICATION_JSON,
+                    schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = Schema.class)))
     )
     @SuppressWarnings("unused")
-    public String buildFullSchemaFromOwl(@RequestParam("file") @ApiParam(access = "1", value = "Upload OWL file", required = true) MultipartFile file,
-                                         @Validated @ModelAttribute @Nonnull OWLOntologyReaderRequest readerRequest,
-                                         @Validated @ModelAttribute @Nonnull OWLOntologyEnhancerRequest enhancerRequest) {
+    public String buildFullSchemaFromOwl(@RequestParam("file") @Parameter(description = "Upload OWL file", required = true) MultipartFile file,
+                                         @Validated @ModelAttribute @ParameterObject @Nonnull OWLOntologyReaderRequest readerRequest,
+                                         @Validated @ModelAttribute @ParameterObject @Nonnull OWLOntologyEnhancerRequest enhancerRequest) {
         String correlationId = requestBuilder.generateCorrelationId();
 
         // READ OWL ontology file and convert to Schema JSON format

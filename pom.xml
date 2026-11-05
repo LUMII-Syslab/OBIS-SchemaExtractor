@@ -11,62 +11,35 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>2.1.5.RELEASE</version>
+		<version>4.1.2</version>
 	</parent>
-	
+
 	<properties>
 		<!-- project properties -->
-		<jdk.version>1.8</jdk.version>
+		<java.version>25</java.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
 		<!-- 3rd party library versions -->
-		<spring.swagger.version>2.9.2</spring.swagger.version>
-		<owlapi.version>5.1.1</owlapi.version>
+		<!-- Lombok, Gson, Jackson, SnakeYAML and maven-compiler-plugin versions are managed by the Spring Boot parent -->
+		<springdoc.version>3.2.0</springdoc.version>
+		<owlapi.version>5.1.20</owlapi.version>
 		<apache.jena.version>4.9.0</apache.jena.version>
 		<javax.ws.rs.version>2.1</javax.ws.rs.version>
-		<lombok.version>1.18.30</lombok.version>
-		<gson.version>2.8.9</gson.version>
-		<maven.compiler.version>3.7.0</maven.compiler.version>
-		<glassfish.jersey.version>2.26</glassfish.jersey.version>
 		<opencsv.version>5.5.2</opencsv.version>
 		<commons.codec>1.16.0</commons.codec>
-		<jackson.version>2.16.1</jackson.version>
 	</properties>
 
 	<dependencies>
 
-		<!-- Spring Boot and Swagger main dependencies -->
+		<!-- Spring Boot and Swagger (OpenAPI) main dependencies -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-web</artifactId>
+			<artifactId>spring-boot-starter-webmvc</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>io.springfox</groupId>
-			<artifactId>springfox-swagger2</artifactId>
-			<version>${spring.swagger.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>io.springfox</groupId>
-			<artifactId>springfox-swagger-ui</artifactId>
-			<version>${spring.swagger.version}</version>
-		</dependency>
-
-		<dependency>
-			<groupId>org.glassfish.jersey.media</groupId>
-			<artifactId>jersey-media-multipart</artifactId>
-			<version>${glassfish.jersey.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>org.glassfish.jersey.containers</groupId>
-			<artifactId>jersey-container-servlet-core</artifactId>
-			<version>${glassfish.jersey.version}</version>
-			<scope>runtime</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.glassfish.jersey.inject</groupId>
-			<artifactId>jersey-hk2</artifactId>
-			<version>${glassfish.jersey.version}</version>
-			<scope>runtime</scope>
+			<groupId>org.springdoc</groupId>
+			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+			<version>${springdoc.version}</version>
 		</dependency>
 
 		<!-- OWL Api dependencies -->
@@ -90,13 +63,11 @@
 		<dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
-			<version>${lombok.version}</version>
 			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>com.google.code.gson</groupId>
 			<artifactId>gson</artifactId>
-			<version>${gson.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>com.opencsv</groupId>
@@ -106,17 +77,14 @@
 		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>
 			<artifactId>jackson-databind</artifactId>
-			<version>${jackson.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>com.fasterxml.jackson.dataformat</groupId>
 			<artifactId>jackson-dataformat-yaml</artifactId>
-			<version>${jackson.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.yaml</groupId>
 			<artifactId>snakeyaml</artifactId>
-			<version>2.2</version>
 			<scope>runtime</scope>
 		</dependency>
 
@@ -141,10 +109,15 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
-				<version>${maven.compiler.version}</version>
 				<configuration>
-					<source>11</source>
-					<target>11</target>
+					<!-- Since JDK 23 annotation processors are not picked up from the classpath automatically -->
+					<annotationProcessorPaths>
+						<path>
+							<groupId>org.projectlombok</groupId>
+							<artifactId>lombok</artifactId>
+							<version>${lombok.version}</version>
+						</path>
+					</annotationProcessorPaths>
 				</configuration>
 			</plugin>
 			<plugin>

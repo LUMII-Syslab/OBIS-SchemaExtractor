@@ -22,9 +22,9 @@ Consider [extractor wiki](https://github.com/LUMII-Syslab/OBIS-SchemaExtractor/w
 
 ### Option 1: Executable JAR
 
-The application is packaged as an executable JAR and requires [Java 17](https://www.java.com/en/).
+The application is packaged as an executable JAR and requires [Java 25](https://www.oracle.com/java/technologies/downloads/#java25).
 
-1. Install Java 17.
+1. Install Java 25.
 2. Copy [`build/schema-extractor-exec.jar`](build/schema-extractor-exec.jar) to any folder along with the other files in the `build` directory.
 3. Run the JAR:
    ```sh
@@ -136,7 +136,7 @@ Example JSON response: [SampleTestOntology_Schema.json](build/SampleTestOntology
 
 ## Development
 
-Clone the repository and build with Maven:
+Clone the repository and build with Maven (requires JDK 25 and Maven 3.10.0 or newer):
 
 ```sh
 git clone https://github.com/LUMII-Syslab/OBIS-SchemaExtractor.git

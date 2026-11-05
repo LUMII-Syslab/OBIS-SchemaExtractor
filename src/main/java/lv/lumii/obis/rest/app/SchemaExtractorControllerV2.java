@@ -1,6 +1,10 @@
 package lv.lumii.obis.rest.app;
 
-import io.swagger.annotations.*;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import lv.lumii.obis.schema.constants.SchemaConstants;
@@ -10,6 +14,7 @@ import lv.lumii.obis.schema.services.extractor.v2.SchemaExtractor;
 import lv.lumii.obis.schema.services.*;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
@@ -40,7 +45,7 @@ import static lv.lumii.obis.schema.constants.SchemaConstants.GLOBAL_SPARQL_QUERI
  */
 @RestController
 @RequestMapping("/schema-extractor-rest/v2")
-@Api(value = "SchemaExtractorServicesV2", tags = "Services V2")
+@Tag(name = "Services V2")
 @Slf4j
 @Setter
 public class SchemaExtractorControllerV2 {
@@ -76,26 +81,25 @@ public class SchemaExtractorControllerV2 {
 
 
     @RequestMapping(value = "/endpoint/buildFullSchema", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON)
-    @ApiOperation(
-            value = "Extract and analyze data from SPARQL endpoint and build full schema model (version 2)",
-            consumes = MediaType.APPLICATION_JSON,
-            produces = MediaType.APPLICATION_JSON,
-            response = lv.lumii.obis.schema.model.v2.Schema.class
+    @Operation(
+            summary = "Extract and analyze data from SPARQL endpoint and build full schema model (version 2)",
+            responses = @ApiResponse(responseCode = "200", description = "OK", content = @Content(mediaType = MediaType.APPLICATION_JSON,
+                    schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = lv.lumii.obis.schema.model.v2.Schema.class)))
     )
     @SuppressWarnings("unused")
-    public String buildFullSchemaFromEndpointV2(@Validated @ModelAttribute @Nonnull SchemaExtractorRequestNew request,
+    public String buildFullSchemaFromEndpointV2(@Validated @ModelAttribute @ParameterObject @Nonnull SchemaExtractorRequestNew request,
                                                 @RequestParam(value = "includedClassesFile", required = false)
-                                                @ApiParam(access = "240", value = "Valid CSV file with the list of included classes. To be used, if the created schema is to be restricted to the explicitly listed classes. " +
+                                                @Parameter(description = "Valid CSV file with the list of included classes. To be used, if the created schema is to be restricted to the explicitly listed classes. " +
                                                         "If not specified, all classes will be analyzed.") MultipartFile includedClassesCsvFile,
                                                 @RequestParam(value = "includedPropertiesFile", required = false)
-                                                @ApiParam(access = "250", value = "Valid CSV file with the list of included properties. To be used, if the created schema is to be restricted to the explicitly listed properties. " +
+                                                @Parameter(description = "Valid CSV file with the list of included properties. To be used, if the created schema is to be restricted to the explicitly listed properties. " +
                                                         "If not specified, all properties will be analyzed.") MultipartFile includedPropertiesCsvFile,
                                                 @RequestParam(value = "namespacePrefixFile", required = false)
-                                                @ApiParam(hidden = true, access = "260", value = "Valid JSON file with predefined namespaces") MultipartFile namespacePrefixFile,
+                                                @Parameter(hidden = true, description = "Valid JSON file with predefined namespaces") MultipartFile namespacePrefixFile,
                                                 @RequestParam(value = "enableLogging", required = false, defaultValue = "true")
-                                                @ApiParam(access = "270", value = "Enable SPARQL query logging to file on the server") Boolean enableLogging,
+                                                @Parameter(description = "Enable SPARQL query logging to file on the server") Boolean enableLogging,
                                                 @RequestParam(value = "saveThisConfig", required = false, defaultValue = "true")
-                                                @ApiParam(access = "280", value = "Save this configuration to a file on the server") Boolean saveConfig) {
+                                                @Parameter(description = "Save this configuration to a file on the server") Boolean saveConfig) {
 
         // 1. Create the request object
         SchemaExtractorRequestDto requestDto = requestBuilder.buildRequest(request);
@@ -160,16 +164,15 @@ public class SchemaExtractorControllerV2 {
     }
 
     @RequestMapping(value = "/endpoint/buildFullSchemaFromConfigFile", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON)
-    @ApiOperation(
-            value = "Extract and analyze data from SPARQL endpoint and build full schema model (version 2) using configuration file",
-            consumes = MediaType.MULTIPART_FORM_DATA,
-            produces = MediaType.APPLICATION_JSON,
-            response = lv.lumii.obis.schema.model.v2.Schema.class
+    @Operation(
+            summary = "Extract and analyze data from SPARQL endpoint and build full schema model (version 2) using configuration file",
+            responses = @ApiResponse(responseCode = "200", description = "OK", content = @Content(mediaType = MediaType.APPLICATION_JSON,
+                    schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = lv.lumii.obis.schema.model.v2.Schema.class)))
     )
     @SuppressWarnings("unused")
     public String buildFullSchemaFromEndpointV2FromConfigFile(
             @RequestParam(value = "configurationFile")
-            @ApiParam(access = "1", value = "Configuration YAML file") MultipartFile configurationFile) {
+            @Parameter(description = "Configuration YAML file") MultipartFile configurationFile) {
 
         // 1. Read request parameters from the configuration YAML file
         String correlationId = SchemaExtractorRequestBuilder.generateCorrelationId();

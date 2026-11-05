@@ -1,71 +1,63 @@
 package lv.lumii.obis.rest.app;
 
+import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.info.License;
+import org.springdoc.core.models.GroupedOpenApi;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import springfox.documentation.builders.ApiInfoBuilder;
-import springfox.documentation.builders.PathSelectors;
-import springfox.documentation.builders.RequestHandlerSelectors;
-import springfox.documentation.service.ApiInfo;
-import springfox.documentation.service.Tag;
-import springfox.documentation.spi.DocumentationType;
-import springfox.documentation.spring.web.plugins.Docket;
-import springfox.documentation.swagger2.annotations.EnableSwagger2;
 
 /**
- * Swagger 2 configuration for the Spring REST web services.
+ * OpenAPI (Swagger) configuration for the Spring REST web services.
  * It describes and documents RESTful APIs.
- * Swagger UI is used for user interactions with the Swagger-generated API resources.
+ * Swagger UI is used for user interactions with the generated API resources.
  * <p>
- * REST API docs - http://<server>:<port>/v2/api-docs
+ * REST API docs - http://<server>:<port>/v3/api-docs/{group}
  * Swagger UI - http://<server>:<port>/swagger-ui.html
  */
 @Configuration
-@EnableSwagger2
 public class SwaggerConfig {
 
     @Bean
-    public Docket currentApi() {
-        return new Docket(DocumentationType.SWAGGER_2)
-                .groupName("Schema Extractor API - Current V2")
-                .select()
-                .apis(RequestHandlerSelectors.basePackage("lv.lumii.obis.rest.app"))
-                .paths(PathSelectors.regex("/schema-extractor-rest/v2/.*"))
-                .build()
-                .useDefaultResponseMessages(false)
-                .apiInfo(currentApiInfo())
-                .tags(new Tag("Services V2", ""));
+    public GroupedOpenApi currentApi() {
+        return GroupedOpenApi.builder()
+                .group("v2")
+                .displayName("Schema Extractor API - Current V2")
+                .packagesToScan("lv.lumii.obis.rest.app")
+                .pathsToMatch("/schema-extractor-rest/v2/**")
+                .addOpenApiCustomizer(openApi -> openApi.info(currentApiInfo()))
+                .build();
     }
 
     @Bean
-    public Docket archivedApi() {
-        return new Docket(DocumentationType.SWAGGER_2)
-                .groupName("Schema Extractor API - Deprecated V1")
-                .select()
-                .apis(RequestHandlerSelectors.basePackage("lv.lumii.obis.rest.app"))
-                .paths(PathSelectors.regex("/schema-extractor-rest/v1/.*"))
-                .build()
-                .useDefaultResponseMessages(false)
-                .apiInfo(archiveApiInfo())
-                .tags(new Tag("Services V1", ""));
-    }
-
-    private ApiInfo currentApiInfo() {
-        return new ApiInfoBuilder()
-                .title("Schema Extractor REST Services API - V2")
-                .license("Apache 2.0")
-                .licenseUrl("http://www.apache.org/licenses/LICENSE-2.0.html")
-                .version("2.0")
+    public GroupedOpenApi archivedApi() {
+        return GroupedOpenApi.builder()
+                .group("v1")
+                .displayName("Schema Extractor API - Deprecated V1")
+                .packagesToScan("lv.lumii.obis.rest.app")
+                .pathsToMatch("/schema-extractor-rest/v1/**")
+                .addOpenApiCustomizer(openApi -> openApi.info(archiveApiInfo()))
                 .build();
     }
 
-    private ApiInfo archiveApiInfo() {
-        return new ApiInfoBuilder()
+    private Info currentApiInfo() {
+        return new Info()
+                .title("Schema Extractor REST Services API - V2")
+                .license(apacheLicense())
+                .version("2.0");
+    }
+
+    private Info archiveApiInfo() {
+        return new Info()
                 .title("Schema Extractor REST Services API - V1 - Deprecated")
                 .description("Deprecated/Archived Schema Extractor API documentation (V1). Use V2 services instead.")
-                .license("Apache 2.0")
-                .licenseUrl("http://www.apache.org/licenses/LICENSE-2.0.html")
-                .version("1.0")
-                .build();
+                .license(apacheLicense())
+                .version("1.0");
+    }
+
+    private License apacheLicense() {
+        return new License()
+                .name("Apache 2.0")
+                .url("http://www.apache.org/licenses/LICENSE-2.0.html");
     }
 
 }
