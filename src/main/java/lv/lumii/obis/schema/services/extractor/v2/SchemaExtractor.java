@@ -2566,6 +2566,11 @@ public class SchemaExtractor {
         List<String> processedProperties = relatedProperties.stream().map(SchemaExtractorPropertyRelatedPropertyInfo::getPropertyName)
                 .collect(Collectors.toList());
 
+        // pairs answered (yes/no) by the regular limit queries, the other side of the relation or individual check queries
+        int answeredPairs = processedProperties.size();
+        // pairs for which the individual check query failed
+        int failedPairs = 0;
+
         // find triple count base from the regular limit queries
         Long tripleCountBase = null;
         SchemaExtractorPropertyRelatedPropertyInfo exampleProperty = relatedProperties.stream().findFirst().orElse(null);
@@ -2575,9 +2580,6 @@ public class SchemaExtractor {
 
         for (Map.Entry<String, SchemaExtractorPropertyNodeInfo> entry : properties.entrySet()) {
             SchemaExtractorPropertyNodeInfo property2 = entry.getValue();
-
-            // Step 0: Skip current property
-            if (property2.getPropertyName().equals(property.getPropertyName())) continue;
 
             // Step 0: skip data type properties for incoming relations
             if (SchemaExtractorPropertyRelatedPropertyInfo.LinkType.incoming.equals(linkType) && isFalse(property2.getIsObjectProperty())) {
@@ -2595,6 +2597,7 @@ public class SchemaExtractor {
                 if (potentialCandidate.getPropertyName() != null) {
                     relatedProperties.add(potentialCandidate);
                 }
+                answeredPairs++;
                 continue;
             }
 
@@ -2606,11 +2609,13 @@ public class SchemaExtractor {
 
             if (!queryResponse.hasErrors() && queryResponse.getResults().isEmpty()) {
                 // No data exists for this pair — skip entirely
+                answeredPairs++;
                 continue;
             }
 
             // Step 4: Data exists — add candidate
             if (!queryResponse.hasErrors()) {
+                answeredPairs++;
                 SchemaExtractorPropertyRelatedPropertyInfo candidate = new SchemaExtractorPropertyRelatedPropertyInfo(property2.getPropertyName(), null, null, linkType);
                 if (tripleCountBase != null) {
                     candidate.setTripleCount(0L);
@@ -2619,11 +2624,21 @@ public class SchemaExtractor {
                 relatedProperties.add(candidate);
             } else {
                 // queryCheck itself failed with errors
+                failedPairs++;
                 SchemaExtractorMessage checkQueryError = new SchemaExtractorMessage(WARNING, property.getPropertyName(), queryCheck.name(), queryBuilder.getQueryString());
                 schema.getMessages().add(checkQueryError);
             }
         }
 
+        // 5 - all potentially related properties were resolved with yes/no answer
+        if (failedPairs == 0) {
+            return 5;
+        }
+        // 3 - some (or even many) individual checks failed, but at least some pairs were resolved
+        if (answeredPairs > 0) {
+            return 3;
+        }
+        // nothing was resolved - keep the result of the regular limit queries (1, 2 or 0)
         return resultQuality;
     }
 
@@ -2638,8 +2653,6 @@ public class SchemaExtractor {
 
         for (Map.Entry<String, SchemaExtractorPropertyNodeInfo> entry : properties.entrySet()) {
             SchemaExtractorPropertyNodeInfo property2 = entry.getValue();
-
-            if (property2.getPropertyName().equals(property.getPropertyName())) continue;
 
             // skip data type properties for incoming relations
             if (SchemaExtractorPropertyRelatedPropertyInfo.LinkType.incoming.equals(linkType) && isFalse(property2.getIsObjectProperty())) {
@@ -2710,8 +2723,6 @@ public class SchemaExtractor {
 
         for (Map.Entry<String, SchemaExtractorPropertyNodeInfo> entry : properties.entrySet()) {
             SchemaExtractorPropertyNodeInfo property2 = entry.getValue();
-
-            if (property2.getPropertyName().equals(property.getPropertyName())) continue;
 
             // skip data type properties for incoming relations
             if (SchemaExtractorPropertyRelatedPropertyInfo.LinkType.incoming.equals(linkType) && isFalse(property2.getIsObjectProperty())) {
@@ -2789,6 +2800,11 @@ public class SchemaExtractor {
                                                                        @Nonnull SchemaExtractorPropertyRelatedPropertyInfo.LinkType linkType) {
 
         if (SchemaExtractorPropertyRelatedPropertyInfo.LinkType.follower.equals(linkType)) {
+            return null;
+        }
+
+        // self relation is never resolved from "the other side" (the other side is the list being built now) - it must be queried
+        if (property2.getPropertyName().equals(property.getPropertyName())) {
             return null;
         }
 
