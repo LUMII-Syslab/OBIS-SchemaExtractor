@@ -217,13 +217,13 @@ public enum SchemaExtractorQueries {
     ),
 
     FIND_PROPERTY_SOURCES_WITH_TRIPLE_COUNT(
-            "SELECT ?class (COUNT(?x) as ?instances) WHERE {?x <property> ?y. ?x <classificationProperty> ?class. } GROUP BY ?class", QueryType.LARGE
+            "SELECT ?class (COUNT(?x) as ?instances) WHERE {<classValuesClause> ?x <property> ?y. ?x <classificationProperty> ?class. } GROUP BY ?class", QueryType.LARGE
     ),
     FIND_PROPERTY_SOURCES_WITH_TRIPLE_COUNT_DISTINCT(
-            "SELECT ?class (COUNT(?x) as ?instances) WHERE { { SELECT DISTINCT ?x ?y ?class WHERE { ?x <property> ?y. ?x <classificationProperty> ?class. }}} GROUP BY ?class", QueryType.LARGE
+            "SELECT ?class (COUNT(?x) as ?instances) WHERE { { SELECT DISTINCT ?x ?y ?class WHERE { <classValuesClause> ?x <property> ?y. ?x <classificationProperty> ?class. }}} GROUP BY ?class", QueryType.LARGE
     ),
     FIND_PROPERTY_SOURCES_WITHOUT_TRIPLE_COUNT(
-            "SELECT DISTINCT ?class WHERE {?x <property> ?y. ?x <classificationProperty> ?class. }", QueryType.LARGE
+            "SELECT DISTINCT ?class WHERE {<classValuesClause> ?x <property> ?y. ?x <classificationProperty> ?class. }", QueryType.LARGE
     ),
     FIND_PROPERTY_SOURCE_TRIPLE_COUNT(
             "SELECT (COUNT(?x) as ?instances) WHERE {?x <property> ?y. ?x <classificationProperty> <sourceClass>. }", QueryType.SMALL
@@ -245,23 +245,23 @@ public enum SchemaExtractorQueries {
             "SELECT ?property (COUNT(?x) as ?instances) WHERE { <valuesClause> ?x <classificationProperty> <sourceClass> . ?x ?property ?y . } GROUP BY ?property", QueryType.LARGE
     ),
     FIND_OUTGOING_PROPERTY_TRIPLE_COUNTS_FOR_CLASS_WITH_LIMITS(
-            "SELECT ?property (COUNT(?x) as ?instances) WHERE { <valuesClause> { SELECT ?x WHERE { ?x <classificationProperty> <sourceClass> } LIMIT <limit> } ?x ?property ?y . } GROUP BY ?property", QueryType.LARGE
+            "SELECT ?property (COUNT(?x) as ?instances) WHERE { <valuesClause> { SELECT DISTINCT ?x WHERE { ?x <classificationProperty> <sourceClass> } LIMIT <limit> } ?x ?property ?y . } GROUP BY ?property", QueryType.LARGE
     ),
 
     FIND_PROPERTY_TARGETS_WITH_TRIPLE_COUNT(
-            "SELECT ?class (COUNT(?x) as ?instances) WHERE {?x <property> ?y. ?y <classificationProperty> ?class. } GROUP BY ?class", QueryType.LARGE
+            "SELECT ?class (COUNT(?x) as ?instances) WHERE {<classValuesClause> ?x <property> ?y. ?y <classificationProperty> ?class. } GROUP BY ?class", QueryType.LARGE
     ),
     FIND_PROPERTY_TARGETS_WITH_TRIPLE_COUNT_DISTINCT(
-            "SELECT ?class (COUNT(?y) as ?instances) WHERE { {SELECT DISTINCT ?x ?y ?class WHERE {?x <property> ?y. ?y <classificationProperty> ?class. }}} GROUP BY ?class", QueryType.LARGE
+            "SELECT ?class (COUNT(?y) as ?instances) WHERE { {SELECT DISTINCT ?x ?y ?class WHERE {<classValuesClause> ?x <property> ?y. ?y <classificationProperty> ?class. }}} GROUP BY ?class", QueryType.LARGE
     ),
     FIND_PROPERTY_TARGETS_WITHOUT_TRIPLE_COUNT(
-            "SELECT DISTINCT ?class WHERE {?x <property> ?y. ?y <classificationProperty> ?class. } ", QueryType.LARGE
+            "SELECT DISTINCT ?class WHERE {<classValuesClause> ?x <property> ?y. ?y <classificationProperty> ?class. } ", QueryType.LARGE
     ),
     FIND_PROPERTY_TARGET_TRIPLE_COUNT(
             "SELECT (COUNT(?x) as ?instances) WHERE {?x <property> ?y. ?y <classificationProperty> <targetClass>. }", QueryType.SMALL
     ),
     FIND_PROPERTY_TARGET_TRIPLE_COUNT_DISTINCT(
-            "SELECT (COUNT(?x) as ?instances) WHERE { {SELECT DISTINCT ?x WHERE { ?x <property> ?y. ?y <classificationProperty> <targetClass>. }}}", QueryType.SMALL
+            "SELECT (COUNT(?x) as ?instances) WHERE { {SELECT DISTINCT ?x ?y WHERE { ?x <property> ?y. ?y <classificationProperty> <targetClass>. }}}", QueryType.SMALL
     ),
     FIND_PROPERTY_TARGET_TRIPLE_COUNT_WITH_LIMITS(
             "SELECT (COUNT(?x) as ?instances) WHERE { { SELECT ?y WHERE {?y <classificationProperty> <targetClass>. } LIMIT <limit> } ?x <property> ?y. }", QueryType.SMALL
@@ -278,7 +278,7 @@ public enum SchemaExtractorQueries {
             "SELECT ?property (COUNT(?y) as ?instances) WHERE { <valuesClause> ?y <classificationProperty> <targetClass> . ?x ?property ?y . } GROUP BY ?property", QueryType.LARGE
     ),
     FIND_INCOMING_PROPERTY_TRIPLE_COUNTS_FOR_CLASS_WITH_LIMITS(
-            "SELECT ?property (COUNT(?y) as ?instances) WHERE { <valuesClause> { SELECT ?y WHERE { ?y <classificationProperty> <targetClass> } LIMIT <limit> } ?x ?property ?y . } GROUP BY ?property", QueryType.LARGE
+            "SELECT ?property (COUNT(?y) as ?instances) WHERE { <valuesClause> { SELECT DISTINCT ?y WHERE { ?y <classificationProperty> <targetClass> } LIMIT <limit> } ?x ?property ?y . } GROUP BY ?property", QueryType.LARGE
     ),
 
     FIND_PROPERTY_SOURCE_TARGET_PAIRS(
@@ -471,6 +471,78 @@ public enum SchemaExtractorQueries {
     ),
     FIND_INSTANCE_NAMESPACES_FOR_PROPERTY_OBJECTS_WITH_LIMIT(
             "SELECT ?nspace (COUNT(?object) AS ?nsCount) WHERE { { SELECT ?object WHERE { ?subject <property> ?object . FILTER (isIRI(?object)) } LIMIT <limit> } BIND(REPLACE(STR(?object), \"(.*[/#]).*\", \"$1\") AS ?nspace)} GROUP BY ?nspace ORDER BY DESC(?nsCount)", QueryType.LARGE
+    ),
+
+    FIND_PROPERTY_SUBJECTS_INSTANCES(
+            "SELECT DISTINCT ?x WHERE { ?x <property> ?y . }", QueryType.LARGE
+    ),
+
+    FIND_PROPERTY_OBJECTS_INSTANCES(
+            "SELECT DISTINCT ?x WHERE { ?y <property> ?x . }", QueryType.LARGE
+    ),
+
+    FIND_CLASS_INSTANCES(
+            "SELECT DISTINCT ?x WHERE { ?x <classificationProperty> <class> . <instanceFilter> } <limitClause>", QueryType.LARGE
+    ),
+
+    FIND_PROPERTY_SOURCES_WITH_TRIPLE_COUNT_FOR_INSTANCES(
+            "SELECT ?class (COUNT(*) AS ?instances) WHERE { <instanceValuesClause> <classValuesClause> ?x <property> ?y . ?x <classificationProperty> ?class . } GROUP BY ?class", QueryType.SMALL
+    ),
+
+    FIND_PROPERTY_SOURCES_WITH_TRIPLE_COUNT_FOR_INSTANCES_DISTINCT(
+            "SELECT ?class (COUNT(*) AS ?instances) WHERE { { SELECT DISTINCT ?x ?y ?class WHERE { <instanceValuesClause> <classValuesClause> ?x <property> ?y . ?x <classificationProperty> ?class . } } } GROUP BY ?class", QueryType.SMALL
+    ),
+
+    FIND_PROPERTY_TARGETS_WITH_TRIPLE_COUNT_FOR_INSTANCES(
+            "SELECT ?class (COUNT(*) AS ?instances) WHERE { <instanceValuesClause> <classValuesClause> ?y <property> ?x . ?x <classificationProperty> ?class . } GROUP BY ?class", QueryType.SMALL
+    ),
+
+    FIND_PROPERTY_TARGETS_WITH_TRIPLE_COUNT_FOR_INSTANCES_DISTINCT(
+            "SELECT ?class (COUNT(*) AS ?instances) WHERE { { SELECT DISTINCT ?x ?y ?class WHERE { <instanceValuesClause> <classValuesClause> ?y <property> ?x . ?x <classificationProperty> ?class . } } } GROUP BY ?class", QueryType.SMALL
+    ),
+
+    FIND_OUTGOING_PROPERTY_TRIPLE_COUNTS_FOR_CLASS_DISTINCT(
+            "SELECT ?property (COUNT(*) AS ?instances) WHERE { { SELECT DISTINCT ?x ?property ?y WHERE { <propertyValuesClause> ?x <classificationProperty> <sourceClass> . ?x ?property ?y . } } } GROUP BY ?property", QueryType.LARGE
+    ),
+
+    FIND_INCOMING_PROPERTY_TRIPLE_COUNTS_FOR_CLASS_DISTINCT(
+            "SELECT ?property (COUNT(*) AS ?instances) WHERE { { SELECT DISTINCT ?x ?property ?y WHERE { <propertyValuesClause> ?x <classificationProperty> <targetClass> . ?y ?property ?x . } } } GROUP BY ?property", QueryType.LARGE
+    ),
+
+    FIND_OUTGOING_PROPERTY_TRIPLE_COUNTS_FOR_CLASS_WITH_LIMITS_DISTINCT(
+            "SELECT ?property (COUNT(*) AS ?instances) WHERE { { SELECT DISTINCT ?x ?property ?y WHERE { <propertyValuesClause> { SELECT DISTINCT ?x WHERE { ?x <classificationProperty> <sourceClass> . } LIMIT <limit> } ?x ?property ?y . } } } GROUP BY ?property", QueryType.LARGE
+    ),
+
+    FIND_INCOMING_PROPERTY_TRIPLE_COUNTS_FOR_CLASS_WITH_LIMITS_DISTINCT(
+            "SELECT ?property (COUNT(*) AS ?instances) WHERE { { SELECT DISTINCT ?x ?property ?y WHERE { <propertyValuesClause> { SELECT DISTINCT ?x WHERE { ?x <classificationProperty> <targetClass> . } LIMIT <limit> } ?y ?property ?x . } } } GROUP BY ?property", QueryType.LARGE
+    ),
+
+    FIND_INSTANCE_OUTGOING_PROPERTIES(
+            "SELECT ?property (COUNT(*) AS ?instances) WHERE { <instanceValuesClause> <propertyValuesClause> ?x ?property ?y . } GROUP BY ?property", QueryType.SMALL
+    ),
+
+    FIND_INSTANCE_OUTGOING_PROPERTIES_DISTINCT(
+            "SELECT ?property (COUNT(*) AS ?instances) WHERE { { SELECT DISTINCT ?x ?property ?y WHERE { <instanceValuesClause> <propertyValuesClause> ?x ?property ?y . } } } GROUP BY ?property", QueryType.SMALL
+    ),
+
+    FIND_INSTANCE_INCOMING_PROPERTIES(
+            "SELECT ?property (COUNT(*) AS ?instances) WHERE { <instanceValuesClause> <propertyValuesClause> ?y ?property ?x . } GROUP BY ?property", QueryType.SMALL
+    ),
+
+    FIND_INSTANCE_INCOMING_PROPERTIES_DISTINCT(
+            "SELECT ?property (COUNT(*) AS ?instances) WHERE { { SELECT DISTINCT ?x ?property ?y WHERE { <instanceValuesClause> <propertyValuesClause> ?y ?property ?x . } } } GROUP BY ?property", QueryType.SMALL
+    ),
+
+    CHECK_PROPERTY_HAS_BLANK_SUBJECTS(
+            "SELECT (1 AS ?found) WHERE { ?x <property> ?y . FILTER(isBlank(?x)) } LIMIT 1", QueryType.SMALL
+    ),
+
+    CHECK_PROPERTY_HAS_BLANK_OBJECTS(
+            "SELECT (1 AS ?found) WHERE { ?y <property> ?x . FILTER(isBlank(?x)) } LIMIT 1", QueryType.SMALL
+    ),
+
+    CHECK_CLASS_HAS_BLANK_INSTANCES(
+            "SELECT (1 AS ?found) WHERE { ?x <classificationProperty> <class> . FILTER(isBlank(?x)) } LIMIT 1", QueryType.SMALL
     ),
 
     ENDPOINT_HEALTH_CHECK(

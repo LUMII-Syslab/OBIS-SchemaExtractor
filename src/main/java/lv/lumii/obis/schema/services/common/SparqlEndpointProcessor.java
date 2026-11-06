@@ -152,6 +152,7 @@ public class SparqlEndpointProcessor {
     }
 
     @Nonnull
+    // Execute the full query while routing normal server diagnostics through the builder's abbreviated instance representation.
     private QueryResponse read(@Nonnull SparqlEndpointConfig request, @Nonnull SparqlQueryBuilder queryBuilder, boolean withRetry) {
 
         String query = queryBuilder.build();
@@ -162,14 +163,15 @@ public class SparqlEndpointProcessor {
         }
 
         if (request.isEnableLogging()) {
-            log.info(queryBuilder.getQueryName() + (request.getTimeout() != null ? " (timeout: " + request.getTimeout() + "s)" : "") + "\n" + queryBuilder.getQueryString());
+            log.info(queryBuilder.getQueryName() + (request.getTimeout() != null ? " (timeout: " + request.getTimeout() + "s)" : "") + "\n" + queryBuilder.getQueryStringForLogging());
         }
 
-        return requestData(request, queryBuilder.getQueryName(), queryBuilder.getQueryString(), queryBuilder.getQueryType(), request.getTimeout(), 1, withRetry);
+        return requestData(request, queryBuilder.getQueryName(), queryBuilder.getQueryString(), queryBuilder.getQueryStringForLogging(), queryBuilder.getQueryType(), request.getTimeout(), 1, withRetry);
     }
 
     @Nonnull
-    private QueryResponse requestData(@Nonnull SparqlEndpointConfig request, @Nonnull String queryName, @Nonnull String sparqlQuery, @Nullable QueryType queryType,
+    // Discard incomplete result streams on failure and keep error and retry logs on the same abbreviated query representation.
+    private QueryResponse requestData(@Nonnull SparqlEndpointConfig request, @Nonnull String queryName, @Nonnull String sparqlQuery, String loggedQuery, @Nullable QueryType queryType,
                                       @Nullable Long timeout, int attempt, boolean withRetry) {
         LocalDateTime startTime = LocalDateTime.now();
         QueryResponse response = new QueryResponse();
@@ -190,25 +192,28 @@ public class SparqlEndpointProcessor {
                 }
             }
         } catch (Exception e) {
+            queryResults = null;
+            String loggedError = sparqlQuery.equals(loggedQuery) ? e.getMessage()
+                    : e instanceof QueryExceptionHTTP ? "HTTP " + ((QueryExceptionHTTP) e).getStatusCode() : e.getClass().getSimpleName();
             if (e instanceof QueryExceptionHTTP) {
                 response.setQueryResponseError(new QueryResponseError(((QueryExceptionHTTP) e).getStatusCode(), ((QueryExceptionHTTP) e).getResponseMessage()));
             } else {
                 response.setQueryResponseError(new QueryResponseError(500, e.getMessage()));
             }
             if (withRetry) {
-                log.error(String.format("SPARQL Endpoint Exception status '%s'. This was attempt number %d for the query %s", e.getMessage(), attempt, queryName));
-                log.error("\n" + sparqlQuery);
+                log.error(String.format("SPARQL Endpoint Exception status '%s'. This was attempt number %d for the query %s", loggedError, attempt, queryName));
+                log.error("\n" + loggedQuery);
                 if (attempt < RETRY_COUNT) {
                     log.warn(String.format("SPARQL queries encountered errors, running validation queries to check the endpoint availability - [ %s ]",
                             SchemaUtil.getEndpointLinkText(request.getEndpointUrl(), request.getGraphName())));
                     boolean endpointIsHealthyWithoutRetries = checkEndpointHealthAndStopExecutionOnError(request, true);
                     if (!endpointIsHealthyWithoutRetries || !QueryType.SMALL.equals(queryType)) {
-                        return requestData(request, queryName, sparqlQuery, queryType, timeout, ++attempt, withRetry);
+                        return requestData(request, queryName, sparqlQuery, loggedQuery, queryType, timeout, ++attempt, withRetry);
                     }
                 }
             } else {
-                log.error(String.format("SPARQL Endpoint Exception status '%s' for the query %s", e.getMessage(), queryName));
-                log.error("\n" + sparqlQuery);
+                log.error(String.format("SPARQL Endpoint Exception status '%s' for the query %s", loggedError, queryName));
+                log.error("\n" + loggedQuery);
             }
         } finally {
             queryExecutor.close();
@@ -339,7 +344,8 @@ public class SparqlEndpointProcessor {
             log.info(queryName + "\n" + sparqlQuery);
         }
 
-        return requestData(request, queryName, sparqlQuery, null, null, 1, true);
+        // Preserve legacy callers by using their unchanged query for both execution and diagnostics.
+        return requestData(request, queryName, sparqlQuery, sparqlQuery, null, null, 1, true);
     }
 
 }

@@ -52,6 +52,8 @@ public class SchemaExtractorRequestBuilder {
         requestDto.setCalculatePropertyPropertyRelations(request.getCalculatePropertyPropertyRelations());
         requestDto.setPropertyPropertyLinkCheckBackupMode(Enums.getIfPresent(SchemaExtractorRequestDto.PropertyRelationsCheckMode.class, request.getPropertyPropertyLinkCheckBackupMode().name()).orNull());
         requestDto.setCalculateSourceAndTargetPairs(request.getCalculateSourceAndTargetPairs());
+        // Carry the explicit refinement policy into extraction without changing other request defaults.
+        requestDto.setFineTuneTripleCounts(request.getFineTuneTripleCounts());
         requestDto.setCalculateDomainsAndRanges(request.getCalculateDomainsAndRanges());
         requestDto.setIncludeDistinctSubjectsAndObjects(Enums.getIfPresent(SchemaExtractorRequestDto.DistinctSubjectsAndObjectsMode.class, request.getIncludeDistinctSubjectsAndObjects().name()).orNull());
         requestDto.setComputeBlankNodeStatistics(Enums.getIfPresent(SchemaExtractorRequestDto.BlankNodeMode.class, request.getComputeBlankNodeStatistics().name()).orNull());

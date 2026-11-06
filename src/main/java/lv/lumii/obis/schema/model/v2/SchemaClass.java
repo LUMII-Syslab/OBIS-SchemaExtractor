@@ -39,6 +39,8 @@ public class SchemaClass extends SchemaElement {
 
     private Integer incomingPropertiesOK;
     private Integer outgoingPropertiesOK;
+    private Long outgoingLimit;
+    private Long incomingLimit;
 
     @JsonIgnore
     private Map<String, TripleCount> outgoingProperties;

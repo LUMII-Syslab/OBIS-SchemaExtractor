@@ -7,9 +7,12 @@ import lombok.Setter;
 @Getter
 public class SchemaExtractorMessage {
 
-    public enum MessageLevel {ERROR, WARNING, WARNING_HIGH, WARNING_LOW, INFO, OK}
+    public enum MessageLevel {ERROR, WARNING, WARNING_HIGH, WARNING_LOW, MESSAGE, NOTE, INFO, OK}
+
+    public enum FunctionalityType {Struct, Count}
 
     private MessageLevel messageLevel;
+    private FunctionalityType functionalityType;
     private String message;
     private String entity;
     private String relatedEntity;

@@ -72,6 +72,9 @@ public class SchemaExtractorRequestNew {
     @Schema(description = "Calculate pairs of source and target classes for properties (creates finer-grained schemas; used as a source of statistics in visual schema diagrams)", defaultValue = "true", requiredMode = Schema.RequiredMode.REQUIRED)
     private Boolean calculateSourceAndTargetPairs;
 
+    @Schema(description = "Refine existing class-property relation counts. All and CPRels enable refinement; None keeps recovered counts.", defaultValue = "None")
+    private SchemaExtractorRequestDto.FineTuneTripleCounts fineTuneTripleCounts;
+
     @Schema(description = "Calculate domain and range classes for properties (in the strict, ontological sense)", defaultValue = "true", requiredMode = Schema.RequiredMode.REQUIRED)
     private Boolean calculateDomainsAndRanges;
 
@@ -240,6 +243,12 @@ public class SchemaExtractorRequestNew {
             calculateInstanceNamespaces = InstanceNamespacesMode.no;
         }
         return calculateInstanceNamespaces;
+    }
+
+    @Nonnull
+    // Keep optional relation recounting disabled when callers omit the new parameter.
+    public SchemaExtractorRequestDto.FineTuneTripleCounts getFineTuneTripleCounts() {
+        return fineTuneTripleCounts == null ? SchemaExtractorRequestDto.FineTuneTripleCounts.None : fineTuneTripleCounts;
     }
 
     @Nonnull

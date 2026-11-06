@@ -50,6 +50,8 @@ public class SchemaExtractorRequestDto {
 
     public enum PropertyRelationsCheckMode {none, limits, limitsPlus, limitsPlusSimple, detailsBase, details}
 
+    public enum FineTuneTripleCounts {All, CPRels, None}
+
     public enum NoClassesLoggingOptions {yes, no, sourcesOnly}
 
     private String correlationId;
@@ -71,6 +73,7 @@ public class SchemaExtractorRequestDto {
     private ImportantIndexesMode calculateImportanceIndexes;
     private Boolean calculateClosedClassSets;
     private CalculatePropertyFeatureMode calculateCardinalities;
+    private FineTuneTripleCounts fineTuneTripleCounts;
     private CalculatePropertyFeatureMode calculateDataTypes;
     private Long sampleLimitForDataTypeCalculation;
 
@@ -134,6 +137,11 @@ public class SchemaExtractorRequestDto {
     private Boolean excludeMetaDomainClasses;
     @JsonIgnore
     private Boolean excludePropertiesWithoutClasses;
+
+    // Treat an omitted refinement policy consistently for configuration files and REST requests.
+    public FineTuneTripleCounts getFineTuneTripleCounts() {
+        return fineTuneTripleCounts == null ? FineTuneTripleCounts.None : fineTuneTripleCounts;
+    }
 
     public SchemaExtractorRequestDto(@Nonnull String correlationId) {
         this.correlationId = correlationId;

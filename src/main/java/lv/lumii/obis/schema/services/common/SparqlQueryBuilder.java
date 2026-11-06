@@ -11,6 +11,7 @@ import org.apache.jena.query.QueryFactory;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static lv.lumii.obis.schema.constants.SchemaConstants.SPARQL_QUERY_BINDING_NAME_DISTINCT;
@@ -24,6 +25,10 @@ public class SparqlQueryBuilder {
     private final SchemaExtractorQueries backupQuery;
     private String resultQuery;
     private Map<String, String> contextMap;
+    private String instanceValuesClause;
+    private String loggedInstanceValuesClause;
+    private int instanceCount;
+    private int shownInstanceCount;
 
     public SparqlQueryBuilder(@Nullable String query, @Nonnull SchemaExtractorQueries backupQuery) {
         this.query = query;
@@ -59,6 +64,26 @@ public class SparqlQueryBuilder {
         return this;
     }
 
+    // Keep full instance bindings for execution and attach bounded representations for every server-log path.
+    public SparqlQueryBuilder withInstanceValues(List<String> values) {
+        instanceCount = values.size();
+        shownInstanceCount = Math.min(instanceCount, instanceCount <= 10 ? 2 : 5);
+        instanceValuesClause = "VALUES ?x { " + String.join(" ", values) + " }";
+        loggedInstanceValuesClause = "VALUES ?x { " + String.join(" ", values.subList(0, shownInstanceCount)) + " }";
+        return withContextParam("<instanceValuesClause>", instanceValuesClause);
+    }
+
+    // Expose the abbreviated query separately so callers never execute the shortened diagnostic form.
+    public String getQueryStringForLogging() {
+        return forLogging(resultQuery);
+    }
+
+    // Abbreviate only registered instance clauses while preserving independent class and property scopes.
+    private String forLogging(String text) {
+        if (text == null || instanceValuesClause == null || shownInstanceCount == instanceCount) return text;
+        return text.replace(instanceValuesClause, loggedInstanceValuesClause)
+                + "\n[instance VALUES abbreviated: " + shownInstanceCount + " of " + instanceCount + " shown]";
+    }
     public String getQueryName() {
         return this.backupQuery.name();
     }
@@ -89,6 +114,7 @@ public class SparqlQueryBuilder {
     }
 
     @Nullable
+    // Retain the attempted query for diagnostics while preventing parser failures from logging complete instance lists.
     private String buildQuery(@Nullable String queryToBuild) {
         if (StringUtils.isEmpty(queryToBuild)) {
             return null;
@@ -97,12 +123,12 @@ public class SparqlQueryBuilder {
             for (String param : this.getContextMap().keySet()) {
                 queryToBuild = queryToBuild.replace(param, this.getContextMap().get(param));
             }
-            QueryFactory.create(queryToBuild);
             this.resultQuery = queryToBuild;
+            QueryFactory.create(queryToBuild);
             return this.resultQuery;
         } catch (QueryException e) {
             log.error(String.format("SPARQL query syntax or parsing exception for the query %s", this.backupQuery.name()));
-            log.error("\n" + queryToBuild);
+            log.error("\n" + forLogging(queryToBuild));
         }
         return null;
     }

@@ -774,33 +774,7 @@ public class SchemaExtractor {
             determinePropertyDataTripleCount(schema, property, request, totalCountOfProperties);
             determinePropertyType(property, request);
         }
-        // enrich property with detailed information
-        currentPropertyInd = 1;
-        for (Map.Entry<String, SchemaExtractorPropertyNodeInfo> entry : properties.entrySet()) {
-
-            SchemaExtractorPropertyNodeInfo property = entry.getValue();
-
-            log.info(request.getCorrelationId() + String.format(PROPERTY_PROCESSING, currentPropertyInd++, totalCountOfProperties, property.getPropertyName()));
-
-            boolean foundSources = determinePropertySourcesWithTripleCount(schema, property, request);
-            if (!foundSources) {
-                determinePropertySource(schema, property, properties, request);
-                determinePropertySourceTripleCount(schema, property, properties, request);
-            }
-            determinePropertySourceObjectTripleCount(schema, property, request, totalCountOfProperties);
-            determinePropertySourceDataTripleCount(schema, property, request, totalCountOfProperties);
-
-            if (calculateTargetClasses(request, property)) {
-                boolean foundTargets = determinePropertyTargetsWithTripleCount(schema, property, request);
-                if (!foundTargets) {
-                    determinePropertyTarget(schema, property, properties, request);
-                    determinePropertyTargetTripleCount(schema, property, properties, request);
-                }
-                if (isTrue(request.getCalculateSourceAndTargetPairs())) {
-                    determinePropertySourceTargetPairs(schema, property, request, totalCountOfProperties);
-                }
-            }
-
+        for (SchemaExtractorPropertyNodeInfo property : properties.values()) {
             if (isTrue(SchemaExtractorRequestDto.DistinctSubjectsAndObjectsMode.yes.equals(request.getIncludeDistinctSubjectsAndObjects()))
                     || isTrue(SchemaExtractorRequestDto.DistinctSubjectsAndObjectsMode.propertyLevel.equals(request.getIncludeDistinctSubjectsAndObjects()))) {
                 if (subjectsMap == null || subjectsMap.isEmpty()) {
@@ -814,11 +788,6 @@ public class SchemaExtractor {
                     property.setDistinctObjectsCount(objectsMap.get(property.getPropertyName()));
                 }
             }
-            if (isTrue(SchemaExtractorRequestDto.DistinctSubjectsAndObjectsMode.yes.equals(request.getIncludeDistinctSubjectsAndObjects()))) {
-                determineDistinctPropertySubjectsOnSourceClassLevel(schema, property, request);
-                determineDistinctPropertyObjectsOnTargetClassLevel(schema, property, request);
-            }
-
             if (isTrue(SchemaExtractorRequestDto.BlankNodeMode.full.equals(request.getComputeBlankNodeStatistics()))
                     && BooleanUtils.isNotFalse(schema.getHasBlankNodeSubjects())) {
                 if (blankNodeSubjects == null || blankNodeSubjects.isEmpty()) {
@@ -833,6 +802,33 @@ public class SchemaExtractor {
                 } else {
                     property.setBlankNodeObjects(blankNodeObjects.get(property.getPropertyName()));
                 }
+            }
+
+        }
+        // Initialize existing statistics before the ordered mapping passes and keep later enrichment on its usual DTO lists.
+        Map<SchemaClass, Boolean> classBlankChecks = new IdentityHashMap<>();
+        determinePropertySources(schema, properties, request, classBlankChecks);
+        Map<String, SchemaExtractorPropertyNodeInfo> targetProperties = new LinkedHashMap<>();
+        properties.forEach((name, property) -> {
+            if (calculateTargetClasses(request, property)) targetProperties.put(name, property);
+        });
+        determinePropertyTargets(schema, targetProperties, request, classBlankChecks);
+        // enrich property with detailed information
+        currentPropertyInd = 1;
+        for (Map.Entry<String, SchemaExtractorPropertyNodeInfo> entry : properties.entrySet()) {
+
+            SchemaExtractorPropertyNodeInfo property = entry.getValue();
+
+            log.info(request.getCorrelationId() + String.format(PROPERTY_PROCESSING, currentPropertyInd++, totalCountOfProperties, property.getPropertyName()));
+
+            determinePropertySourceObjectTripleCount(schema, property, request, totalCountOfProperties);
+            determinePropertySourceDataTripleCount(schema, property, request, totalCountOfProperties);
+            if (calculateTargetClasses(request, property) && isTrue(request.getCalculateSourceAndTargetPairs())) {
+                determinePropertySourceTargetPairs(schema, property, request, totalCountOfProperties);
+            }
+            if (isTrue(SchemaExtractorRequestDto.DistinctSubjectsAndObjectsMode.yes.equals(request.getIncludeDistinctSubjectsAndObjects()))) {
+                determineDistinctPropertySubjectsOnSourceClassLevel(schema, property, request);
+                determineDistinctPropertyObjectsOnTargetClassLevel(schema, property, request);
             }
 
             if (isTrue(request.getCalculateClosedClassSets())) {
@@ -969,405 +965,750 @@ public class SchemaExtractor {
         }
     }
 
-    protected boolean determinePropertySourcesWithTripleCount(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request) {
-        log.info(request.getCorrelationId() + " - determinePropertySourcesWithTripleCount [" + property.getPropertyName() + "]");
+    private static final long[] CLASS_PROPERTY_LIMITS = {1000, 3000, 10000, 100000, 1000000, 10000000};
+    private static final int CLASS_PROPERTY_INSTANCE_LIMIT = 1000;
+    private static final org.slf4j.Logger procedureDetailLog = org.slf4j.LoggerFactory.getLogger(SchemaExtractor.class.getName() + ".detail");
 
-        boolean found = false;
-        for (String classificationProperty : request.getMainClassificationProperties()) {
-            SchemaExtractorQueries query = selectQuery(request.getExactCountCalculations(), FIND_PROPERTY_SOURCES_WITH_TRIPLE_COUNT, FIND_PROPERTY_SOURCES_WITH_TRIPLE_COUNT_DISTINCT);
-            SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(query.name()), query)
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, classificationProperty)
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false);
-            QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
-            if (queryResponse.hasErrors()) {
-                schema.getMessages().add(new SchemaExtractorMessage(INFO, "Endpoint Error", property.getPropertyName(), null, query.name(), queryBuilder.getQueryString()));
-                continue;
-            } else {
-                property.setSourceClassesOK(5);
-            }
-            if (queryResponse.getResults().isEmpty()) {
-                if (SchemaExtractorRequestDto.NoClassesLoggingOptions.yes.equals(request.getLogNoClassesForProperty())
-                        || SchemaExtractorRequestDto.NoClassesLoggingOptions.sourcesOnly.equals(request.getLogNoClassesForProperty())) {
-                    schema.getMessages().add(new SchemaExtractorMessage(INFO, "No source class for a property", property.getPropertyName(),
-                            null, query.name(), queryBuilder.getQueryString()));
-                }
-                continue;
-            }
-            if (!queryResponse.getResults().isEmpty()) {
-                found = true;
-            }
-            for (QueryResult queryResult : queryResponse.getResults()) {
-                String className = queryResult.getValueFullName(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS);
-                if (StringUtils.isNotEmpty(className) && isNotExcludedResource(className, request.getExcludedNamespaces())) {
-                    SchemaClass schemaClass = findClass(schema.getClasses(), className);
-                    if (schemaClass != null && isNotFalse(schemaClass.getPropertiesInSchema())) {
-                        SchemaExtractorClassNodeInfo sourceClass = new SchemaExtractorClassNodeInfo(className, classificationProperty, schemaClass.getIsLiteral());
-                        sourceClass.setTripleCount(SchemaUtil.getLongValueFromString(queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT)));
-                        sourceClass.setTripleCountBase(null);
-                        property.getSourceClasses().add(sourceClass);
-                        if (schemaClass.getOutgoingPropertiesOK() == null) {
-                            schemaClass.setOutgoingPropertiesOK(5);
-                        }
-                    }
-                }
-            }
-        }
-        return found;
+    private static class InstanceQueryState {
+        boolean singletonReported;
     }
 
-    protected void determinePropertySource(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull Map<String, SchemaExtractorPropertyNodeInfo> properties,
-                                           @Nonnull SchemaExtractorRequestDto request) {
-        log.info(request.getCorrelationId() + " - determinePropertySource [" + property.getPropertyName() + "]");
+    private static final class ClassPropertyState extends InstanceQueryState {
+        boolean complete;
+        int failures;
+        // Use the same internal count-work marker for source and target contexts without exporting it.
+        int sourceClassCountsOK;
+        int missingCounts;
+        int pendingRefinements;
+    }
 
-        boolean hasErrors = false;
-        for (String classificationProperty : request.getMainClassificationProperties()) {
-            SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_PROPERTY_SOURCES_WITHOUT_TRIPLE_COUNT.name()), FIND_PROPERTY_SOURCES_WITHOUT_TRIPLE_COUNT)
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, classificationProperty)
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false);
-            QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
-            if (isFalse(hasErrors)) {
-                hasErrors = queryResponse.hasErrors();
-            }
-            for (QueryResult queryResult : queryResponse.getResults()) {
-                String className = queryResult.getValueFullName(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS);
-                if (StringUtils.isNotEmpty(className) && isNotExcludedResource(className, request.getExcludedNamespaces())) {
-                    SchemaClass schemaClass = findClass(schema.getClasses(), className);
-                    if (schemaClass != null && isNotFalse(schemaClass.getPropertiesInSchema())) {
-                        property.getSourceClasses().add(new SchemaExtractorClassNodeInfo(className, classificationProperty, schemaClass.getIsLiteral()));
-                        if (schemaClass.getOutgoingPropertiesOK() == null) {
-                            schemaClass.setOutgoingPropertiesOK(5);
-                        }
+    private static final class ClassPropertyContext {
+        Schema schema;
+        SchemaExtractorRequestDto request;
+        Map<String, SchemaExtractorPropertyNodeInfo> properties;
+        Map<String, SchemaExtractorPropertyNodeInfo> activeProperties;
+        boolean target;
+        final Map<SchemaClass, ClassPropertyState> classes = new LinkedHashMap<>();
+        final Map<String, Map<String, SchemaClass>> classIndex = new LinkedHashMap<>();
+        final Map<SchemaExtractorPropertyNodeInfo, ClassPropertyState> propertyStates = new IdentityHashMap<>();
+        Map<SchemaClass, Boolean> blankChecks;
+    }
+
+    private static final class InstanceBatchResult<K> {
+        final Map<K, Long> counts = new LinkedHashMap<>();
+        final BitSet covered = new BitSet();
+    }
+
+    // Run the revised source passes in this extractor while sharing blank-presence observations with target extraction.
+    protected void determinePropertySources(Schema schema, Map<String, SchemaExtractorPropertyNodeInfo> properties,
+                                            SchemaExtractorRequestDto request, Map<SchemaClass, Boolean> blankChecks) {
+        determineClassPropertyMappings(schema, properties, request, false, blankChecks);
+    }
+
+    // Apply the same execution and count policies to the target direction without duplicating the extraction algorithm.
+    protected void determinePropertyTargets(Schema schema, Map<String, SchemaExtractorPropertyNodeInfo> properties,
+                                            SchemaExtractorRequestDto request, Map<SchemaClass, Boolean> blankChecks) {
+        determineClassPropertyMappings(schema, properties, request, true, blankChecks);
+    }
+
+    // Keep mapping state request-local and store only correspondences that have actually been discovered.
+    private void determineClassPropertyMappings(Schema schema, Map<String, SchemaExtractorPropertyNodeInfo> properties,
+                                               SchemaExtractorRequestDto request, boolean target, Map<SchemaClass, Boolean> blankChecks) {
+        ClassPropertyContext context = new ClassPropertyContext();
+        context.schema = schema;
+        context.request = request;
+        context.properties = properties;
+        context.target = target;
+        context.blankChecks = blankChecks;
+        properties.values().forEach(property -> context.propertyStates.put(property, new ClassPropertyState()));
+        for (SchemaClass clazz : schema.getClasses()) {
+            if (isNotFalse(clazz.getPropertiesInSchema()) && request.getMainClassificationProperties().contains(clazz.getClassificationProperty())) {
+                context.classes.put(clazz, new ClassPropertyState());
+                context.classIndex.computeIfAbsent(clazz.getClassificationProperty(), key -> new LinkedHashMap<>()).put(clazz.getFullName(), clazz);
+                classPropertyLinks(context, clazz).forEach((name, count) -> {
+                    SchemaExtractorPropertyNodeInfo property = properties.get(name);
+                    if (property != null) {
+                        ClassPropertyState state = context.propertyStates.get(property);
+                        if (count.getTripleCount() == null) state.missingCounts++;
+                        if (count.isCountNeedsRefinement()) state.pendingRefinements++;
                     }
-                }
+                });
             }
         }
-        if (isFalse(hasErrors)) {
-            property.setSourceClassesOK(5);
-        } else if (!property.getSourceClasses().isEmpty()) {
-            property.setSourceClassesOK(3);
+        if (target) directTargetClassCheckForProperties(context);
+        else directSourceClassCheckForProperties(context);
+        if (properties.values().stream().allMatch(property -> classPropertyHandled(context, property))) {
+            context.classes.forEach((clazz, state) -> { state.complete = true; classPropertyClassQuality(context, clazz, 7); });
+            publishClassPropertyMappings(context);
+            return;
         }
-        if (hasErrors && property.getSourceClasses().isEmpty()) {
-            AtomicBoolean hasAtLeastOneError = new AtomicBoolean(false);
-            AtomicBoolean hasAtLeastOneResult = new AtomicBoolean(false);
-            schema.getClasses().forEach(potentialSource -> {
-                if (isNotFalse(potentialSource.getPropertiesInSchema())) {
-                    if (potentialSource.getOutgoingProperties().containsKey(property.getPropertyName())) {
-                        hasAtLeastOneResult.set(true);
-                        TripleCount tripleCountObject = potentialSource.getOutgoingProperties().get(property.getPropertyName());
-                        if (tripleCountObject != null) {
-                            SchemaExtractorClassNodeInfo newSourceClass = new SchemaExtractorClassNodeInfo(potentialSource.getFullName(), tripleCountObject.getTripleCount(),
-                                    potentialSource.getClassificationProperty(), potentialSource.getIsLiteral());
-                            newSourceClass.setTripleCountBase(tripleCountObject.getTripleCountBase());
-                            property.getSourceClasses().add(newSourceClass);
-                            if (potentialSource.getOutgoingPropertiesOK() == null) {
-                                potentialSource.setOutgoingPropertiesOK(5);
-                            }
-                        }
-                    } else if (isNotTrue(potentialSource.getOutgoingPropertiesFullList())) {
-                        SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_CLASS_AS_PROPERTY_SOURCE.name()), CHECK_CLASS_AS_PROPERTY_SOURCE)
-                                .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL, potentialSource.getFullName(), potentialSource.getIsLiteral())
-                                .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, potentialSource.getClassificationProperty())
-                                .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false);
-                        QueryResponse checkSourceQueryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
-                        if (!checkSourceQueryResponse.hasErrors() && !checkSourceQueryResponse.getResults().isEmpty()) {
-                            hasAtLeastOneResult.set(true);
-                            property.getSourceClasses().add(new SchemaExtractorClassNodeInfo(potentialSource.getFullName(), potentialSource.getClassificationProperty(), potentialSource.getIsLiteral()));
-                            if (potentialSource.getOutgoingPropertiesOK() == null) {
-                                potentialSource.setOutgoingPropertiesOK(5);
-                            }
-                        } else if (checkSourceQueryResponse.hasErrors()) {
-                            schema.getMessages().add(new SchemaExtractorMessage(WARNING, property.getPropertyName(), CHECK_CLASS_AS_PROPERTY_SOURCE.name(), queryBuilder.getQueryString()));
-                            if (potentialSource.getOutgoingPropertiesFullList() == null) {
-                                boolean foundOutgoingProperties = determineClassOutgoingProperties(schema, potentialSource, properties, request);
-                                if (!foundOutgoingProperties) {
-                                    hasAtLeastOneError.set(true);
-                                    potentialSource.setOutgoingPropertiesOK(3);
-                                } else {
-                                    if (potentialSource.getOutgoingProperties().containsKey(property.getPropertyName())) {
-                                        hasAtLeastOneResult.set(true);
-                                        TripleCount tripleCountObject = potentialSource.getOutgoingProperties().get(property.getPropertyName());
-                                        if (tripleCountObject != null) {
-                                            SchemaExtractorClassNodeInfo newSourceClass = new SchemaExtractorClassNodeInfo(potentialSource.getFullName(), tripleCountObject.getTripleCount(),
-                                                    potentialSource.getClassificationProperty(), potentialSource.getIsLiteral());
-                                            newSourceClass.setTripleCountBase(tripleCountObject.getTripleCountBase());
-                                            property.getSourceClasses().add(newSourceClass);
-                                            if (potentialSource.getOutgoingPropertiesOK() == null) {
-                                                potentialSource.setOutgoingPropertiesOK(5);
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+        Map<String, SchemaExtractorPropertyNodeInfo> remaining = new LinkedHashMap<>();
+        properties.forEach((name, property) -> { if (!classPropertyHandled(context, property)) remaining.put(name, property); });
+        context.activeProperties = remaining.size() <= 10 ? remaining : properties;
+        if (target) checkIncomingPropertiesByClass(context);
+        else checkOutgoingPropertiesByClass(context);
+        if (context.classes.values().stream().allMatch(state -> state.complete)) {
+            properties.values().forEach(property -> {
+                context.propertyStates.get(property).complete = true;
+                context.propertyStates.get(property).sourceClassCountsOK = 3;
+                classPropertyPropertyQuality(context, property, 7);
             });
-            property.setSourceClassesOK(!hasAtLeastOneError.get() ? 5 : (hasAtLeastOneResult.get() ? 3 : 0));
+            publishClassPropertyMappings(context);
+            return;
+        }
+        boolean needsSampling = properties.values().stream().anyMatch(property -> classPropertyPropertyQuality(context, property) < 7
+                || context.propertyStates.get(property).sourceClassCountsOK < 2);
+        if (needsSampling) {
+            if (target) checkIncomingPropertiesByClassWithLimits(context);
+            else checkOutgoingPropertiesByClassWithLimits(context);
+        }
+        if (target) checkIndividualPropertyToClassPairs(context);
+        else checkIndividualClassToPropertyPairs(context);
+        setClassPropertyQualityMarks(context);
+        publishClassPropertyMappings(context);
+    }
+
+    // Complete the direct source pass for every property before starting class-centered recovery.
+    protected void directSourceClassCheckForProperties(ClassPropertyContext context) {
+        logClassPropertyProcedure(context, "directSourceClassCheckForProperties", null);
+        context.properties.values().forEach(property -> directSourceClassCheckForProperty(context, property));
+    }
+
+    // Complete the symmetric direct target pass before any incoming class recovery.
+    protected void directTargetClassCheckForProperties(ClassPropertyContext context) {
+        logClassPropertyProcedure(context, "directTargetClassCheckForProperties", null);
+        context.properties.values().forEach(property -> directTargetClassCheckForProperty(context, property));
+    }
+
+    // Log one source-property procedure start and delegate to the shared count and count-free stages.
+    protected void directSourceClassCheckForProperty(ClassPropertyContext context, SchemaExtractorPropertyNodeInfo property) {
+        logClassPropertyProcedure(context, "directSourceClassCheckForProperty", property.getPropertyName());
+        directClassCheckForProperty(context, property);
+    }
+
+    // Log the target-property start through the same file-only route used for sources.
+    protected void directTargetClassCheckForProperty(ClassPropertyContext context, SchemaExtractorPropertyNodeInfo property) {
+        logClassPropertyProcedure(context, "directTargetClassCheckForProperty", property.getPropertyName());
+        directClassCheckForProperty(context, property);
+    }
+
+    // Separate complete correspondence discovery from count completion and preserve quality seven during partial count recovery.
+    private void directClassCheckForProperty(ClassPropertyContext context, SchemaExtractorPropertyNodeInfo property) {
+        ClassPropertyState state = context.propertyStates.get(property);
+        Set<String> failedCounts = context.target ? determinePropertyTargetsWithTripleCount(context, property)
+                : determinePropertySourcesWithTripleCount(context, property);
+        if (failedCounts.isEmpty()) {
+            state.complete = true;
+            state.sourceClassCountsOK = 3;
+            classPropertyPropertyQuality(context, property, 7);
+            return;
+        }
+        Set<String> failedClasses = context.target ? determinePropertyTarget(context, property, failedCounts)
+                : determinePropertySource(context, property, failedCounts);
+        if (failedClasses.isEmpty()) {
+            state.complete = true;
+            classPropertyPropertyQuality(context, property, 7);
+        }
+        if (!smallClassPropertyEntity(classPropertySize(property, context.target)) || !noPropertyBlankNodes(context, property)) return;
+        List<String> instances = readClassPropertyInstances(context, property, null, 0);
+        if (instances == null || instances.size() > CLASS_PROPERTY_INSTANCE_LIMIT) return;
+        BitSet covered = new BitSet(instances.size());
+        covered.set(0, instances.size());
+        Map<SchemaClass, Long> counts = new LinkedHashMap<>();
+        for (String predicate : failedCounts) {
+            InstanceBatchResult<SchemaClass> result = new InstanceBatchResult<>();
+            SchemaExtractorQueries query = context.target
+                    ? selectQuery(context.request.getExactCountCalculations(), FIND_PROPERTY_TARGETS_WITH_TRIPLE_COUNT_FOR_INSTANCES, FIND_PROPERTY_TARGETS_WITH_TRIPLE_COUNT_FOR_INSTANCES_DISTINCT)
+                    : selectQuery(context.request.getExactCountCalculations(), FIND_PROPERTY_SOURCES_WITH_TRIPLE_COUNT_FOR_INSTANCES, FIND_PROPERTY_SOURCES_WITH_TRIPLE_COUNT_FOR_INSTANCES_DISTINCT);
+            executeInstanceBatches(context.schema, context.request, instances, 0, instances.size(), "class",
+                    () -> propertyClassQuery(context, property, predicate, query),
+                    row -> context.classIndex.get(predicate).get(row.getValueFullName("class")), result, state, property.getPropertyName());
+            covered.and(result.covered);
+            result.counts.forEach((clazz, count) -> counts.merge(clazz, count, Math::addExact));
+        }
+        int successful = covered.cardinality();
+        boolean complete = successful == instances.size();
+        boolean usableCounts = complete || (long) successful * 10 >= (long) instances.size() * 3;
+        counts.forEach((clazz, count) -> recordClassPropertyRelation(context, clazz, property,
+                usableCounts ? count : null, null, complete, !complete && usableCounts));
+        if (complete) {
+            state.complete = true;
+            state.sourceClassCountsOK = state.missingCounts == 0 ? 3 : 2;
+            classPropertyPropertyQuality(context, property, 7);
+        } else if (successful > 0) {
+            if (!state.complete) classPropertyPropertyQuality(context, property, usableCounts ? 5 : 1);
+            state.sourceClassCountsOK = usableCounts ? (fineTuneClassPropertyCounts(context) || state.missingCounts > 0 ? 2 : 3) : 0;
         }
     }
 
-    protected boolean determineClassOutgoingProperties(@Nonnull Schema schema, @Nonnull SchemaClass clazz, @Nonnull Map<String, SchemaExtractorPropertyNodeInfo> properties,
-                                                       @Nonnull SchemaExtractorRequestDto request) {
-        log.info(request.getCorrelationId() + " - determineClassOutgoingProperties [" + clazz.getFullName() + "]");
+    // Reuse the source-count stage while returning failed predicates instead of conflating success with a nonempty answer.
+    protected Set<String> determinePropertySourcesWithTripleCount(ClassPropertyContext context, SchemaExtractorPropertyNodeInfo property) {
+        return readDirectPropertyClasses(context, property, context.classIndex.keySet(), true);
+    }
 
-        SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_OUTGOING_PROPERTY_TRIPLE_COUNTS_FOR_CLASS.name()), FIND_OUTGOING_PROPERTY_TRIPLE_COUNTS_FOR_CLASS)
-                .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL, clazz.getFullName(), clazz.getIsLiteral())
-                .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, clazz.getClassificationProperty());
-        if (!request.getIncludedProperties().isEmpty()) {
-            if (!properties.keySet().isEmpty()) {
-                queryBuilder.withContextParam(SPARQL_QUERY_BINDING_NAME_VALUES, buildValuesClause(properties.keySet(), SPARQL_QUERY_BINDING_NAME_PROPERTY));
+    // Reuse the target-count stage with the same complete-empty and scoped-predicate semantics as sources.
+    protected Set<String> determinePropertyTargetsWithTripleCount(ClassPropertyContext context, SchemaExtractorPropertyNodeInfo property) {
+        return readDirectPropertyClasses(context, property, context.classIndex.keySet(), true);
+    }
+
+    // Keep count-free source discovery in its prescribed direct stage instead of executing nested fallback passes.
+    protected Set<String> determinePropertySource(ClassPropertyContext context, SchemaExtractorPropertyNodeInfo property, Set<String> predicates) {
+        return readDirectPropertyClasses(context, property, predicates, false);
+    }
+
+    // Keep count-free target discovery symmetric and retain any counts already obtained by successful predicates.
+    protected Set<String> determinePropertyTarget(ClassPropertyContext context, SchemaExtractorPropertyNodeInfo property, Set<String> predicates) {
+        return readDirectPropertyClasses(context, property, predicates, false);
+    }
+
+    // Apply a direct response only after validating it and report recoverable aggregate failures as INFO(Struct).
+    private Set<String> readDirectPropertyClasses(ClassPropertyContext context, SchemaExtractorPropertyNodeInfo property,
+                                                 Collection<String> predicates, boolean withCounts) {
+        Set<String> failed = new LinkedHashSet<>();
+        SchemaExtractorQueries name = withCounts ? (context.target
+                ? selectQuery(context.request.getExactCountCalculations(), FIND_PROPERTY_TARGETS_WITH_TRIPLE_COUNT, FIND_PROPERTY_TARGETS_WITH_TRIPLE_COUNT_DISTINCT)
+                : selectQuery(context.request.getExactCountCalculations(), FIND_PROPERTY_SOURCES_WITH_TRIPLE_COUNT, FIND_PROPERTY_SOURCES_WITH_TRIPLE_COUNT_DISTINCT))
+                : context.target ? FIND_PROPERTY_TARGETS_WITHOUT_TRIPLE_COUNT : FIND_PROPERTY_SOURCES_WITHOUT_TRIPLE_COUNT;
+        for (String predicate : predicates) {
+            SparqlQueryBuilder query = propertyClassQuery(context, property, predicate, name);
+            Map<SchemaClass, Long> counts = readGroupedCounts(sparqlEndpointProcessor.read(context.request, query), "class",
+                    row -> context.classIndex.get(predicate).get(row.getValueFullName("class")), withCounts);
+            if (counts == null) {
+                failed.add(predicate);
+                addExtractionMessage(context.schema, INFO, SchemaExtractorMessage.FunctionalityType.Struct, property.getPropertyName(), null, query);
+            } else {
+                counts.forEach((clazz, count) -> recordClassPropertyRelation(context, clazz, property, count, null, withCounts, false));
             }
+        }
+        return failed;
+    }
+
+    // Run full outgoing class attempts globally before considering LIMIT recovery.
+    protected void checkOutgoingPropertiesByClass(ClassPropertyContext context) {
+        logClassPropertyProcedure(context, "checkOutgoingPropertiesByClass", null);
+        context.classes.keySet().forEach(clazz -> checkOutgoingPropertiesForClass(context, clazz));
+    }
+
+    // Run the same full-class pass for incoming properties with its own procedure name.
+    protected void checkIncomingPropertiesByClass(ClassPropertyContext context) {
+        logClassPropertyProcedure(context, "checkIncomingPropertiesByClass", null);
+        context.classes.keySet().forEach(clazz -> checkIncomingPropertiesForClass(context, clazz));
+    }
+
+    // Keep per-class outgoing procedure starts out of the console while using the shared recovery policy.
+    protected void checkOutgoingPropertiesForClass(ClassPropertyContext context, SchemaClass clazz) {
+        logClassPropertyProcedure(context, "checkOutgoingPropertiesForClass", clazz.getFullName());
+        checkPropertiesForClass(context, clazz);
+    }
+
+    // Apply identical per-class recovery and logging to incoming properties.
+    protected void checkIncomingPropertiesForClass(ClassPropertyContext context, SchemaClass clazz) {
+        logClassPropertyProcedure(context, "checkIncomingPropertiesForClass", clazz.getFullName());
+        checkPropertiesForClass(context, clazz);
+    }
+
+    // Finish each full class attempt before later sampling passes and recover small classes through the shared batch executor.
+    private void checkPropertiesForClass(ClassPropertyContext context, SchemaClass clazz) {
+        Map<String, TripleCount> counts = context.target ? determineClassIncomingProperties(context, clazz, null)
+                : determineClassOutgoingProperties(context, clazz, null);
+        if (counts != null) {
+            counts.forEach((name, count) -> recordClassPropertyRelation(context, clazz, context.properties.get(name), count.getTripleCount(), null, true, false));
+            context.classes.get(clazz).complete = true;
+            classPropertyClassQuality(context, clazz, 7);
+            refreshClassPropertyCountMarks(context);
+            return;
+        }
+        if (!smallClassPropertyEntity(classPropertyClassSize(clazz)) || !noClassBlankNodes(context, clazz)) return;
+        List<String> instances = readClassPropertyInstances(context, null, clazz, 0);
+        if (instances == null || instances.size() > CLASS_PROPERTY_INSTANCE_LIMIT) return;
+        InstanceBatchResult<SchemaExtractorPropertyNodeInfo> result = executeClassInstanceBatches(context, clazz, instances);
+        boolean complete = result.covered.cardinality() == instances.size();
+        result.counts.forEach((property, count) -> recordClassPropertyRelation(context, clazz, property, count, null, complete, !complete));
+        if (complete) {
+            context.classes.get(clazz).complete = true;
+            classPropertyClassQuality(context, clazz, 7);
+        } else if (!result.covered.isEmpty()) {
+            classPropertyClassQuality(context, clazz, 5);
+        }
+        refreshClassPropertyCountMarks(context);
+    }
+
+    // Expose a single outgoing full or LIMIT attempt so its caller controls the global pass order.
+    protected Map<String, TripleCount> determineClassOutgoingProperties(ClassPropertyContext context, SchemaClass clazz, Long limit) {
+        return determineClassProperties(context, clazz, limit);
+    }
+
+    // Expose the corresponding incoming attempt with identical scope and failure handling.
+    protected Map<String, TripleCount> determineClassIncomingProperties(ClassPropertyContext context, SchemaClass clazz, Long limit) {
+        return determineClassProperties(context, clazz, limit);
+    }
+
+    // Reuse query selection and scoped VALUES for both full and sampled class responses.
+    private Map<String, TripleCount> determineClassProperties(ClassPropertyContext context, SchemaClass clazz, Long limit) {
+        SchemaExtractorQueries name = context.target
+                ? (limit == null ? selectQuery(context.request.getExactCountCalculations(), FIND_INCOMING_PROPERTY_TRIPLE_COUNTS_FOR_CLASS, FIND_INCOMING_PROPERTY_TRIPLE_COUNTS_FOR_CLASS_DISTINCT)
+                : selectQuery(context.request.getExactCountCalculations(), FIND_INCOMING_PROPERTY_TRIPLE_COUNTS_FOR_CLASS_WITH_LIMITS, FIND_INCOMING_PROPERTY_TRIPLE_COUNTS_FOR_CLASS_WITH_LIMITS_DISTINCT))
+                : (limit == null ? selectQuery(context.request.getExactCountCalculations(), FIND_OUTGOING_PROPERTY_TRIPLE_COUNTS_FOR_CLASS, FIND_OUTGOING_PROPERTY_TRIPLE_COUNTS_FOR_CLASS_DISTINCT)
+                : selectQuery(context.request.getExactCountCalculations(), FIND_OUTGOING_PROPERTY_TRIPLE_COUNTS_FOR_CLASS_WITH_LIMITS, FIND_OUTGOING_PROPERTY_TRIPLE_COUNTS_FOR_CLASS_WITH_LIMITS_DISTINCT));
+        SparqlQueryBuilder query = classPropertiesQuery(context, clazz, name);
+        if (limit != null) query.withContextParam(SPARQL_QUERY_BINDING_NAME_LIMIT, limit.toString());
+        QueryResponse response = sparqlEndpointProcessor.read(context.request, query);
+        Map<String, TripleCount> counts = context.target ? getClassIncomingProperties(context, response, limit) : getClassOutgoingProperties(context, response, limit);
+        if (counts == null && limit == null) addExtractionMessage(context.schema, INFO, SchemaExtractorMessage.FunctionalityType.Struct, clazz.getFullName(), null, query);
+        return counts;
+    }
+
+    // Share validated grouped-count conversion instead of maintaining a separate outgoing parser.
+    protected Map<String, TripleCount> getClassOutgoingProperties(ClassPropertyContext context, QueryResponse response, Long base) {
+        return getClassProperties(context, response, base);
+    }
+
+    // Use the same grouped-property parser for incoming results while preserving the supplied sample base.
+    protected Map<String, TripleCount> getClassIncomingProperties(ClassPropertyContext context, QueryResponse response, Long base) {
+        return getClassProperties(context, response, base);
+    }
+
+    // Resolve only considered properties and distinguish a valid empty group list from a malformed response.
+    private Map<String, TripleCount> getClassProperties(ClassPropertyContext context, QueryResponse response, Long base) {
+        Map<SchemaExtractorPropertyNodeInfo, Long> counts = readGroupedCounts(response, "property",
+                row -> context.activeProperties.get(row.getValue("property")), true);
+        if (counts == null) return null;
+        Map<String, TripleCount> result = new LinkedHashMap<>();
+        counts.forEach((property, count) -> result.put(property.getPropertyName(), new TripleCount(count, base)));
+        return result;
+    }
+
+    // Restrict the outgoing sampling pass to classes whose full discovery remains incomplete.
+    protected void checkOutgoingPropertiesByClassWithLimits(ClassPropertyContext context) {
+        logClassPropertyProcedure(context, "checkOutgoingPropertiesByClassWithLimits", null);
+        context.classes.forEach((clazz, state) -> { if (!state.complete) checkOutgoingPropertiesForClassWithLimits(context, clazz); });
+    }
+
+    // Apply the same incomplete-class selection to the incoming sampling pass.
+    protected void checkIncomingPropertiesByClassWithLimits(ClassPropertyContext context) {
+        logClassPropertyProcedure(context, "checkIncomingPropertiesByClassWithLimits", null);
+        context.classes.forEach((clazz, state) -> { if (!state.complete) checkIncomingPropertiesForClassWithLimits(context, clazz); });
+    }
+
+    // Give outgoing LIMIT recovery a file-only per-class start before shared sampling execution.
+    protected void checkOutgoingPropertiesForClassWithLimits(ClassPropertyContext context, SchemaClass clazz) {
+        logClassPropertyProcedure(context, "checkOutgoingPropertiesForClassWithLimits", clazz.getFullName());
+        checkPropertiesForClassWithLimits(context, clazz);
+    }
+
+    // Give incoming LIMIT recovery the symmetric per-class logging and sampling behavior.
+    protected void checkIncomingPropertiesForClassWithLimits(ClassPropertyContext context, SchemaClass clazz) {
+        logClassPropertyProcedure(context, "checkIncomingPropertiesForClassWithLimits", clazz.getFullName());
+        checkPropertiesForClassWithLimits(context, clazz);
+    }
+
+    // Retain discoveries across non-nested samples and back up failed or unavailable minimum limits with nonblank instances.
+    private void checkPropertiesForClassWithLimits(ClassPropertyContext context, SchemaClass clazz) {
+        Map<String, TripleCount> best = null;
+        Long bestLimit = null;
+        Long size = classPropertyClassSize(clazz);
+        for (long limit : CLASS_PROPERTY_LIMITS) {
+            if (size != null && size >= 0 && limit > size) break;
+            Map<String, TripleCount> counts = context.target ? determineClassIncomingProperties(context, clazz, limit)
+                    : determineClassOutgoingProperties(context, clazz, limit);
+            if (counts == null) break;
+            if (best == null) best = new LinkedHashMap<>();
+            best.putAll(counts);
+            bestLimit = limit;
+        }
+        if (best != null) {
+            best.forEach((name, count) -> recordClassPropertyRelation(context, clazz, context.properties.get(name), count.getTripleCount(), count.getTripleCountBase(), false, true));
+            setClassPropertyLimit(context, clazz, bestLimit);
+            if (classPropertyClassQuality(context, clazz) < 4) classPropertyClassQuality(context, clazz, 4);
         } else {
-            queryBuilder.withContextParam(SPARQL_QUERY_BINDING_NAME_VALUES, StringUtils.EMPTY);
-        }
-        QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
-        if (!queryResponse.hasErrors()) {
-            if (!queryResponse.getResults().isEmpty()) {
-                clazz.getOutgoingProperties().putAll(getClassOutgoingProperties(queryResponse.getResults(), schema, null, request));
-            } else {
-                schema.getMessages().add(new SchemaExtractorMessage(INFO, "The class does not have outgoing properties", clazz.getFullName(),
-                        null, FIND_OUTGOING_PROPERTY_TRIPLE_COUNTS_FOR_CLASS.name(), queryBuilder.getQueryString()));
-            }
-            clazz.setOutgoingPropertiesFullList(Boolean.TRUE);
-            return true;
-        } else {
-            schema.getMessages().add(new SchemaExtractorMessage(WARNING, clazz.getFullName(), FIND_OUTGOING_PROPERTY_TRIPLE_COUNTS_FOR_CLASS.name(), queryBuilder.getQueryString()));
-            boolean retry = true;
-            Long tripleCountLimit = null;
-            List<Long> largeLimits = Lists.reverse(limitsLarge);
-            Map<String, TripleCount> outgoingPropertiesWithLimits = null;
-            while (isTrue(retry)) {
-                Long finalTripleCountLimit = tripleCountLimit;
-                Long newLimit = largeLimits.stream()
-                        .filter(limit -> (finalTripleCountLimit == null || limit > finalTripleCountLimit) && (clazz.getInstanceCount() == null || limit <= clazz.getInstanceCount())).findFirst().orElse(null);
-                if (newLimit != null) {
-                    tripleCountLimit = newLimit;
-                    queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_OUTGOING_PROPERTY_TRIPLE_COUNTS_FOR_CLASS_WITH_LIMITS.name()), FIND_OUTGOING_PROPERTY_TRIPLE_COUNTS_FOR_CLASS_WITH_LIMITS)
-                            .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL, clazz.getFullName(), clazz.getIsLiteral())
-                            .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, clazz.getClassificationProperty())
-                            .withContextParam(SPARQL_QUERY_BINDING_NAME_LIMIT, tripleCountLimit.toString());
-                    if (!request.getIncludedProperties().isEmpty()) {
-                        if (!properties.keySet().isEmpty()) {
-                            queryBuilder.withContextParam(SPARQL_QUERY_BINDING_NAME_VALUES, buildValuesClause(properties.keySet(), SPARQL_QUERY_BINDING_NAME_PROPERTY));
-                        }
-                    } else {
-                        queryBuilder.withContextParam(SPARQL_QUERY_BINDING_NAME_VALUES, StringUtils.EMPTY);
-                    }
-                    QueryResponse queryResponseLimit = sparqlEndpointProcessor.read(request, queryBuilder);
-                    if (!queryResponseLimit.hasErrors()) {
-                        outgoingPropertiesWithLimits = getClassOutgoingProperties(queryResponseLimit.getResults(), schema, tripleCountLimit, request);
-                    } else {
-                        retry = false;
-                    }
-                } else {
-                    retry = false;
-                }
-            }
-            if (tripleCountLimit == null) {
-                clazz.setOutgoingPropertiesFullList(Boolean.FALSE);
-                return false;
-            }
-            if (outgoingPropertiesWithLimits == null) {
-                schema.getMessages().add(new SchemaExtractorMessage(WARNING, clazz.getFullName(), FIND_OUTGOING_PROPERTY_TRIPLE_COUNTS_FOR_CLASS_WITH_LIMITS.name(), queryBuilder.getQueryString()));
-                return false;
-            } else {
-                if (!outgoingPropertiesWithLimits.isEmpty()) {
-                    clazz.getOutgoingProperties().putAll(outgoingPropertiesWithLimits);
-                }
-                clazz.setOutgoingPropertiesFullList(Boolean.FALSE);
-                return true;
+            List<String> instances = readClassPropertyInstances(context, null, clazz, CLASS_PROPERTY_INSTANCE_LIMIT);
+            if (instances == null || instances.isEmpty()) return;
+            InstanceBatchResult<SchemaExtractorPropertyNodeInfo> result = executeClassInstanceBatches(context, clazz, instances);
+            int successful = result.covered.cardinality();
+            boolean enoughRetrieved = instances.size() >= 500 || size != null && size >= 0 && (long) instances.size() * 2 >= size;
+            boolean usableCounts = enoughRetrieved && (long) successful * 2 >= instances.size();
+            result.counts.forEach((property, count) -> recordClassPropertyRelation(context, clazz, property,
+                    usableCounts ? count : null, usableCounts ? (long) successful : null, false, usableCounts));
+            if (usableCounts) {
+                setClassPropertyLimit(context, clazz, (long) successful);
+                if (classPropertyClassQuality(context, clazz) < 4) classPropertyClassQuality(context, clazz, 4);
             }
         }
+        refreshClassPropertyCountMarks(context);
     }
 
-    @Nonnull
-    protected Map<String, TripleCount> getClassOutgoingProperties(@Nonnull List<QueryResult> queryResults, @Nonnull Schema schema,
-                                                                  @Nullable Long tripleCountBase, @Nonnull SchemaExtractorRequestDto request) {
-        Map<String, TripleCount> outgoingProperties = new HashMap<>();
-        for (QueryResult queryResult : queryResults) {
-            String propertyName = queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY);
-            if (!SchemaUtil.isValidURI(propertyName)) {
-                log.error(request.getCorrelationId() + " - invalid property URI will not be processed - " + propertyName);
-                schema.getMessages().add(new SchemaExtractorMessage(ERROR, "Invalid property URI returned from the endpoint", propertyName,
-                        null, INVALID_URI, null));
-                continue;
-            }
-            Long tripleCount = SchemaUtil.getLongValueFromString(queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
-            outgoingProperties.put(propertyName, new TripleCount(tripleCount, tripleCountBase));
-        }
-        return outgoingProperties;
+    // Start the final source correspondence/count pass after all class recovery options.
+    protected void checkIndividualClassToPropertyPairs(ClassPropertyContext context) {
+        logClassPropertyProcedure(context, "checkIndividualClassToPropertyPairs", null);
+        checkIndividualClassPropertyPairs(context);
     }
 
-    protected boolean determineClassIncomingProperties(@Nonnull Schema schema, @Nonnull SchemaClass clazz, @Nonnull Map<String, SchemaExtractorPropertyNodeInfo> properties,
-                                                       @Nonnull SchemaExtractorRequestDto request) {
-        log.info(request.getCorrelationId() + " - determineClassIncomingProperties [" + clazz.getFullName() + "]");
-
-        SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_INCOMING_PROPERTY_TRIPLE_COUNTS_FOR_CLASS.name()), FIND_INCOMING_PROPERTY_TRIPLE_COUNTS_FOR_CLASS)
-                .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_TARGET_FULL, clazz.getFullName(), clazz.getIsLiteral())
-                .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, clazz.getClassificationProperty());
-        if (!request.getIncludedProperties().isEmpty()) {
-            if (!properties.keySet().isEmpty()) {
-                queryBuilder.withContextParam(SPARQL_QUERY_BINDING_NAME_VALUES, buildValuesClause(properties.keySet(), SPARQL_QUERY_BINDING_NAME_PROPERTY));
-            }
-        } else {
-            queryBuilder.withContextParam(SPARQL_QUERY_BINDING_NAME_VALUES, StringUtils.EMPTY);
-        }
-        QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
-        if (!queryResponse.hasErrors()) {
-            if (!queryResponse.getResults().isEmpty()) {
-                clazz.getIncomingProperties().putAll(getClassIncomingProperties(queryResponse.getResults(), schema, null, request));
-            } else {
-                schema.getMessages().add(new SchemaExtractorMessage(INFO, "The class does not have incoming properties", clazz.getFullName(),
-                        null, FIND_INCOMING_PROPERTY_TRIPLE_COUNTS_FOR_CLASS.name(), queryBuilder.getQueryString()));
-            }
-            clazz.setIncomingPropertiesFullList(Boolean.TRUE);
-            return true;
-        } else {
-            schema.getMessages().add(new SchemaExtractorMessage(WARNING, clazz.getFullName(), FIND_INCOMING_PROPERTY_TRIPLE_COUNTS_FOR_CLASS.name(), queryBuilder.getQueryString()));
-            boolean retry = true;
-            Long tripleCountLimit = null;
-            List<Long> largeLimits = Lists.reverse(limitsLarge);
-            Map<String, TripleCount> incomingPropertiesWithLimits = null;
-            while (isTrue(retry)) {
-                Long finalTripleCountLimit = tripleCountLimit;
-                Long newLimit = largeLimits.stream()
-                        .filter(limit -> (finalTripleCountLimit == null || limit > finalTripleCountLimit) && (clazz.getInstanceCount() == null || limit <= clazz.getInstanceCount())).findFirst().orElse(null);
-                if (newLimit != null) {
-                    tripleCountLimit = newLimit;
-                    queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_INCOMING_PROPERTY_TRIPLE_COUNTS_FOR_CLASS_WITH_LIMITS.name()), FIND_INCOMING_PROPERTY_TRIPLE_COUNTS_FOR_CLASS_WITH_LIMITS)
-                            .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_TARGET_FULL, clazz.getFullName(), clazz.getIsLiteral())
-                            .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, clazz.getClassificationProperty())
-                            .withContextParam(SPARQL_QUERY_BINDING_NAME_LIMIT, tripleCountLimit.toString());
-                    if (!request.getIncludedProperties().isEmpty()) {
-                        if (!properties.keySet().isEmpty()) {
-                            queryBuilder.withContextParam(SPARQL_QUERY_BINDING_NAME_VALUES, buildValuesClause(properties.keySet(), SPARQL_QUERY_BINDING_NAME_PROPERTY));
-                        }
-                    } else {
-                        queryBuilder.withContextParam(SPARQL_QUERY_BINDING_NAME_VALUES, StringUtils.EMPTY);
-                    }
-                    QueryResponse queryResponseLimit = sparqlEndpointProcessor.read(request, queryBuilder);
-                    if (!queryResponseLimit.hasErrors()) {
-                        incomingPropertiesWithLimits = getClassIncomingProperties(queryResponseLimit.getResults(), schema, tripleCountLimit, request);
-                    } else {
-                        retry = false;
-                    }
-                } else {
-                    retry = false;
-                }
-            }
-            if (tripleCountLimit == null) {
-                clazz.setIncomingPropertiesFullList(Boolean.FALSE);
-                return false;
-            }
-            if (incomingPropertiesWithLimits == null) {
-                schema.getMessages().add(new SchemaExtractorMessage(WARNING, clazz.getFullName(), FIND_INCOMING_PROPERTY_TRIPLE_COUNTS_FOR_CLASS_WITH_LIMITS.name(), queryBuilder.getQueryString()));
-                return false;
-            } else {
-                if (!incomingPropertiesWithLimits.isEmpty()) {
-                    clazz.getIncomingProperties().putAll(incomingPropertiesWithLimits);
-                }
-                clazz.setIncomingPropertiesFullList(Boolean.FALSE);
-                return true;
-            }
-        }
+    // Start the symmetric target correspondence/count pass with the procedure name prescribed by the design.
+    protected void checkIndividualPropertyToClassPairs(ClassPropertyContext context) {
+        logClassPropertyProcedure(context, "checkIndividualPropertyToClassPairs", null);
+        checkIndividualClassPropertyPairs(context);
     }
 
-    @Nonnull
-    protected Map<String, TripleCount> getClassIncomingProperties(@Nonnull List<QueryResult> queryResults, @Nonnull Schema schema,
-                                                                  @Nullable Long tripleCountBase, @Nonnull SchemaExtractorRequestDto request) {
-        Map<String, TripleCount> incomingProperties = new HashMap<>();
-        for (QueryResult queryResult : queryResults) {
-            String propertyName = queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY);
-            if (!SchemaUtil.isValidURI(propertyName)) {
-                log.error(request.getCorrelationId() + " - invalid property URI will not be processed - " + propertyName);
-                schema.getMessages().add(new SchemaExtractorMessage(ERROR, "Invalid property URI returned from the endpoint", propertyName,
-                        null, INVALID_URI, null));
-                continue;
-            }
-            Long tripleCount = SchemaUtil.getLongValueFromString(queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
-            incomingProperties.put(propertyName, new TripleCount(tripleCount, tripleCountBase));
-        }
-        return incomingProperties;
-    }
-
-    protected void determinePropertySourceTripleCount(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property,
-                                                      @Nonnull Map<String, SchemaExtractorPropertyNodeInfo> properties, @Nonnull SchemaExtractorRequestDto request) {
-        log.info(request.getCorrelationId() + " - determineTripleCountForAllPropertySources[" + property.getPropertyName() + "]");
-
-        for (SchemaExtractorClassNodeInfo sourceClass : property.getSourceClasses()) {
-
-            if (sourceClass.getTripleCount() != null) continue;
-
-            SchemaExtractorQueries query = selectQuery(request.getExactCountCalculations(), FIND_PROPERTY_SOURCE_TRIPLE_COUNT, FIND_PROPERTY_SOURCE_TRIPLE_COUNT_DISTINCT);
-            SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(query.name()), query)
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL, sourceClass.getClassName(), sourceClass.getIsLiteral())
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, sourceClass.getClassificationProperty())
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false);
-            QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
-            if (!queryResponse.hasErrors()) {
-                for (QueryResult queryResult : queryResponse.getResults()) {
-                    if (queryResult != null) {
-                        sourceClass.setTripleCount(SchemaUtil.getLongValueFromString(queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT)));
-                        sourceClass.setTripleCountBase(null);
-                    }
-                }
-            } else {
-                schema.getMessages().add(new SchemaExtractorMessage(WARNING, property.getPropertyName(), query.name(), queryBuilder.getQueryString()));
-                boolean found = false;
-                for (Long limit : sampleLimits) {
-                    if (property.getTripleCount() == null || limit <= property.getTripleCount()) {
-                        found = determinePropertySourceTripleCountWithLimits(schema, property, sourceClass, request, limit);
-                        if (found) break;
-                    }
-                }
-                if (!found) {
-                    SchemaClass sourceClassWithoutTripleCount = findClass(schema.getClasses(), sourceClass.getClassName());
-                    if (sourceClassWithoutTripleCount == null) continue;
-                    if (sourceClassWithoutTripleCount.getOutgoingProperties().containsKey(property.getPropertyName())) {
-                        TripleCount tripleCountObject = sourceClassWithoutTripleCount.getOutgoingProperties().get(property.getPropertyName());
-                        if (tripleCountObject != null) {
-                            sourceClass.setTripleCount(tripleCountObject.getTripleCount());
-                            sourceClass.setTripleCountBase(tripleCountObject.getTripleCountBase());
-                        }
+    // Reuse positive evidence and complete positive sets before querying unknown pairs, without storing negative-pair tables.
+    private void checkIndividualClassPropertyPairs(ClassPropertyContext context) {
+        for (SchemaClass clazz : context.classes.keySet()) {
+            if (context.classes.get(clazz).complete) continue;
+            for (SchemaExtractorPropertyNodeInfo property : context.properties.values()) {
+                if (classPropertyHandled(context, property)) continue;
+                TripleCount relation = classPropertyLinks(context, clazz).get(property.getPropertyName());
+                if (relation == null) {
+                    if (context.propertyStates.get(property).complete) continue;
+                    SparqlQueryBuilder query = classPropertyPairQuery(context, clazz, property,
+                            context.target ? CHECK_CLASS_AS_PROPERTY_TARGET : CHECK_CLASS_AS_PROPERTY_SOURCE);
+                    QueryResponse response = sparqlEndpointProcessor.read(context.request, query);
+                    if (response.hasErrors()) {
+                        context.classes.get(clazz).failures++;
+                        context.propertyStates.get(property).failures++;
+                        addExtractionMessage(context.schema, WARNING, SchemaExtractorMessage.FunctionalityType.Struct, property.getPropertyName(), clazz.getFullName(), query);
                         continue;
                     }
-                    if (sourceClassWithoutTripleCount.getOutgoingPropertiesFullList() == null) {
-                        boolean foundOutgoingProperties = determineClassOutgoingProperties(schema, sourceClassWithoutTripleCount, properties, request);
-                        if (foundOutgoingProperties && sourceClassWithoutTripleCount.getOutgoingProperties().containsKey(property.getPropertyName())) {
-                            TripleCount tripleCountObject = sourceClassWithoutTripleCount.getOutgoingProperties().get(property.getPropertyName());
-                            if (tripleCountObject != null) {
-                                sourceClass.setTripleCount(tripleCountObject.getTripleCount());
-                                sourceClass.setTripleCountBase(tripleCountObject.getTripleCountBase());
-                            }
-                        }
-                    }
+                    if (response.getResults().isEmpty()) continue;
+                    relation = recordClassPropertyRelation(context, clazz, property, null, null, false, false);
+                }
+                if (relation.getTripleCount() == null || relation.isCountNeedsRefinement() && fineTuneClassPropertyCounts(context)) {
+                    boolean refinement = relation.getTripleCount() != null;
+                    if (context.target) determinePropertyTargetTripleCount(context, clazz, property, refinement);
+                    else determinePropertySourceTripleCount(context, clazz, property, refinement);
                 }
             }
         }
+        refreshClassPropertyCountMarks(context);
     }
 
-    protected boolean determinePropertySourceTripleCountWithLimits(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property,
-                                                                   @Nonnull SchemaExtractorClassNodeInfo sourceClass,
-                                                                   @Nonnull SchemaExtractorRequestDto request, Long limit) {
-        log.info(request.getCorrelationId() + " - determinePropertySourceTripleCountWithLimits[" + property.getPropertyName() + "]");
+    // Reuse full source counting with explicit mandatory-versus-refinement retention and message policies.
+    protected void determinePropertySourceTripleCount(ClassPropertyContext context, SchemaClass clazz, SchemaExtractorPropertyNodeInfo property, boolean refinement) {
+        determineClassPropertyTripleCount(context, clazz, property, refinement);
+    }
 
-        SchemaExtractorQueries query = selectQuery(request.getExactCountCalculations(), FIND_PROPERTY_SOURCE_TRIPLE_COUNT_WITH_LIMITS, FIND_PROPERTY_SOURCE_TRIPLE_COUNT_WITH_LIMITS_DISTINCT);
-        SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(query.name()), query)
-                .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL, sourceClass.getClassName(), sourceClass.getIsLiteral())
-                .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, sourceClass.getClassificationProperty())
-                .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false)
-                .withContextParam(SPARQL_QUERY_BINDING_NAME_LIMIT, limit.toString());
-        QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
-        if (queryResponse.hasErrors()) {
-            return false;
+    // Apply the same count policy to targets while counting distinct triples rather than distinct subjects alone.
+    protected void determinePropertyTargetTripleCount(ClassPropertyContext context, SchemaClass clazz, SchemaExtractorPropertyNodeInfo property, boolean refinement) {
+        determineClassPropertyTripleCount(context, clazz, property, refinement);
+    }
+
+    // Replace counts only after a valid full recount and preserve accepted count/base values when optional refinement fails.
+    private void determineClassPropertyTripleCount(ClassPropertyContext context, SchemaClass clazz, SchemaExtractorPropertyNodeInfo property, boolean refinement) {
+        SchemaExtractorQueries name = context.target
+                ? selectQuery(context.request.getExactCountCalculations(), FIND_PROPERTY_TARGET_TRIPLE_COUNT, FIND_PROPERTY_TARGET_TRIPLE_COUNT_DISTINCT)
+                : selectQuery(context.request.getExactCountCalculations(), FIND_PROPERTY_SOURCE_TRIPLE_COUNT, FIND_PROPERTY_SOURCE_TRIPLE_COUNT_DISTINCT);
+        SparqlQueryBuilder query = classPropertyPairQuery(context, clazz, property, name);
+        QueryResponse response = sparqlEndpointProcessor.read(context.request, query);
+        Long count = !response.hasErrors() && response.getResults().size() == 1 ? readNonNegativeCount(response.getResults().get(0).getValue("instances")) : null;
+        if (count != null) recordClassPropertyRelation(context, clazz, property, count, null, true, false);
+        else addExtractionMessage(context.schema, refinement ? MESSAGE : WARNING, SchemaExtractorMessage.FunctionalityType.Count, property.getPropertyName(), clazz.getFullName(), query);
+    }
+
+    // Share request-local coverage tracking while leaving completion thresholds and quality assignment with the caller.
+    private <K> void executeInstanceBatches(Schema schema, SchemaExtractorRequestDto request, List<String> instances, int start, int end, String binding,
+                                            java.util.function.Supplier<SparqlQueryBuilder> factory, java.util.function.Function<QueryResult, K> key,
+                                            InstanceBatchResult<K> result, InstanceQueryState state, String entity) {
+        if (start == end) return;
+        SparqlQueryBuilder query = factory.get().withInstanceValues(instances.subList(start, end));
+        Map<K, Long> counts = readGroupedCounts(sparqlEndpointProcessor.read(request, query), binding, key, true);
+        if (counts != null) {
+            counts.forEach((value, count) -> result.counts.merge(value, count, Math::addExact));
+            result.covered.set(start, end);
+            return;
         }
-        if (!queryResponse.getResults().isEmpty() && queryResponse.getResults().get(0) != null) {
-            QueryResult queryResult = queryResponse.getResults().get(0);
-            sourceClass.setTripleCount(SchemaUtil.getLongValueFromString(queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT)));
-            sourceClass.setTripleCountBase(limit);
-            schema.getMessages().add(new SchemaExtractorMessage(OK, property.getPropertyName(), query.name(), queryBuilder.getQueryString()));
+        int size = end - start;
+        if (size == 1) {
+            if (!state.singletonReported) {
+                addExtractionMessage(schema, MESSAGE, SchemaExtractorMessage.FunctionalityType.Struct, entity, null, query);
+                state.singletonReported = true;
+            }
+            return;
         }
-        return true;
+        int batchSize = size > 100 ? 100 : size > 10 ? 10 : 1;
+        for (int offset = start; offset < end; offset += batchSize) executeInstanceBatches(schema, request, instances, offset, Math.min(offset + batchSize, end), binding, factory, key, result, state, entity);
+    }
+
+    // Build class-instance batches with the same active property scope used by the aggregate and LIMIT queries.
+    private InstanceBatchResult<SchemaExtractorPropertyNodeInfo> executeClassInstanceBatches(ClassPropertyContext context, SchemaClass clazz, List<String> instances) {
+        SchemaExtractorQueries name = context.target
+                ? selectQuery(context.request.getExactCountCalculations(), FIND_INSTANCE_INCOMING_PROPERTIES, FIND_INSTANCE_INCOMING_PROPERTIES_DISTINCT)
+                : selectQuery(context.request.getExactCountCalculations(), FIND_INSTANCE_OUTGOING_PROPERTIES, FIND_INSTANCE_OUTGOING_PROPERTIES_DISTINCT);
+        InstanceBatchResult<SchemaExtractorPropertyNodeInfo> result = new InstanceBatchResult<>();
+        executeInstanceBatches(context.schema, context.request, instances, 0, instances.size(), "property", () -> classPropertiesQuery(context, clazz, name),
+                row -> context.activeProperties.get(row.getValue("property")), result, context.classes.get(clazz), clazz.getFullName());
+        return result;
+    }
+
+    // Parse grouped rows atomically so malformed counts never masquerade as zero or successful instance coverage.
+    private <K> Map<K, Long> readGroupedCounts(QueryResponse response, String binding, java.util.function.Function<QueryResult, K> key, boolean counted) {
+        if (response.hasErrors()) return null;
+        Map<K, Long> result = new LinkedHashMap<>();
+        for (QueryResult row : response.getResults()) {
+            if (row.getValue(binding) == null) return null;
+            K value = key.apply(row);
+            if (value == null) continue;
+            Long count = counted ? readNonNegativeCount(row.getValue("instances")) : null;
+            if (counted && count == null) return null;
+            if (!counted) result.put(value, null);
+            else if (count > 0) {
+                try { result.merge(value, count, Math::addExact); }
+                catch (ArithmeticException overflow) { return null; }
+            }
+        }
+        return result;
+    }
+
+    // Preserve the legacy global parser by using strict nonnegative parsing only for the new grouped/count paths.
+    private Long readNonNegativeCount(String value) {
+        try { long count = Long.parseLong(value); return count >= 0 ? count : null; }
+        catch (NumberFormatException failure) { return null; }
+    }
+
+    // Keep pair counts canonical in the existing sparse class maps and track pending count work with scalar property counters.
+    private TripleCount recordClassPropertyRelation(ClassPropertyContext context, SchemaClass clazz, SchemaExtractorPropertyNodeInfo property,
+                                                    Long count, Long base, boolean replace, boolean refine) {
+        ClassPropertyState state = context.propertyStates.get(property);
+        TripleCount relation = classPropertyLinks(context, clazz).get(property.getPropertyName());
+        if (relation == null) {
+            relation = new TripleCount(null, null);
+            classPropertyLinks(context, clazz).put(property.getPropertyName(), relation);
+            state.missingCounts++;
+        }
+        if (count != null && (replace || relation.getTripleCount() == null)) {
+            if (relation.getTripleCount() == null) state.missingCounts--;
+            relation.setTripleCount(count);
+            relation.setTripleCountBase(base);
+            if (replace && relation.isCountNeedsRefinement()) { relation.setCountNeedsRefinement(false); state.pendingRefinements--; }
+        }
+        if (refine && fineTuneClassPropertyCounts(context) && relation.getTripleCount() != null && !relation.isCountNeedsRefinement()) {
+            relation.setCountNeedsRefinement(true);
+            state.pendingRefinements++;
+        }
+        return relation;
+    }
+
+    // Recalculate count completion after later recovery while keeping structural completeness independent of count availability.
+    private void refreshClassPropertyCountMarks(ClassPropertyContext context) {
+        context.propertyStates.values().forEach(state -> state.sourceClassCountsOK = state.pendingRefinements > 0 ? 2 : state.missingCounts > 0
+                ? (state.sourceClassCountsOK >= 2 ? 2 : 0) : 3);
+    }
+
+    // Apply the agreed structural failure scale without downgrading quality five to limit-based quality four.
+    protected void setClassPropertyQualityMarks(ClassPropertyContext context) {
+        context.classes.forEach((clazz, state) -> {
+            if (state.failures == 0) { state.complete = true; classPropertyClassQuality(context, clazz, 7); }
+            else if (classPropertyClassQuality(context, clazz) < 3) classPropertyClassQuality(context, clazz, classPropertyFailureQuality(state.failures, context.properties.size()));
+        });
+        boolean allSampled = context.classes.keySet().stream().allMatch(clazz -> classPropertyClassQuality(context, clazz) >= 4);
+        context.propertyStates.forEach((property, state) -> {
+            int quality = state.failures == 0 ? 7 : allSampled ? 4 : classPropertyFailureQuality(state.failures, context.classes.size());
+            if (state.failures == 0) state.complete = true;
+            classPropertyPropertyQuality(context, property, Math.max(classPropertyPropertyQuality(context, property), quality));
+        });
+    }
+
+    // Calculate only the class-property individual-failure grades rather than imposing them on other extraction workflows.
+    static int classPropertyFailureQuality(int failures, int total) {
+        if ((long) failures * 10 < total || failures == 1 && total >= 5 || failures == 2 && total >= 10) return 2;
+        return (long) failures * 10 < (long) total * 3 ? 1 : 0;
+    }
+
+    // Publish canonical mappings once before existing source/target-dependent enrichment consumes its usual DTO lists.
+    private void publishClassPropertyMappings(ClassPropertyContext context) {
+        context.properties.values().forEach(property -> { if (context.target) property.getTargetClasses().clear(); else property.getSourceClasses().clear(); });
+        context.classes.forEach((clazz, state) -> {
+            if (context.target) clazz.setIncomingPropertiesFullList(state.complete); else clazz.setOutgoingPropertiesFullList(state.complete);
+            classPropertyLinks(context, clazz).forEach((name, count) -> {
+                SchemaExtractorPropertyNodeInfo property = context.properties.get(name);
+                if (property == null) return;
+                SchemaExtractorClassNodeInfo info = new SchemaExtractorClassNodeInfo(clazz.getFullName(), count.getTripleCount(), clazz.getClassificationProperty(), clazz.getIsLiteral());
+                info.setTripleCountBase(count.getTripleCountBase());
+                if (context.target) property.getTargetClasses().add(info); else property.getSourceClasses().add(info);
+            });
+        });
+        context.properties.values().forEach(property -> {
+            boolean enabled = context.request.getLogNoClassesForProperty() == SchemaExtractorRequestDto.NoClassesLoggingOptions.yes
+                    || !context.target && context.request.getLogNoClassesForProperty() == SchemaExtractorRequestDto.NoClassesLoggingOptions.sourcesOnly;
+            if (enabled && classPropertyPropertyQuality(context, property) == 7 && (context.target ? property.getTargetClasses() : property.getSourceClasses()).isEmpty()) {
+                SchemaExtractorMessage message = new SchemaExtractorMessage(INFO, context.target ? "No target class for a property" : "No source class for a property", property.getPropertyName(), null, null, null);
+                message.setFunctionalityType(SchemaExtractorMessage.FunctionalityType.Struct);
+                context.schema.getMessages().add(message);
+            }
+        });
+    }
+
+    // Reuse recorded blank-node statistics and issue a property existence probe only when presence is unknown.
+    private boolean noPropertyBlankNodes(ClassPropertyContext context, SchemaExtractorPropertyNodeInfo property) {
+        Long count = context.target ? property.getBlankNodeObjects() : property.getBlankNodeSubjects();
+        Boolean global = context.target ? context.schema.getHasBlankNodeObjects() : context.schema.getHasBlankNodeSubjects();
+        if (Boolean.FALSE.equals(global) || Long.valueOf(0).equals(count)) return true;
+        if (count != null && count > 0) return false;
+        SparqlQueryBuilder query = classPropertyQuery(context, context.target ? CHECK_PROPERTY_HAS_BLANK_OBJECTS : CHECK_PROPERTY_HAS_BLANK_SUBJECTS)
+                .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false);
+        QueryResponse response = sparqlEndpointProcessor.read(context.request, query);
+        return !response.hasErrors() && response.getResults().isEmpty();
+    }
+
+    // Share unknown class blank-presence observations between source and target directions without changing count statistics.
+    private boolean noClassBlankNodes(ClassPropertyContext context, SchemaClass clazz) {
+        if (Boolean.FALSE.equals(context.schema.getHasBlankNodeSubjects()) || Long.valueOf(0).equals(clazz.getBlankNodeCount())) return true;
+        if (clazz.getBlankNodeCount() != null && clazz.getBlankNodeCount() > 0) return false;
+        if (context.blankChecks.containsKey(clazz)) return Boolean.FALSE.equals(context.blankChecks.get(clazz));
+        SparqlQueryBuilder query = classPropertyQuery(context, CHECK_CLASS_HAS_BLANK_INSTANCES)
+                .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, clazz.getClassificationProperty())
+                .withContextParam("<class>", clazz.getFullName(), clazz.getIsLiteral());
+        QueryResponse response = sparqlEndpointProcessor.read(context.request, query);
+        context.blankChecks.put(clazz, response.hasErrors() ? null : !response.getResults().isEmpty());
+        return !response.hasErrors() && response.getResults().isEmpty();
+    }
+
+    // Read small blank-free entities without filters or limits and recover failed filtered samples by selecting nonblank terms locally.
+    private List<String> readClassPropertyInstances(ClassPropertyContext context, SchemaExtractorPropertyNodeInfo property, SchemaClass clazz, int limit) {
+        SchemaExtractorQueries name = clazz != null ? FIND_CLASS_INSTANCES : context.target ? FIND_PROPERTY_OBJECTS_INSTANCES : FIND_PROPERTY_SUBJECTS_INSTANCES;
+        boolean noBlankNodes = property != null || Boolean.FALSE.equals(context.schema.getHasBlankNodeSubjects())
+                || Long.valueOf(0).equals(clazz.getBlankNodeCount()) || Boolean.FALSE.equals(context.blankChecks.get(clazz));
+        int queryLimit = noBlankNodes && (property != null || smallClassPropertyEntity(classPropertyClassSize(clazz))) ? 0 : limit;
+        SparqlQueryBuilder query = classPropertyQuery(context, name)
+                .withContextParam("<instanceFilter>", noBlankNodes ? "" : "FILTER(isIRI(?x))")
+                .withContextParam("<limitClause>", queryLimit > 0 ? "LIMIT " + queryLimit : "");
+        if (property != null) query.withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false);
+        if (clazz != null) query.withContextParam("<class>", clazz.getFullName(), clazz.getIsLiteral())
+                .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, clazz.getClassificationProperty());
+        List<String> instances = readInstanceTerms(context.request, query, limit);
+        if (instances == null && !noBlankNodes) {
+            Long size = classPropertyClassSize(clazz);
+            query = classPropertyQuery(context, name)
+                    .withContextParam("<class>", clazz.getFullName(), clazz.getIsLiteral())
+                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, clazz.getClassificationProperty())
+                    .withContextParam("<instanceFilter>", "")
+                    .withContextParam("<limitClause>", size != null && size >= 0 && size < 2000 ? "" : "LIMIT 2000");
+            instances = readInstanceTerms(context.request, query, limit);
+        }
+        return instances;
+    }
+
+    // Skip literals and blank nodes, whose URI is null in shared query results, and retain at most the requested number of distinct IRIs.
+    private List<String> readInstanceTerms(SchemaExtractorRequestDto request, SparqlQueryBuilder query, int limit) {
+        QueryResponse response = sparqlEndpointProcessor.read(request, query);
+        if (response.hasErrors()) return null;
+        Set<String> instances = new LinkedHashSet<>();
+        for (QueryResult row : response.getResults()) {
+            if (row.getResultObject("x") == null) return null;
+            String value = row.getValueFullName("x");
+            if (value == null || Boolean.TRUE.equals(row.getResultObject("x").getIsLiteral()) || value.startsWith("_:")) continue;
+            instances.add(SchemaUtil.addAngleBracketsToString(value));
+            if (instances.size() == limit) break;
+        }
+        return new ArrayList<>(instances);
+    }
+
+    // Reuse existing template fallback and context binding for every class-property query.
+    private SparqlQueryBuilder classPropertyQuery(ClassPropertyContext context, SchemaExtractorQueries name) {
+        return new SparqlQueryBuilder(context.request.getQueries().get(name.name()), name);
+    }
+
+    // Attach class scope independently of instance bindings and retain literal class terms where configured.
+    private SparqlQueryBuilder propertyClassQuery(ClassPropertyContext context, SchemaExtractorPropertyNodeInfo property, String predicate, SchemaExtractorQueries name) {
+        String scope = "";
+        if (!context.request.getIncludedClasses().isEmpty()) {
+            List<String> terms = new ArrayList<>();
+            context.classIndex.get(predicate).values().forEach(clazz -> terms.add(Boolean.TRUE.equals(clazz.getIsLiteral()) ? clazz.getFullName() : SchemaUtil.addAngleBracketsToString(clazz.getFullName())));
+            scope = buildValuesClause(terms, "class", true);
+        }
+        return classPropertyQuery(context, name).withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false)
+                .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, predicate).withContextParam("<classValuesClause>", scope);
+    }
+
+    // Apply the residual-property clause as a restriction of the original scope for all subsequent class query forms.
+    private SparqlQueryBuilder classPropertiesQuery(ClassPropertyContext context, SchemaClass clazz, SchemaExtractorQueries name) {
+        SparqlQueryBuilder query = classPropertyQuery(context, name)
+                .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, clazz.getClassificationProperty())
+                .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL, clazz.getFullName(), clazz.getIsLiteral())
+                .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_TARGET_FULL, clazz.getFullName(), clazz.getIsLiteral());
+        Set<String> scope = context.activeProperties != context.properties || !context.request.getIncludedProperties().isEmpty() ? context.activeProperties.keySet() : null;
+        updateValueClause(query, scope, "<propertyValuesClause>", SPARQL_QUERY_BINDING_NAME_PROPERTY);
+        updateValueClause(query, scope, SPARQL_QUERY_BINDING_NAME_VALUES, SPARQL_QUERY_BINDING_NAME_PROPERTY);
+        return query;
+    }
+
+    // Bind an individual property without reintroducing a residual VALUES clause into pair queries.
+    private SparqlQueryBuilder classPropertyPairQuery(ClassPropertyContext context, SchemaClass clazz, SchemaExtractorPropertyNodeInfo property, SchemaExtractorQueries name) {
+        return classPropertyQuery(context, name).withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, clazz.getClassificationProperty())
+                .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL, clazz.getFullName(), clazz.getIsLiteral())
+                .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_TARGET_FULL, clazz.getFullName(), clazz.getIsLiteral())
+                .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false);
+    }
+
+    // Centralize typed diagnostics while retaining existing schema-level message flag behavior.
+    private void addExtractionMessage(Schema schema, SchemaExtractorMessage.MessageLevel level, SchemaExtractorMessage.FunctionalityType type,
+                                      String entity, String related, SparqlQueryBuilder query) {
+        SchemaExtractorMessage message = new SchemaExtractorMessage(level, entity, query.getQueryName(), query.getQueryString());
+        message.setFunctionalityType(type);
+        message.setRelatedEntity(related);
+        schema.getMessages().add(message);
+    }
+
+    // Send per-entity starts only to the detail logger while top-level procedure starts retain console and file logging.
+    private void logClassPropertyProcedure(ClassPropertyContext context, String procedure, String entity) {
+        String text = context.request.getCorrelationId() + " - " + procedure + (entity == null ? "" : " [" + entity + "]");
+        if (entity == null) log.info(text); else procedureDetailLog.info(text);
+    }
+
+    // Select the existing sparse relation map without constructing a class-by-property matrix.
+    private Map<String, TripleCount> classPropertyLinks(ClassPropertyContext context, SchemaClass clazz) {
+        return context.target ? clazz.getIncomingProperties() : clazz.getOutgoingProperties();
+    }
+
+    // Require both complete correspondence discovery and completed count work before skipping a property.
+    private boolean classPropertyHandled(ClassPropertyContext context, SchemaExtractorPropertyNodeInfo property) {
+        return context.propertyStates.get(property).complete && context.propertyStates.get(property).sourceClassCountsOK == 3;
+    }
+
+    // Apply both supported refinement settings to class-property counts while preserving the None default.
+    private boolean fineTuneClassPropertyCounts(ClassPropertyContext context) {
+        return context.request.getFineTuneTripleCounts() != SchemaExtractorRequestDto.FineTuneTripleCounts.None;
+    }
+
+    // Read the direction-specific property marker with zero as its initial quality.
+    private int classPropertyPropertyQuality(ClassPropertyContext context, SchemaExtractorPropertyNodeInfo property) {
+        Integer quality = context.target ? property.getTargetClassesOK() : property.getSourceClassesOK();
+        return quality == null ? 0 : quality;
+    }
+
+    // Update the appropriate source or target quality through the same shared workflow.
+    private void classPropertyPropertyQuality(ClassPropertyContext context, SchemaExtractorPropertyNodeInfo property, int quality) {
+        if (context.target) property.setTargetClassesOK(quality); else property.setSourceClassesOK(quality);
+    }
+
+    // Read the direction-specific class marker independently of its stored pair counts.
+    private int classPropertyClassQuality(ClassPropertyContext context, SchemaClass clazz) {
+        Integer quality = context.target ? clazz.getIncomingPropertiesOK() : clazz.getOutgoingPropertiesOK();
+        return quality == null ? 0 : quality;
+    }
+
+    // Apply identical quality rules to outgoing and incoming class discovery.
+    private void classPropertyClassQuality(ClassPropertyContext context, SchemaClass clazz, int quality) {
+        if (context.target) clazz.setIncomingPropertiesOK(quality); else clazz.setOutgoingPropertiesOK(quality);
+    }
+
+    // Record the successful LIMIT or actual successful-instance base for the selected direction.
+    private void setClassPropertyLimit(ClassPropertyContext context, SchemaClass clazz, Long limit) {
+        if (context.target) clazz.setIncomingLimit(limit); else clazz.setOutgoingLimit(limit);
+    }
+
+    // Prefer recorded distinct subjects or objects before using the property's triple-count bound.
+    private Long classPropertySize(SchemaExtractorPropertyNodeInfo property, boolean target) {
+        Long distinct = target ? property.getDistinctObjectsCount() : property.getDistinctSubjectsCount();
+        return distinct != null && distinct >= 0 ? distinct : property.getTripleCount();
+    }
+
+    // Prefer the recorded distinct class size without issuing another counting query.
+    private Long classPropertyClassSize(SchemaClass clazz) {
+        Long distinct = clazz.getDistinctInstances();
+        return distinct != null && distinct >= 0 ? distinct : clazz.getInstanceCount();
+    }
+
+    // Include exactly one thousand instances as required by the revised class-property specification.
+    private boolean smallClassPropertyEntity(Long size) {
+        return size != null && size >= 0 && size <= CLASS_PROPERTY_INSTANCE_LIMIT;
     }
 
     protected boolean determineObjectTripleCountForAllPropertySources(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties) {
@@ -1508,221 +1849,6 @@ public class SchemaExtractor {
                 }
             }
         });
-    }
-
-    protected boolean determinePropertyTargetsWithTripleCount(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request) {
-        log.info(request.getCorrelationId() + " - determinePropertyTargetsWithTripleCount [" + property.getPropertyName() + "]");
-
-        boolean found = false;
-        for (String classificationProperty : request.getMainClassificationProperties()) {
-            SchemaExtractorQueries query = selectQuery(request.getExactCountCalculations(), FIND_PROPERTY_TARGETS_WITH_TRIPLE_COUNT, FIND_PROPERTY_TARGETS_WITH_TRIPLE_COUNT_DISTINCT);
-            SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(query.name()), query)
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, classificationProperty)
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false);
-            QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
-            if (queryResponse.hasErrors()) {
-                schema.getMessages().add(new SchemaExtractorMessage(INFO, "Endpoint Error", property.getPropertyName(), null, query.name(), queryBuilder.getQueryString()));
-                continue;
-            } else {
-                property.setTargetClassesOK(5);
-            }
-            if (queryResponse.getResults().isEmpty()) {
-                if (SchemaExtractorRequestDto.NoClassesLoggingOptions.yes.equals(request.getLogNoClassesForProperty())) {
-                    schema.getMessages().add(new SchemaExtractorMessage(INFO, "No target class for a property", property.getPropertyName(), null, query.name(), queryBuilder.getQueryString()));
-                }
-                continue;
-            }
-            if (!queryResponse.getResults().isEmpty()) {
-                found = true;
-            }
-            for (QueryResult queryResult : queryResponse.getResults()) {
-                String className = queryResult.getValueFullName(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS);
-                if (StringUtils.isNotEmpty(className) && isNotExcludedResource(className, request.getExcludedNamespaces())) {
-                    SchemaClass schemaClass = findClass(schema.getClasses(), className);
-                    if (schemaClass != null && isNotFalse(schemaClass.getPropertiesInSchema())) {
-                        SchemaExtractorClassNodeInfo targetClass = new SchemaExtractorClassNodeInfo(className, classificationProperty, schemaClass.getIsLiteral());
-                        targetClass.setTripleCount(SchemaUtil.getLongValueFromString(queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT)));
-                        targetClass.setTripleCountBase(null);
-                        property.getTargetClasses().add(targetClass);
-                        if (schemaClass.getIncomingPropertiesOK() == null) {
-                            schemaClass.setIncomingPropertiesOK(5);
-                        }
-                    }
-                }
-            }
-        }
-        return found;
-    }
-
-    protected void determinePropertyTarget(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property,
-                                           @Nonnull Map<String, SchemaExtractorPropertyNodeInfo> properties, @Nonnull SchemaExtractorRequestDto request) {
-        log.info(request.getCorrelationId() + " - determinePropertyTargets [" + property.getPropertyName() + "]");
-
-        boolean hasErrors = false;
-        for (String classificationProperty : request.getMainClassificationProperties()) {
-            SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_PROPERTY_TARGETS_WITHOUT_TRIPLE_COUNT.name()), FIND_PROPERTY_TARGETS_WITHOUT_TRIPLE_COUNT)
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, classificationProperty)
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false);
-            QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
-            if (isFalse(hasErrors)) {
-                hasErrors = queryResponse.hasErrors();
-            }
-            for (QueryResult queryResult : queryResponse.getResults()) {
-                String className = queryResult.getValueFullName(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS);
-                if (StringUtils.isNotEmpty(className) && isNotExcludedResource(className, request.getExcludedNamespaces())) {
-                    SchemaClass schemaClass = findClass(schema.getClasses(), className);
-                    if (schemaClass != null && isNotFalse(schemaClass.getPropertiesInSchema())) {
-                        property.getTargetClasses().add(new SchemaExtractorClassNodeInfo(className, classificationProperty, schemaClass.getIsLiteral()));
-                        if (schemaClass.getIncomingPropertiesOK() == null) {
-                            schemaClass.setIncomingPropertiesOK(5);
-                        }
-                    }
-                }
-            }
-        }
-        if (isFalse(hasErrors)) {
-            property.setTargetClassesOK(5);
-        } else if (!property.getTargetClasses().isEmpty()) {
-            property.setTargetClassesOK(3);
-        }
-        if (hasErrors && property.getTargetClasses().isEmpty()) {
-            AtomicBoolean hasAtLeastOneError = new AtomicBoolean(false);
-            AtomicBoolean hasAtLeastOneResult = new AtomicBoolean(false);
-            schema.getClasses().forEach(potentialTarget -> {
-                if (isNotFalse(potentialTarget.getPropertiesInSchema())) {
-                    if (potentialTarget.getIncomingProperties().containsKey(property.getPropertyName())) {
-                        hasAtLeastOneResult.set(true);
-                        TripleCount tripleCountObject = potentialTarget.getIncomingProperties().get(property.getPropertyName());
-                        if (tripleCountObject != null) {
-                            SchemaExtractorClassNodeInfo newTargetClass = new SchemaExtractorClassNodeInfo(potentialTarget.getFullName(), tripleCountObject.getTripleCount(),
-                                    potentialTarget.getClassificationProperty(), potentialTarget.getIsLiteral());
-                            newTargetClass.setTripleCountBase(tripleCountObject.getTripleCountBase());
-                            property.getTargetClasses().add(newTargetClass);
-                            if (potentialTarget.getIncomingPropertiesOK() == null) {
-                                potentialTarget.setIncomingPropertiesOK(5);
-                            }
-                        }
-                    } else if (isNotTrue(potentialTarget.getIncomingPropertiesFullList())) {
-                        SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_CLASS_AS_PROPERTY_TARGET.name()), CHECK_CLASS_AS_PROPERTY_TARGET)
-                                .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_TARGET_FULL, potentialTarget.getFullName(), potentialTarget.getIsLiteral())
-                                .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, potentialTarget.getClassificationProperty())
-                                .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false);
-                        QueryResponse checkTargetQueryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
-                        if (!checkTargetQueryResponse.hasErrors() && !checkTargetQueryResponse.getResults().isEmpty()) {
-                            hasAtLeastOneResult.set(true);
-                            property.getTargetClasses().add(new SchemaExtractorClassNodeInfo(potentialTarget.getFullName(), potentialTarget.getClassificationProperty(), potentialTarget.getIsLiteral()));
-                            if (potentialTarget.getIncomingPropertiesOK() == null) {
-                                potentialTarget.setIncomingPropertiesOK(5);
-                            }
-                        } else if (checkTargetQueryResponse.hasErrors()) {
-                            schema.getMessages().add(new SchemaExtractorMessage(WARNING, property.getPropertyName(), CHECK_CLASS_AS_PROPERTY_TARGET.name(), queryBuilder.getQueryString()));
-                            if (potentialTarget.getIncomingPropertiesFullList() == null) {
-                                boolean foundIncomingProperties = determineClassIncomingProperties(schema, potentialTarget, properties, request);
-                                if (!foundIncomingProperties) {
-                                    hasAtLeastOneError.set(true);
-                                    potentialTarget.setIncomingPropertiesOK(3);
-                                } else {
-                                    if (potentialTarget.getIncomingProperties().containsKey(property.getPropertyName())) {
-                                        hasAtLeastOneResult.set(true);
-                                        TripleCount tripleCountObject = potentialTarget.getIncomingProperties().get(property.getPropertyName());
-                                        if (tripleCountObject != null) {
-                                            SchemaExtractorClassNodeInfo newTargetClass = new SchemaExtractorClassNodeInfo(potentialTarget.getFullName(), tripleCountObject.getTripleCount(),
-                                                    potentialTarget.getClassificationProperty(), potentialTarget.getIsLiteral());
-                                            newTargetClass.setTripleCountBase(tripleCountObject.getTripleCountBase());
-                                            property.getTargetClasses().add(newTargetClass);
-                                            if (potentialTarget.getIncomingPropertiesOK() == null) {
-                                                potentialTarget.setIncomingPropertiesOK(5);
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            });
-            property.setTargetClassesOK(!hasAtLeastOneError.get() ? 5 : (hasAtLeastOneResult.get() ? 3 : 0));
-        }
-    }
-
-    protected void determinePropertyTargetTripleCount(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property,
-                                                      @Nonnull Map<String, SchemaExtractorPropertyNodeInfo> properties, @Nonnull SchemaExtractorRequestDto request) {
-        log.info(request.getCorrelationId() + " - determineTripleCountForAllPropertyTargets [" + property.getPropertyName() + "]");
-
-        for (SchemaExtractorClassNodeInfo targetClass : property.getTargetClasses()) {
-
-            if (targetClass.getTripleCount() != null) continue;
-
-            SchemaExtractorQueries query = selectQuery(request.getExactCountCalculations(), FIND_PROPERTY_TARGET_TRIPLE_COUNT, FIND_PROPERTY_TARGET_TRIPLE_COUNT_DISTINCT);
-            SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(query.name()), query)
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_TARGET_FULL, targetClass.getClassName(), targetClass.getIsLiteral())
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, targetClass.getClassificationProperty())
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false);
-            QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
-            if (!queryResponse.hasErrors()) {
-                for (QueryResult queryResult : queryResponse.getResults()) {
-                    if (queryResult != null) {
-                        targetClass.setTripleCount(SchemaUtil.getLongValueFromString(queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT)));
-                        targetClass.setTripleCountBase(null);
-                    }
-                }
-            } else {
-                schema.getMessages().add(new SchemaExtractorMessage(WARNING, property.getPropertyName(), query.name(), queryBuilder.getQueryString()));
-                boolean found = false;
-                for (Long limit : sampleLimits) {
-                    if (property.getTripleCount() == null || limit <= property.getTripleCount()) {
-                        found = determinePropertyTargetTripleCountWithLimits(schema, property, targetClass, request, limit);
-                        if (found) break;
-                    }
-                }
-                if (!found) {
-                    SchemaClass targetClassWithoutTripleCount = findClass(schema.getClasses(), targetClass.getClassName());
-                    if (targetClassWithoutTripleCount == null) continue;
-                    if (targetClassWithoutTripleCount.getIncomingProperties().containsKey(property.getPropertyName())) {
-                        TripleCount tripleCountObject = targetClassWithoutTripleCount.getIncomingProperties().get(property.getPropertyName());
-                        if (tripleCountObject != null) {
-                            targetClass.setTripleCount(tripleCountObject.getTripleCount());
-                            targetClass.setTripleCountBase(tripleCountObject.getTripleCountBase());
-                        }
-                        continue;
-                    }
-                    if (targetClassWithoutTripleCount.getIncomingPropertiesFullList() == null) {
-                        boolean foundIncomingProperties = determineClassIncomingProperties(schema, targetClassWithoutTripleCount, properties, request);
-                        if (foundIncomingProperties && targetClassWithoutTripleCount.getIncomingProperties().containsKey(property.getPropertyName())) {
-                            TripleCount tripleCountObject = targetClassWithoutTripleCount.getIncomingProperties().get(property.getPropertyName());
-                            if (tripleCountObject != null) {
-                                targetClass.setTripleCount(tripleCountObject.getTripleCount());
-                                targetClass.setTripleCountBase(tripleCountObject.getTripleCountBase());
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    protected boolean determinePropertyTargetTripleCountWithLimits(@Nonnull Schema schema,
-                                                                   @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorClassNodeInfo targetClass,
-                                                                   @Nonnull SchemaExtractorRequestDto request, Long limit) {
-        log.info(request.getCorrelationId() + " - determinePropertyTargetTripleCountWithLimits[" + property.getPropertyName() + "]");
-
-        SchemaExtractorQueries query = selectQuery(request.getExactCountCalculations(), FIND_PROPERTY_TARGET_TRIPLE_COUNT_WITH_LIMITS, FIND_PROPERTY_TARGET_TRIPLE_COUNT_WITH_LIMITS_DISTINCT);
-        SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(query.name()), query)
-                .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_TARGET_FULL, targetClass.getClassName(), targetClass.getIsLiteral())
-                .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, targetClass.getClassificationProperty())
-                .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false)
-                .withContextParam(SPARQL_QUERY_BINDING_NAME_LIMIT, limit.toString());
-        QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
-        if (queryResponse.hasErrors()) {
-            return false;
-        }
-        if (!queryResponse.getResults().isEmpty() && queryResponse.getResults().get(0) != null) {
-            QueryResult queryResult = queryResponse.getResults().get(0);
-            targetClass.setTripleCount(SchemaUtil.getLongValueFromString(queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT)));
-            targetClass.setTripleCountBase(limit);
-            schema.getMessages().add(new SchemaExtractorMessage(OK, property.getPropertyName(), query.name(), queryBuilder.getQueryString()));
-        }
-        return true;
     }
 
     protected void determinePropertySourceTargetPairs(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties) {
@@ -2507,13 +2633,16 @@ public class SchemaExtractor {
         return 0;
     }
 
+    // Parameterize scope placement while preserving the existing property-relation defaults.
     private void updateValueClause(@Nonnull SchemaExtractorRequestDto request, @Nonnull Map<String, SchemaExtractorPropertyNodeInfo> properties,
                                    @Nonnull SparqlQueryBuilder queryBuilder) {
-        if (!request.getIncludedProperties().isEmpty() && !properties.keySet().isEmpty()) {
-            queryBuilder.withContextParam(SPARQL_QUERY_BINDING_NAME_VALUES, buildValuesClause(properties.keySet(), SPARQL_QUERY_BINDING_NAME_PROPERTY_OTHER));
-        } else {
-            queryBuilder.withContextParam(SPARQL_QUERY_BINDING_NAME_VALUES, StringUtils.EMPTY);
-        }
+        Set<String> scope = !request.getIncludedProperties().isEmpty() && !properties.isEmpty() ? properties.keySet() : null;
+        updateValueClause(queryBuilder, scope, SPARQL_QUERY_BINDING_NAME_VALUES, SPARQL_QUERY_BINDING_NAME_PROPERTY_OTHER);
+    }
+
+    // Distinguish an absent restriction from an explicitly empty scope for independent VALUES placeholders.
+    private void updateValueClause(SparqlQueryBuilder query, Set<String> scope, String placeholder, String variable) {
+        query.withContextParam(placeholder, scope == null ? StringUtils.EMPTY : buildValuesClause(scope, variable));
     }
 
     private void updatedRelatedProperties(@Nonnull SchemaExtractorRequestDto request, @Nonnull QueryResponse queryResponse,
@@ -3667,11 +3796,16 @@ public class SchemaExtractor {
         return customFilter.toString();
     }
 
+    // Preserve existing IRI callers while sharing VALUES construction with already formatted literal class terms.
     protected String buildValuesClause(@Nonnull Set<String> values, @Nonnull String param) {
-        StringBuilder valuesClause = new StringBuilder("VALUES ?").append(param).append(" { ");
-        values.forEach(value -> valuesClause.append("<").append(value).append(">").append(" "));
-        valuesClause.append("} ");
-        return valuesClause.toString();
+        return buildValuesClause(values, param, false);
+    }
+
+    // Keep each clause independent and retain empty restricted sets instead of accidentally querying the unrestricted graph.
+    private String buildValuesClause(Collection<String> values, String variable, boolean formatted) {
+        StringBuilder clause = new StringBuilder("VALUES ?").append(variable).append(" { ");
+        values.forEach(value -> clause.append(formatted ? value : SchemaUtil.addAngleBracketsToString(value)).append(" "));
+        return clause.append("} ").toString();
     }
 
     protected void updateClassesWithIncomingTripleCount(@Nonnull Map<String, SchemaExtractorPropertyNodeInfo> properties, @Nonnull Schema schema) {
