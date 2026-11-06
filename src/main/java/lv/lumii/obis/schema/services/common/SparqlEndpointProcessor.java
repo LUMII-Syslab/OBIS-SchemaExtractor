@@ -12,6 +12,7 @@ import lv.lumii.obis.schema.services.SparqlEndpointException;
 import lv.lumii.obis.schema.services.common.dto.*;
 import lv.lumii.obis.schema.services.extractor.dto.SchemaExtractorRequestDto;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.jena.http.HttpEnv;
 import org.apache.jena.query.*;
 import org.apache.jena.rdf.model.Literal;
 import org.apache.jena.rdf.model.RDFNode;
@@ -270,10 +271,12 @@ public class SparqlEndpointProcessor {
         queryResults.add(queryResult);
     }
 
+    // Infer missing JSON/XML response types while retaining Jena's selected client, connection pool and normal content negotiation.
     private QueryExecutionHTTP getQueryExecutor(@Nonnull String endpointUrl, @Nullable String graphName, @Nonnull String query, boolean isPostMethod,
                                                 @Nullable String acceptHeaderForSparqlResults, @Nullable Long timeout) {
 
-        QueryExecutionHTTPBuilder builder = QueryExecutionHTTP.create().endpoint(endpointUrl).queryString(query);
+        QueryExecutionHTTPBuilder builder = QueryExecutionHTTP.create().endpoint(endpointUrl).queryString(query)
+                .httpClient(new SparqlResponseHttpClient(HttpEnv.getHttpClient(endpointUrl, null)));
 
         // If no MIME type is configured, leave the Accept header unset so the SPARQL client uses its default content negotiation.
         if (StringUtils.isNotEmpty(acceptHeaderForSparqlResults)) {

@@ -90,20 +90,20 @@ public class SchemaExtractor {
     }
 
     protected void validateEndpointHealth(@Nonnull SchemaExtractorRequestDto request) {
-        // validate GET health check query
-        request.setPostMethod(Boolean.FALSE);
+        // Prefer POST because some endpoints accept GET health checks but reject other GET queries.
+        request.setPostMethod(Boolean.TRUE);
         boolean isEndpointHealthy = sparqlEndpointProcessor.checkEndpointHealthQuery(request);
         if (isEndpointHealthy) {
-            log.info(String.format("The endpoint [ %s ] is available and in working state - schema extractor execution [ %s ] is in progress with GET requests",
+            log.info(String.format("The endpoint [ %s ] is available and in working state - schema extractor execution [ %s ] is in progress with POST requests",
                     SchemaUtil.getEndpointLinkText(request.getEndpointUrl(), request.getGraphName()), request.getCorrelationId()));
             return;
         }
 
-        // validate POST health check query
-        request.setPostMethod(Boolean.TRUE);
+        // Fall back to GET when the POST health check fails.
+        request.setPostMethod(Boolean.FALSE);
         isEndpointHealthy = sparqlEndpointProcessor.checkEndpointHealthQuery(request);
         if (isEndpointHealthy) {
-            log.info(String.format("The endpoint [ %s ] is available and in working state - schema extractor execution [ %s ] is in progress with POST requests",
+            log.info(String.format("The endpoint [ %s ] is available and in working state - schema extractor execution [ %s ] is in progress with GET requests",
                     SchemaUtil.getEndpointLinkText(request.getEndpointUrl(), request.getGraphName()), request.getCorrelationId()));
             return;
         }
