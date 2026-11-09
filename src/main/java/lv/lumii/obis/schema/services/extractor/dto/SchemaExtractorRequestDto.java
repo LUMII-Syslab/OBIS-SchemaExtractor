@@ -48,7 +48,7 @@ public class SchemaExtractorRequestDto {
 
     public enum BlankNodeMode {no, targetsOnly, full}
 
-    public enum PropertyRelationsCheckMode {none, limits, limitsPlus, limitsPlusSimple, detailsBase, details}
+    public enum PropertyRelationsCheckMode {limits, limitsPlusSimple, limitsPlus}
 
     public enum FineTuneTripleCounts {All, CPRels, None}
 
@@ -141,6 +141,11 @@ public class SchemaExtractorRequestDto {
     // Treat an omitted refinement policy consistently for configuration files and REST requests.
     public FineTuneTripleCounts getFineTuneTripleCounts() {
         return fineTuneTripleCounts == null ? FineTuneTripleCounts.None : fineTuneTripleCounts;
+    }
+
+    // Apply the same PP default to YAML and form requests without coupling it to CP count refinement.
+    public PropertyRelationsCheckMode getPropertyPropertyLinkCheckBackupMode() {
+        return propertyPropertyLinkCheckBackupMode == null ? PropertyRelationsCheckMode.limitsPlus : propertyPropertyLinkCheckBackupMode;
     }
 
     public SchemaExtractorRequestDto(@Nonnull String correlationId) {

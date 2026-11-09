@@ -38,6 +38,9 @@ public class SchemaExtractorPropertyNodeInfo {
     private Integer hasOutgoingPropertiesOK;
     private Integer hasIncomingPropertiesOK;
     private Integer hasFollowersOK;
+    private Long outgoingLimit;
+    private Long incomingLimit;
+    private Long followersLimit;
     private List<SchemaExtractorSourceTargetInfo> sourceAndTargetPairs;
     private List<SchemaExtractorClassNodeInfo> sourceClasses;
     private List<SchemaExtractorClassNodeInfo> targetClasses;

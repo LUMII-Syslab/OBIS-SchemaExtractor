@@ -35,6 +35,9 @@ public class SchemaProperty extends SchemaElement {
     private Integer hasOutgoingPropertiesOK;
     private Integer hasIncomingPropertiesOK;
     private Integer hasFollowersOK;
+    private Long outgoingLimit;
+    private Long incomingLimit;
+    private Long followersLimit;
 
     @JsonProperty("DataTypes")
     private List<DataType> dataTypes;

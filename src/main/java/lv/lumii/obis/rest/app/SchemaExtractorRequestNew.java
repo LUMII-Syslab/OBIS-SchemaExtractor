@@ -27,7 +27,7 @@ public class SchemaExtractorRequestNew {
 
     public enum BlankNodeMode {no, targetsOnly, full}
 
-    public enum PropertyRelationsCheckMode {none, limits, limitsPlus, limitsPlusSimple, detailsBase, details}
+    public enum PropertyRelationsCheckMode {limits, limitsPlusSimple, limitsPlus}
 
     public enum NoClassesLoggingOptions {yes, no, sourcesOnly}
 
@@ -62,18 +62,18 @@ public class SchemaExtractorRequestNew {
             "Can be time-consuming for larger schemas, consider appropriate propertyPropertyLinkCheckBackupMode", defaultValue = "true", requiredMode = Schema.RequiredMode.REQUIRED)
     private Boolean calculatePropertyPropertyRelations;
 
-    @Schema(description = "Set backup validation queries to calculate property-property relations in the case of a failing property co-occurrence query for a given base property. " +
-            "details, limitsPlus and limitsPlusSimple guarantee trying a single-line pattern of two property co-occurrence, if larger patterns fail. " +
-            "details gives exact statistics for two property co-occurrence, whenever possible. " +
-            "limitsPlus attempts at least a limit-based estimate, limitsPlusSimple can stay with yes/no answer for co-occurrence for performance reasons (with some count information imputed at later schema import steps). " +
-            "none and limits are faster, but can result in partially incomplete structure information.", defaultValue = "details", requiredMode = Schema.RequiredMode.REQUIRED)
+    @Schema(description = "Recover property-property relations using increasing LIMITs and symmetric evidence. " +
+            "limits skips individual property-pair checks; limitsPlusSimple checks unresolved pairs for existence without extra counts; " +
+            "limitsPlus also counts newly confirmed individual pairs immediately, in both directions for common subjects or objects. " +
+            "Counts already obtained during discovery or recovery are retained.", defaultValue = "limitsPlus", requiredMode = Schema.RequiredMode.REQUIRED)
     private PropertyRelationsCheckMode propertyPropertyLinkCheckBackupMode;
+
+    @Schema(description = "Refine existing class-property relation counts. All and CPRels enable refinement; None keeps recovered counts. " +
+            "This parameter does not control property-property counts.", defaultValue = "None", requiredMode = Schema.RequiredMode.REQUIRED)
+    private SchemaExtractorRequestDto.FineTuneTripleCounts fineTuneTripleCounts;
 
     @Schema(description = "Calculate pairs of source and target classes for properties (creates finer-grained schemas; used as a source of statistics in visual schema diagrams)", defaultValue = "true", requiredMode = Schema.RequiredMode.REQUIRED)
     private Boolean calculateSourceAndTargetPairs;
-
-    @Schema(description = "Refine existing class-property relation counts. All and CPRels enable refinement; None keeps recovered counts.", defaultValue = "None")
-    private SchemaExtractorRequestDto.FineTuneTripleCounts fineTuneTripleCounts;
 
     @Schema(description = "Calculate domain and range classes for properties (in the strict, ontological sense)", defaultValue = "true", requiredMode = Schema.RequiredMode.REQUIRED)
     private Boolean calculateDomainsAndRanges;
@@ -348,9 +348,10 @@ public class SchemaExtractorRequestNew {
     }
 
     @Nonnull
+    // Default form requests to the same PP recovery/count mode as configuration requests.
     public PropertyRelationsCheckMode getPropertyPropertyLinkCheckBackupMode() {
         if (propertyPropertyLinkCheckBackupMode == null) {
-            propertyPropertyLinkCheckBackupMode = PropertyRelationsCheckMode.details;
+            propertyPropertyLinkCheckBackupMode = PropertyRelationsCheckMode.limitsPlus;
         }
         return propertyPropertyLinkCheckBackupMode;
     }

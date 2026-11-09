@@ -77,17 +77,9 @@ validatePropertiesList: true
 # Allowed values: [true, false]
 calculatePropertyPropertyRelations: true
 
-# Description: Set backup validation queries to calculate property-property relations in the case of a failing
-# property co-occurrence query for a given base property. details, limitsPlus and limitsPlusSimple guarantee trying
-# a single-line pattern of two property co-occurrence, if larger patterns fail. details gives exact statistics for
-# two property co-occurrence, whenever possible. limitsPlus attempts at least a limit-based estimate,
-# limitsPlusSimple can stay with yes/no answer for co-occurrence for performance reasons (with some count information
-# imputed at later schema import steps). none and limits are faster, but can result in partially incomplete structure
-# information.
-# Required: true
-# Default: details
-# Allowed values: [none, limits, limitsPlus, limitsPlusSimple, detailsBase, details]
-propertyPropertyLinkCheckBackupMode: "details"
+# PP recovery: limits skips individual pair checks; limitsPlusSimple checks existence only;
+# limitsPlus also counts newly confirmed individual pairs immediately. Recovery uses increasing LIMITs and symmetric evidence.
+propertyPropertyLinkCheckBackupMode: limitsPlus
 
 # ------------------------------------------------------------
 # SOURCE/TARGET & DOMAIN/RANGE
