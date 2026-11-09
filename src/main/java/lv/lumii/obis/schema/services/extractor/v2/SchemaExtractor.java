@@ -1047,6 +1047,10 @@ public class SchemaExtractor {
             AtomicBoolean hasAtLeastOneResult = new AtomicBoolean(false);
             schema.getClasses().forEach(potentialSource -> {
                 if (isNotFalse(potentialSource.getPropertiesInSchema())) {
+                    // the class level outgoing property list is requested (once per class) before checking the specific class-property pair
+                    if (potentialSource.getOutgoingPropertiesListStatus() == null) {
+                        determineClassOutgoingProperties(schema, potentialSource, properties, request);
+                    }
                     if (potentialSource.getOutgoingProperties().containsKey(property.getPropertyName())) {
                         hasAtLeastOneResult.set(true);
                         TripleCount tripleCountObject = potentialSource.getOutgoingProperties().get(property.getPropertyName());
@@ -1059,7 +1063,8 @@ public class SchemaExtractor {
                                 potentialSource.setOutgoingPropertiesOK(5);
                             }
                         }
-                    } else if (isNotTrue(potentialSource.getOutgoingPropertiesFullList())) {
+                    } else if (potentialSource.getOutgoingPropertiesListStatus() != ClassPropertiesListStatus.FULL) {
+                        // the class level property list is partial or not available - the specific class-property pair is checked
                         SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_CLASS_AS_PROPERTY_SOURCE.name()), CHECK_CLASS_AS_PROPERTY_SOURCE)
                                 .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL, potentialSource.getFullName(), potentialSource.getIsLiteral())
                                 .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, potentialSource.getClassificationProperty())
@@ -1073,27 +1078,8 @@ public class SchemaExtractor {
                             }
                         } else if (checkSourceQueryResponse.hasErrors()) {
                             schema.getMessages().add(new SchemaExtractorMessage(WARNING, property.getPropertyName(), CHECK_CLASS_AS_PROPERTY_SOURCE.name(), queryBuilder.getQueryString()));
-                            if (potentialSource.getOutgoingPropertiesFullList() == null) {
-                                boolean foundOutgoingProperties = determineClassOutgoingProperties(schema, potentialSource, properties, request);
-                                if (!foundOutgoingProperties) {
-                                    hasAtLeastOneError.set(true);
-                                    potentialSource.setOutgoingPropertiesOK(3);
-                                } else {
-                                    if (potentialSource.getOutgoingProperties().containsKey(property.getPropertyName())) {
-                                        hasAtLeastOneResult.set(true);
-                                        TripleCount tripleCountObject = potentialSource.getOutgoingProperties().get(property.getPropertyName());
-                                        if (tripleCountObject != null) {
-                                            SchemaExtractorClassNodeInfo newSourceClass = new SchemaExtractorClassNodeInfo(potentialSource.getFullName(), tripleCountObject.getTripleCount(),
-                                                    potentialSource.getClassificationProperty(), potentialSource.getIsLiteral());
-                                            newSourceClass.setTripleCountBase(tripleCountObject.getTripleCountBase());
-                                            property.getSourceClasses().add(newSourceClass);
-                                            if (potentialSource.getOutgoingPropertiesOK() == null) {
-                                                potentialSource.setOutgoingPropertiesOK(5);
-                                            }
-                                        }
-                                    }
-                                }
-                            }
+                            hasAtLeastOneError.set(true);
+                            potentialSource.setOutgoingPropertiesOK(3);
                         }
                     }
                 }
@@ -1124,7 +1110,7 @@ public class SchemaExtractor {
                 schema.getMessages().add(new SchemaExtractorMessage(INFO, "The class does not have outgoing properties", clazz.getFullName(),
                         null, FIND_OUTGOING_PROPERTY_TRIPLE_COUNTS_FOR_CLASS.name(), queryBuilder.getQueryString()));
             }
-            clazz.setOutgoingPropertiesFullList(Boolean.TRUE);
+            clazz.setOutgoingPropertiesListStatus(ClassPropertiesListStatus.FULL);
             return true;
         } else {
             schema.getMessages().add(new SchemaExtractorMessage(WARNING, clazz.getFullName(), FIND_OUTGOING_PROPERTY_TRIPLE_COUNTS_FOR_CLASS.name(), queryBuilder.getQueryString()));
@@ -1160,17 +1146,19 @@ public class SchemaExtractor {
                 }
             }
             if (tripleCountLimit == null) {
-                clazz.setOutgoingPropertiesFullList(Boolean.FALSE);
+                clazz.setOutgoingPropertiesListStatus(ClassPropertiesListStatus.FAILED);
                 return false;
             }
             if (outgoingPropertiesWithLimits == null) {
                 schema.getMessages().add(new SchemaExtractorMessage(WARNING, clazz.getFullName(), FIND_OUTGOING_PROPERTY_TRIPLE_COUNTS_FOR_CLASS_WITH_LIMITS.name(), queryBuilder.getQueryString()));
+                // mark the failure so that the class level queries are not repeated in the context of other properties
+                clazz.setOutgoingPropertiesListStatus(ClassPropertiesListStatus.FAILED);
                 return false;
             } else {
                 if (!outgoingPropertiesWithLimits.isEmpty()) {
                     clazz.getOutgoingProperties().putAll(outgoingPropertiesWithLimits);
                 }
-                clazz.setOutgoingPropertiesFullList(Boolean.FALSE);
+                clazz.setOutgoingPropertiesListStatus(ClassPropertiesListStatus.PARTIAL);
                 return true;
             }
         }
@@ -1216,7 +1204,7 @@ public class SchemaExtractor {
                 schema.getMessages().add(new SchemaExtractorMessage(INFO, "The class does not have incoming properties", clazz.getFullName(),
                         null, FIND_INCOMING_PROPERTY_TRIPLE_COUNTS_FOR_CLASS.name(), queryBuilder.getQueryString()));
             }
-            clazz.setIncomingPropertiesFullList(Boolean.TRUE);
+            clazz.setIncomingPropertiesListStatus(ClassPropertiesListStatus.FULL);
             return true;
         } else {
             schema.getMessages().add(new SchemaExtractorMessage(WARNING, clazz.getFullName(), FIND_INCOMING_PROPERTY_TRIPLE_COUNTS_FOR_CLASS.name(), queryBuilder.getQueryString()));
@@ -1252,17 +1240,19 @@ public class SchemaExtractor {
                 }
             }
             if (tripleCountLimit == null) {
-                clazz.setIncomingPropertiesFullList(Boolean.FALSE);
+                clazz.setIncomingPropertiesListStatus(ClassPropertiesListStatus.FAILED);
                 return false;
             }
             if (incomingPropertiesWithLimits == null) {
                 schema.getMessages().add(new SchemaExtractorMessage(WARNING, clazz.getFullName(), FIND_INCOMING_PROPERTY_TRIPLE_COUNTS_FOR_CLASS_WITH_LIMITS.name(), queryBuilder.getQueryString()));
+                // mark the failure so that the class level queries are not repeated in the context of other properties
+                clazz.setIncomingPropertiesListStatus(ClassPropertiesListStatus.FAILED);
                 return false;
             } else {
                 if (!incomingPropertiesWithLimits.isEmpty()) {
                     clazz.getIncomingProperties().putAll(incomingPropertiesWithLimits);
                 }
-                clazz.setIncomingPropertiesFullList(Boolean.FALSE);
+                clazz.setIncomingPropertiesListStatus(ClassPropertiesListStatus.PARTIAL);
                 return true;
             }
         }
@@ -1327,7 +1317,7 @@ public class SchemaExtractor {
                         }
                         continue;
                     }
-                    if (sourceClassWithoutTripleCount.getOutgoingPropertiesFullList() == null) {
+                    if (sourceClassWithoutTripleCount.getOutgoingPropertiesListStatus() == null) {
                         boolean foundOutgoingProperties = determineClassOutgoingProperties(schema, sourceClassWithoutTripleCount, properties, request);
                         if (foundOutgoingProperties && sourceClassWithoutTripleCount.getOutgoingProperties().containsKey(property.getPropertyName())) {
                             TripleCount tripleCountObject = sourceClassWithoutTripleCount.getOutgoingProperties().get(property.getPropertyName());
@@ -1586,6 +1576,10 @@ public class SchemaExtractor {
             AtomicBoolean hasAtLeastOneResult = new AtomicBoolean(false);
             schema.getClasses().forEach(potentialTarget -> {
                 if (isNotFalse(potentialTarget.getPropertiesInSchema())) {
+                    // the class level incoming property list is requested (once per class) before checking the specific class-property pair
+                    if (potentialTarget.getIncomingPropertiesListStatus() == null) {
+                        determineClassIncomingProperties(schema, potentialTarget, properties, request);
+                    }
                     if (potentialTarget.getIncomingProperties().containsKey(property.getPropertyName())) {
                         hasAtLeastOneResult.set(true);
                         TripleCount tripleCountObject = potentialTarget.getIncomingProperties().get(property.getPropertyName());
@@ -1598,7 +1592,8 @@ public class SchemaExtractor {
                                 potentialTarget.setIncomingPropertiesOK(5);
                             }
                         }
-                    } else if (isNotTrue(potentialTarget.getIncomingPropertiesFullList())) {
+                    } else if (potentialTarget.getIncomingPropertiesListStatus() != ClassPropertiesListStatus.FULL) {
+                        // the class level property list is partial or not available - the specific class-property pair is checked
                         SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_CLASS_AS_PROPERTY_TARGET.name()), CHECK_CLASS_AS_PROPERTY_TARGET)
                                 .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_TARGET_FULL, potentialTarget.getFullName(), potentialTarget.getIsLiteral())
                                 .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, potentialTarget.getClassificationProperty())
@@ -1612,27 +1607,8 @@ public class SchemaExtractor {
                             }
                         } else if (checkTargetQueryResponse.hasErrors()) {
                             schema.getMessages().add(new SchemaExtractorMessage(WARNING, property.getPropertyName(), CHECK_CLASS_AS_PROPERTY_TARGET.name(), queryBuilder.getQueryString()));
-                            if (potentialTarget.getIncomingPropertiesFullList() == null) {
-                                boolean foundIncomingProperties = determineClassIncomingProperties(schema, potentialTarget, properties, request);
-                                if (!foundIncomingProperties) {
-                                    hasAtLeastOneError.set(true);
-                                    potentialTarget.setIncomingPropertiesOK(3);
-                                } else {
-                                    if (potentialTarget.getIncomingProperties().containsKey(property.getPropertyName())) {
-                                        hasAtLeastOneResult.set(true);
-                                        TripleCount tripleCountObject = potentialTarget.getIncomingProperties().get(property.getPropertyName());
-                                        if (tripleCountObject != null) {
-                                            SchemaExtractorClassNodeInfo newTargetClass = new SchemaExtractorClassNodeInfo(potentialTarget.getFullName(), tripleCountObject.getTripleCount(),
-                                                    potentialTarget.getClassificationProperty(), potentialTarget.getIsLiteral());
-                                            newTargetClass.setTripleCountBase(tripleCountObject.getTripleCountBase());
-                                            property.getTargetClasses().add(newTargetClass);
-                                            if (potentialTarget.getIncomingPropertiesOK() == null) {
-                                                potentialTarget.setIncomingPropertiesOK(5);
-                                            }
-                                        }
-                                    }
-                                }
-                            }
+                            hasAtLeastOneError.set(true);
+                            potentialTarget.setIncomingPropertiesOK(3);
                         }
                     }
                 }
@@ -1682,7 +1658,7 @@ public class SchemaExtractor {
                         }
                         continue;
                     }
-                    if (targetClassWithoutTripleCount.getIncomingPropertiesFullList() == null) {
+                    if (targetClassWithoutTripleCount.getIncomingPropertiesListStatus() == null) {
                         boolean foundIncomingProperties = determineClassIncomingProperties(schema, targetClassWithoutTripleCount, properties, request);
                         if (foundIncomingProperties && targetClassWithoutTripleCount.getIncomingProperties().containsKey(property.getPropertyName())) {
                             TripleCount tripleCountObject = targetClassWithoutTripleCount.getIncomingProperties().get(property.getPropertyName());
