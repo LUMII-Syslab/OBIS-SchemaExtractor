@@ -827,7 +827,7 @@ public class SchemaExtractor {
                     property.setBlankNodeSubjects(blankNodeSubjects.get(property.getPropertyName()));
                 }
             }
-            if (calculateBlankNodeObjects && property.getObjectTripleCount() != null && property.getObjectTripleCount() != 0) {
+            if (calculateBlankNodeObjects && (property.getObjectTripleCount() == null || property.getObjectTripleCount() != 0)) {
                 if (blankNodeObjects.isEmpty()) {
                     determinePropertyBlankNodeObjects(schema, property, request);
                 } else {
@@ -1842,6 +1842,9 @@ public class SchemaExtractor {
                 schema.getMessages().add(new SchemaExtractorMessage(INFO, null, COUNT_BLANK_INSTANCES_FOR_CLASSES.name(), queryBuilder.getQueryString()));
                 classificationPropertiesWithError.add(classificationProperty);
             } else {
+                schema.getClasses().stream()
+                        .filter(clazz -> classificationProperty.equals(clazz.getClassificationProperty()) && clazz.getBlankNodeCount() == null)
+                        .forEach(clazz -> clazz.setBlankNodeCount(0L));
                 for (QueryResult queryResult : queryResponse.getResults()) {
                     String className = queryResult.getValueFullName(SchemaConstants.SPARQL_QUERY_BINDING_NAME_CLASS);
                     if (className == null) {
@@ -1899,7 +1902,8 @@ public class SchemaExtractor {
             queryBuilder.withContextParam(SPARQL_QUERY_BINDING_NAME_VALUES, StringUtils.EMPTY);
         }
         QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
-        if (!queryResponse.hasErrors() && !queryResponse.getResults().isEmpty()) {
+        if (!queryResponse.hasErrors()) {
+            properties.keySet().forEach(propertyName -> blankNodeMap.put(propertyName, 0L));
             for (QueryResult queryResult : queryResponse.getResults()) {
                 String propertyName = queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY);
                 String instanceCount = queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT);
@@ -1927,7 +1931,8 @@ public class SchemaExtractor {
             queryBuilder.withContextParam(SPARQL_QUERY_BINDING_NAME_VALUES, StringUtils.EMPTY);
         }
         QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
-        if (!queryResponse.hasErrors() && !queryResponse.getResults().isEmpty()) {
+        if (!queryResponse.hasErrors()) {
+            properties.keySet().forEach(propertyName -> blankNodeMap.put(propertyName, 0L));
             for (QueryResult queryResult : queryResponse.getResults()) {
                 String propertyName = queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY);
                 String instanceCount = queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT);
