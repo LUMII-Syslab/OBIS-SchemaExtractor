@@ -193,6 +193,8 @@ public class SparqlEndpointProcessor {
                 }
             }
         } catch (Exception e) {
+            // Retry fast SMALL-query failures using the attempt duration before endpoint validation or waiting.
+            long failedAttemptSeconds = Duration.between(startTime, LocalDateTime.now()).getSeconds();
             queryResults = null;
             String loggedError = sparqlQuery.equals(loggedQuery) ? e.getMessage()
                     : e instanceof QueryExceptionHTTP ? "HTTP " + ((QueryExceptionHTTP) e).getStatusCode() : e.getClass().getSimpleName();
@@ -208,7 +210,7 @@ public class SparqlEndpointProcessor {
                     log.warn(String.format("SPARQL queries encountered errors, running validation queries to check the endpoint availability - [ %s ]",
                             SchemaUtil.getEndpointLinkText(request.getEndpointUrl(), request.getGraphName())));
                     boolean endpointIsHealthyWithoutRetries = checkEndpointHealthAndStopExecutionOnError(request, true);
-                    if (!endpointIsHealthyWithoutRetries || !QueryType.SMALL.equals(queryType)) {
+                    if (!endpointIsHealthyWithoutRetries || !QueryType.SMALL.equals(queryType) || failedAttemptSeconds < 10) {
                         return requestData(request, queryName, sparqlQuery, loggedQuery, queryType, timeout, ++attempt, withRetry);
                     }
                 }
