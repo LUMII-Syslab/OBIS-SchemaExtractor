@@ -85,26 +85,24 @@ public class SchemaExtractor {
         return schema;
     }
 
+    // Probe both methods independently and start regular queries with GET whenever its health check succeeds.
     protected void validateEndpointHealth(@Nonnull SchemaExtractorRequestDto request) {
-        // Prefer POST because some endpoints accept GET health checks but reject other GET queries.
-        request.setPostMethod(Boolean.TRUE);
-        boolean isEndpointHealthy = sparqlEndpointProcessor.checkEndpointHealthQuery(request);
-        if (isEndpointHealthy) {
-            log.info(String.format("The endpoint [ %s ] is available and in working state - schema extractor execution [ %s ] is in progress with POST requests",
-                    SchemaUtil.getEndpointLinkText(request.getEndpointUrl(), request.getGraphName()), request.getCorrelationId()));
-            return;
-        }
-
-        // Fall back to GET when the POST health check fails.
+        request.setGetMethodAvailable(null);
+        request.setPostMethodAvailable(null);
         request.setPostMethod(Boolean.FALSE);
-        isEndpointHealthy = sparqlEndpointProcessor.checkEndpointHealthQuery(request);
-        if (isEndpointHealthy) {
-            log.info(String.format("The endpoint [ %s ] is available and in working state - schema extractor execution [ %s ] is in progress with GET requests",
-                    SchemaUtil.getEndpointLinkText(request.getEndpointUrl(), request.getGraphName()), request.getCorrelationId()));
+        boolean getAvailable = sparqlEndpointProcessor.checkEndpointHealthQuery(request);
+        request.setPostMethod(Boolean.TRUE);
+        boolean postAvailable = sparqlEndpointProcessor.checkEndpointHealthQuery(request);
+        request.setGetMethodAvailable(getAvailable);
+        request.setPostMethodAvailable(postAvailable);
+        if (getAvailable || postAvailable) {
+            request.setPostMethod(!getAvailable);
+            log.info(String.format("The endpoint [ %s ] is available - schema extractor execution [ %s ] starts with %s requests (GET available: %s; POST available: %s)",
+                    SchemaUtil.getEndpointLinkText(request.getEndpointUrl(), request.getGraphName()), request.getCorrelationId(),
+                    request.getPostMethod() ? "POST" : "GET", getAvailable, postAvailable));
             return;
         }
 
-        // log error and stop extractor execution for the specific request
         String stoppingError = String.format("The endpoint [ %s ] is not available for GET and POST requests, stopping the schema extraction for the request [ %s ]",
                 SchemaUtil.getEndpointLinkText(request.getEndpointUrl(), request.getGraphName()), request.getCorrelationId());
         log.error(stoppingError);

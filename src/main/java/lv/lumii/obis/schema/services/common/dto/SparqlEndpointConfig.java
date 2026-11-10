@@ -12,6 +12,8 @@ public class SparqlEndpointConfig {
     private String graphName;
     private boolean enableLogging;
     private boolean isPostRequest;
+    private Boolean getMethodAvailable;
+    private Boolean postMethodAvailable;
     private String acceptHeaderForSparqlResults;
     private Long timeout;
     private Long delayOnFailure;

@@ -35,6 +35,7 @@ import static lv.lumii.obis.schema.services.extractor.v2.SchemaExtractorQueries.
 public class SparqlEndpointProcessor {
 
     private static final int RETRY_COUNT = 2;
+    private static final int FAST_QUERY_RETRY_SECONDS = 15;
 
     private static final String[] FALLBACK_ACCEPT_HEADERS = {
             "application/sparql-results+json",
@@ -49,10 +50,21 @@ public class SparqlEndpointProcessor {
      * Actual methods for SchemaExtractor V2
      */
     @Nonnull
+    // Retain a successful retry's method in this extraction request while keeping transport availability internal.
     public QueryResponse read(@Nonnull SchemaExtractorRequestDto request, @Nonnull SparqlQueryBuilder queryBuilder) {
         Long timeout = calculateTimeout(request, queryBuilder);
-        return read(new SparqlEndpointConfig(request.getCorrelationId(), request.getEndpointUrl(), request.getGraphName(), request.getEnableLogging(),
-                request.getPostMethod(), request.getAcceptHeaderForSparqlResults(), timeout, request.getDelayOnFailure(), request.getWaitingTimeForEndpoint()), queryBuilder, true);
+        SparqlEndpointConfig config = new SparqlEndpointConfig(request.getCorrelationId(), request.getEndpointUrl(), request.getGraphName(), request.getEnableLogging(),
+                request.getPostMethod(), request.getAcceptHeaderForSparqlResults(), timeout, request.getDelayOnFailure(), request.getWaitingTimeForEndpoint());
+        config.setGetMethodAvailable(request.getGetMethodAvailable());
+        config.setPostMethodAvailable(request.getPostMethodAvailable());
+        QueryResponse response = read(config, queryBuilder, true);
+        if (!response.hasErrors() && request.getPostMethod() != config.isPostRequest()) {
+            log.info("{} - regular query method changed from {} to {} after successful retry of {} at [ {} ]",
+                    request.getCorrelationId(), request.getPostMethod() ? "POST" : "GET", config.isPostRequest() ? "POST" : "GET",
+                    queryBuilder.getQueryName(), SchemaUtil.getEndpointLinkText(request.getEndpointUrl(), request.getGraphName()));
+            request.setPostMethod(config.isPostRequest());
+        }
+        return response;
     }
 
     public boolean checkEndpointHealthAndStopExecutionOnError(@Nonnull SparqlEndpointConfig request, boolean applyWaiting) {
@@ -101,10 +113,12 @@ public class SparqlEndpointProcessor {
         return endpointIsHealthyWithoutRetries;
     }
 
+    // Honor explicit initial probes while preferring known-available POST for later health checks without changing regular-query selection.
     public boolean checkEndpointHealthQuery(@Nonnull SchemaExtractorRequestDto request) {
         SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(ENDPOINT_HEALTH_CHECK.getSparqlQuery(), ENDPOINT_HEALTH_CHECK);
         SparqlEndpointConfig config = new SparqlEndpointConfig(request.getCorrelationId(), request.getEndpointUrl(), request.getGraphName(), request.getEnableLogging(),
-                request.getPostMethod(), request.getAcceptHeaderForSparqlResults(), null, null, null);
+                request.getPostMethodAvailable() == null ? request.getPostMethod() : request.getPostMethodAvailable(),
+                request.getAcceptHeaderForSparqlResults(), null, null, null);
 
         QueryResponse response = read(config, queryBuilder, false);
 
@@ -135,9 +149,13 @@ public class SparqlEndpointProcessor {
                 && QueryResponseError.NOT_ACCEPTABLE_MSG.equals(response.getQueryResponseError().getResponseMessage());
     }
 
+    // Use POST for retry health checks when initially available, preserving the regular query's method and timeout.
     private boolean checkEndpointHealthQuery(@Nonnull SparqlEndpointConfig config) {
         SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(ENDPOINT_HEALTH_CHECK.getSparqlQuery(), ENDPOINT_HEALTH_CHECK);
-        QueryResponse response = read(config, queryBuilder, false);
+        SparqlEndpointConfig healthConfig = new SparqlEndpointConfig(config.getCorrelationId(), config.getEndpointUrl(), config.getGraphName(), config.isEnableLogging(),
+                config.getPostMethodAvailable() == null ? config.isPostRequest() : config.getPostMethodAvailable(),
+                config.getAcceptHeaderForSparqlResults(), config.getTimeout(), config.getDelayOnFailure(), config.getWaitingTimeForEndpoint());
+        QueryResponse response = read(healthConfig, queryBuilder, false);
         return !response.hasErrors() && !response.getResults().isEmpty();
     }
 
@@ -193,7 +211,7 @@ public class SparqlEndpointProcessor {
                 }
             }
         } catch (Exception e) {
-            // Retry fast SMALL-query failures using the attempt duration before endpoint validation or waiting.
+            // Measure failure before health checks or waiting so only fast regular queries may change method on their retry.
             long failedAttemptSeconds = Duration.between(startTime, LocalDateTime.now()).getSeconds();
             queryResults = null;
             String loggedError = sparqlQuery.equals(loggedQuery) ? e.getMessage()
@@ -210,8 +228,15 @@ public class SparqlEndpointProcessor {
                     log.warn(String.format("SPARQL queries encountered errors, running validation queries to check the endpoint availability - [ %s ]",
                             SchemaUtil.getEndpointLinkText(request.getEndpointUrl(), request.getGraphName())));
                     boolean endpointIsHealthyWithoutRetries = checkEndpointHealthAndStopExecutionOnError(request, true);
-                    if (!endpointIsHealthyWithoutRetries || !QueryType.SMALL.equals(queryType) || failedAttemptSeconds < 10) {
-                        return requestData(request, queryName, sparqlQuery, loggedQuery, queryType, timeout, ++attempt, withRetry);
+                    if (!endpointIsHealthyWithoutRetries || !QueryType.SMALL.equals(queryType) || failedAttemptSeconds < FAST_QUERY_RETRY_SECONDS) {
+                        boolean originalPostMethod = request.isPostRequest();
+                        if (failedAttemptSeconds < FAST_QUERY_RETRY_SECONDS && !ENDPOINT_HEALTH_CHECK.name().equals(queryName)
+                                && Boolean.TRUE.equals(request.getGetMethodAvailable()) && Boolean.TRUE.equals(request.getPostMethodAvailable())) {
+                            request.setPostRequest(!originalPostMethod);
+                        }
+                        QueryResponse retried = requestData(request, queryName, sparqlQuery, loggedQuery, queryType, timeout, ++attempt, withRetry);
+                        if (retried.hasErrors()) request.setPostRequest(originalPostMethod);
+                        return retried;
                     }
                 }
             } else {
