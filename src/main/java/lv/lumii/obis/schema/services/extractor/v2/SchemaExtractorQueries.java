@@ -200,6 +200,12 @@ public enum SchemaExtractorQueries {
             "SELECT (COUNT(?x) as ?instances) WHERE { { SELECT DISTINCT ?x WHERE { [] <property> ?x . FILTER(!isLiteral(?x))} LIMIT <limit>} [] <property2> ?x }", QueryType.SMALL
     ),
 
+    FIND_PROPERTY_SUBJECTS_INSTANCES_FOR_RELATIONS(
+            "SELECT DISTINCT ?x WHERE { ?x <property> ?y . <instanceFilter> } <limitClause>", QueryType.LARGE
+    ),
+    FIND_PROPERTY_OBJECTS_INSTANCES_FOR_RELATIONS(
+            "SELECT DISTINCT ?x WHERE { ?y <property> ?x . <objectFilter> <instanceFilter> } <limitClause>", QueryType.LARGE
+    ),
     CHECK_PROPERTY_OUTGOING_PROPERTY_TRIPLES_DISTINCT(
             "SELECT (COUNT(*) as ?instances) WHERE { { SELECT DISTINCT ?x ?y WHERE { { SELECT DISTINCT ?x WHERE { ?x <property> [] } } ?x <property2> ?y } } }", QueryType.LARGE
     ),

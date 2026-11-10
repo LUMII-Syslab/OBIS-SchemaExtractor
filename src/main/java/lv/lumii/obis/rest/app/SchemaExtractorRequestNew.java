@@ -62,7 +62,7 @@ public class SchemaExtractorRequestNew {
             "Can be time-consuming for larger schemas, consider appropriate propertyPropertyLinkCheckBackupMode", defaultValue = "true", requiredMode = Schema.RequiredMode.REQUIRED)
     private Boolean calculatePropertyPropertyRelations;
 
-    @Schema(description = "Recover property-property relations using increasing LIMITs and symmetric evidence. " +
+    @Schema(description = "Recover property-property relations using small-property instances, increasing LIMITs and samples, including singleton instance fallbacks. " +
             "limits skips individual property-pair checks; limitsPlusSimple checks unresolved pairs for existence without extra counts; " +
             "limitsPlus also counts newly confirmed individual pairs immediately, in both directions for common subjects or objects. " +
             "Counts already obtained during discovery or recovery are retained.", defaultValue = "limitsPlus", requiredMode = Schema.RequiredMode.REQUIRED)

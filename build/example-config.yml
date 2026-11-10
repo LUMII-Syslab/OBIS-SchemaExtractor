@@ -78,7 +78,7 @@ validatePropertiesList: true
 calculatePropertyPropertyRelations: true
 
 # PP recovery: limits skips individual pair checks; limitsPlusSimple checks existence only;
-# limitsPlus also counts newly confirmed individual pairs immediately. Recovery uses increasing LIMITs and symmetric evidence.
+# limitsPlus also counts newly confirmed individual pairs immediately. All modes retain singleton instance fallbacks.
 propertyPropertyLinkCheckBackupMode: limitsPlus
 
 # ------------------------------------------------------------
