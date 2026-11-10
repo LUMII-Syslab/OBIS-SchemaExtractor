@@ -2926,8 +2926,18 @@ public class SchemaExtractor {
                 .withContextParam("<objectFilter>", propertyRelationObjectFilter(property, type));
     }
 
+    // Select the filtered common-object pair template only when neither property is confirmed to have zero literal objects.
     private SparqlQueryBuilder propertyRelationPairQuery(SchemaExtractorRequestDto request, SchemaExtractorPropertyNodeInfo property,
                                                           SchemaExtractorPropertyNodeInfo other, SchemaExtractorPropertyRelatedPropertyInfo.LinkType type, SchemaExtractorQueries name) {
+        if (type == SchemaExtractorPropertyRelatedPropertyInfo.LinkType.incoming
+                && !Long.valueOf(0).equals(property.getDataTripleCount()) && !Long.valueOf(0).equals(other.getDataTripleCount())) {
+            name = switch (name) {
+                case CHECK_PROPERTY_INCOMING_PROPERTY -> CHECK_PROPERTY_INCOMING_PROPERTY_NONLITERAL;
+                case CHECK_PROPERTY_INCOMING_PROPERTY_TRIPLES -> CHECK_PROPERTY_INCOMING_PROPERTY_TRIPLES_NONLITERAL;
+                case CHECK_PROPERTY_INCOMING_PROPERTY_TRIPLES_DISTINCT -> CHECK_PROPERTY_INCOMING_PROPERTY_TRIPLES_DISTINCT_NONLITERAL;
+                default -> name;
+            };
+        }
         return propertyRelationQuery(request, property, type, name).withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY2_FULL, other.getPropertyName(), false);
     }
 

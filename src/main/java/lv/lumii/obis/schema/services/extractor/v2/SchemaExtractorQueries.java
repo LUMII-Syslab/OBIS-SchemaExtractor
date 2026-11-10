@@ -190,11 +190,17 @@ public enum SchemaExtractorQueries {
     FIND_PROPERTY_INCOMING_PROPERTIES_WITH_LIMITS_DISTINCT(
             "SELECT ?p2 (COUNT(?x) as ?instances) WHERE { { SELECT DISTINCT ?x ?p2 ?y WHERE { <valuesClause> { SELECT DISTINCT ?x WHERE { [] <property> ?x . <objectFilter> } LIMIT <limit> } ?y ?p2 ?x } } } GROUP BY ?p2", QueryType.LARGE
     ),
-    CHECK_PROPERTY_INCOMING_PROPERTY_TRIPLES(
+    CHECK_PROPERTY_INCOMING_PROPERTY_TRIPLES_NONLITERAL(
             "SELECT (COUNT(?x) as ?instances) WHERE { { SELECT DISTINCT ?x WHERE { [] <property> ?x . <objectFilter>} } [] <property2> ?x }", QueryType.LARGE
     ),
-    CHECK_PROPERTY_INCOMING_PROPERTY(
+    CHECK_PROPERTY_INCOMING_PROPERTY_TRIPLES(
+            "SELECT (COUNT(?x) as ?instances) WHERE { { SELECT DISTINCT ?x WHERE { [] <property> ?x . } } [] <property2> ?x }", QueryType.LARGE
+    ),
+    CHECK_PROPERTY_INCOMING_PROPERTY_NONLITERAL(
             "SELECT * WHERE { [] <property> ?x . <objectFilter> [] <property2> ?x } LIMIT 1", QueryType.SMALL
+    ),
+    CHECK_PROPERTY_INCOMING_PROPERTY(
+            "SELECT * WHERE { [] <property> ?x . [] <property2> ?x } LIMIT 1", QueryType.SMALL
     ),
     CHECK_PROPERTY_INCOMING_PROPERTY_TRIPLES_LIMITS(
             "SELECT (COUNT(?x) as ?instances) WHERE { { SELECT DISTINCT ?x WHERE { [] <property> ?x . FILTER(!isLiteral(?x))} LIMIT <limit>} [] <property2> ?x }", QueryType.SMALL
@@ -209,8 +215,11 @@ public enum SchemaExtractorQueries {
     CHECK_PROPERTY_OUTGOING_PROPERTY_TRIPLES_DISTINCT(
             "SELECT (COUNT(*) as ?instances) WHERE { { SELECT DISTINCT ?x ?y WHERE { { SELECT DISTINCT ?x WHERE { ?x <property> [] } } ?x <property2> ?y } } }", QueryType.LARGE
     ),
-    CHECK_PROPERTY_INCOMING_PROPERTY_TRIPLES_DISTINCT(
+    CHECK_PROPERTY_INCOMING_PROPERTY_TRIPLES_DISTINCT_NONLITERAL(
             "SELECT (COUNT(*) as ?instances) WHERE { { SELECT DISTINCT ?x ?y WHERE { { SELECT DISTINCT ?x WHERE { [] <property> ?x . <objectFilter> } } ?y <property2> ?x } } }", QueryType.LARGE
+    ),
+    CHECK_PROPERTY_INCOMING_PROPERTY_TRIPLES_DISTINCT(
+            "SELECT (COUNT(*) as ?instances) WHERE { { SELECT DISTINCT ?x ?y WHERE { { SELECT DISTINCT ?x WHERE { [] <property> ?x . } } ?y <property2> ?x } } }", QueryType.LARGE
     ),
     CHECK_PROPERTY_FOLLOWER_TRIPLES_DISTINCT(
             "SELECT (COUNT(*) as ?instances) WHERE { { SELECT DISTINCT ?x ?y WHERE { { SELECT DISTINCT ?x WHERE { [] <property> ?x } } ?x <property2> ?y } } }", QueryType.LARGE
