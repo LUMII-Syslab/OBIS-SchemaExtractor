@@ -366,12 +366,13 @@ public class SchemaExtractor {
         }
     }
 
+    // Bind the complete RDF class term so fallback counting preserves literal classification values.
     protected boolean readInstanceCountForClass(@Nonnull SchemaExtractorRequestDto request, @Nonnull Schema schema, @Nonnull QueryResultObject classNameObject,
                                                 @Nonnull String classificationProperty, @Nonnull List<SchemaClass> classes) {
         SchemaExtractorQueries query = selectQuery(request.getExactCountCalculations(), FIND_INSTANCE_COUNT_FOR_CLASS, FIND_INSTANCE_COUNT_FOR_CLASS_DISTINCT);
         SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(query.name()), query)
                 .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, classificationProperty)
-                .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_A_FULL, classNameObject.getValue(), false);
+                .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_A_FULL, classNameObject.getFullName(), classNameObject.getIsLiteral());
         QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
         if (!queryResponse.hasErrors() && !queryResponse.getResults().isEmpty() && queryResponse.getResults().get(0) != null) {
             String instancesCountStr = queryResponse.getResults().get(0).getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT);
@@ -385,11 +386,12 @@ public class SchemaExtractor {
         return false;
     }
 
+    // Preserve literal class terms when recounting distinct instances instead of formatting every class as an IRI.
     protected void readDistinctInstanceCountForClass(@Nonnull SchemaExtractorRequestDto request, @Nonnull Schema schema, @Nonnull SchemaClass clazz) {
         log.info(request.getCorrelationId() + " - findDistinctInstanceCountForClass");
         SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_INSTANCE_COUNT_FOR_CLASS_DISTINCT.name()), FIND_INSTANCE_COUNT_FOR_CLASS_DISTINCT)
                 .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, clazz.getClassificationProperty())
-                .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_A_FULL, clazz.getFullName(), false);
+                .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_A_FULL, clazz.getFullName(), clazz.getIsLiteral());
         QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
         if (!queryResponse.hasErrors() && !queryResponse.getResults().isEmpty() && queryResponse.getResults().get(0) != null) {
             Long distinctCount = SchemaUtil.getLongValueFromString(queryResponse.getResults().get(0).getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
