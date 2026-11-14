@@ -34,6 +34,7 @@ import static lv.lumii.obis.schema.services.extractor.v2.SchemaExtractorQueries.
 public class SparqlEndpointProcessor {
 
     private static final int RETRY_COUNT = 2;
+    private static final int FAST_QUERY_RETRY_SECONDS = 15;
 
     private static final String[] FALLBACK_ACCEPT_HEADERS = {
             "application/sparql-results+json",
@@ -190,6 +191,7 @@ public class SparqlEndpointProcessor {
                 }
             }
         } catch (Exception e) {
+            long failedAttemptSeconds = Duration.between(startTime, LocalDateTime.now()).getSeconds();
             if (e instanceof QueryExceptionHTTP) {
                 response.setQueryResponseError(new QueryResponseError(((QueryExceptionHTTP) e).getStatusCode(), ((QueryExceptionHTTP) e).getResponseMessage()));
             } else {
@@ -202,7 +204,7 @@ public class SparqlEndpointProcessor {
                     log.warn(String.format("SPARQL queries encountered errors, running validation queries to check the endpoint availability - [ %s ]",
                             SchemaUtil.getEndpointLinkText(request.getEndpointUrl(), request.getGraphName())));
                     boolean endpointIsHealthyWithoutRetries = checkEndpointHealthAndStopExecutionOnError(request, true);
-                    if (!endpointIsHealthyWithoutRetries || !QueryType.SMALL.equals(queryType)) {
+                    if (!endpointIsHealthyWithoutRetries || !QueryType.SMALL.equals(queryType) || failedAttemptSeconds < FAST_QUERY_RETRY_SECONDS) {
                         return requestData(request, queryName, sparqlQuery, queryType, timeout, ++attempt, withRetry);
                     }
                 }
