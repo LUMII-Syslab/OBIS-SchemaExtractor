@@ -16,6 +16,8 @@ public class SchemaElement {
     private String namespace;
     private String fullName;
 
+    private Boolean isLiteral;
+
     @JsonProperty("Labels")
     private List<Label> labels;
 
