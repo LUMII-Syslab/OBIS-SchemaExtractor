@@ -12,6 +12,10 @@ public class SparqlEndpointConfig {
     private String graphName;
     private boolean enableLogging;
     private boolean isPostRequest;
+    private Boolean getMethodAvailable;
+    private Boolean postMethodAvailable;
+    // Failure that made the retry switch HTTP method; kept only while the switched retry succeeds.
+    private String methodSwitchCause;
     private String acceptHeaderForSparqlResults;
     private Long timeout;
     private Long delayOnFailure;
@@ -47,5 +51,11 @@ public class SparqlEndpointConfig {
         this.enableLogging = enableLogging;
         this.isPostRequest = false;
         this.timeout = timeout;
+    }
+
+    // Health-check copy: same endpoint, graph, logging, Accept header and waiting settings, with its own method and timeout.
+    public SparqlEndpointConfig forHealthCheck(boolean isPostRequest, Long timeout) {
+        return new SparqlEndpointConfig(correlationId, endpointUrl, graphName, enableLogging, isPostRequest,
+                acceptHeaderForSparqlResults, timeout, delayOnFailure, waitingTimeForEndpoint);
     }
 }

@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import lombok.extern.slf4j.Slf4j;
@@ -36,6 +37,9 @@ public class SparqlEndpointProcessor {
 
     private static final int RETRY_COUNT = 2;
     private static final int FAST_QUERY_RETRY_SECONDS = 15;
+    private static final long HEALTH_CHECK_TIMEOUT_SECONDS = 120L;
+    // 403 Forbidden (e.g. WAF on the query URL), 405 Method Not Allowed, 414 URI Too Long, 431 Request Header Fields Too Large.
+    private static final Set<Integer> GET_REJECTION_STATUS_CODES = Set.of(403, 405, 414, 431);
 
     private static final String[] FALLBACK_ACCEPT_HEADERS = {
             "application/sparql-results+json",
@@ -52,8 +56,18 @@ public class SparqlEndpointProcessor {
     @Nonnull
     public QueryResponse read(@Nonnull SchemaExtractorRequestDto request, @Nonnull SparqlQueryBuilder queryBuilder) {
         Long timeout = calculateTimeout(request, queryBuilder);
-        return read(new SparqlEndpointConfig(request.getCorrelationId(), request.getEndpointUrl(), request.getGraphName(), request.getEnableLogging(),
-                request.getPostMethod(), request.getAcceptHeaderForSparqlResults(), timeout, request.getDelayOnFailure(), request.getWaitingTimeForEndpoint()), queryBuilder, true);
+        SparqlEndpointConfig config = new SparqlEndpointConfig(request.getCorrelationId(), request.getEndpointUrl(), request.getGraphName(), request.getEnableLogging(),
+                request.getPostMethod(), request.getAcceptHeaderForSparqlResults(), timeout, request.getDelayOnFailure(), request.getWaitingTimeForEndpoint());
+        config.setGetMethodAvailable(request.getGetMethodAvailable());
+        config.setPostMethodAvailable(request.getPostMethodAvailable());
+        QueryResponse response = read(config, queryBuilder, true);
+        if (!response.hasErrors() && request.getPostMethod() != config.isPostRequest()) {
+            log.info("{} - regular query method changed from {} to {} after successful retry of {} (first attempt failed with {}) at [ {} ]",
+                    request.getCorrelationId(), methodName(request.getPostMethod()), methodName(config.isPostRequest()),
+                    queryBuilder.getQueryName(), config.getMethodSwitchCause(), SchemaUtil.getEndpointLinkText(request.getEndpointUrl(), request.getGraphName()));
+            request.setPostMethod(config.isPostRequest());
+        }
+        return response;
     }
 
     public boolean checkEndpointHealthAndStopExecutionOnError(@Nonnull SparqlEndpointConfig request, boolean applyWaiting) {
@@ -102,10 +116,11 @@ public class SparqlEndpointProcessor {
         return endpointIsHealthyWithoutRetries;
     }
 
+    // Probe with the method chosen by the caller (used for the initial GET and POST availability checks).
     public boolean checkEndpointHealthQuery(@Nonnull SchemaExtractorRequestDto request) {
         SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(ENDPOINT_HEALTH_CHECK.getSparqlQuery(), ENDPOINT_HEALTH_CHECK);
         SparqlEndpointConfig config = new SparqlEndpointConfig(request.getCorrelationId(), request.getEndpointUrl(), request.getGraphName(), request.getEnableLogging(),
-                request.getPostMethod(), request.getAcceptHeaderForSparqlResults(), null, null, null);
+                request.getPostMethod(), request.getAcceptHeaderForSparqlResults(), healthCheckTimeout(null), null, null);
 
         QueryResponse response = read(config, queryBuilder, false);
 
@@ -136,10 +151,18 @@ public class SparqlEndpointProcessor {
                 && QueryResponseError.NOT_ACCEPTABLE_MSG.equals(response.getQueryResponseError().getResponseMessage());
     }
 
+    // Use POST for retry health checks when initially available, preserving the regular query's method and timeout.
     private boolean checkEndpointHealthQuery(@Nonnull SparqlEndpointConfig config) {
         SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(ENDPOINT_HEALTH_CHECK.getSparqlQuery(), ENDPOINT_HEALTH_CHECK);
-        QueryResponse response = read(config, queryBuilder, false);
+        SparqlEndpointConfig healthConfig = config.forHealthCheck(config.isPostRequest() || Boolean.TRUE.equals(config.getPostMethodAvailable()),
+                healthCheckTimeout(config.getTimeout()));
+        QueryResponse response = read(healthConfig, queryBuilder, false);
         return !response.hasErrors() && !response.getResults().isEmpty();
+    }
+
+    // Bound health checks so a hanging GET or POST cannot stall the initial probes or the waiting loop; keep a tighter regular-query timeout.
+    private static long healthCheckTimeout(@Nullable Long queryTimeout) {
+        return queryTimeout != null && queryTimeout > 0L ? Math.min(queryTimeout, HEALTH_CHECK_TIMEOUT_SECONDS) : HEALTH_CHECK_TIMEOUT_SECONDS;
     }
 
     private void waitForEndpoint(@Nonnull SparqlEndpointConfig request, @Nonnull Long sleepTime) {
@@ -192,25 +215,34 @@ public class SparqlEndpointProcessor {
                 }
             }
         } catch (Exception e) {
+            // Measure failure before health checks or waiting so only fast regular queries may change method on their retry.
             long failedAttemptSeconds = Duration.between(startTime, LocalDateTime.now()).getSeconds();
             if (e instanceof QueryExceptionHTTP) {
                 response.setQueryResponseError(new QueryResponseError(((QueryExceptionHTTP) e).getStatusCode(), ((QueryExceptionHTTP) e).getResponseMessage()));
             } else {
                 response.setQueryResponseError(new QueryResponseError(500, e.getMessage()));
             }
+            String failure = describeFailure(e);
             if (withRetry) {
-                log.error(String.format("SPARQL Endpoint Exception status '%s'. This was attempt number %d for the query %s", e.getMessage(), attempt, queryName));
+                log.error(String.format("SPARQL Endpoint Exception [%s] via %s: '%s'. This was attempt number %d for the query %s",
+                        failure, methodName(request.isPostRequest()), e.getMessage(), attempt, queryName));
                 log.error("\n" + sparqlQuery);
                 if (attempt < RETRY_COUNT) {
+                    if (isGetRejection(request, e)) {
+                        // The endpoint answered, but refused this GET; POST avoids it, so health checks and delayOnFailure would only waste time.
+                        return retryRequest(request, queryName, sparqlQuery, queryType, timeout, attempt + 1, withRetry, true, failure, failedAttemptSeconds);
+                    }
                     log.warn(String.format("SPARQL queries encountered errors, running validation queries to check the endpoint availability - [ %s ]",
                             SchemaUtil.getEndpointLinkText(request.getEndpointUrl(), request.getGraphName())));
                     boolean endpointIsHealthyWithoutRetries = checkEndpointHealthAndStopExecutionOnError(request, true);
                     if (!endpointIsHealthyWithoutRetries || !QueryType.SMALL.equals(queryType) || failedAttemptSeconds < FAST_QUERY_RETRY_SECONDS) {
-                        return requestData(request, queryName, sparqlQuery, queryType, timeout, ++attempt, withRetry);
+                        boolean switchMethod = failedAttemptSeconds < FAST_QUERY_RETRY_SECONDS && Boolean.TRUE.equals(request.getGetMethodAvailable()) && Boolean.TRUE.equals(request.getPostMethodAvailable());
+                        return retryRequest(request, queryName, sparqlQuery, queryType, timeout, attempt + 1, withRetry, switchMethod, failure, failedAttemptSeconds);
                     }
                 }
             } else {
-                log.error(String.format("SPARQL Endpoint Exception status '%s' for the query %s", e.getMessage(), queryName));
+                log.error(String.format("SPARQL Endpoint Exception [%s] via %s: '%s' for the query %s",
+                        failure, methodName(request.isPostRequest()), e.getMessage(), queryName));
                 log.error("\n" + sparqlQuery);
             }
         } finally {
@@ -230,6 +262,47 @@ public class SparqlEndpointProcessor {
         }
 
         return response;
+    }
+
+    // Retry once, optionally with the other HTTP method; the switched method stays in the config only if the retry succeeds.
+    @Nonnull
+    private QueryResponse retryRequest(@Nonnull SparqlEndpointConfig request, @Nonnull String queryName, @Nonnull String sparqlQuery, @Nullable QueryType queryType,
+                                       @Nullable Long timeout, int nextAttempt, boolean withRetry, boolean switchMethod, @Nonnull String failure, long failedAttemptSeconds) {
+        boolean originalPostMethod = request.isPostRequest();
+        if (switchMethod) {
+            request.setPostRequest(!originalPostMethod);
+            request.setMethodSwitchCause(String.format("%s via %s", failure, methodName(originalPostMethod)));
+            log.warn(String.format("Retrying the query %s with %s instead of %s after %s in %d s",
+                    queryName, methodName(!originalPostMethod), methodName(originalPostMethod), failure, failedAttemptSeconds));
+        }
+        QueryResponse retried = requestData(request, queryName, sparqlQuery, queryType, timeout, nextAttempt, withRetry);
+        if (retried.hasErrors() && switchMethod) {
+            request.setPostRequest(originalPostMethod);
+            request.setMethodSwitchCause(null);
+        }
+        return retried;
+    }
+
+    // GET refusals caused by the request itself (WAF rule on the URL, method not allowed, URL or request line too long) that POST can avoid.
+    private static boolean isGetRejection(@Nonnull SparqlEndpointConfig request, @Nonnull Exception e) {
+        return !request.isPostRequest() && Boolean.TRUE.equals(request.getPostMethodAvailable())
+                && e instanceof QueryExceptionHTTP httpException && GET_REJECTION_STATUS_CODES.contains(httpException.getStatusCode());
+    }
+
+    // Distinguish real HTTP statuses (e.g. a WAF 403) from transport or parsing failures, which Jena reports without a usable status.
+    @Nonnull
+    private static String describeFailure(@Nonnull Exception e) {
+        if (e instanceof QueryExceptionHTTP httpException && httpException.getStatusCode() > 0) {
+            String message = StringUtils.trimToEmpty(httpException.getResponseMessage());
+            return "HTTP " + httpException.getStatusCode() + (message.isEmpty() ? "" : " " + message);
+        }
+        Throwable cause = e.getCause() != null ? e.getCause() : e;
+        return "no HTTP status, " + cause.getClass().getSimpleName();
+    }
+
+    @Nonnull
+    private static String methodName(boolean isPostMethod) {
+        return isPostMethod ? "POST" : "GET";
     }
 
     private void buildQueryResultObject(@Nonnull List<QueryResult> queryResults, List<String> resultVariables, QuerySolution resultItem) {

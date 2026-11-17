@@ -119,6 +119,10 @@ public class SchemaExtractorRequestDto {
     @JsonIgnore
     private Boolean postMethod;
     @JsonIgnore
+    private Boolean getMethodAvailable;
+    @JsonIgnore
+    private Boolean postMethodAvailable;
+    @JsonIgnore
     private String acceptHeaderForSparqlResults;
 
     /**
