@@ -92,10 +92,10 @@ public enum SchemaExtractorQueries {
             "SELECT (COUNT(?value) as ?instances) WHERE { { SELECT DISTINCT ?x ?value WHERE { ?x <property> ?value. FILTER (lang(?value) != \"\") }} }", QueryType.LARGE
     ),
     FIND_PROPERTY_DATA_TYPE_LANG_STRING_WITH_LIMITS(
-            "SELECT (COUNT(?value) as ?instances) WHERE { { SELECT ?x ?value WHERE {?x <property> ?value.} LIMIT <limit> } FILTER (lang(?value) != \\\"\\\") }", QueryType.LARGE
+            "SELECT (COUNT(?value) as ?instances) WHERE { { SELECT ?x ?value WHERE {?x <property> ?value.} LIMIT <limit> } FILTER (lang(?value) != \"\") }", QueryType.LARGE
     ),
     FIND_PROPERTY_DATA_TYPE_LANG_STRING_WITH_LIMITS_DISTINCT(
-            "SELECT (COUNT(?value) as ?instances) WHERE { { SELECT DISTINCT ?x ?value WHERE {?x <property> ?value.} LIMIT <limit> } FILTER (lang(?value) != \\\"\\\") }", QueryType.LARGE
+            "SELECT (COUNT(?value) as ?instances) WHERE { { SELECT DISTINCT ?x ?value WHERE {?x <property> ?value.} LIMIT <limit> } FILTER (lang(?value) != \"\") }", QueryType.LARGE
     ),
     FIND_PROPERTY_DATA_TYPE_LANG_STRING_FOR_SOURCE(
             "SELECT (COUNT(?value) as ?instances) WHERE { ?x <classificationProperty> <sourceClass>. ?x <property> ?value. FILTER (lang(?value) != \"\") }", QueryType.SMALL

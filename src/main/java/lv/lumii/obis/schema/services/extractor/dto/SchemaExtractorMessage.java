@@ -9,7 +9,12 @@ public class SchemaExtractorMessage {
 
     public enum MessageLevel {ERROR, WARNING, WARNING_HIGH, WARNING_LOW, MESSAGE, NOTE, INFO, OK}
 
-    public enum FunctionalityType {Struct, Count}
+    public enum FunctionalityType {
+        STRUCT, DISTINCT, COUNT, STRUCT_SUB, BLANKS, STRUCT_URL_LITERAL,
+        STRUCT_INSTANCE, STRUCT_PP, STRUCT_PAIRS,
+        CLOSED_SOURCE_TARGET, DATATYPE, DOMAIN_RANGE,
+        CARDINALITY, INSTANCE_NAMESPACES, LABELS, INVALID_URI
+    }
 
     private MessageLevel messageLevel;
     private FunctionalityType functionalityType;
