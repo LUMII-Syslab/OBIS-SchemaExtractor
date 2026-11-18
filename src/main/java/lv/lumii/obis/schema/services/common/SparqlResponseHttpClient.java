@@ -1,6 +1,7 @@
 package lv.lumii.obis.schema.services.common;
 
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLParameters;
@@ -80,11 +81,18 @@ final class SparqlResponseHttpClient extends HttpClient {
     private <T> CompletableFuture<HttpResponse<T>> detectContentType(CompletableFuture<HttpResponse<T>> response) {
         // Peeking blocks on the body, so keep it off the common ForkJoinPool. A plain thenApply is not enough: a JDK client
         // without its own executor completes the future on the common pool, so run the peek on a virtual thread instead.
+        // carry the logging context (e.g. the run-specific log file of the schema extraction) over to the peek thread
+        Map<String, String> loggingContext = MDC.getCopyOfContextMap();
         return response.thenApplyAsync(value -> {
+            if (loggingContext != null) {
+                MDC.setContextMap(loggingContext);
+            }
             try {
                 return detectContentType(value);
             } catch (IOException failure) {
                 throw new CompletionException(failure);
+            } finally {
+                MDC.clear();
             }
         }, PEEK_EXECUTOR);
     }

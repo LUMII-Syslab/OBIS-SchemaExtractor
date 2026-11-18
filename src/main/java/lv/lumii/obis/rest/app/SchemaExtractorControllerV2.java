@@ -12,6 +12,7 @@ import lv.lumii.obis.schema.model.v2.Schema;
 import lv.lumii.obis.schema.services.extractor.dto.SchemaExtractorRequestDto;
 import lv.lumii.obis.schema.services.extractor.v2.SchemaExtractor;
 import lv.lumii.obis.schema.services.*;
+import lv.lumii.obis.schema.services.logging.ExtractionLog;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springdoc.core.annotations.ParameterObject;
@@ -104,6 +105,16 @@ public class SchemaExtractorControllerV2 {
         // 1. Create the request object
         SchemaExtractorRequestDto requestDto = requestBuilder.buildRequest(request);
         requestDto.setEnableLogging(enableLogging);
+
+        // the whole processing of this request is logged in a separate log file
+        try (ExtractionLog ignored = ExtractionLog.start(requestDto.getEndpointUrl(), requestDto.getGraphName())) {
+            return processBuildFullSchemaRequest(requestDto, includedClassesCsvFile, includedPropertiesCsvFile, namespacePrefixFile, saveConfig);
+        }
+    }
+
+    private String processBuildFullSchemaRequest(@Nonnull SchemaExtractorRequestDto requestDto, @Nullable MultipartFile includedClassesCsvFile,
+                                                 @Nullable MultipartFile includedPropertiesCsvFile, @Nullable MultipartFile namespacePrefixFile,
+                                                 @Nullable Boolean saveConfig) {
         log.info(String.format(SCHEMA_BUILD_PARAMETERS, requestDto.getCorrelationId()));
 
         // 2. Read included classes from the external CSV file
@@ -203,17 +214,20 @@ public class SchemaExtractorControllerV2 {
         // 3. Load SPARQL queries defined in the system file
         requestDto.setQueries(initializeSparqlQueries());
 
-        try {
-            // 4. Build the schema from the endpoint and Save the result JSON schema in file
-            String resultSchema = extractSchema(requestDto);
-            // 8. Return the result JSON schema
-            return resultSchema;
-        } catch (SparqlEndpointException e) {
-            log.error(e.getMessage());
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage(), e);
-        } catch (Exception e) {
-            log.error(SCHEMA_EXTRACT_EXCEPTION_INTERNAL_ERROR, e);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, SCHEMA_EXTRACT_EXCEPTION_INTERNAL_ERROR, e);
+        // the extraction of this request is logged in a separate log file
+        try (ExtractionLog ignored = ExtractionLog.start(requestDto.getEndpointUrl(), requestDto.getGraphName())) {
+            try {
+                // 4. Build the schema from the endpoint and Save the result JSON schema in file
+                String resultSchema = extractSchema(requestDto);
+                // 5. Return the result JSON schema
+                return resultSchema;
+            } catch (SparqlEndpointException e) {
+                log.error(e.getMessage());
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage(), e);
+            } catch (Exception e) {
+                log.error(SCHEMA_EXTRACT_EXCEPTION_INTERNAL_ERROR, e);
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, SCHEMA_EXTRACT_EXCEPTION_INTERNAL_ERROR, e);
+            }
         }
     }
 

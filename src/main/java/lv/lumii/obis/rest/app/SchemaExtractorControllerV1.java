@@ -17,6 +17,7 @@ import lv.lumii.obis.schema.services.extractor.v1.SchemaExtractorFewQueries;
 import lv.lumii.obis.schema.services.extractor.v1.SchemaExtractorManyQueries;
 import lv.lumii.obis.schema.model.v1.Schema;
 import lv.lumii.obis.schema.services.*;
+import lv.lumii.obis.schema.services.logging.ExtractionLog;
 import lv.lumii.obis.schema.services.reader.OWLOntologyReader;
 import org.apache.commons.lang3.StringUtils;
 import org.springdoc.core.annotations.ParameterObject;
@@ -79,22 +80,25 @@ public class SchemaExtractorControllerV1 {
         SchemaExtractorRequestDto requestDto = requestBuilder.buildRequest(request);
         String requestJson = new Gson().toJson(request);
 
-        log.info(String.format(SCHEMA_EXTRACT_MESSAGE_START, requestJson));
+        // the extraction of this request is logged in a separate log file
+        try (ExtractionLog ignored = ExtractionLog.start(requestDto.getEndpointUrl(), requestDto.getGraphName())) {
+            log.info(String.format(SCHEMA_EXTRACT_MESSAGE_START, requestJson));
 
-        LocalDateTime startTime = LocalDateTime.now();
-        Schema schema;
-        if (isTrue(SchemaExtractorRequestOld.ExtractionVersion.fewComplexQueries.equals(request.getVersion()))) {
-            schema = schemaExtractorFewQueries.extractSchema(requestDto);
-        } else if (isTrue(SchemaExtractorRequestOld.ExtractionVersion.manySmallQueriesWithDirectProperties.equals(request.getVersion()))) {
-            schema = schemaExtractorManyQueriesWithDirectProperties.extractSchema(requestDto);
-        } else {
-            schema = schemaExtractorManyQueries.extractSchema(requestDto);
+            LocalDateTime startTime = LocalDateTime.now();
+            Schema schema;
+            if (isTrue(SchemaExtractorRequestOld.ExtractionVersion.fewComplexQueries.equals(request.getVersion()))) {
+                schema = schemaExtractorFewQueries.extractSchema(requestDto);
+            } else if (isTrue(SchemaExtractorRequestOld.ExtractionVersion.manySmallQueriesWithDirectProperties.equals(request.getVersion()))) {
+                schema = schemaExtractorManyQueriesWithDirectProperties.extractSchema(requestDto);
+            } else {
+                schema = schemaExtractorManyQueries.extractSchema(requestDto);
+            }
+            LocalDateTime endTime = LocalDateTime.now();
+
+            log.info(String.format(SCHEMA_EXTRACT_MESSAGE_END, calculateExecutionTime(startTime, endTime), requestJson));
+
+            return objectConversionService.getJsonSchemaString(schema);
         }
-        LocalDateTime endTime = LocalDateTime.now();
-
-        log.info(String.format(SCHEMA_EXTRACT_MESSAGE_END, calculateExecutionTime(startTime, endTime), requestJson));
-
-        return objectConversionService.getJsonSchemaString(schema);
     }
 
     @RequestMapping(value = "/owlFile/buildFullSchema", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON)
@@ -127,13 +131,16 @@ public class SchemaExtractorControllerV1 {
 
         // Enhance Schema JSON with data from SPARQL endpoint
         if (StringUtils.isNotEmpty(enhancerRequest.getEndpointUrl())) {
-            log.info(String.format(SCHEMA_ENHANCE_MESSAGE_START, correlationId, enhancerRequest.getEndpointUrl()));
-            startTime = LocalDateTime.now();
-            enhancerRequest.setCorrelationId(correlationId);
-            enhancerRequest.setExcludedNamespaces(readerRequest.getExcludedNamespaces());
-            schema = owlOntologyEnhancer.enhanceSchema(schema, enhancerRequest);
-            endTime = LocalDateTime.now();
-            log.info(String.format(SCHEMA_ENHANCE_MESSAGE_END, correlationId, enhancerRequest.getEndpointUrl(), calculateExecutionTime(startTime, endTime)));
+            // the endpoint queries of this request are logged in a separate log file
+            try (ExtractionLog ignored = ExtractionLog.start(enhancerRequest.getEndpointUrl(), enhancerRequest.getGraphName())) {
+                log.info(String.format(SCHEMA_ENHANCE_MESSAGE_START, correlationId, enhancerRequest.getEndpointUrl()));
+                startTime = LocalDateTime.now();
+                enhancerRequest.setCorrelationId(correlationId);
+                enhancerRequest.setExcludedNamespaces(readerRequest.getExcludedNamespaces());
+                schema = owlOntologyEnhancer.enhanceSchema(schema, enhancerRequest);
+                endTime = LocalDateTime.now();
+                log.info(String.format(SCHEMA_ENHANCE_MESSAGE_END, correlationId, enhancerRequest.getEndpointUrl(), calculateExecutionTime(startTime, endTime)));
+            }
         }
 
         return objectConversionService.getJsonSchemaString(schema);

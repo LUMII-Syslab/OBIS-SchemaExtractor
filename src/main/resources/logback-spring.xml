@@ -26,15 +26,52 @@
         <encoder>
             <pattern>${defaultPattern}</pattern>
         </encoder>
+        <!-- lines of schema extraction runs are written to the run-specific log files (EXTRACTION_LOG) -->
+        <filter class="lv.lumii.obis.schema.services.logging.ExtractionLogFilter">
+            <insideExtraction>false</insideExtraction>
+        </filter>
+    </appender>
+
+    <!-- Separate log file for every schema extraction run (endpoint + named graph + start date/time),
+         the file name is set in MDC by lv.lumii.obis.schema.services.logging.ExtractionLog (also uses the "logs" directory) -->
+    <appender name="EXTRACTION_LOG" class="ch.qos.logback.classic.sift.SiftingAppender">
+        <filter class="lv.lumii.obis.schema.services.logging.ExtractionLogFilter">
+            <insideExtraction>true</insideExtraction>
+        </filter>
+        <discriminator>
+            <key>extractionLog</key>
+            <defaultValue>schema-extraction</defaultValue>
+        </discriminator>
+        <!-- a run-specific file is closed at the end of the run; the timeout only covers abnormal terminations -->
+        <timeout>24 hours</timeout>
+        <sift>
+            <appender name="EXTRACTION_LOG-${extractionLog}" class="ch.qos.logback.core.rolling.RollingFileAppender">
+                <!-- no <file> here: the rolling policy decides the file name;
+                     a long run is continued in the files logs/<name>_2.log, logs/<name>_3.log, ...; no part is ever deleted -->
+                <rollingPolicy class="lv.lumii.obis.schema.services.logging.ExtractionLogRollingPolicy">
+                    <fileBaseName>logs/${extractionLog}</fileBaseName>
+                </rollingPolicy>
+                <triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
+                    <maxFileSize>10000KB</maxFileSize>
+                    <!-- the file size is checked at most this often (logback default is 60 seconds) -->
+                    <checkIncrement>1 second</checkIncrement>
+                </triggeringPolicy>
+                <encoder>
+                    <pattern>${defaultPattern}</pattern>
+                </encoder>
+            </appender>
+        </sift>
     </appender>
 
     <logger name="lv.lumii.obis.schema.services.common.SparqlEndpointProcessor" level="INFO" additivity="false">
         <appender-ref ref="LOGFILE"/>
+        <appender-ref ref="EXTRACTION_LOG"/>
     </logger>
 
     <root level="INFO">
         <appender-ref ref="CONSOLE"/>
         <appender-ref ref="LOGFILE"/>
+        <appender-ref ref="EXTRACTION_LOG"/>
     </root>
 
 </configuration>
