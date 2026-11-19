@@ -138,6 +138,12 @@ calculateImportanceIndexes: "basic"
 # Allowed values: [true, false]
 calculateClosedClassSets: true
 
+# Description: Enable inferred markers for unresolved closed source/target checks (configuration-file option only).
+# Required: false
+# Default: false
+# Allowed values: [true, false]
+estimateClosedSourceTarget: false
+
 # ------------------------------------------------------------
 # CARDINALITIES & DATA TYPES
 # ------------------------------------------------------------

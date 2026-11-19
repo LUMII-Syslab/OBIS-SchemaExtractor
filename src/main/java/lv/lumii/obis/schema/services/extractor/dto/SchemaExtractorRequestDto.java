@@ -74,6 +74,7 @@ public class SchemaExtractorRequestDto {
     private Boolean calculateClosedClassSets;
     private CalculatePropertyFeatureMode calculateCardinalities;
     private Boolean estimateCardinalities;
+    private Boolean estimateClosedSourceTarget;
     private FineTuneTripleCounts fineTuneTripleCounts;
     private CalculatePropertyFeatureMode calculateDataTypes;
     private Long sampleLimitForDataTypeCalculation;
@@ -289,6 +290,12 @@ public class SchemaExtractorRequestDto {
     @Nonnull
     public Boolean getEstimateCardinalities() {
         return estimateCardinalities == null ? Boolean.FALSE : estimateCardinalities;
+    }
+
+    // Keep closed source/target estimation disabled when the configuration omits this optional setting.
+    @Nonnull
+    public Boolean getEstimateClosedSourceTarget() {
+        return estimateClosedSourceTarget == null ? Boolean.FALSE : estimateClosedSourceTarget;
     }
 
     @Nonnull
