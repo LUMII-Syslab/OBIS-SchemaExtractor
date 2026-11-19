@@ -48,6 +48,9 @@ public class Schema {
     @JsonProperty("HasWarnings")
     private Boolean hasWarnings;
 
+    @JsonProperty("HasMessages")
+    private Boolean hasMessages;
+
     @JsonProperty("HasNotes")
     private Boolean hasNotes;
 
@@ -92,15 +95,24 @@ public class Schema {
         return hasErrors;
     }
 
+    // Only WARNING contributes to the warning summary.
     @Nonnull
     public Boolean getHasWarnings() {
-        hasWarnings = hasMessageFlag(SchemaExtractorMessage.MessageLevel.WARNING) || hasMessageFlag(SchemaExtractorMessage.MessageLevel.WARNING_LOW);
+        hasWarnings = hasMessageFlag(SchemaExtractorMessage.MessageLevel.WARNING);
         return hasWarnings;
     }
 
+    // Expose MESSAGE diagnostics separately from notes and warnings.
+    @Nonnull
+    public Boolean getHasMessages() {
+        hasMessages = hasMessageFlag(SchemaExtractorMessage.MessageLevel.MESSAGE);
+        return hasMessages;
+    }
+
+    // Group NOTE and INFO diagnostics under the notes summary.
     @Nonnull
     public Boolean getHasNotes() {
-        hasNotes = hasMessageFlag(SchemaExtractorMessage.MessageLevel.INFO);
+        hasNotes = hasMessageFlag(SchemaExtractorMessage.MessageLevel.NOTE) || hasMessageFlag(SchemaExtractorMessage.MessageLevel.INFO);
         return hasNotes;
     }
 

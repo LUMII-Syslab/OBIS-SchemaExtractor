@@ -2950,7 +2950,7 @@ public class SchemaExtractor {
         String relation = type == SchemaExtractorPropertyRelatedPropertyInfo.LinkType.follower ? "follower" : type + " property";
         boolean nonLiteral = forwardQuery.getQueryName().endsWith("_NONLITERAL");
         String estimateMessage = "Query for exact property " + relation + " triple count" + (nonLiteral ? " (with non-literal filter)" : "")
-                + " not successful. Using an estimate instead.";
+                + " not successful. Using an estimate instead (from the reverse direction).";
         String unavailableMessage = "Property " + relation + " triple count unavailable" + (nonLiteral ? " (via a query with non-literal filter)" : "");
         if (forwardCount != null) {
             forward.setTripleCount(forwardCount);
