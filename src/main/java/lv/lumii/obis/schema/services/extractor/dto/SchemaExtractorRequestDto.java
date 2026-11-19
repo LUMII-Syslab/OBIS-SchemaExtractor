@@ -73,6 +73,7 @@ public class SchemaExtractorRequestDto {
     private ImportantIndexesMode calculateImportanceIndexes;
     private Boolean calculateClosedClassSets;
     private CalculatePropertyFeatureMode calculateCardinalities;
+    private Boolean estimateCardinalities;
     private FineTuneTripleCounts fineTuneTripleCounts;
     private CalculatePropertyFeatureMode calculateDataTypes;
     private Long sampleLimitForDataTypeCalculation;
@@ -282,6 +283,12 @@ public class SchemaExtractorRequestDto {
             return CalculatePropertyFeatureMode.propertyLevelAndClassContext;
         }
         return calculateCardinalities;
+    }
+
+    // Keep cardinality estimation disabled when the configuration omits this optional setting.
+    @Nonnull
+    public Boolean getEstimateCardinalities() {
+        return estimateCardinalities == null ? Boolean.FALSE : estimateCardinalities;
     }
 
     @Nonnull

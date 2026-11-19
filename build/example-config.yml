@@ -149,6 +149,12 @@ calculateClosedClassSets: true
 # Allowed values: [none, propertyLevelOnly, propertyLevelAndClassContext]
 calculateCardinalities: "propertyLevelAndClassContext"
 
+# Description: Enable cardinality estimation (configuration-file option only).
+# Required: false
+# Default: false
+# Allowed values: [true, false]
+estimateCardinalities: false
+
 # Description: Calculate data types for attributes. May consider propertyLevelOnly for larger schemas.
 # Required: true
 # Default: propertyLevelAndClassContext

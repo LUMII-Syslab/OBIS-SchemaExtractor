@@ -13,6 +13,7 @@ public class QueryResponse {
     private QueryResponseError queryResponseError;
 
     private long executionTime;
+    private Long shortestFailedAttemptDurationNanos;
 
     private List<QueryResult> results;
 
@@ -22,6 +23,10 @@ public class QueryResponse {
 
     public long getExecutionTime() {
         return executionTime;
+    }
+
+    public Long getShortestFailedAttemptDurationNanos() {
+        return shortestFailedAttemptDurationNanos;
     }
 
     public List<QueryResult> getResults() {

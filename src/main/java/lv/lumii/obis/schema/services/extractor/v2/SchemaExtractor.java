@@ -26,6 +26,7 @@ import javax.annotation.Nullable;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
@@ -3116,6 +3117,18 @@ public class SchemaExtractor {
         };
     }
 
+    // Report a failed cardinality query and estimate only when every failed attempt was measured and exceeded 45 seconds.
+    private boolean reportCardinalityFailure(Schema schema, SchemaExtractorRequestDto request, String property, String contextClass,
+                                              SparqlQueryBuilder query, QueryResponse response) {
+        Long shortestFailedAttempt = response.getShortestFailedAttemptDurationNanos();
+        boolean estimated = request.getEstimateCardinalities() && shortestFailedAttempt != null
+                && shortestFailedAttempt > TimeUnit.SECONDS.toNanos(45);
+        addExtractionMessage(schema, NOTE, SchemaExtractorMessage.FunctionalityType.CARDINALITY, property, contextClass, query,
+                estimated ? "The cardinality has been set on the basis of the query failure" : null);
+        return estimated;
+    }
+
+    // Apply the configurable failure policy to source minimum cardinality while retaining successful counterexample checks.
     protected void determinePropertySourceMinCardinality(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property,
                                                          @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties) {
         log.info(request.getCorrelationId() + " - determinePropertySourceMinCardinality [" + property.getPropertyName() + "]");
@@ -3125,47 +3138,35 @@ public class SchemaExtractor {
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, sourceClass.getClassificationProperty())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false);
             QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
-            if (!queryResponse.getResults().isEmpty()) {
-                sourceClass.setMinCardinality(DEFAULT_MIN_CARDINALITY);
-            } else {
-                sourceClass.setMinCardinality(1);
-            }
             if (queryResponse.hasErrors()) {
-                addExtractionMessage(schema, NOTE, SchemaExtractorMessage.FunctionalityType.CARDINALITY,
-                        property.getPropertyName(), null, queryBuilder);
-                sourceClass.setMinCardinality(0);
-                if (queryResponse.getExecutionTime() > 45) {
-                    sourceClass.setMinCardinalityAssertionSize(-1);
-                }
+                boolean estimated = reportCardinalityFailure(schema, request, property.getPropertyName(), sourceClass.getClassName(), queryBuilder, queryResponse);
+                sourceClass.setMinCardinality(estimated ? 1 : DEFAULT_MIN_CARDINALITY);
+                sourceClass.setMinCardinalityAssertionSize(estimated ? -1 : null);
+            } else {
+                sourceClass.setMinCardinality(queryResponse.getResults().isEmpty() ? 1 : DEFAULT_MIN_CARDINALITY);
+                sourceClass.setMinCardinalityAssertionSize(null);
             }
         });
     }
 
+    // Handle property maximum-cardinality failures before empty results can be interpreted as a successful restriction.
     protected void determinePropertyMaxCardinality(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo
             property, @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties) {
         log.info(request.getCorrelationId() + " - determinePropertyMaxCardinality [" + property.getPropertyName() + "]");
         SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_PROPERTY_MAX_CARDINALITY.name()), FIND_PROPERTY_MAX_CARDINALITY)
                 .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false);
         QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
-        if (queryResponse.getResults().isEmpty()) {
-            if (queryResponse.hasErrors()) {
-                addExtractionMessage(schema, NOTE, SchemaExtractorMessage.FunctionalityType.CARDINALITY,
-                        property.getPropertyName(), null, queryBuilder);
-            }
-            property.setMaxCardinality(1);
-            return;
-        }
-        property.setMaxCardinality(DEFAULT_MAX_CARDINALITY);
         if (queryResponse.hasErrors()) {
-            addExtractionMessage(schema, NOTE, SchemaExtractorMessage.FunctionalityType.CARDINALITY,
-                    property.getPropertyName(), null, queryBuilder);
-            property.setMaxCardinality(-1);
-            if (queryResponse.getExecutionTime() > 45) {
-                property.setMaxCardinalityAssertionSize(-1);
-            }
+            boolean estimated = reportCardinalityFailure(schema, request, property.getPropertyName(), null, queryBuilder, queryResponse);
+            property.setMaxCardinality(estimated ? 1 : DEFAULT_MAX_CARDINALITY);
+            property.setMaxCardinalityAssertionSize(estimated ? -1 : null);
+        } else {
+            property.setMaxCardinality(queryResponse.getResults().isEmpty() ? 1 : DEFAULT_MAX_CARDINALITY);
+            property.setMaxCardinalityAssertionSize(null);
         }
     }
 
+    // Apply the configurable failure policy and include the source class in maximum-cardinality diagnostics.
     protected void determinePropertySourceMaxCardinality(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request,
                                                          int totalCountOfProperties) {
         log.info(request.getCorrelationId() + " - determinePropertySourceMaxCardinality [" + property.getPropertyName() + "]");
@@ -3175,51 +3176,35 @@ public class SchemaExtractor {
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, sourceClass.getClassificationProperty())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false);
             QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
-            if (queryResponse.getResults().isEmpty()) {
-                if (queryResponse.hasErrors()) {
-                    addExtractionMessage(schema, NOTE, SchemaExtractorMessage.FunctionalityType.CARDINALITY,
-                            property.getPropertyName(), null, queryBuilder);
-                }
-                sourceClass.setMaxCardinality(1);
+            if (queryResponse.hasErrors()) {
+                boolean estimated = reportCardinalityFailure(schema, request, property.getPropertyName(), sourceClass.getClassName(), queryBuilder, queryResponse);
+                sourceClass.setMaxCardinality(estimated ? 1 : DEFAULT_MAX_CARDINALITY);
+                sourceClass.setMaxCardinalityAssertionSize(estimated ? -1 : null);
             } else {
-                sourceClass.setMaxCardinality(DEFAULT_MAX_CARDINALITY);
-                if (queryResponse.hasErrors()) {
-                    addExtractionMessage(schema, NOTE, SchemaExtractorMessage.FunctionalityType.CARDINALITY,
-                            property.getPropertyName(), null, queryBuilder);
-                    sourceClass.setMaxCardinality(-1);
-                    if (queryResponse.getExecutionTime() > 45) {
-                        sourceClass.setMaxCardinalityAssertionSize(-1);
-                    }
-                }
+                sourceClass.setMaxCardinality(queryResponse.getResults().isEmpty() ? 1 : DEFAULT_MAX_CARDINALITY);
+                sourceClass.setMaxCardinalityAssertionSize(null);
             }
         });
     }
 
+    // Handle property inverse-maximum failures before interpreting successful counterexample results.
     protected void determinePropertyInverseMaxCardinality(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request,
                                                           int totalCountOfProperties) {
         log.info(request.getCorrelationId() + " - determinePropertyInverseMaxCardinality [" + property.getPropertyName() + "]");
         SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_INVERSE_PROPERTY_MAX_CARDINALITY.name()), FIND_INVERSE_PROPERTY_MAX_CARDINALITY)
                 .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false);
         QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
-        if (queryResponse.getResults().isEmpty()) {
-            if (queryResponse.hasErrors()) {
-                addExtractionMessage(schema, NOTE, SchemaExtractorMessage.FunctionalityType.CARDINALITY,
-                        property.getPropertyName(), null, queryBuilder);
-            }
-            property.setMaxInverseCardinality(1);
-            return;
-        }
-        property.setMaxInverseCardinality(DEFAULT_MAX_CARDINALITY);
         if (queryResponse.hasErrors()) {
-            addExtractionMessage(schema, NOTE, SchemaExtractorMessage.FunctionalityType.CARDINALITY,
-                    property.getPropertyName(), null, queryBuilder);
-            property.setMaxInverseCardinality(-1);
-            if (queryResponse.getExecutionTime() > 45) {
-                property.setMaxInverseCardinalityAssertionSize(-1);
-            }
+            boolean estimated = reportCardinalityFailure(schema, request, property.getPropertyName(), null, queryBuilder, queryResponse);
+            property.setMaxInverseCardinality(estimated ? 1 : DEFAULT_MAX_CARDINALITY);
+            property.setMaxInverseCardinalityAssertionSize(estimated ? -1 : null);
+        } else {
+            property.setMaxInverseCardinality(queryResponse.getResults().isEmpty() ? 1 : DEFAULT_MAX_CARDINALITY);
+            property.setMaxInverseCardinalityAssertionSize(null);
         }
     }
 
+    // Preserve the chosen failure or estimate value and record the target class for inverse-maximum diagnostics.
     protected void determinePropertyTargetsInverseMaxCardinality(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request,
                                                                  int totalCountOfProperties) {
         log.info(request.getCorrelationId() + " - determinePropertyTargetsInverseMaxCardinality [" + property.getPropertyName() + "]");
@@ -3230,17 +3215,17 @@ public class SchemaExtractor {
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false);
             QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
             if (queryResponse.hasErrors()) {
-                addExtractionMessage(schema, NOTE, SchemaExtractorMessage.FunctionalityType.CARDINALITY,
-                        property.getPropertyName(), null, queryBuilder);
-                targetClass.setMaxInverseCardinality(-1);
-                if (queryResponse.getExecutionTime() > 45) {
-                    targetClass.setMaxInverseCardinalityAssertionSize(-1);
-                }
+                boolean estimated = reportCardinalityFailure(schema, request, property.getPropertyName(), targetClass.getClassName(), queryBuilder, queryResponse);
+                targetClass.setMaxInverseCardinality(estimated ? 1 : DEFAULT_MAX_CARDINALITY);
+                targetClass.setMaxInverseCardinalityAssertionSize(estimated ? -1 : null);
+            } else {
+                targetClass.setMaxInverseCardinality(queryResponse.getResults().isEmpty() ? 1 : DEFAULT_MAX_CARDINALITY);
+                targetClass.setMaxInverseCardinalityAssertionSize(null);
             }
-            targetClass.setMaxInverseCardinality(queryResponse.getResults().isEmpty() ? 1 : DEFAULT_MAX_CARDINALITY);
         });
     }
 
+    // Preserve the chosen failure or estimate value and record the target class for inverse-minimum diagnostics.
     protected void determinePropertyTargetsInverseMinCardinality(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request,
                                                                  int totalCountOfProperties) {
         log.info(request.getCorrelationId() + " - determinePropertyTargetsInverseMinCardinality [" + property.getPropertyName() + "]");
@@ -3251,16 +3236,16 @@ public class SchemaExtractor {
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false);
             QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
             if (queryResponse.hasErrors()) {
-                addExtractionMessage(schema, NOTE, SchemaExtractorMessage.FunctionalityType.CARDINALITY,
-                        property.getPropertyName(), null, queryBuilder);
-                targetClass.setMinInverseCardinality(0);
-                if (queryResponse.getExecutionTime() > 45) {
-                    targetClass.setMinInverseCardinalityAssertionSize(-1);
-                }
+                boolean estimated = reportCardinalityFailure(schema, request, property.getPropertyName(), targetClass.getClassName(), queryBuilder, queryResponse);
+                targetClass.setMinInverseCardinality(estimated ? 1 : DEFAULT_MIN_CARDINALITY);
+                targetClass.setMinInverseCardinalityAssertionSize(estimated ? -1 : null);
+            } else {
+                targetClass.setMinInverseCardinality(queryResponse.getResults().isEmpty() ? 1 : DEFAULT_MIN_CARDINALITY);
+                targetClass.setMinInverseCardinalityAssertionSize(null);
             }
-            targetClass.setMinInverseCardinality(!queryResponse.getResults().isEmpty() ? DEFAULT_MIN_CARDINALITY : 1);
         });
     }
+
 
     protected void determineDomainsAndRanges(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull List<SchemaClass> classes,
                                              @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties) {

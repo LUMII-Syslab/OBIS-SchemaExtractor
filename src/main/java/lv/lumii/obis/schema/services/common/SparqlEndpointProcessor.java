@@ -193,6 +193,8 @@ public class SparqlEndpointProcessor {
     private QueryResponse requestData(@Nonnull SparqlEndpointConfig request, @Nonnull String queryName, @Nonnull String sparqlQuery, String loggedQuery, @Nullable QueryType queryType,
                                       @Nullable Long timeout, int attempt, boolean withRetry) {
         LocalDateTime startTime = LocalDateTime.now();
+        // Track failed-attempt durations separately so health checks and waiting cannot affect cardinality estimates.
+        long attemptStartNanos = System.nanoTime();
         QueryResponse response = new QueryResponse();
         List<QueryResult> queryResults = null;
         ResultSet resultSet;
@@ -211,6 +213,8 @@ public class SparqlEndpointProcessor {
                 }
             }
         } catch (Exception e) {
+            long failedAttemptDurationNanos = System.nanoTime() - attemptStartNanos;
+            response.setShortestFailedAttemptDurationNanos(failedAttemptDurationNanos);
             // Measure failure before health checks or waiting so only fast regular queries may change method on their retry.
             long failedAttemptSeconds = Duration.between(startTime, LocalDateTime.now()).getSeconds();
             queryResults = null;
@@ -235,6 +239,12 @@ public class SparqlEndpointProcessor {
                             request.setPostRequest(!originalPostMethod);
                         }
                         QueryResponse retried = requestData(request, queryName, sparqlQuery, loggedQuery, queryType, timeout, ++attempt, withRetry);
+                        Long retriedFailureDurationNanos = retried.getShortestFailedAttemptDurationNanos();
+                        if (retriedFailureDurationNanos != null) {
+                            retried.setShortestFailedAttemptDurationNanos(Math.min(failedAttemptDurationNanos, retriedFailureDurationNanos));
+                        } else if (!retried.hasErrors()) {
+                            retried.setShortestFailedAttemptDurationNanos(failedAttemptDurationNanos);
+                        }
                         if (retried.hasErrors()) request.setPostRequest(originalPostMethod);
                         return retried;
                     }
