@@ -3674,7 +3674,7 @@ public class SchemaExtractor {
 
             // if the query fails, check additionally only the first biggest class from the list
             if (queryResponse.hasErrors()) {
-                addExtractionMessage(schema, NOTE, SchemaExtractorMessage.FunctionalityType.DOMAIN_RANGE,
+                addExtractionMessage(schema, NOTE, SchemaExtractorMessage.FunctionalityType.IMPORTANCE_INDEX,
                         propertyName, null, queryBuilder);
 
                 queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_PRINCIPAL_SOURCE.name()), CHECK_PRINCIPAL_SOURCE)
@@ -3685,7 +3685,7 @@ public class SchemaExtractor {
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CUSTOM_FILTER, buildCustomFilterToCheckPrincipalClass(Collections.unmodifiableList(existingClasses.subList(0, 1)), classes));
                 queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
                 if (queryResponse.hasErrors()) {
-                    addExtractionMessage(schema, NOTE, SchemaExtractorMessage.FunctionalityType.DOMAIN_RANGE,
+                    addExtractionMessage(schema, NOTE, SchemaExtractorMessage.FunctionalityType.IMPORTANCE_INDEX,
                             propertyName, null, queryBuilder);
                 }
             }
@@ -3713,7 +3713,7 @@ public class SchemaExtractor {
 
             // if the query fails, check additionally only the first biggest class from the list
             if (queryResponse.hasErrors()) {
-                addExtractionMessage(schema, NOTE, SchemaExtractorMessage.FunctionalityType.DOMAIN_RANGE,
+                addExtractionMessage(schema, NOTE, SchemaExtractorMessage.FunctionalityType.IMPORTANCE_INDEX,
                         propertyName, null, queryBuilder);
 
                 queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_PRINCIPAL_TARGET.name()), CHECK_PRINCIPAL_TARGET)
@@ -3724,7 +3724,7 @@ public class SchemaExtractor {
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CUSTOM_FILTER, buildCustomFilterToCheckPrincipalClass(Collections.unmodifiableList(existingClasses.subList(0, 1)), classes));
                 queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
                 if (queryResponse.hasErrors()) {
-                    addExtractionMessage(schema, NOTE, SchemaExtractorMessage.FunctionalityType.DOMAIN_RANGE,
+                    addExtractionMessage(schema, NOTE, SchemaExtractorMessage.FunctionalityType.IMPORTANCE_INDEX,
                             propertyName, null, queryBuilder);
                 }
             }
@@ -3754,7 +3754,7 @@ public class SchemaExtractor {
 
             // if the query fails, check additionally only the first biggest class from the list
             if (queryResponse.hasErrors()) {
-                addExtractionMessage(schema, NOTE, SchemaExtractorMessage.FunctionalityType.DOMAIN_RANGE,
+                addExtractionMessage(schema, NOTE, SchemaExtractorMessage.FunctionalityType.IMPORTANCE_INDEX,
                         propertyName, null, queryBuilder);
 
                 queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_PRINCIPAL_TARGET_FOR_SOURCE.name()), CHECK_PRINCIPAL_TARGET_FOR_SOURCE)
@@ -3768,7 +3768,7 @@ public class SchemaExtractor {
                 queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
 
                 if (queryResponse.hasErrors()) {
-                    addExtractionMessage(schema, NOTE, SchemaExtractorMessage.FunctionalityType.DOMAIN_RANGE,
+                    addExtractionMessage(schema, NOTE, SchemaExtractorMessage.FunctionalityType.IMPORTANCE_INDEX,
                             propertyName, null, queryBuilder);
                 }
             }
@@ -3798,7 +3798,7 @@ public class SchemaExtractor {
 
             // if the query fails, check additionally only the first biggest class from the list
             if (queryResponse.hasErrors()) {
-                addExtractionMessage(schema, NOTE, SchemaExtractorMessage.FunctionalityType.DOMAIN_RANGE,
+                addExtractionMessage(schema, NOTE, SchemaExtractorMessage.FunctionalityType.IMPORTANCE_INDEX,
                         propertyName, null, queryBuilder);
 
                 queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_PRINCIPAL_SOURCE_FOR_TARGET.name()), CHECK_PRINCIPAL_SOURCE_FOR_TARGET)
@@ -3811,7 +3811,7 @@ public class SchemaExtractor {
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CUSTOM_FILTER, buildCustomFilterToCheckPrincipalClass(Collections.unmodifiableList(existingClasses.subList(0, 1)), classes));
                 queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
                 if (queryResponse.hasErrors()) {
-                    addExtractionMessage(schema, NOTE, SchemaExtractorMessage.FunctionalityType.DOMAIN_RANGE,
+                    addExtractionMessage(schema, NOTE, SchemaExtractorMessage.FunctionalityType.IMPORTANCE_INDEX,
                             propertyName, null, queryBuilder);
                 }
             }
