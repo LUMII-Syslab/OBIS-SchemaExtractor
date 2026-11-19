@@ -476,6 +476,9 @@ public class SchemaExtractor {
                             null, INVALID_URI, null));
                     continue;
                 }
+                if (!isNotExcludedResource(includedProperty.getPropertyName(), request.getExcludedNamespaces())) {
+                    continue;
+                }
                 if (SchemaUtil.getLongValueFromString(includedProperty.getInstanceCount()) > 0L) {
                     addProperty(includedProperty.getPropertyName(), includedProperty.getInstanceCount(), properties, request);
                 } else {
@@ -541,7 +544,7 @@ public class SchemaExtractor {
                 schema.getMessages().add(new SchemaExtractorMessage(ERROR, null, FIND_PROPERTIES.name(), queryBuilder.getQueryString()));
                 propertiesList = readPropertiesForClasses(request, schema);
             } else {
-                propertiesList = addPropertyNames(queryResponse.getResults(), schema);
+                propertiesList = addPropertyNames(queryResponse.getResults(), request, schema);
             }
             for (String propertyName : propertiesList) {
                 readTripleCountForProperty(request, schema, propertyName, properties);
@@ -606,9 +609,12 @@ public class SchemaExtractor {
                     log.error(request.getCorrelationId() + " - invalid property URI will not be processed - " + propertyName);
                     continue;
                 }
+                if (!isNotExcludedResource(propertyName, request.getExcludedNamespaces())) {
+                    continue;
+                }
                 if (!properties.containsKey(propertyName)) {
                     readTripleCountForProperty(request, schema, propertyName, properties);
-                    propertiesFromSimpleQuery++;
+                    if (properties.containsKey(propertyName)) propertiesFromSimpleQuery++;
                 }
             }
             if (propertiesFromSimpleQuery > 0) {
@@ -641,11 +647,11 @@ public class SchemaExtractor {
                         schema.getMessages().add(new SchemaExtractorMessage(WARNING, clazz.getFullName(), FIND_PROPERTIES_FOR_CLASS_WITH_LIMIT.name(), queryBuilder.getQueryString()));
                         continue;
                     }
-                    properties = addPropertyNames(queryResponse.getResults(), schema);
+                    properties.addAll(addPropertyNames(queryResponse.getResults(), request, schema));
                     break;
                 }
             } else {
-                properties.addAll(addPropertyNames(queryResponse.getResults(), schema));
+                properties.addAll(addPropertyNames(queryResponse.getResults(), request, schema));
             }
         }
 
@@ -653,13 +659,15 @@ public class SchemaExtractor {
     }
 
     @Nonnull
-    protected Set<String> addPropertyNames(@Nonnull List<QueryResult> queryResults, @Nonnull Schema schema) {
+    protected Set<String> addPropertyNames(@Nonnull List<QueryResult> queryResults, @Nonnull SchemaExtractorRequestDto request, @Nonnull Schema schema) {
         Set<String> properties = new HashSet<>();
         for (QueryResult queryResult : queryResults) {
             String propertyName = queryResult.getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_PROPERTY);
             if (StringUtils.isEmpty(propertyName)) continue;
             if (SchemaUtil.isValidURI(propertyName)) {
-                properties.add(propertyName);
+                if (isNotExcludedResource(propertyName, request.getExcludedNamespaces())) {
+                    properties.add(propertyName);
+                }
             } else {
                 schema.getMessages().add(new SchemaExtractorMessage(ERROR, "Invalid property URI returned from the endpoint", propertyName,
                         null, INVALID_URI, null));
