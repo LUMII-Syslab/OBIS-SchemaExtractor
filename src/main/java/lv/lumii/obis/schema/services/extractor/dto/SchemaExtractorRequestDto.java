@@ -75,6 +75,7 @@ public class SchemaExtractorRequestDto {
     private CalculatePropertyFeatureMode calculateCardinalities;
     private Boolean estimateCardinalities;
     private Boolean estimateClosedSourceTarget;
+    private Boolean estimateDomainRange;
     private FineTuneTripleCounts fineTuneTripleCounts;
     private CalculatePropertyFeatureMode calculateDataTypes;
     private Long sampleLimitForDataTypeCalculation;
@@ -296,6 +297,12 @@ public class SchemaExtractorRequestDto {
     @Nonnull
     public Boolean getEstimateClosedSourceTarget() {
         return estimateClosedSourceTarget == null ? Boolean.FALSE : estimateClosedSourceTarget;
+    }
+
+    // Keep domain/range estimation disabled when the configuration omits this optional setting.
+    @Nonnull
+    public Boolean getEstimateDomainRange() {
+        return estimateDomainRange == null ? Boolean.FALSE : estimateDomainRange;
     }
 
     @Nonnull

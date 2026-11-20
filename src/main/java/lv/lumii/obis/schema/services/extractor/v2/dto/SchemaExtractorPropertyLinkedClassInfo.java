@@ -4,6 +4,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import javax.annotation.Nonnull;
+import java.util.List;
 
 @Setter
 @Getter
@@ -20,6 +21,10 @@ public class SchemaExtractorPropertyLinkedClassInfo {
 
     private Integer sourcePrincipalAssertedSize;
     private Integer targetPrincipalAssertedSize;
+    private PrincipalWitness principalWitness;
+
+    // Keep only clean-query evidence for the caller to retract contradicted domain/range estimates.
+    public record PrincipalWitness(String classificationPropertyOther, List<String> comparedClasses) {}
 
     @Nonnull
     public Long getClassTotalTripleCount() {

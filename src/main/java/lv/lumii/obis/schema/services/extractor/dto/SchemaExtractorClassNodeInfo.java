@@ -1,5 +1,7 @@
 package lv.lumii.obis.schema.services.extractor.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import lombok.Getter;
 import lombok.Setter;
 import lv.lumii.obis.schema.services.extractor.v2.dto.SchemaExtractorIntersectionClassDto;
@@ -15,6 +17,9 @@ public class SchemaExtractorClassNodeInfo {
 	private Long tripleCount;
 	private Long tripleCountBase;
 	private Long dataTripleCount;
+	// Preserve positive literal-existence evidence without publishing an unavailable count.
+	@JsonIgnore
+	private boolean literalObjectsKnown;
 	private Long objectTripleCount;
 	private Long distinctSubjectsCount;
 	private Long distinctObjectsCount;

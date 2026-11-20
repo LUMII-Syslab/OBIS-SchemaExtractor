@@ -101,6 +101,12 @@ fineTuneTripleCounts: None
 # Allowed values: [true, false]
 calculateDomainsAndRanges: true
 
+# Description: Enable inferred markers for unresolved domain/range checks (configuration-file option only).
+# Required: false
+# Default: false
+# Allowed values: [true, false]
+estimateDomainRange: false
+
 # Description: Calculate distinct subjects and objects count for property and/or for property source and target classes
 # Required: true
 # Default: propertyLevel

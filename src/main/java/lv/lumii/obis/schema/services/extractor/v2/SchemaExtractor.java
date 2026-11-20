@@ -44,6 +44,11 @@ public class SchemaExtractor {
 
     private enum LinkedClassType {SOURCE, TARGET, PAIR_SOURCE, PAIR_TARGET}
 
+    // Retain only property-local inference metadata and references to the existing output marker and failure NOTE.
+    private record DomainRangeEstimate(boolean domain, String className, String classificationProperty,
+                                       String contextClass, String contextClassificationProperty,
+                                       SchemaExtractorMessage message, Runnable clearMarker) {}
+
     private static final List<Long> sampleLimits = List.of(1000000L, 100000L, 10000L, 1000L);
 
     private static final String PROPERTY_TYPE_PROCESSING = " - calculating property type %d/%d [%s]";
@@ -879,13 +884,8 @@ public class SchemaExtractor {
 
             }
 
-            if (isTrue(request.getCalculateDomainsAndRanges())) {
-                determineDomainsAndRanges(schema, property, schema.getClasses(), request, totalCountOfProperties);
-            }
-
-            if (isFalse(SchemaExtractorRequestDto.ImportantIndexesMode.no.equals(request.getCalculateImportanceIndexes()))) {
-                determineImportanceIndexes(schema, property, schema.getClasses(), graphOfClasses, request, totalCountOfProperties);
-            }
+            // Share property-local inference evidence between the existing domain/range and importance passes.
+            determineDomainsRangesAndImportanceIndexes(schema, property, schema.getClasses(), graphOfClasses, request, totalCountOfProperties);
 
             switch (request.getCalculateCardinalities()) {
                 case propertyLevelOnly:
@@ -1895,8 +1895,11 @@ public class SchemaExtractor {
         return found;
     }
 
+    // Retain source-scoped literal existence when a successful fallback cannot supply its count.
     protected void determinePropertySourceDataTripleCount(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties) {
         log.info(request.getCorrelationId() + " - determineDataTripleCountForAllPropertySources [" + property.getPropertyName() + "]");
+
+        property.getSourceClasses().forEach(sourceClass -> sourceClass.setLiteralObjectsKnown(false));
 
         // get count of literal values for the specific property and for all source classes
         boolean found = determineDataTripleCountForAllPropertySources(schema, property, request, totalCountOfProperties);
@@ -1927,6 +1930,8 @@ public class SchemaExtractor {
                     if (!checkQueryResponse.hasErrors()) {
                         if (checkQueryResponse.getResults().isEmpty()) {
                             sourceClass.setDataTripleCount(0L);
+                        } else {
+                            sourceClass.setLiteralObjectsKnown(true);
                         }
                     } else {
                         addExtractionMessage(schema, MESSAGE, SchemaExtractorMessage.FunctionalityType.STRUCT_URL_LITERAL,
@@ -3285,13 +3290,39 @@ public class SchemaExtractor {
     }
 
 
+    // Keep the existing pass gates while carrying only this property's eligible inference references into importance checks.
+    protected void determineDomainsRangesAndImportanceIndexes(Schema schema, SchemaExtractorPropertyNodeInfo property,
+                                                              List<SchemaClass> classes, Map<String, SchemaExtractorClassNodeInfo> graphOfClasses,
+                                                              SchemaExtractorRequestDto request, int totalCountOfProperties) {
+        List<DomainRangeEstimate> estimates = new ArrayList<>();
+        if (isTrue(request.getCalculateDomainsAndRanges())) {
+            determineDomainsAndRanges(schema, property, classes, request, totalCountOfProperties, estimates);
+        }
+        if (isFalse(SchemaExtractorRequestDto.ImportantIndexesMode.no.equals(request.getCalculateImportanceIndexes()))) {
+            determineImportanceIndexes(schema, property, classes, graphOfClasses, request, totalCountOfProperties, estimates);
+        }
+    }
+
+    // Preserve the existing entry point while clearing stale markers and exporting estimates from temporary candidates.
     protected void determineDomainsAndRanges(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull List<SchemaClass> classes,
                                              @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties) {
+        determineDomainsAndRanges(schema, property, classes, request, totalCountOfProperties, new ArrayList<>());
+    }
+
+    private void determineDomainsAndRanges(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull List<SchemaClass> classes,
+                                             @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties, List<DomainRangeEstimate> estimates) {
+        property.getSourceClasses().forEach(link -> link.setPrincipalAssertedSize(null));
+        property.getTargetClasses().forEach(link -> link.setPrincipalAssertedSize(null));
+        property.getSourceAndTargetPairs().forEach(pair -> {
+            pair.setSourcePrincipalAssertedSize(null);
+            pair.setTargetPrincipalAssertedSize(null);
+        });
+
 
         log.info(request.getCorrelationId() + " - determineDomainForProperty [" + property.getPropertyName() + "]");
         SchemaExtractorPropertyLinkedClassInfo domainClass = determinePropertyDomainOrRange(schema, property,
                 getTheFirstMainClass(buildAndSortPropertyLinkedClasses(property.getSourceClasses(), classes)), request, LinkedClassType.SOURCE, null, null,
-                totalCountOfProperties);
+                totalCountOfProperties, estimates);
         if (domainClass != null) {
             property.setHasDomain(true);
             mapDomainOrRangeClass(property.getSourceClasses(), domainClass);
@@ -3303,7 +3334,7 @@ public class SchemaExtractor {
         log.info(request.getCorrelationId() + " - determineRangeForProperty [" + property.getPropertyName() + "]");
         SchemaExtractorPropertyLinkedClassInfo rangeClass = determinePropertyDomainOrRange(schema, property,
                 getTheFirstMainClass(buildAndSortPropertyLinkedClasses(property.getTargetClasses(), classes)), request, LinkedClassType.TARGET, null, null,
-                totalCountOfProperties);
+                totalCountOfProperties, estimates);
         if (rangeClass != null) {
             property.setHasRange(true);
             mapDomainOrRangeClass(property.getTargetClasses(), rangeClass);
@@ -3317,7 +3348,7 @@ public class SchemaExtractor {
             List<SchemaExtractorSourceTargetInfo> pairsForSpecificSource = findPairsWithSpecificSource(property.getSourceAndTargetPairs(), sourceClass.getClassName());
             SchemaExtractorPropertyLinkedClassInfo pairRange = determinePropertyDomainOrRange(schema, property,
                     getTheFirstMainClass(buildAndSortPropertyPairTargets(pairsForSpecificSource, classes)), request, LinkedClassType.PAIR_SOURCE, sourceClass, null,
-                    totalCountOfProperties);
+                    totalCountOfProperties, estimates);
             if (pairRange != null) {
                 sourceClass.setHasRangeInClassPair(true);
                 pairsForSpecificSource.forEach(linkedPair -> {
@@ -3340,7 +3371,7 @@ public class SchemaExtractor {
             List<SchemaExtractorSourceTargetInfo> pairsForSpecificTarget = findPairsWithSpecificTarget(property.getSourceAndTargetPairs(), targetClass.getClassName());
             SchemaExtractorPropertyLinkedClassInfo pairDomain = determinePropertyDomainOrRange(schema, property,
                     getTheFirstMainClass(buildAndSortPropertyPairSources(pairsForSpecificTarget, classes)), request, LinkedClassType.PAIR_TARGET, null, targetClass,
-                    totalCountOfProperties);
+                    totalCountOfProperties, estimates);
             if (pairDomain != null) {
                 targetClass.setHasDomainInClassPair(true);
                 pairsForSpecificTarget.forEach(linkedPair -> {
@@ -3379,6 +3410,7 @@ public class SchemaExtractor {
     }
 
 
+    // Preserve strict candidate-check callers while copying inference markers to their persistent class or pair entries.
     @Nullable
     protected SchemaExtractorPropertyLinkedClassInfo determinePropertyDomainOrRange(@Nonnull Schema schema,
                                                                                     @Nonnull SchemaExtractorPropertyNodeInfo property,
@@ -3388,9 +3420,23 @@ public class SchemaExtractor {
                                                                                     @Nullable SchemaExtractorClassNodeInfo sourceClass,
                                                                                     @Nullable SchemaExtractorClassNodeInfo targetClass,
                                                                                     int totalCountOfProperties) {
+        return determinePropertyDomainOrRange(schema, property, currentClass, request, linkedClassType, sourceClass, targetClass,
+                totalCountOfProperties, new ArrayList<>());
+    }
+
+    @Nullable
+    private SchemaExtractorPropertyLinkedClassInfo determinePropertyDomainOrRange(@Nonnull Schema schema,
+                                                                                    @Nonnull SchemaExtractorPropertyNodeInfo property,
+                                                                                    @Nullable SchemaExtractorPropertyLinkedClassInfo currentClass,
+                                                                                    @Nonnull SchemaExtractorRequestDto request,
+                                                                                    @Nonnull LinkedClassType linkedClassType,
+                                                                                    @Nullable SchemaExtractorClassNodeInfo sourceClass,
+                                                                                    @Nullable SchemaExtractorClassNodeInfo targetClass,
+                                                                                    int totalCountOfProperties, List<DomainRangeEstimate> estimates) {
         if (currentClass == null) {
             return null;
         }
+        int messageStart = schema.getMessages().size();
         boolean isApplicable = false;
 
         switch (linkedClassType) {
@@ -3413,103 +3459,185 @@ public class SchemaExtractor {
             default:
                 break;
         }
+        boolean domain = linkedClassType == LinkedClassType.SOURCE || linkedClassType == LinkedClassType.PAIR_TARGET;
+        SchemaExtractorClassNodeInfo context = linkedClassType == LinkedClassType.PAIR_SOURCE ? sourceClass
+                : linkedClassType == LinkedClassType.PAIR_TARGET ? targetClass : null;
+        SchemaExtractorMessage failureMessage = schema.getMessages().size() > messageStart ? schema.getMessages().get(messageStart) : null;
+        boolean knownLiteralObjects = !domain && (context == null
+                ? hasKnownLiteralObjects(property.getDataTripleCount()) || property.getSourceClasses().stream().anyMatch(this::hasKnownLiteralObjects)
+                : hasKnownLiteralObjects(context));
+        if (knownLiteralObjects && Integer.valueOf(-1).equals(currentClass.getTargetPrincipalAssertedSize())) {
+            currentClass.setTargetPrincipalAssertedSize(null);
+            if (failureMessage != null) failureMessage.setMessage(null);
+        }
+        retractDomainRangeEstimates(estimates, linkedClassType, sourceClass, targetClass, currentClass.getPrincipalWitness());
+        currentClass.setPrincipalWitness(null);
+        mapDomainRangeAssertion(property, currentClass, domain, context, failureMessage, estimates);
         if (isApplicable) {
             return currentClass;
         }
         return null;
     }
 
+    // Interpret one strict domain/range query without accepting a failed check as verified.
+    private boolean readDomainRangeCheck(Schema schema, String propertyName, SchemaExtractorPropertyLinkedClassInfo candidate,
+                                         SchemaExtractorRequestDto request, String contextClass, SparqlQueryBuilder query, boolean domain) {
+        candidate.setPrincipalWitness(null);
+        if (domain) candidate.setSourcePrincipalAssertedSize(null);
+        else candidate.setTargetPrincipalAssertedSize(null);
+        QueryResponse response = sparqlEndpointProcessor.read(request, query);
+        if (response.hasErrors()) {
+            Long shortestFailedAttempt = response.getShortestFailedAttemptDurationNanos();
+            boolean estimated = request.getEstimateDomainRange() && shortestFailedAttempt != null
+                    && shortestFailedAttempt > TimeUnit.SECONDS.toNanos(45);
+            if (domain) candidate.setSourcePrincipalAssertedSize(estimated ? -1 : null);
+            else candidate.setTargetPrincipalAssertedSize(estimated ? -1 : null);
+            addExtractionMessage(schema, NOTE, SchemaExtractorMessage.FunctionalityType.DOMAIN_RANGE,
+                    propertyName, contextClass == null ? candidate.getClassName() : contextClass, query,
+                    estimated ? "The " + (domain ? "domain" : "range") + " assertion may be inferred based on the query failure" : null);
+            return false;
+        }
+        if (!response.getResults().isEmpty()) {
+            candidate.setPrincipalWitness(new SchemaExtractorPropertyLinkedClassInfo.PrincipalWitness(
+                    candidate.getClassificationProperty(), List.of(candidate.getClassName())));
+            return false;
+        }
+        return true;
+    }
+
+    // Treat the existence-check sentinel -1 as known literal presence even when the count itself is unavailable.
+    private boolean hasKnownLiteralObjects(Long count) {
+        return count != null && count != 0;
+    }
+
+    // Include successful source-scoped existence checks whose positive result has no numeric count.
+    private boolean hasKnownLiteralObjects(SchemaExtractorClassNodeInfo clazz) {
+        return clazz.isLiteralObjectsKnown() || hasKnownLiteralObjects(clazz.getDataTripleCount());
+    }
+
+    // Copy the candidate marker to the class or pair that is actually serialized, retaining only eligible inference references.
+    private void mapDomainRangeAssertion(SchemaExtractorPropertyNodeInfo property, SchemaExtractorPropertyLinkedClassInfo candidate,
+                                         boolean domain, SchemaExtractorClassNodeInfo context, SchemaExtractorMessage message,
+                                         List<DomainRangeEstimate> estimates) {
+        Integer marker = domain ? candidate.getSourcePrincipalAssertedSize() : candidate.getTargetPrincipalAssertedSize();
+        if (context == null) {
+            List<SchemaExtractorClassNodeInfo> links = domain ? property.getSourceClasses() : property.getTargetClasses();
+            for (SchemaExtractorClassNodeInfo link : links) {
+                if (Objects.equals(link.getClassName(), candidate.getClassName())
+                        && Objects.equals(link.getClassificationProperty(), candidate.getClassificationProperty())) {
+                    link.setPrincipalAssertedSize(marker);
+                    if (Integer.valueOf(-1).equals(marker)) {
+                        estimates.add(new DomainRangeEstimate(domain, candidate.getClassName(), candidate.getClassificationProperty(),
+                                null, null, message, () -> link.setPrincipalAssertedSize(null)));
+                    }
+                }
+            }
+        } else {
+            for (SchemaExtractorSourceTargetInfo pair : property.getSourceAndTargetPairs()) {
+                String candidateClass = domain ? pair.getSourceClass() : pair.getTargetClass();
+                String candidatePredicate = domain ? pair.getClassificationPropertyForSource() : pair.getClassificationPropertyForTarget();
+                String fixedClass = domain ? pair.getTargetClass() : pair.getSourceClass();
+                String fixedPredicate = domain ? pair.getClassificationPropertyForTarget() : pair.getClassificationPropertyForSource();
+                if (Objects.equals(candidateClass, candidate.getClassName())
+                        && Objects.equals(candidatePredicate, candidate.getClassificationProperty())
+                        && Objects.equals(fixedClass, context.getClassName())
+                        && Objects.equals(fixedPredicate, context.getClassificationProperty())) {
+                    if (domain) pair.setSourcePrincipalAssertedSize(marker);
+                    else pair.setTargetPrincipalAssertedSize(marker);
+                    if (Integer.valueOf(-1).equals(marker)) {
+                        estimates.add(new DomainRangeEstimate(domain, candidateClass, candidatePredicate, fixedClass, fixedPredicate, message, () -> {
+                            if (domain) pair.setSourcePrincipalAssertedSize(null);
+                            else pair.setTargetPrincipalAssertedSize(null);
+                        }));
+                    }
+                }
+            }
+        }
+    }
+
+    // Revoke only inferences contradicted by a clean witness with the same class, predicate and a compatible scope.
+    private void retractDomainRangeEstimates(List<DomainRangeEstimate> estimates, LinkedClassType type,
+                                             SchemaExtractorClassNodeInfo sourceClass, SchemaExtractorClassNodeInfo targetClass,
+                                             SchemaExtractorPropertyLinkedClassInfo.PrincipalWitness witness) {
+        if (witness == null || estimates.isEmpty()) return;
+        boolean domain = type == LinkedClassType.SOURCE || type == LinkedClassType.PAIR_TARGET;
+        SchemaExtractorClassNodeInfo context = type == LinkedClassType.PAIR_SOURCE ? sourceClass
+                : type == LinkedClassType.PAIR_TARGET ? targetClass : null;
+        estimates.removeIf(estimate -> {
+            if (estimate.domain() != domain || !witness.comparedClasses().contains(estimate.className())
+                    || !Objects.equals(witness.classificationPropertyOther(), estimate.classificationProperty())) return false;
+            if (estimate.contextClass() != null && (context == null
+                    || !Objects.equals(context.getClassName(), estimate.contextClass())
+                    || !Objects.equals(context.getClassificationProperty(), estimate.contextClassificationProperty()))) return false;
+            estimate.clearMarker().run();
+            if (estimate.message() != null) estimate.message().setMessage(null);
+            return true;
+        });
+    }
+
+
+    // Apply the configurable domain/range failure policy while preserving successful counterexample semantics.
     protected boolean checkDomainClass(@Nonnull Schema schema, @Nonnull String propertyName, @Nonnull SchemaExtractorPropertyLinkedClassInfo potentialDomain,
                                        @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties) {
-        boolean isDomainClass;
         SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_DOMAIN_FOR_PROPERTY.name()), CHECK_DOMAIN_FOR_PROPERTY)
                 .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL, potentialDomain.getClassName(), potentialDomain.getIsLiteral())
                 .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, potentialDomain.getClassificationProperty())
                 .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, propertyName, false);
-        QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
-        if (queryResponse.hasErrors()) {
-            addExtractionMessage(schema, NOTE, SchemaExtractorMessage.FunctionalityType.DOMAIN_RANGE,
-                    propertyName, null, queryBuilder);
-            if (queryResponse.getExecutionTime() > 45) {
-                potentialDomain.setSourcePrincipalAssertedSize(-1);
-            }
-        }
-        isDomainClass = !queryResponse.hasErrors() && queryResponse.getResults().isEmpty();
-        return isDomainClass;
+        return readDomainRangeCheck(schema, propertyName, potentialDomain, request, null, queryBuilder, true);
     }
 
+    // Apply the configurable domain/range failure policy while preserving successful counterexample semantics.
     protected boolean checkRangeClass(@Nonnull Schema schema, @Nonnull String propertyName, @Nonnull SchemaExtractorPropertyLinkedClassInfo potentialRange,
                                       @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties) {
-        boolean isRangeClass;
         SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_RANGE_FOR_PROPERTY.name()), CHECK_RANGE_FOR_PROPERTY)
                 .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_TARGET_FULL, potentialRange.getClassName(), potentialRange.getIsLiteral())
                 .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, potentialRange.getClassificationProperty())
                 .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, propertyName, false);
-        QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
-        if (queryResponse.hasErrors()) {
-            addExtractionMessage(schema, NOTE, SchemaExtractorMessage.FunctionalityType.DOMAIN_RANGE,
-                    propertyName, null, queryBuilder);
-            if (queryResponse.getExecutionTime() > 45) {
-                potentialRange.setTargetPrincipalAssertedSize(-1);
-            }
-        }
-        isRangeClass = !queryResponse.hasErrors() && queryResponse.getResults().isEmpty();
-        return isRangeClass;
+        return readDomainRangeCheck(schema, propertyName, potentialRange, request, null, queryBuilder, false);
     }
 
+    // Apply the configurable domain/range failure policy while preserving successful counterexample semantics.
     protected boolean checkRangeForSource(@Nonnull Schema schema, @Nonnull String propertyName, @Nonnull SchemaExtractorClassNodeInfo sourceClass,
                                           @Nonnull SchemaExtractorPropertyLinkedClassInfo potentialRange,
                                           @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties) {
-        boolean isRangeClass;
         SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_RANGE_FOR_PAIR_SOURCE.name()), CHECK_RANGE_FOR_PAIR_SOURCE)
                 .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL, sourceClass.getClassName(), sourceClass.getIsLiteral())
                 .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_TARGET_FULL, potentialRange.getClassName(), potentialRange.getIsLiteral())
                 .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_SOURCE, sourceClass.getClassificationProperty())
                 .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_TARGET, potentialRange.getClassificationProperty())
                 .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, propertyName, false);
-        QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
-        if (queryResponse.hasErrors()) {
-            addExtractionMessage(schema, NOTE, SchemaExtractorMessage.FunctionalityType.DOMAIN_RANGE,
-                    propertyName, null, queryBuilder);
-            if (queryResponse.getExecutionTime() > 45) {
-                potentialRange.setTargetPrincipalAssertedSize(-1);
-            }
-        }
-        isRangeClass = !queryResponse.hasErrors() && queryResponse.getResults().isEmpty();
-        return isRangeClass;
+        return readDomainRangeCheck(schema, propertyName, potentialRange, request, sourceClass.getClassName(), queryBuilder, false);
     }
 
+    // Apply the configurable domain/range failure policy while preserving successful counterexample semantics.
     protected boolean checkDomainForTarget(@Nonnull Schema schema, @Nonnull String propertyName, @Nonnull SchemaExtractorClassNodeInfo targetClass,
                                            @Nonnull SchemaExtractorPropertyLinkedClassInfo potentialDomain,
                                            @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties) {
-        boolean isDomainClass;
         SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_DOMAIN_FOR_PAIR_TARGET.name()), CHECK_DOMAIN_FOR_PAIR_TARGET)
                 .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL, potentialDomain.getClassName(), potentialDomain.getIsLiteral())
                 .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_TARGET_FULL, targetClass.getClassName(), targetClass.getIsLiteral())
                 .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_SOURCE, potentialDomain.getClassificationProperty())
                 .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_TARGET, targetClass.getClassificationProperty())
                 .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, propertyName, false);
-        QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
-        if (queryResponse.hasErrors()) {
-            addExtractionMessage(schema, NOTE, SchemaExtractorMessage.FunctionalityType.DOMAIN_RANGE,
-                    propertyName, null, queryBuilder);
-            if (queryResponse.getExecutionTime() > 45) {
-                potentialDomain.setSourcePrincipalAssertedSize(-1);
-            }
-        }
-        isDomainClass = !queryResponse.hasErrors() && queryResponse.getResults().isEmpty();
-        return isDomainClass;
+        return readDomainRangeCheck(schema, propertyName, potentialDomain, request, targetClass.getClassName(), queryBuilder, true);
     }
 
+    // Preserve the importance entry point and keep inference retraction local to the combined property workflow.
     protected void determineImportanceIndexes(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull List<SchemaClass> classes,
                                               @Nonnull Map<String, SchemaExtractorClassNodeInfo> graphOfClasses,
                                               @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties) {
+        determineImportanceIndexes(schema, property, classes, graphOfClasses, request, totalCountOfProperties, new ArrayList<>());
+    }
+
+    private void determineImportanceIndexes(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull List<SchemaClass> classes,
+                                              @Nonnull Map<String, SchemaExtractorClassNodeInfo> graphOfClasses,
+                                              @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties, List<DomainRangeEstimate> estimates) {
 
         if (isNotTrue(property.getHasDomain()) || SchemaExtractorRequestDto.ImportantIndexesMode.classCoverage.equals(request.getCalculateImportanceIndexes())) {
             log.info(request.getCorrelationId() + " - determineImportanceIndexesForSourceClasses [" + property.getPropertyName() + "]");
             List<SchemaExtractorPropertyLinkedClassInfo> principalSourceClasses = determinePrincipalClasses(schema, property,
                     buildAndSortPropertyLinkedClasses(property.getSourceClasses(), classes), classes, graphOfClasses, request, LinkedClassType.SOURCE, null, null,
-                    totalCountOfProperties);
+                    totalCountOfProperties, estimates);
             mapPrincipalClasses(property.getSourceClasses(), principalSourceClasses);
         }
 
@@ -3517,7 +3645,7 @@ public class SchemaExtractor {
             log.info(request.getCorrelationId() + " - determineImportanceIndexesForTargetClasses [" + property.getPropertyName() + "]");
             List<SchemaExtractorPropertyLinkedClassInfo> principalTargetClasses = determinePrincipalClasses(schema, property,
                     buildAndSortPropertyLinkedClasses(property.getTargetClasses(), classes), classes, graphOfClasses, request, LinkedClassType.TARGET, null, null,
-                    totalCountOfProperties);
+                    totalCountOfProperties, estimates);
             mapPrincipalClasses(property.getTargetClasses(), principalTargetClasses);
         }
 
@@ -3528,7 +3656,7 @@ public class SchemaExtractor {
                 List<SchemaExtractorSourceTargetInfo> pairsForSpecificSource = findPairsWithSpecificSource(property.getSourceAndTargetPairs(), sourceClass.getClassName());
                 List<SchemaExtractorPropertyLinkedClassInfo> principalPairTargets = determinePrincipalClasses(schema, property,
                         buildAndSortPropertyPairTargets(pairsForSpecificSource, classes), classes, graphOfClasses, request, LinkedClassType.PAIR_SOURCE, sourceClass, null,
-                        totalCountOfProperties);
+                        totalCountOfProperties, estimates);
                 pairsForSpecificSource.forEach(linkedPair -> {
                     SchemaExtractorPropertyLinkedClassInfo pairWithIndex = principalPairTargets.stream()
                             .filter(pairTarget -> pairTarget.getClassName().equals(linkedPair.getTargetClass())).findFirst().orElse(null);
@@ -3544,7 +3672,7 @@ public class SchemaExtractor {
                 List<SchemaExtractorSourceTargetInfo> pairsForSpecificTarget = findPairsWithSpecificTarget(property.getSourceAndTargetPairs(), targetClass.getClassName());
                 List<SchemaExtractorPropertyLinkedClassInfo> principalPairSources = determinePrincipalClasses(schema, property,
                         buildAndSortPropertyPairSources(pairsForSpecificTarget, classes), classes, graphOfClasses, request, LinkedClassType.PAIR_TARGET, null, targetClass,
-                        totalCountOfProperties);
+                        totalCountOfProperties, estimates);
                 pairsForSpecificTarget.forEach(linkedPair -> {
                     SchemaExtractorPropertyLinkedClassInfo pairWithIndex = principalPairSources.stream()
                             .filter(pairTarget -> pairTarget.getClassName().equals(linkedPair.getSourceClass())).findFirst().orElse(null);
@@ -3554,6 +3682,7 @@ public class SchemaExtractor {
         });
     }
 
+    // Preserve principal selection and use only explicit successful witnesses to revoke an earlier strict assertion estimate.
     @Nonnull
     protected List<SchemaExtractorPropertyLinkedClassInfo> determinePrincipalClasses(@Nonnull Schema schema,
                                                                                      @Nonnull SchemaExtractorPropertyNodeInfo property,
@@ -3565,6 +3694,21 @@ public class SchemaExtractor {
                                                                                      @Nullable SchemaExtractorClassNodeInfo sourceClass,
                                                                                      @Nullable SchemaExtractorClassNodeInfo targetClass,
                                                                                      int totalCountOfProperties) {
+        return determinePrincipalClasses(schema, property, propertyLinkedClassesSorted, classes, graphOfClasses, request,
+                linkedClassType, sourceClass, targetClass, totalCountOfProperties, new ArrayList<>());
+    }
+
+    @Nonnull
+    private List<SchemaExtractorPropertyLinkedClassInfo> determinePrincipalClasses(@Nonnull Schema schema,
+                                                                                     @Nonnull SchemaExtractorPropertyNodeInfo property,
+                                                                                     @Nonnull List<SchemaExtractorPropertyLinkedClassInfo> propertyLinkedClassesSorted,
+                                                                                     @Nonnull List<SchemaClass> classes,
+                                                                                     @Nonnull Map<String, SchemaExtractorClassNodeInfo> graphOfClasses,
+                                                                                     @Nonnull SchemaExtractorRequestDto request,
+                                                                                     @Nonnull LinkedClassType linkedClassType,
+                                                                                     @Nullable SchemaExtractorClassNodeInfo sourceClass,
+                                                                                     @Nullable SchemaExtractorClassNodeInfo targetClass,
+                                                                                     int totalCountOfProperties, List<DomainRangeEstimate> estimates) {
 
         // set important indexes
         Set<String> importantClasses = new HashSet<>();
@@ -3643,6 +3787,8 @@ public class SchemaExtractor {
                         break;
                 }
 
+                retractDomainRangeEstimates(estimates, linkedClassType, sourceClass, targetClass, currentClass.getPrincipalWitness());
+                currentClass.setPrincipalWitness(null);
                 if (needToInclude) {
                     currentClass.setImportanceIndex(index++);
                     importantClasses.add(currentClass.getClassName());
@@ -3655,21 +3801,24 @@ public class SchemaExtractor {
         return propertyLinkedClassesSorted;
     }
 
+    // Retain clean principal-source witnesses so proven exclusions can cancel contradicted domain estimates.
     protected boolean checkNewPrincipalSourceClass(@Nonnull Schema schema, @Nonnull String propertyName, @Nonnull SchemaExtractorPropertyLinkedClassInfo newSourceClass,
                                                    @Nonnull List<String> existingClasses,
                                                    @Nonnull List<SchemaClass> classes, @Nonnull SchemaExtractorRequestDto request,
                                                    int totalCountOfProperties) {
+        newSourceClass.setPrincipalWitness(null);
         boolean isPrincipalSource = false;
 
         // check the first 5 classes with the highest triple count
         List<String> classesForCustomFilter = existingClasses.size() <= 5 ? Collections.unmodifiableList(existingClasses) : Collections.unmodifiableList(existingClasses.subList(0, 5));
         for (String classificationProperty : request.getMainClassificationProperties()) {
+            List<String> comparedClasses = classesForCustomFilter;
             SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_PRINCIPAL_SOURCE.name()), CHECK_PRINCIPAL_SOURCE)
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL, newSourceClass.getClassName(), newSourceClass.getIsLiteral())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_SOURCE, newSourceClass.getClassificationProperty())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_OTHER, classificationProperty)
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, propertyName, false)
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CUSTOM_FILTER, buildCustomFilterToCheckPrincipalClass(classesForCustomFilter, classes));
+                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CUSTOM_FILTER, buildCustomFilterToCheckPrincipalClass(comparedClasses, classes));
             QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
 
             // if the query fails, check additionally only the first biggest class from the list
@@ -3677,17 +3826,22 @@ public class SchemaExtractor {
                 addExtractionMessage(schema, NOTE, SchemaExtractorMessage.FunctionalityType.IMPORTANCE_INDEX,
                         propertyName, null, queryBuilder);
 
+                comparedClasses = Collections.unmodifiableList(existingClasses.subList(0, 1));
                 queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_PRINCIPAL_SOURCE.name()), CHECK_PRINCIPAL_SOURCE)
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL, newSourceClass.getClassName(), newSourceClass.getIsLiteral())
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_SOURCE, newSourceClass.getClassificationProperty())
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_OTHER, classificationProperty)
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, propertyName, false)
-                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CUSTOM_FILTER, buildCustomFilterToCheckPrincipalClass(Collections.unmodifiableList(existingClasses.subList(0, 1)), classes));
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CUSTOM_FILTER, buildCustomFilterToCheckPrincipalClass(comparedClasses, classes));
                 queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
                 if (queryResponse.hasErrors()) {
                     addExtractionMessage(schema, NOTE, SchemaExtractorMessage.FunctionalityType.IMPORTANCE_INDEX,
                             propertyName, null, queryBuilder);
                 }
+            }
+            if (!queryResponse.hasErrors() && !queryResponse.getResults().isEmpty()) {
+                newSourceClass.setPrincipalWitness(new SchemaExtractorPropertyLinkedClassInfo.PrincipalWitness(
+                        classificationProperty, List.copyOf(comparedClasses)));
             }
             isPrincipalSource = queryResponse.hasErrors() || !queryResponse.getResults().isEmpty();
             if (isTrue(isPrincipalSource)) break;
@@ -3695,20 +3849,23 @@ public class SchemaExtractor {
         return isPrincipalSource;
     }
 
+    // Retain clean principal-target witnesses so proven exclusions can cancel contradicted range estimates.
     protected boolean checkNewPrincipalTargetClass(@Nonnull Schema schema, @Nonnull String propertyName, @Nonnull SchemaExtractorPropertyLinkedClassInfo newTargetClass,
                                                    @Nonnull List<String> existingClasses,
                                                    @Nonnull List<SchemaClass> classes, @Nonnull SchemaExtractorRequestDto request,
                                                    int totalCountOfProperties) {
+        newTargetClass.setPrincipalWitness(null);
         boolean isPrincipalTarget = false;
         // check the first 5 classes with the highest triple count
         List<String> classesForCustomFilter = existingClasses.size() <= 5 ? Collections.unmodifiableList(existingClasses) : Collections.unmodifiableList(existingClasses.subList(0, 5));
         for (String classificationProperty : request.getMainClassificationProperties()) {
+            List<String> comparedClasses = classesForCustomFilter;
             SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_PRINCIPAL_TARGET.name()), CHECK_PRINCIPAL_TARGET)
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_TARGET_FULL, newTargetClass.getClassName(), newTargetClass.getIsLiteral())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_TARGET, newTargetClass.getClassificationProperty())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_OTHER, classificationProperty)
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, propertyName, false)
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CUSTOM_FILTER, buildCustomFilterToCheckPrincipalClass(classesForCustomFilter, classes));
+                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CUSTOM_FILTER, buildCustomFilterToCheckPrincipalClass(comparedClasses, classes));
             QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
 
             // if the query fails, check additionally only the first biggest class from the list
@@ -3716,17 +3873,22 @@ public class SchemaExtractor {
                 addExtractionMessage(schema, NOTE, SchemaExtractorMessage.FunctionalityType.IMPORTANCE_INDEX,
                         propertyName, null, queryBuilder);
 
+                comparedClasses = Collections.unmodifiableList(existingClasses.subList(0, 1));
                 queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_PRINCIPAL_TARGET.name()), CHECK_PRINCIPAL_TARGET)
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_TARGET_FULL, newTargetClass.getClassName(), newTargetClass.getIsLiteral())
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_TARGET, newTargetClass.getClassificationProperty())
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_OTHER, classificationProperty)
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, propertyName, false)
-                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CUSTOM_FILTER, buildCustomFilterToCheckPrincipalClass(Collections.unmodifiableList(existingClasses.subList(0, 1)), classes));
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CUSTOM_FILTER, buildCustomFilterToCheckPrincipalClass(comparedClasses, classes));
                 queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
                 if (queryResponse.hasErrors()) {
                     addExtractionMessage(schema, NOTE, SchemaExtractorMessage.FunctionalityType.IMPORTANCE_INDEX,
                             propertyName, null, queryBuilder);
                 }
+            }
+            if (!queryResponse.hasErrors() && !queryResponse.getResults().isEmpty()) {
+                newTargetClass.setPrincipalWitness(new SchemaExtractorPropertyLinkedClassInfo.PrincipalWitness(
+                        classificationProperty, List.copyOf(comparedClasses)));
             }
             isPrincipalTarget = queryResponse.hasErrors() || !queryResponse.getResults().isEmpty();
             if (isTrue(isPrincipalTarget)) break;
@@ -3734,14 +3896,17 @@ public class SchemaExtractor {
         return isPrincipalTarget;
     }
 
+    // Retain clean source-context target witnesses so proven exclusions can cancel contradicted range estimates.
     protected boolean checkNewPrincipalTargetClassForSource(@Nonnull Schema schema, @Nonnull String propertyName, @Nonnull SchemaExtractorClassNodeInfo sourceClass,
                                                             @Nonnull SchemaExtractorPropertyLinkedClassInfo newTargetClass,
                                                             @Nonnull List<String> existingClasses, @Nonnull List<SchemaClass> classes, @Nonnull SchemaExtractorRequestDto request,
                                                             int totalCountOfProperties) {
+        newTargetClass.setPrincipalWitness(null);
         boolean isPrincipalTarget = false;
         // check the first 5 classes with the highest triple count
         List<String> classesForCustomFilter = existingClasses.size() <= 5 ? Collections.unmodifiableList(existingClasses) : Collections.unmodifiableList(existingClasses.subList(0, 5));
         for (String classificationProperty : request.getMainClassificationProperties()) {
+            List<String> comparedClasses = classesForCustomFilter;
             SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_PRINCIPAL_TARGET_FOR_SOURCE.name()), CHECK_PRINCIPAL_TARGET_FOR_SOURCE)
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL, sourceClass.getClassName(), sourceClass.getIsLiteral())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_TARGET_FULL, newTargetClass.getClassName(), newTargetClass.getIsLiteral())
@@ -3749,7 +3914,7 @@ public class SchemaExtractor {
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_TARGET, newTargetClass.getClassificationProperty())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_OTHER, classificationProperty)
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, propertyName, false)
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CUSTOM_FILTER, buildCustomFilterToCheckPrincipalClass(classesForCustomFilter, classes));
+                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CUSTOM_FILTER, buildCustomFilterToCheckPrincipalClass(comparedClasses, classes));
             QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
 
             // if the query fails, check additionally only the first biggest class from the list
@@ -3757,6 +3922,7 @@ public class SchemaExtractor {
                 addExtractionMessage(schema, NOTE, SchemaExtractorMessage.FunctionalityType.IMPORTANCE_INDEX,
                         propertyName, null, queryBuilder);
 
+                comparedClasses = Collections.unmodifiableList(existingClasses.subList(0, 1));
                 queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_PRINCIPAL_TARGET_FOR_SOURCE.name()), CHECK_PRINCIPAL_TARGET_FOR_SOURCE)
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL, sourceClass.getClassName(), sourceClass.getIsLiteral())
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_TARGET_FULL, newTargetClass.getClassName(), newTargetClass.getIsLiteral())
@@ -3764,7 +3930,7 @@ public class SchemaExtractor {
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_TARGET, newTargetClass.getClassificationProperty())
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_OTHER, classificationProperty)
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, propertyName, false)
-                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CUSTOM_FILTER, buildCustomFilterToCheckPrincipalClass(Collections.unmodifiableList(existingClasses.subList(0, 1)), classes));
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CUSTOM_FILTER, buildCustomFilterToCheckPrincipalClass(comparedClasses, classes));
                 queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
 
                 if (queryResponse.hasErrors()) {
@@ -3772,20 +3938,27 @@ public class SchemaExtractor {
                             propertyName, null, queryBuilder);
                 }
             }
+            if (!queryResponse.hasErrors() && !queryResponse.getResults().isEmpty()) {
+                newTargetClass.setPrincipalWitness(new SchemaExtractorPropertyLinkedClassInfo.PrincipalWitness(
+                        classificationProperty, List.copyOf(comparedClasses)));
+            }
             isPrincipalTarget = queryResponse.hasErrors() || !queryResponse.getResults().isEmpty();
             if (isTrue(isPrincipalTarget)) break;
         }
         return isPrincipalTarget;
     }
 
+    // Retain clean target-context source witnesses so proven exclusions can cancel contradicted domain estimates.
     protected boolean checkNewPrincipalSourceClassForTarget(@Nonnull Schema schema, @Nonnull String propertyName, @Nonnull SchemaExtractorClassNodeInfo targetClass,
                                                             @Nonnull SchemaExtractorPropertyLinkedClassInfo newSourceClass,
                                                             @Nonnull List<String> existingClasses, @Nonnull List<SchemaClass> classes, @Nonnull SchemaExtractorRequestDto request,
                                                             int totalCountOfProperties) {
+        newSourceClass.setPrincipalWitness(null);
         boolean isPrincipalSource = false;
         // check the first 5 classes with the highest triple count
         List<String> classesForCustomFilter = existingClasses.size() <= 5 ? Collections.unmodifiableList(existingClasses) : Collections.unmodifiableList(existingClasses.subList(0, 5));
         for (String classificationProperty : request.getMainClassificationProperties()) {
+            List<String> comparedClasses = classesForCustomFilter;
             SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_PRINCIPAL_SOURCE_FOR_TARGET.name()), CHECK_PRINCIPAL_SOURCE_FOR_TARGET)
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL, newSourceClass.getClassName(), newSourceClass.getIsLiteral())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_TARGET_FULL, targetClass.getClassName(), targetClass.getIsLiteral())
@@ -3793,7 +3966,7 @@ public class SchemaExtractor {
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_TARGET, targetClass.getClassificationProperty())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_OTHER, classificationProperty)
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, propertyName, false)
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CUSTOM_FILTER, buildCustomFilterToCheckPrincipalClass(classesForCustomFilter, classes));
+                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CUSTOM_FILTER, buildCustomFilterToCheckPrincipalClass(comparedClasses, classes));
             QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
 
             // if the query fails, check additionally only the first biggest class from the list
@@ -3801,6 +3974,7 @@ public class SchemaExtractor {
                 addExtractionMessage(schema, NOTE, SchemaExtractorMessage.FunctionalityType.IMPORTANCE_INDEX,
                         propertyName, null, queryBuilder);
 
+                comparedClasses = Collections.unmodifiableList(existingClasses.subList(0, 1));
                 queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_PRINCIPAL_SOURCE_FOR_TARGET.name()), CHECK_PRINCIPAL_SOURCE_FOR_TARGET)
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL, newSourceClass.getClassName(), newSourceClass.getIsLiteral())
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_TARGET_FULL, targetClass.getClassName(), targetClass.getIsLiteral())
@@ -3808,12 +3982,16 @@ public class SchemaExtractor {
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_TARGET, targetClass.getClassificationProperty())
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_OTHER, classificationProperty)
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, propertyName, false)
-                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CUSTOM_FILTER, buildCustomFilterToCheckPrincipalClass(Collections.unmodifiableList(existingClasses.subList(0, 1)), classes));
+                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CUSTOM_FILTER, buildCustomFilterToCheckPrincipalClass(comparedClasses, classes));
                 queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
                 if (queryResponse.hasErrors()) {
                     addExtractionMessage(schema, NOTE, SchemaExtractorMessage.FunctionalityType.IMPORTANCE_INDEX,
                             propertyName, null, queryBuilder);
                 }
+            }
+            if (!queryResponse.hasErrors() && !queryResponse.getResults().isEmpty()) {
+                newSourceClass.setPrincipalWitness(new SchemaExtractorPropertyLinkedClassInfo.PrincipalWitness(
+                        classificationProperty, List.copyOf(comparedClasses)));
             }
             isPrincipalSource = queryResponse.hasErrors() || !queryResponse.getResults().isEmpty();
             if (isTrue(isPrincipalSource)) break;
