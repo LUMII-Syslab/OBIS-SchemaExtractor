@@ -232,7 +232,7 @@ public enum SchemaExtractorQueries {
             "SELECT ?property (COUNT(?x) as ?instances) WHERE {?x ?property ?y} GROUP BY ?property", QueryType.LARGE
     ),
     FIND_PROPERTIES_WITH_TRIPLE_COUNT_DISTINCT(
-            "SELECT ?property (COUNT(?x) as ?instances) WHERE { { SELECT DISTINCT ?x ?property WHERE { ?x ?property ?y } } } GROUP BY ?property", QueryType.LARGE
+            "SELECT ?property (COUNT(?x) as ?instances) WHERE { { SELECT DISTINCT ?x ?property ?y WHERE { ?x ?property ?y } } } GROUP BY ?property", QueryType.LARGE
     ),
     FIND_PROPERTIES_FOR_CLASS(
             "SELECT DISTINCT ?property WHERE { { SELECT ?x ?property ?y WHERE { ?x <classificationProperty> <sourceClass> . ?x ?property ?y . } } }", QueryType.LARGE
