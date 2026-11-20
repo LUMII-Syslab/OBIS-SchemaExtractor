@@ -2033,15 +2033,19 @@ public class SchemaExtractor {
                                 QueryResponse checkQueryResponse = sparqlEndpointProcessor.read(request, checkQueryBuilder);
                                 // if the relation is found then create source-target pair but without the triple count
                                 if (!checkQueryResponse.getResults().isEmpty() && checkQueryResponse.getResults().get(0) != null) {
-                                    addExtractionMessage(schema, MESSAGE, SchemaExtractorMessage.FunctionalityType.STRUCT_PAIRS,
-                                            property.getPropertyName(), null, checkQueryBuilder,
-                                            "Count information not available for property source and target pair");
+                                    // Report the failed count query and both class parameters after positive existence recovery.
+                                    addExtractionMessage(schema, MESSAGE, SchemaExtractorMessage.FunctionalityType.COUNT,
+                                            property.getPropertyName(), sourceClass.getClassName(), pairQueryBuilder,
+                                            "Count information not available for property source and target pair")
+                                            .setRelatedEntity2(targetClass.getClassName());
                                     property.getSourceAndTargetPairs().add(new SchemaExtractorSourceTargetInfo(
                                             sourceClass.getClassName(), targetClass.getClassName(), null, sourceClass.getClassificationProperty(), targetClass.getClassificationProperty()));
                                 } else if (checkQueryResponse.hasErrors()) {
+                                    // Include both class parameters when the existence check fails.
                                     addExtractionMessage(schema, MESSAGE, SchemaExtractorMessage.FunctionalityType.STRUCT_PAIRS,
-                                            property.getPropertyName(), null, checkQueryBuilder,
-                                            "Property source and target pair can not be checked. Source and target pair possibility is assumed for property.");
+                                            property.getPropertyName(), sourceClass.getClassName(), checkQueryBuilder,
+                                            "Property source and target pair can not be checked. Source and target pair possibility is assumed for property.")
+                                            .setRelatedEntity2(targetClass.getClassName());
                                     SchemaExtractorSourceTargetInfo assumedPair = new SchemaExtractorSourceTargetInfo(
                                             sourceClass.getClassName(), targetClass.getClassName(), null, sourceClass.getClassificationProperty(), targetClass.getClassificationProperty());
                                     assumedPair.setIsAssumed(true);

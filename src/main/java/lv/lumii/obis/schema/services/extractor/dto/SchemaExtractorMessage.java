@@ -21,6 +21,7 @@ public class SchemaExtractorMessage {
     private String message;
     private String entity;
     private String relatedEntity;
+    private String relatedEntity2;
     private String queryName;
     private String query;
 
