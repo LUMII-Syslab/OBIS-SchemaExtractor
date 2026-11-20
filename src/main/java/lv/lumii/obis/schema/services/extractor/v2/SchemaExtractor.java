@@ -3171,6 +3171,20 @@ public class SchemaExtractor {
         return estimated;
     }
 
+    // Remove only the latest global cardinality inference wording while preserving its historical failure NOTE.
+    private void clearCardinalityInferenceText(Schema schema, String propertyName, SchemaExtractorQueries query) {
+        List<SchemaExtractorMessage> messages = schema.getMessages();
+        for (int i = messages.size() - 1; i >= 0; i--) {
+            SchemaExtractorMessage message = messages.get(i);
+            if (message.getMessageLevel() == NOTE && message.getFunctionalityType() == SchemaExtractorMessage.FunctionalityType.CARDINALITY
+                    && Objects.equals(propertyName, message.getEntity()) && message.getRelatedEntity() == null
+                    && query.name().equals(message.getQueryName())) {
+                if ("The cardinality has been set on the basis of the query failure".equals(message.getMessage())) message.setMessage(null);
+                return;
+            }
+        }
+    }
+
     // Apply the configurable failure policy to source minimum cardinality while retaining successful counterexample checks.
     protected void determinePropertySourceMinCardinality(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property,
                                                          @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties) {
@@ -3226,6 +3240,13 @@ public class SchemaExtractor {
             } else {
                 sourceClass.setMaxCardinality(queryResponse.getResults().isEmpty() ? 1 : DEFAULT_MAX_CARDINALITY);
                 sourceClass.setMaxCardinalityAssertionSize(null);
+                // A successful source-class counterexample disproves an estimated property maximum.
+                if (!queryResponse.getResults().isEmpty() && Integer.valueOf(1).equals(property.getMaxCardinality())
+                        && Integer.valueOf(-1).equals(property.getMaxCardinalityAssertionSize())) {
+                    property.setMaxCardinality(DEFAULT_MAX_CARDINALITY);
+                    property.setMaxCardinalityAssertionSize(null);
+                    clearCardinalityInferenceText(schema, property.getPropertyName(), FIND_PROPERTY_MAX_CARDINALITY);
+                }
             }
         });
     }
@@ -3264,6 +3285,13 @@ public class SchemaExtractor {
             } else {
                 targetClass.setMaxInverseCardinality(queryResponse.getResults().isEmpty() ? 1 : DEFAULT_MAX_CARDINALITY);
                 targetClass.setMaxInverseCardinalityAssertionSize(null);
+                // A successful target-class counterexample disproves an estimated property inverse maximum.
+                if (!queryResponse.getResults().isEmpty() && Integer.valueOf(1).equals(property.getMaxInverseCardinality())
+                        && Integer.valueOf(-1).equals(property.getMaxInverseCardinalityAssertionSize())) {
+                    property.setMaxInverseCardinality(DEFAULT_MAX_CARDINALITY);
+                    property.setMaxInverseCardinalityAssertionSize(null);
+                    clearCardinalityInferenceText(schema, property.getPropertyName(), FIND_INVERSE_PROPERTY_MAX_CARDINALITY);
+                }
             }
         });
     }
