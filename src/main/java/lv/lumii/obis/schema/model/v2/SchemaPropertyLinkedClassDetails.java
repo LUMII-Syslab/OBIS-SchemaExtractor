@@ -25,9 +25,9 @@ public class SchemaPropertyLinkedClassDetails {
     private Long distinctSubjectsCount;
     private Long distinctObjectsCount;
 
-    private Boolean closedDomain;
+    private Boolean closedSource;
     private Integer closedSourceAssertedSize;
-    private Boolean closedRange;
+    private Boolean closedTarget;
     private Integer closedTargetAssertedSize;
 
     private Boolean isPrincipal;
@@ -53,7 +53,7 @@ public class SchemaPropertyLinkedClassDetails {
     public SchemaPropertyLinkedClassDetails(String classFullName,
                                             Long tripleCount, Long tripleCountBase, Long dataTripleCount, Long objectTripleCount,
                                             Long distinctSubjectsCount, Long distinctObjectsCount,
-                                            Boolean closedDomain, Integer closedSourceAssertedSize, Boolean closedRange, Integer closedTargetAssertedSize,
+                                            Boolean closedSource, Integer closedSourceAssertedSize, Boolean closedTarget, Integer closedTargetAssertedSize,
                                             Boolean isPrincipal, Integer principalAssertedSize,
                                             Integer minCardinality, Integer minCardinalityAssertionSize, Integer maxCardinality, Integer maxCardinalityAssertionSize,
                                             Integer minInverseCardinality, Integer minInverseCardinalityAssertionSize, Integer maxInverseCardinality, Integer maxInverseCardinalityAssertionSize,
@@ -65,9 +65,9 @@ public class SchemaPropertyLinkedClassDetails {
         this.objectTripleCount = objectTripleCount;
         this.distinctSubjectsCount = distinctSubjectsCount;
         this.distinctObjectsCount = distinctObjectsCount;
-        this.closedDomain = closedDomain;
+        this.closedSource = closedSource;
         this.closedSourceAssertedSize = closedSourceAssertedSize;
-        this.closedRange = closedRange;
+        this.closedTarget = closedTarget;
         this.closedTargetAssertedSize = closedTargetAssertedSize;
         this.isPrincipal = isPrincipal;
         this.principalAssertedSize = principalAssertedSize;

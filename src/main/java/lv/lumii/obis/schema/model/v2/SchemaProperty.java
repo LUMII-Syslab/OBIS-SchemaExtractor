@@ -26,9 +26,9 @@ public class SchemaProperty extends SchemaElement {
     private Long blankNodeSubjects;
     private Long distinctSubjectsCount;
     private Long distinctObjectsCount;
-    private Boolean closedDomain;
+    private Boolean closedSource;
     private Integer closedSourceAssertedSize;
-    private Boolean closedRange;
+    private Boolean closedTarget;
     private Integer closedTargetAssertedSize;
     private Integer sourceClassesOK;
     private Integer targetClassesOK;

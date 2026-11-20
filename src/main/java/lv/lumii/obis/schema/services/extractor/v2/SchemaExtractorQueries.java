@@ -377,16 +377,16 @@ public enum SchemaExtractorQueries {
             "SELECT ?y WHERE {?x <classificationProperty> <sourceClass>. ?x <property> ?y. FILTER(isLiteral(?y)) } LIMIT 1", QueryType.SMALL
     ),
 
-    FIND_CLOSED_RANGE_FOR_PROPERTY(
+    FIND_CLOSED_TARGET_FOR_PROPERTY(
             "SELECT ?x ?y WHERE { ?x <property> ?y. FILTER(!isLiteral(?y)) OPTIONAL {?y <classificationProperty> ?c} FILTER(!BOUND(?c)) } LIMIT 1", QueryType.LARGE
     ),
-    FIND_CLOSED_DOMAIN_FOR_PROPERTY(
+    FIND_CLOSED_SOURCE_FOR_PROPERTY(
             "SELECT ?x ?y WHERE { ?x <property> ?y. OPTIONAL {?x <classificationProperty> ?c} FILTER(!BOUND(?c)) } LIMIT 1", QueryType.LARGE
     ),
-    FIND_CLOSED_RANGE_FOR_PROPERTY_AND_CLASS(
+    FIND_CLOSED_TARGET_FOR_PROPERTY_AND_CLASS(
             "SELECT ?x ?y WHERE { ?x <classificationPropertySource> <sourceClass>. ?x <property> ?y. FILTER(!isLiteral(?y)) OPTIONAL {?y <classificationPropertyTarget> ?c} FILTER(!BOUND(?c)) } LIMIT 1", QueryType.SMALL
     ),
-    FIND_CLOSED_DOMAIN_FOR_PROPERTY_AND_CLASS(
+    FIND_CLOSED_SOURCE_FOR_PROPERTY_AND_CLASS(
             "SELECT ?x ?y WHERE { ?y <classificationPropertyTarget> <targetClass>. ?x <property> ?y. OPTIONAL {?x <classificationPropertySource> ?c} FILTER(!BOUND(?c)) } LIMIT 1", QueryType.SMALL
     ),
 

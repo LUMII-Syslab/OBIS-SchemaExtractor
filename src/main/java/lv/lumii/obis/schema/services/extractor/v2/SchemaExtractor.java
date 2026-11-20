@@ -860,10 +860,10 @@ public class SchemaExtractor {
             }
 
             if (isTrue(request.getCalculateClosedClassSets())) {
-                determinePropertyClosedDomains(schema, property, request, totalCountOfProperties);
-                determinePropertyClosedRanges(schema, property, request, totalCountOfProperties);
-                determinePropertyClosedRangesOnSourceClassLevel(schema, property, request, totalCountOfProperties);
-                determinePropertyClosedDomainsOnTargetClassLevel(schema, property, request, totalCountOfProperties);
+                determinePropertyClosedSources(schema, property, request, totalCountOfProperties);
+                determinePropertyClosedTargets(schema, property, request, totalCountOfProperties);
+                determinePropertyClosedTargetsOnSourceClassLevel(schema, property, request, totalCountOfProperties);
+                determinePropertyClosedSourcesOnTargetClassLevel(schema, property, request, totalCountOfProperties);
             }
 
             if (isNotTrue(property.getIsObjectProperty())) {
@@ -2443,30 +2443,30 @@ public class SchemaExtractor {
     }
 
     // Keep failed property-source checks false and treat successful blank-node witnesses as counterexamples before inferring closure.
-    protected void determinePropertyClosedDomains(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties) {
-        log.info(request.getCorrelationId() + " - determinePropertyClosedDomains [" + property.getPropertyName() + "]");
+    protected void determinePropertyClosedSources(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties) {
+        log.info(request.getCorrelationId() + " - determinePropertyClosedSources [" + property.getPropertyName() + "]");
 
         property.setClosedSourceAssertedSize(null);
         // Check for a property subject without a bound class.
         if (property.getSourceClasses().isEmpty()) {
-            property.setIsClosedDomain((property.getTripleCount() != null && property.getTripleCount() > 0) ? Boolean.FALSE : null);
+            property.setIsClosedSource((property.getTripleCount() != null && property.getTripleCount() > 0) ? Boolean.FALSE : null);
         } else {
-            property.setIsClosedDomain(Boolean.TRUE);
+            property.setIsClosedSource(Boolean.TRUE);
             boolean canEstimate = request.getEstimateClosedSourceTarget();
             List<SchemaExtractorMessage> failures = new ArrayList<>();
             for (String classificationProperty : request.getMainClassificationProperties()) {
-                SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_CLOSED_DOMAIN_FOR_PROPERTY.name()), FIND_CLOSED_DOMAIN_FOR_PROPERTY)
+                SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_CLOSED_SOURCE_FOR_PROPERTY.name()), FIND_CLOSED_SOURCE_FOR_PROPERTY)
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, classificationProperty)
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false);
                 QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
                 if (queryResponse.hasErrors()) {
-                    property.setIsClosedDomain(Boolean.FALSE);
+                    property.setIsClosedSource(Boolean.FALSE);
                     failures.add(addExtractionMessage(schema, NOTE, SchemaExtractorMessage.FunctionalityType.CLOSED_SOURCE_TARGET,
                             property.getPropertyName(), null, queryBuilder));
                     Long shortestFailedAttempt = queryResponse.getShortestFailedAttemptDurationNanos();
                     canEstimate &= shortestFailedAttempt != null && shortestFailedAttempt > TimeUnit.SECONDS.toNanos(45);
                 } else if (!queryResponse.getResults().isEmpty()) {
-                    property.setIsClosedDomain(Boolean.FALSE);
+                    property.setIsClosedSource(Boolean.FALSE);
                     canEstimate = false;
                     break;
                 }
@@ -2476,30 +2476,30 @@ public class SchemaExtractor {
     }
 
     // Keep failed property-target checks false and treat successful blank-node witnesses as counterexamples before inferring closure.
-    protected void determinePropertyClosedRanges(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties) {
-        log.info(request.getCorrelationId() + " - determinePropertyClosedRanges [" + property.getPropertyName() + "]");
+    protected void determinePropertyClosedTargets(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties) {
+        log.info(request.getCorrelationId() + " - determinePropertyClosedTargets [" + property.getPropertyName() + "]");
 
         property.setClosedTargetAssertedSize(null);
         // Check for a non-literal property object without a bound class.
         if (property.getTargetClasses().isEmpty()) {
-            property.setIsClosedRange((property.getObjectTripleCount() != null && property.getObjectTripleCount() != 0) ? Boolean.FALSE : null);
+            property.setIsClosedTarget((property.getObjectTripleCount() != null && property.getObjectTripleCount() != 0) ? Boolean.FALSE : null);
         } else {
-            property.setIsClosedRange(Boolean.TRUE);
+            property.setIsClosedTarget(Boolean.TRUE);
             boolean canEstimate = request.getEstimateClosedSourceTarget();
             List<SchemaExtractorMessage> failures = new ArrayList<>();
             for (String classificationProperty : request.getMainClassificationProperties()) {
-                SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_CLOSED_RANGE_FOR_PROPERTY.name()), FIND_CLOSED_RANGE_FOR_PROPERTY)
+                SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_CLOSED_TARGET_FOR_PROPERTY.name()), FIND_CLOSED_TARGET_FOR_PROPERTY)
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, classificationProperty)
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false);
                 QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
                 if (queryResponse.hasErrors()) {
-                    property.setIsClosedRange(Boolean.FALSE);
+                    property.setIsClosedTarget(Boolean.FALSE);
                     failures.add(addExtractionMessage(schema, NOTE, SchemaExtractorMessage.FunctionalityType.CLOSED_SOURCE_TARGET,
                             property.getPropertyName(), null, queryBuilder));
                     Long shortestFailedAttempt = queryResponse.getShortestFailedAttemptDurationNanos();
                     canEstimate &= shortestFailedAttempt != null && shortestFailedAttempt > TimeUnit.SECONDS.toNanos(45);
                 } else if (!queryResponse.getResults().isEmpty()) {
-                    property.setIsClosedRange(Boolean.FALSE);
+                    property.setIsClosedTarget(Boolean.FALSE);
                     canEstimate = false;
                     break;
                 }
@@ -2508,37 +2508,37 @@ public class SchemaExtractor {
         }
     }
 
-    // Retain verified range inheritance and reject failed source-context checks or counterexamples, including blank-node witnesses.
-    protected void determinePropertyClosedRangesOnSourceClassLevel(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties) {
-        log.info(request.getCorrelationId() + " - determinePropertyClosedRangesOnSourceClassLevel [" + property.getPropertyName() + "]");
+    // Retain verified closed-target inheritance and reject failed source-context checks or counterexamples, including blank-node witnesses.
+    protected void determinePropertyClosedTargetsOnSourceClassLevel(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties) {
+        log.info(request.getCorrelationId() + " - determinePropertyClosedTargetsOnSourceClassLevel [" + property.getPropertyName() + "]");
 
         // Check for an unclassified non-literal object reached from this source class.
-        if (isTrue(property.getIsClosedRange())) {
+        if (isTrue(property.getIsClosedTarget())) {
             property.getSourceClasses().forEach(sourceClass -> {
-                sourceClass.setIsClosedRange(Boolean.TRUE);
+                sourceClass.setIsClosedTarget(Boolean.TRUE);
                 sourceClass.setClosedTargetAssertedSize(null);
             });
         } else if (isTrue(request.getCalculateSourceAndTargetPairs())) {
             property.getSourceClasses().forEach(sourceClass -> {
-                sourceClass.setIsClosedRange(Boolean.TRUE);
+                sourceClass.setIsClosedTarget(Boolean.TRUE);
                 sourceClass.setClosedTargetAssertedSize(null);
                 boolean canEstimate = request.getEstimateClosedSourceTarget();
                 List<SchemaExtractorMessage> failures = new ArrayList<>();
                 for (String classificationProperty : request.getMainClassificationProperties()) {
-                    SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_CLOSED_RANGE_FOR_PROPERTY_AND_CLASS.name()), FIND_CLOSED_RANGE_FOR_PROPERTY_AND_CLASS)
+                    SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_CLOSED_TARGET_FOR_PROPERTY_AND_CLASS.name()), FIND_CLOSED_TARGET_FOR_PROPERTY_AND_CLASS)
                             .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL, sourceClass.getClassName(), sourceClass.getIsLiteral())
                             .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_SOURCE, sourceClass.getClassificationProperty())
                             .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_TARGET, classificationProperty)
                             .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false);
                     QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
                     if (queryResponse.hasErrors()) {
-                        sourceClass.setIsClosedRange(Boolean.FALSE);
+                        sourceClass.setIsClosedTarget(Boolean.FALSE);
                         failures.add(addExtractionMessage(schema, NOTE, SchemaExtractorMessage.FunctionalityType.CLOSED_SOURCE_TARGET,
                                 property.getPropertyName(), sourceClass.getClassName(), queryBuilder));
                         Long shortestFailedAttempt = queryResponse.getShortestFailedAttemptDurationNanos();
                         canEstimate &= shortestFailedAttempt != null && shortestFailedAttempt > TimeUnit.SECONDS.toNanos(45);
                     } else if (!queryResponse.getResults().isEmpty()) {
-                        sourceClass.setIsClosedRange(Boolean.FALSE);
+                        sourceClass.setIsClosedTarget(Boolean.FALSE);
                         canEstimate = false;
                         break;
                     }
@@ -2548,37 +2548,37 @@ public class SchemaExtractor {
         }
     }
 
-    // Retain verified domain inheritance and reject failed target-context checks or counterexamples, including blank-node witnesses.
-    protected void determinePropertyClosedDomainsOnTargetClassLevel(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties) {
-        log.info(request.getCorrelationId() + " - determinePropertyClosedDomainsOnTargetClassLevel [" + property.getPropertyName() + "]");
+    // Retain verified closed-source inheritance and reject failed target-context checks or counterexamples, including blank-node witnesses.
+    protected void determinePropertyClosedSourcesOnTargetClassLevel(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties) {
+        log.info(request.getCorrelationId() + " - determinePropertyClosedSourcesOnTargetClassLevel [" + property.getPropertyName() + "]");
 
         // Check for an unclassified subject reaching this target class.
-        if (isTrue(property.getIsClosedDomain())) {
+        if (isTrue(property.getIsClosedSource())) {
             property.getTargetClasses().forEach(targetClass -> {
-                targetClass.setIsClosedDomain(Boolean.TRUE);
+                targetClass.setIsClosedSource(Boolean.TRUE);
                 targetClass.setClosedSourceAssertedSize(null);
             });
         } else if (isTrue(request.getCalculateSourceAndTargetPairs())) {
             property.getTargetClasses().forEach(targetClass -> {
-                targetClass.setIsClosedDomain(Boolean.TRUE);
+                targetClass.setIsClosedSource(Boolean.TRUE);
                 targetClass.setClosedSourceAssertedSize(null);
                 boolean canEstimate = request.getEstimateClosedSourceTarget();
                 List<SchemaExtractorMessage> failures = new ArrayList<>();
                 for (String classificationProperty : request.getMainClassificationProperties()) {
-                    SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_CLOSED_DOMAIN_FOR_PROPERTY_AND_CLASS.name()), FIND_CLOSED_DOMAIN_FOR_PROPERTY_AND_CLASS)
+                    SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_CLOSED_SOURCE_FOR_PROPERTY_AND_CLASS.name()), FIND_CLOSED_SOURCE_FOR_PROPERTY_AND_CLASS)
                             .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_TARGET_FULL, targetClass.getClassName(), targetClass.getIsLiteral())
                             .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_TARGET, targetClass.getClassificationProperty())
                             .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_SOURCE, classificationProperty)
                             .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false);
                     QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
                     if (queryResponse.hasErrors()) {
-                        targetClass.setIsClosedDomain(Boolean.FALSE);
+                        targetClass.setIsClosedSource(Boolean.FALSE);
                         failures.add(addExtractionMessage(schema, NOTE, SchemaExtractorMessage.FunctionalityType.CLOSED_SOURCE_TARGET,
                                 property.getPropertyName(), targetClass.getClassName(), queryBuilder));
                         Long shortestFailedAttempt = queryResponse.getShortestFailedAttemptDurationNanos();
                         canEstimate &= shortestFailedAttempt != null && shortestFailedAttempt > TimeUnit.SECONDS.toNanos(45);
                     } else if (!queryResponse.getResults().isEmpty()) {
-                        targetClass.setIsClosedDomain(Boolean.FALSE);
+                        targetClass.setIsClosedSource(Boolean.FALSE);
                         canEstimate = false;
                         break;
                     }
@@ -4109,9 +4109,9 @@ public class SchemaExtractor {
             property.setBlankNodeSubjects(propertyData.getBlankNodeSubjects());
             property.setDistinctSubjectsCount(propertyData.getDistinctSubjectsCount());
             property.setDistinctObjectsCount(propertyData.getDistinctObjectsCount());
-            property.setClosedDomain(propertyData.getIsClosedDomain());
+            property.setClosedSource(propertyData.getIsClosedSource());
             property.setClosedSourceAssertedSize(propertyData.getClosedSourceAssertedSize());
-            property.setClosedRange(propertyData.getIsClosedRange());
+            property.setClosedTarget(propertyData.getIsClosedTarget());
             property.setClosedTargetAssertedSize(propertyData.getClosedTargetAssertedSize());
             property.setSourceClassesOK(propertyData.getSourceClassesOK());
             property.setTargetClassesOK(propertyData.getTargetClassesOK());
@@ -4147,7 +4147,7 @@ public class SchemaExtractor {
                                 internalDto.getClassName(),
                                 internalDto.getTripleCount(), internalDto.getTripleCountBase(), internalDto.getDataTripleCount(), internalDto.getObjectTripleCount(),
                                 internalDto.getDistinctSubjectsCount(), internalDto.getDistinctObjectsCount(),
-                                internalDto.getIsClosedDomain(), internalDto.getClosedSourceAssertedSize(), internalDto.getIsClosedRange(), internalDto.getClosedTargetAssertedSize(),
+                                internalDto.getIsClosedSource(), internalDto.getClosedSourceAssertedSize(), internalDto.getIsClosedTarget(), internalDto.getClosedTargetAssertedSize(),
                                 internalDto.getIsPrincipal(), internalDto.getPrincipalAssertedSize(),
                                 internalDto.getMinCardinality(), internalDto.getMinCardinalityAssertionSize(), internalDto.getMaxCardinality(), internalDto.getMaxCardinalityAssertionSize(),
                                 internalDto.getMinInverseCardinality(), internalDto.getMinInverseCardinalityAssertionSize(), internalDto.getMaxInverseCardinality(), internalDto.getMaxInverseCardinalityAssertionSize(),

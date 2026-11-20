@@ -92,7 +92,7 @@ public class SchemaExtractorManyQueriesWithDirectProperties extends SchemaExtrac
                 determinePropertyRanges(property, request);
                 determinePropertyRangeTripleCount(property, request);
                 determinePropertyDomainRangePairs(property, request);
-                determinePropertyClosedDomainsAndRanges(property, request);
+                determinePropertyClosedSourcesAndTargets(property, request);
             }
 
             if (isFalse(property.getIsObjectProperty())
@@ -244,34 +244,34 @@ public class SchemaExtractorManyQueriesWithDirectProperties extends SchemaExtrac
         }
     }
 
-    protected void determinePropertyClosedDomainsAndRanges(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request) {
-        log.info(request.getCorrelationId() + " - determinePropertyClosedDomainsAndRanges [" + property.getPropertyName() + "]");
+    protected void determinePropertyClosedSourcesAndTargets(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request) {
+        log.info(request.getCorrelationId() + " - determinePropertyClosedSourcesAndTargets [" + property.getPropertyName() + "]");
 
         // check if there is any triple with URI subject but without bound class
         if (property.getSourceClasses().isEmpty()) {
-            property.setIsClosedDomain(null);
+            property.setIsClosedSource(null);
         } else {
-            String query = FIND_CLOSED_DOMAIN_FOR_PROPERTY.getSparqlQuery().replace(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
-            List<QueryResult> queryResults = sparqlEndpointProcessor.read(request, FIND_CLOSED_DOMAIN_FOR_PROPERTY.name(), query);
+            String query = FIND_CLOSED_SOURCE_FOR_PROPERTY.getSparqlQuery().replace(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
+            List<QueryResult> queryResults = sparqlEndpointProcessor.read(request, FIND_CLOSED_SOURCE_FOR_PROPERTY.name(), query);
             if (!queryResults.isEmpty() && StringUtils.isNotEmpty(queryResults.get(0).get(SPARQL_QUERY_BINDING_NAME_X))) {
-                property.setIsClosedDomain(Boolean.FALSE);
+                property.setIsClosedSource(Boolean.FALSE);
             } else {
-                property.setIsClosedDomain(Boolean.TRUE);
+                property.setIsClosedSource(Boolean.TRUE);
             }
         }
 
         // check if there is any triple with URI object but without bound class
         if (property.getTargetClasses().isEmpty()) {
-            property.setIsClosedRange(null);
+            property.setIsClosedTarget(null);
         } else {
-            String query = FIND_CLOSED_RANGE_FOR_PROPERTY.getSparqlQuery().replace(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
-            List<QueryResult> queryResults = sparqlEndpointProcessor.read(request, FIND_CLOSED_RANGE_FOR_PROPERTY.name(), query);
+            String query = FIND_CLOSED_TARGET_FOR_PROPERTY.getSparqlQuery().replace(SPARQL_QUERY_BINDING_NAME_PROPERTY, property.getPropertyName());
+            List<QueryResult> queryResults = sparqlEndpointProcessor.read(request, FIND_CLOSED_TARGET_FOR_PROPERTY.name(), query);
             if (!queryResults.isEmpty()
                     && StringUtils.isNotEmpty(queryResults.get(0).get(SPARQL_QUERY_BINDING_NAME_X))
                     && StringUtils.isNotEmpty(queryResults.get(0).get(SPARQL_QUERY_BINDING_NAME_Y))) {
-                property.setIsClosedRange(Boolean.FALSE);
+                property.setIsClosedTarget(Boolean.FALSE);
             } else {
-                property.setIsClosedRange(Boolean.TRUE);
+                property.setIsClosedTarget(Boolean.TRUE);
             }
         }
 
@@ -343,8 +343,8 @@ public class SchemaExtractorManyQueriesWithDirectProperties extends SchemaExtrac
         attribute.setMaxCardinality(property.getMaxCardinality());
         attribute.setTripleCount(property.getTripleCount());
         attribute.setObjectTripleCount(property.getObjectTripleCount());
-        attribute.setClosedDomain(property.getIsClosedDomain());
-        attribute.setClosedRange(property.getIsClosedRange());
+        attribute.setClosedSource(property.getIsClosedSource());
+        attribute.setClosedTarget(property.getIsClosedTarget());
         attribute.getDataTypes().addAll(convertInternalDataTypesToApiDto(property.getDataTypes()));
         attribute.getSourceClasses().addAll(property.getSourceClasses().stream().map(SchemaExtractorClassNodeInfo::getClassName).collect(Collectors.toSet()));
         attribute.getSourceClassesDetailed().addAll(convertInternalDtoToApiDto(property.getSourceClasses()));
@@ -364,8 +364,8 @@ public class SchemaExtractorManyQueriesWithDirectProperties extends SchemaExtrac
         role.setMaxCardinality(property.getMaxCardinality());
         role.setTripleCount(property.getTripleCount());
         role.setObjectTripleCount(property.getObjectTripleCount());
-        role.setClosedDomain(property.getIsClosedDomain());
-        role.setClosedRange(property.getIsClosedRange());
+        role.setClosedSource(property.getIsClosedSource());
+        role.setClosedTarget(property.getIsClosedTarget());
         role.getSourceClassesDetailed().addAll(convertInternalDtoToApiDto(property.getSourceClasses()));
         role.getTargetClassesDetailed().addAll(convertInternalDtoToApiDto(property.getTargetClasses()));
         property.getSourceAndTargetPairs().forEach(pair -> {

@@ -195,13 +195,13 @@ public enum SchemaExtractorQueries {
     COUNT_PROPERTY_LITERAL_VALUES_FOR_DOMAIN(
             "SELECT (COUNT(?y) as ?instances) WHERE {?x a <sourceClass>. ?x <property> ?y. FILTER(isLiteral(?y)) }"
     ),
-    FIND_CLOSED_RANGE_FOR_PROPERTY(
+    FIND_CLOSED_TARGET_FOR_PROPERTY(
             "SELECT ?x ?y WHERE { ?x <property> ?y. FILTER(!isLiteral(?y)) OPTIONAL {?y a ?c} FILTER(!BOUND(?c)) } LIMIT 1"
     ),
-    FIND_CLOSED_DOMAIN_FOR_PROPERTY(
+    FIND_CLOSED_SOURCE_FOR_PROPERTY(
             "SELECT ?x ?y WHERE { ?x <property> ?y. OPTIONAL {?x a ?c} FILTER(!BOUND(?c)) } LIMIT 1"
     ),
-    FIND_CLOSED_RANGE_FOR_PROPERTY_AND_CLASS(
+    FIND_CLOSED_TARGET_FOR_PROPERTY_AND_CLASS(
             "SELECT ?x ?y WHERE { ?x a <class>. ?x <property> ?y. FILTER(!isLiteral(?y)) OPTIONAL {?y a ?c} FILTER(!BOUND(?c)) } LIMIT 1"
     ),
 

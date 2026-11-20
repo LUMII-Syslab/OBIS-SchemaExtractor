@@ -17,8 +17,8 @@ public abstract class SchemaProperty extends SchemaElement {
 	private Integer maxCardinality;
 	private Long tripleCount;
 	private Long objectTripleCount;
-	private Boolean closedDomain;
-	private Boolean closedRange;
+	private Boolean closedSource;
+	private Boolean closedTarget;
 
 	@JsonProperty("SourceClassesDetailed")
 	private Set<SchemaPropertyLinkedClassDetails> sourceClassesDetailed;
