@@ -1,10 +1,12 @@
 package lv.lumii.obis.schema.services.common;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 import lombok.extern.slf4j.Slf4j;
 import lv.lumii.obis.schema.services.SchemaUtil;
@@ -36,6 +38,7 @@ public class SparqlEndpointProcessor {
 
     private static final int RETRY_COUNT = 2;
     private static final int FAST_QUERY_RETRY_SECONDS = 15;
+    private static final AtomicLong HEALTH_CHECK_SEQUENCE = new AtomicLong();
 
     private static final String[] FALLBACK_ACCEPT_HEADERS = {
             "application/sparql-results+json",
@@ -174,6 +177,10 @@ public class SparqlEndpointProcessor {
     // Execute the full query while routing normal server diagnostics through the builder's abbreviated instance representation.
     private QueryResponse read(@Nonnull SparqlEndpointConfig request, @Nonnull SparqlQueryBuilder queryBuilder, boolean withRetry) {
 
+        // Refresh each health request, including format fallbacks, without changing the response acceptance rules.
+        if (ENDPOINT_HEALTH_CHECK.name().equals(queryBuilder.getQueryName())) {
+            queryBuilder.withContextParam("<healthCheckToken>", Instant.now() + "-" + HEALTH_CHECK_SEQUENCE.incrementAndGet());
+        }
         String query = queryBuilder.build();
         if (query == null) {
             QueryResponse response = new QueryResponse();
@@ -199,7 +206,7 @@ public class SparqlEndpointProcessor {
         List<QueryResult> queryResults = null;
         ResultSet resultSet;
         QueryExecutionHTTP queryExecutor = getQueryExecutor(request.getEndpointUrl(), request.getGraphName(), sparqlQuery, request.isPostRequest(),
-                request.getAcceptHeaderForSparqlResults(), timeout);
+                request.getAcceptHeaderForSparqlResults(), timeout, ENDPOINT_HEALTH_CHECK.name().equals(queryName));
         try {
             resultSet = queryExecutor.execSelect();
             if (attempt > 1) {
@@ -310,10 +317,13 @@ public class SparqlEndpointProcessor {
 
     // Infer missing JSON/XML response types while retaining Jena's selected client, connection pool and normal content negotiation.
     private QueryExecutionHTTP getQueryExecutor(@Nonnull String endpointUrl, @Nullable String graphName, @Nonnull String query, boolean isPostMethod,
-                                                @Nullable String acceptHeaderForSparqlResults, @Nullable Long timeout) {
+                                                @Nullable String acceptHeaderForSparqlResults, @Nullable Long timeout, boolean healthCheck) {
 
         QueryExecutionHTTPBuilder builder = QueryExecutionHTTP.create().endpoint(endpointUrl).queryString(query)
                 .httpClient(new SparqlResponseHttpClient(HttpEnv.getHttpClient(endpointUrl, null)));
+
+        // Apply HTTP cache controls only to health requests while preserving the shared client and regular-query headers.
+        if (healthCheck) builder.httpHeader("Cache-Control", "no-cache, no-store");
 
         // If no MIME type is configured, leave the Accept header unset so the SPARQL client uses its default content negotiation.
         if (StringUtils.isNotEmpty(acceptHeaderForSparqlResults)) {

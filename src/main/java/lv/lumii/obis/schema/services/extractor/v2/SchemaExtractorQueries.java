@@ -571,7 +571,7 @@ public enum SchemaExtractorQueries {
     ),
 
     ENDPOINT_HEALTH_CHECK(
-           "SELECT * WHERE {?a ?b ?c} LIMIT 1", QueryType.SMALL
+           "SELECT (\"<healthCheckToken>\" AS ?probe) WHERE {?a ?b ?c} LIMIT 1", QueryType.SMALL
     ),
 
     ;
