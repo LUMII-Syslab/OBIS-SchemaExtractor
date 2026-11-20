@@ -73,6 +73,14 @@ public class SparqlQueryBuilder {
         return withContextParam("<instanceValuesClause>", instanceValuesClause);
     }
 
+    // Reuse existing context restrictions while binding a singleton directly in its dedicated template.
+    public SparqlQueryBuilder forSingleInstance(@Nonnull String instance, @Nonnull SchemaExtractorQueries singletonQuery, @Nullable String override) {
+        SparqlQueryBuilder single = new SparqlQueryBuilder(override, singletonQuery);
+        single.getContextMap().putAll(getContextMap());
+        single.getContextMap().remove("<instanceValuesClause>");
+        return single.withContextParam("<instance>", instance);
+    }
+
     // Expose the abbreviated query separately so callers never execute the shortened diagnostic form.
     public String getQueryStringForLogging() {
         return forLogging(resultQuery);

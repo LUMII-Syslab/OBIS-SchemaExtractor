@@ -1523,12 +1523,12 @@ public class SchemaExtractor {
         executeInstanceBatches(schema, request, instances, start, end, binding, factory, key, result, state, entity, null);
     }
 
-    // Carry caller-specific text through retries while preserving coverage and the first-failing-singleton suppression rule.
+    // Select direct-URI singleton templates while preserving coverage, retries and the first-failing-singleton diagnostic.
     private <K> void executeInstanceBatches(Schema schema, SchemaExtractorRequestDto request, List<String> instances, int start, int end, String binding,
                                             java.util.function.Supplier<SparqlQueryBuilder> factory, java.util.function.Function<QueryResult, K> key,
                                             InstanceBatchResult<K> result, InstanceQueryState state, String entity, String text) {
         if (start == end) return;
-        SparqlQueryBuilder query = factory.get().withInstanceValues(instances.subList(start, end));
+        SparqlQueryBuilder query = withInstanceBindings(request, factory.get(), instances.subList(start, end));
         Map<K, Long> counts = readGroupedCounts(sparqlEndpointProcessor.read(request, query), binding, key, true);
         if (counts != null) {
             counts.forEach((value, count) -> result.counts.merge(value, count, Math::addExact));
@@ -1545,6 +1545,24 @@ public class SchemaExtractor {
         }
         int batchSize = size > 100 ? 100 : size > 10 ? 10 : 1;
         for (int offset = start; offset < end; offset += batchSize) executeInstanceBatches(schema, request, instances, offset, Math.min(offset + batchSize, end), binding, factory, key, result, state, entity, text);
+    }
+
+    // Keep VALUES for batches and select the corresponding direct-URI query for a single instance.
+    private SparqlQueryBuilder withInstanceBindings(SchemaExtractorRequestDto request, SparqlQueryBuilder query, List<String> instances) {
+        if (instances.size() != 1) return query.withInstanceValues(instances);
+        SchemaExtractorQueries singleton = switch (SchemaExtractorQueries.valueOf(query.getQueryName())) {
+            case FIND_INSTANCE_OUTGOING_PROPERTIES -> FIND_SINGLE_INSTANCE_OUTGOING_PROPERTIES;
+            case FIND_INSTANCE_OUTGOING_PROPERTIES_DISTINCT -> FIND_SINGLE_INSTANCE_OUTGOING_PROPERTIES_DISTINCT;
+            case FIND_INSTANCE_INCOMING_PROPERTIES -> FIND_SINGLE_INSTANCE_INCOMING_PROPERTIES;
+            case FIND_INSTANCE_INCOMING_PROPERTIES_DISTINCT -> FIND_SINGLE_INSTANCE_INCOMING_PROPERTIES_DISTINCT;
+            case FIND_PROPERTY_SOURCES_WITH_TRIPLE_COUNT_FOR_INSTANCES -> FIND_PROPERTY_SOURCES_WITH_TRIPLE_COUNT_FOR_SINGLE_INSTANCE;
+            case FIND_PROPERTY_SOURCES_WITH_TRIPLE_COUNT_FOR_INSTANCES_DISTINCT -> FIND_PROPERTY_SOURCES_WITH_TRIPLE_COUNT_FOR_SINGLE_INSTANCE_DISTINCT;
+            case FIND_PROPERTY_TARGETS_WITH_TRIPLE_COUNT_FOR_INSTANCES -> FIND_PROPERTY_TARGETS_WITH_TRIPLE_COUNT_FOR_SINGLE_INSTANCE;
+            case FIND_PROPERTY_TARGETS_WITH_TRIPLE_COUNT_FOR_INSTANCES_DISTINCT -> FIND_PROPERTY_TARGETS_WITH_TRIPLE_COUNT_FOR_SINGLE_INSTANCE_DISTINCT;
+            default -> null;
+        };
+        return singleton == null ? query.withInstanceValues(instances)
+                : query.forSingleInstance(instances.get(0), singleton, request.getQueries().get(singleton.name()));
     }
 
     // Build class-instance batches with the same active property scope used by the aggregate and LIMIT queries.

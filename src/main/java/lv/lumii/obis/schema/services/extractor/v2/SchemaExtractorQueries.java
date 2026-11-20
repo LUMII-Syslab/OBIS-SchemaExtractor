@@ -526,6 +526,22 @@ public enum SchemaExtractorQueries {
             "SELECT ?class (COUNT(*) AS ?instances) WHERE { { SELECT DISTINCT ?x ?y ?class WHERE { <instanceValuesClause> <classValuesClause> ?y <property> ?x . ?x <classificationProperty> ?class . } } } GROUP BY ?class", QueryType.SMALL
     ),
 
+    FIND_PROPERTY_SOURCES_WITH_TRIPLE_COUNT_FOR_SINGLE_INSTANCE(
+            "SELECT ?class (COUNT(*) AS ?instances) WHERE { <classValuesClause> <instance> <property> ?y . <instance> <classificationProperty> ?class . } GROUP BY ?class", QueryType.SMALL
+    ),
+
+    FIND_PROPERTY_SOURCES_WITH_TRIPLE_COUNT_FOR_SINGLE_INSTANCE_DISTINCT(
+            "SELECT ?class (COUNT(*) AS ?instances) WHERE { { SELECT DISTINCT ?y ?class WHERE { <classValuesClause> <instance> <property> ?y . <instance> <classificationProperty> ?class . } } } GROUP BY ?class", QueryType.SMALL
+    ),
+
+    FIND_PROPERTY_TARGETS_WITH_TRIPLE_COUNT_FOR_SINGLE_INSTANCE(
+            "SELECT ?class (COUNT(*) AS ?instances) WHERE { <classValuesClause> ?y <property> <instance> . <instance> <classificationProperty> ?class . } GROUP BY ?class", QueryType.SMALL
+    ),
+
+    FIND_PROPERTY_TARGETS_WITH_TRIPLE_COUNT_FOR_SINGLE_INSTANCE_DISTINCT(
+            "SELECT ?class (COUNT(*) AS ?instances) WHERE { { SELECT DISTINCT ?y ?class WHERE { <classValuesClause> ?y <property> <instance> . <instance> <classificationProperty> ?class . } } } GROUP BY ?class", QueryType.SMALL
+    ),
+
     FIND_OUTGOING_PROPERTY_TRIPLE_COUNTS_FOR_CLASS_DISTINCT(
             "SELECT ?property (COUNT(*) AS ?instances) WHERE { { SELECT DISTINCT ?x ?property ?y WHERE { <propertyValuesClause> ?x <classificationProperty> <sourceClass> . ?x ?property ?y . } } } GROUP BY ?property", QueryType.LARGE
     ),
@@ -556,6 +572,22 @@ public enum SchemaExtractorQueries {
 
     FIND_INSTANCE_INCOMING_PROPERTIES_DISTINCT(
             "SELECT ?property (COUNT(*) AS ?instances) WHERE { { SELECT DISTINCT ?x ?property ?y WHERE { <instanceValuesClause> <propertyValuesClause> ?y ?property ?x . } } } GROUP BY ?property", QueryType.SMALL
+    ),
+
+    FIND_SINGLE_INSTANCE_OUTGOING_PROPERTIES(
+            "SELECT ?property (COUNT(*) AS ?instances) WHERE { <propertyValuesClause> <instance> ?property ?y . } GROUP BY ?property", QueryType.SMALL
+    ),
+
+    FIND_SINGLE_INSTANCE_OUTGOING_PROPERTIES_DISTINCT(
+            "SELECT ?property (COUNT(*) AS ?instances) WHERE { { SELECT DISTINCT ?property ?y WHERE { <propertyValuesClause> <instance> ?property ?y . } } } GROUP BY ?property", QueryType.SMALL
+    ),
+
+    FIND_SINGLE_INSTANCE_INCOMING_PROPERTIES(
+            "SELECT ?property (COUNT(*) AS ?instances) WHERE { <propertyValuesClause> ?y ?property <instance> . } GROUP BY ?property", QueryType.SMALL
+    ),
+
+    FIND_SINGLE_INSTANCE_INCOMING_PROPERTIES_DISTINCT(
+            "SELECT ?property (COUNT(*) AS ?instances) WHERE { { SELECT DISTINCT ?property ?y WHERE { <propertyValuesClause> ?y ?property <instance> . } } } GROUP BY ?property", QueryType.SMALL
     ),
 
     CHECK_PROPERTY_HAS_BLANK_SUBJECTS(
