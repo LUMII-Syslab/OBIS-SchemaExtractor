@@ -3442,35 +3442,29 @@ public class SchemaExtractor {
                     continue;
                 }
 
-                // if the selected important indexes mode is Basic/ClassCoverage then do not check detailed combinations
-                if (SchemaExtractorRequestDto.ImportantIndexesMode.basic.equals(request.getCalculateImportanceIndexes())
-                        || SchemaExtractorRequestDto.ImportantIndexesMode.classCoverage.equals(request.getCalculateImportanceIndexes())) {
+                // if the selected important indexes mode is ClassCoverage then do not check detailed combinations
+                if (SchemaExtractorRequestDto.ImportantIndexesMode.classCoverage.equals(request.getCalculateImportanceIndexes())) {
                     currentClass.setImportanceIndex(index++);
                     importantClasses.add(currentClass.getClassName());
                     continue;
                 }
 
-                boolean needToInclude = false;
-
-                switch (linkedClassType) {
-                    case SOURCE:
-                        needToInclude = checkNewPrincipalSourceClass(schema, property.getPropertyName(), currentClass, includedClassesToCheckWith, classes, request, totalCountOfProperties);
-                        break;
-                    case TARGET:
-                        needToInclude = checkNewPrincipalTargetClass(schema, property.getPropertyName(), currentClass, includedClassesToCheckWith, classes, request, totalCountOfProperties);
-                        break;
-                    case PAIR_SOURCE:
-                        if (sourceClass != null && StringUtils.isNotEmpty(sourceClass.getClassName())) {
-                            needToInclude = checkNewPrincipalTargetClassForSource(schema, property.getPropertyName(), sourceClass, currentClass, includedClassesToCheckWith, classes, request, totalCountOfProperties);
+                boolean needToInclude;
+                if (SchemaExtractorRequestDto.ImportantIndexesMode.basic.equals(request.getCalculateImportanceIndexes())) {
+                    // Basic mode: check intersecting important classes one by one
+                    // the current class is not important, if all its property ends are already included in some single important class
+                    needToInclude = true;
+                    for (String includedClass : includedClassesToCheckWith) {
+                        needToInclude = checkNewPrincipalClass(schema, property, currentClass, Collections.singletonList(includedClass), classes, request,
+                                linkedClassType, sourceClass, targetClass, totalCountOfProperties);
+                        if (!needToInclude) {
+                            break;
                         }
-                        break;
-                    case PAIR_TARGET:
-                        if (targetClass != null && StringUtils.isNotEmpty(targetClass.getClassName())) {
-                            needToInclude = checkNewPrincipalSourceClassForTarget(schema, property.getPropertyName(), targetClass, currentClass, includedClassesToCheckWith, classes, request, totalCountOfProperties);
-                        }
-                        break;
-                    default:
-                        break;
+                    }
+                } else {
+                    // UnionBased mode: check whether the property ends are included in the union of intersecting important classes
+                    needToInclude = checkNewPrincipalClass(schema, property, currentClass, includedClassesToCheckWith, classes, request,
+                            linkedClassType, sourceClass, targetClass, totalCountOfProperties);
                 }
 
                 if (needToInclude) {
@@ -3483,6 +3477,32 @@ public class SchemaExtractor {
         }
 
         return propertyLinkedClassesSorted;
+    }
+
+    protected boolean checkNewPrincipalClass(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property,
+                                             @Nonnull SchemaExtractorPropertyLinkedClassInfo currentClass, @Nonnull List<String> existingClasses,
+                                             @Nonnull List<SchemaClass> classes, @Nonnull SchemaExtractorRequestDto request,
+                                             @Nonnull LinkedClassType linkedClassType,
+                                             @Nullable SchemaExtractorClassNodeInfo sourceClass, @Nullable SchemaExtractorClassNodeInfo targetClass,
+                                             int totalCountOfProperties) {
+        switch (linkedClassType) {
+            case SOURCE:
+                return checkNewPrincipalSourceClass(schema, property.getPropertyName(), currentClass, existingClasses, classes, request, totalCountOfProperties);
+            case TARGET:
+                return checkNewPrincipalTargetClass(schema, property.getPropertyName(), currentClass, existingClasses, classes, request, totalCountOfProperties);
+            case PAIR_SOURCE:
+                if (sourceClass != null && StringUtils.isNotEmpty(sourceClass.getClassName())) {
+                    return checkNewPrincipalTargetClassForSource(schema, property.getPropertyName(), sourceClass, currentClass, existingClasses, classes, request, totalCountOfProperties);
+                }
+                return false;
+            case PAIR_TARGET:
+                if (targetClass != null && StringUtils.isNotEmpty(targetClass.getClassName())) {
+                    return checkNewPrincipalSourceClassForTarget(schema, property.getPropertyName(), targetClass, currentClass, existingClasses, classes, request, totalCountOfProperties);
+                }
+                return false;
+            default:
+                return false;
+        }
     }
 
     protected boolean checkNewPrincipalSourceClass(@Nonnull Schema schema, @Nonnull String propertyName, @Nonnull SchemaExtractorPropertyLinkedClassInfo newSourceClass,
@@ -3502,10 +3522,11 @@ public class SchemaExtractor {
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CUSTOM_FILTER, buildCustomFilterToCheckPrincipalClass(classesForCustomFilter, classes));
             QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
 
-            // if the query fails, check additionally only the first biggest class from the list
             if (queryResponse.hasErrors()) {
                 schema.getMessages().add(new SchemaExtractorMessage(WARNING, propertyName, CHECK_PRINCIPAL_SOURCE.name(), queryBuilder.getQueryString()));
-
+            }
+            // if the query fails, check additionally only the first biggest class from the list (if the list had more than one class)
+            if (queryResponse.hasErrors() && classesForCustomFilter.size() > 1) {
                 queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_PRINCIPAL_SOURCE.name()), CHECK_PRINCIPAL_SOURCE)
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL, newSourceClass.getClassName(), newSourceClass.getIsLiteral())
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_SOURCE, newSourceClass.getClassificationProperty())
@@ -3539,10 +3560,11 @@ public class SchemaExtractor {
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CUSTOM_FILTER, buildCustomFilterToCheckPrincipalClass(classesForCustomFilter, classes));
             QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
 
-            // if the query fails, check additionally only the first biggest class from the list
             if (queryResponse.hasErrors()) {
                 schema.getMessages().add(new SchemaExtractorMessage(WARNING, propertyName, CHECK_PRINCIPAL_TARGET.name(), queryBuilder.getQueryString()));
-
+            }
+            // if the query fails, check additionally only the first biggest class from the list (if the list had more than one class)
+            if (queryResponse.hasErrors() && classesForCustomFilter.size() > 1) {
                 queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_PRINCIPAL_TARGET.name()), CHECK_PRINCIPAL_TARGET)
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_TARGET_FULL, newTargetClass.getClassName(), newTargetClass.getIsLiteral())
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY_FOR_TARGET, newTargetClass.getClassificationProperty())
@@ -3578,10 +3600,11 @@ public class SchemaExtractor {
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CUSTOM_FILTER, buildCustomFilterToCheckPrincipalClass(classesForCustomFilter, classes));
             QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
 
-            // if the query fails, check additionally only the first biggest class from the list
             if (queryResponse.hasErrors()) {
                 schema.getMessages().add(new SchemaExtractorMessage(WARNING, propertyName, CHECK_PRINCIPAL_TARGET_FOR_SOURCE.name(), queryBuilder.getQueryString()));
-
+            }
+            // if the query fails, check additionally only the first biggest class from the list (if the list had more than one class)
+            if (queryResponse.hasErrors() && classesForCustomFilter.size() > 1) {
                 queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_PRINCIPAL_TARGET_FOR_SOURCE.name()), CHECK_PRINCIPAL_TARGET_FOR_SOURCE)
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL, sourceClass.getClassName(), sourceClass.getIsLiteral())
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_TARGET_FULL, newTargetClass.getClassName(), newTargetClass.getIsLiteral())
@@ -3620,10 +3643,11 @@ public class SchemaExtractor {
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CUSTOM_FILTER, buildCustomFilterToCheckPrincipalClass(classesForCustomFilter, classes));
             QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
 
-            // if the query fails, check additionally only the first biggest class from the list
             if (queryResponse.hasErrors()) {
                 schema.getMessages().add(new SchemaExtractorMessage(WARNING, propertyName, CHECK_PRINCIPAL_SOURCE_FOR_TARGET.name(), queryBuilder.getQueryString()));
-
+            }
+            // if the query fails, check additionally only the first biggest class from the list (if the list had more than one class)
+            if (queryResponse.hasErrors() && classesForCustomFilter.size() > 1) {
                 queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_PRINCIPAL_SOURCE_FOR_TARGET.name()), CHECK_PRINCIPAL_SOURCE_FOR_TARGET)
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL, newSourceClass.getClassName(), newSourceClass.getIsLiteral())
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_TARGET_FULL, targetClass.getClassName(), targetClass.getIsLiteral())
@@ -3650,9 +3674,8 @@ public class SchemaExtractor {
             if (clazz == null) {
                 continue;
             }
-            if (i > 0) {
+            if (customFilter.length() > 0) {
                 customFilter.append(" || ");
-
             }
             if (clazz.getIsLiteral()) {
                 customFilter.append("str(?cc)=\"").append(clazz.getLocalName()).append("\"");
