@@ -3812,39 +3812,29 @@ public class SchemaExtractor {
                     continue;
                 }
 
-                // if the selected important indexes mode is Basic/ClassCoverage then do not check detailed combinations
-                if (SchemaExtractorRequestDto.ImportantIndexesMode.basic.equals(request.getCalculateImportanceIndexes())
-                        || SchemaExtractorRequestDto.ImportantIndexesMode.classCoverage.equals(request.getCalculateImportanceIndexes())) {
+                // Class coverage accepts intersecting classes without checking their property ends.
+                if (SchemaExtractorRequestDto.ImportantIndexesMode.classCoverage.equals(request.getCalculateImportanceIndexes())) {
                     currentClass.setImportanceIndex(index++);
                     importantClasses.add(currentClass.getClassName());
                     continue;
                 }
 
-                boolean needToInclude = false;
-
-                switch (linkedClassType) {
-                    case SOURCE:
-                        needToInclude = checkNewPrincipalSourceClass(schema, property.getPropertyName(), currentClass, includedClassesToCheckWith, classes, request, totalCountOfProperties);
-                        break;
-                    case TARGET:
-                        needToInclude = checkNewPrincipalTargetClass(schema, property.getPropertyName(), currentClass, includedClassesToCheckWith, classes, request, totalCountOfProperties);
-                        break;
-                    case PAIR_SOURCE:
-                        if (sourceClass != null && StringUtils.isNotEmpty(sourceClass.getClassName())) {
-                            needToInclude = checkNewPrincipalTargetClassForSource(schema, property.getPropertyName(), sourceClass, currentClass, includedClassesToCheckWith, classes, request, totalCountOfProperties);
+                boolean needToInclude;
+                if (SchemaExtractorRequestDto.ImportantIndexesMode.basic.equals(request.getCalculateImportanceIndexes())) {
+                    // A single already important class can cover all of this candidate's property ends.
+                    needToInclude = true;
+                    for (String includedClass : includedClassesToCheckWith) {
+                        if (!checkNewPrincipalClass(schema, property, currentClass, List.of(includedClass), classes, request,
+                                linkedClassType, sourceClass, targetClass, totalCountOfProperties, estimates)) {
+                            needToInclude = false;
+                            break;
                         }
-                        break;
-                    case PAIR_TARGET:
-                        if (targetClass != null && StringUtils.isNotEmpty(targetClass.getClassName())) {
-                            needToInclude = checkNewPrincipalSourceClassForTarget(schema, property.getPropertyName(), targetClass, currentClass, includedClassesToCheckWith, classes, request, totalCountOfProperties);
-                        }
-                        break;
-                    default:
-                        break;
+                    }
+                } else {
+                    needToInclude = checkNewPrincipalClass(schema, property, currentClass, includedClassesToCheckWith, classes, request,
+                            linkedClassType, sourceClass, targetClass, totalCountOfProperties, estimates);
                 }
 
-                retractDomainRangeEstimates(estimates, linkedClassType, sourceClass, targetClass, currentClass.getPrincipalWitness());
-                currentClass.setPrincipalWitness(null);
                 if (needToInclude) {
                     currentClass.setImportanceIndex(index++);
                     importantClasses.add(currentClass.getClassName());
@@ -3855,6 +3845,26 @@ public class SchemaExtractor {
         }
 
         return propertyLinkedClassesSorted;
+    }
+
+    // Process each comparison's witness before another principal check can replace it.
+    private boolean checkNewPrincipalClass(Schema schema, SchemaExtractorPropertyNodeInfo property,
+                                           SchemaExtractorPropertyLinkedClassInfo currentClass, List<String> includedClasses,
+                                           List<SchemaClass> classes, SchemaExtractorRequestDto request, LinkedClassType linkedClassType,
+                                           SchemaExtractorClassNodeInfo sourceClass, SchemaExtractorClassNodeInfo targetClass,
+                                           int totalCountOfProperties, List<DomainRangeEstimate> estimates) {
+        String propertyName = property.getPropertyName();
+        boolean needToInclude = switch (linkedClassType) {
+            case SOURCE -> checkNewPrincipalSourceClass(schema, propertyName, currentClass, includedClasses, classes, request, totalCountOfProperties);
+            case TARGET -> checkNewPrincipalTargetClass(schema, propertyName, currentClass, includedClasses, classes, request, totalCountOfProperties);
+            case PAIR_SOURCE -> sourceClass != null && StringUtils.isNotEmpty(sourceClass.getClassName())
+                    && checkNewPrincipalTargetClassForSource(schema, propertyName, sourceClass, currentClass, includedClasses, classes, request, totalCountOfProperties);
+            case PAIR_TARGET -> targetClass != null && StringUtils.isNotEmpty(targetClass.getClassName())
+                    && checkNewPrincipalSourceClassForTarget(schema, propertyName, targetClass, currentClass, includedClasses, classes, request, totalCountOfProperties);
+        };
+        retractDomainRangeEstimates(estimates, linkedClassType, sourceClass, targetClass, currentClass.getPrincipalWitness());
+        currentClass.setPrincipalWitness(null);
+        return needToInclude;
     }
 
     // Retain clean principal-source witnesses so proven exclusions can cancel contradicted domain estimates.
@@ -3877,11 +3887,12 @@ public class SchemaExtractor {
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CUSTOM_FILTER, buildCustomFilterToCheckPrincipalClass(comparedClasses, classes));
             QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
 
-            // if the query fails, check additionally only the first biggest class from the list
             if (queryResponse.hasErrors()) {
                 addExtractionMessage(schema, NOTE, SchemaExtractorMessage.FunctionalityType.IMPORTANCE_INDEX,
                         propertyName, null, queryBuilder);
-
+            }
+            // Retry only failed multi-class comparisons with the largest class to avoid repeating the same singleton query.
+            if (queryResponse.hasErrors() && classesForCustomFilter.size() > 1) {
                 comparedClasses = Collections.unmodifiableList(existingClasses.subList(0, 1));
                 queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_PRINCIPAL_SOURCE.name()), CHECK_PRINCIPAL_SOURCE)
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL, newSourceClass.getClassName(), newSourceClass.getIsLiteral())
@@ -3924,11 +3935,12 @@ public class SchemaExtractor {
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CUSTOM_FILTER, buildCustomFilterToCheckPrincipalClass(comparedClasses, classes));
             QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
 
-            // if the query fails, check additionally only the first biggest class from the list
             if (queryResponse.hasErrors()) {
                 addExtractionMessage(schema, NOTE, SchemaExtractorMessage.FunctionalityType.IMPORTANCE_INDEX,
                         propertyName, null, queryBuilder);
-
+            }
+            // Retry only failed multi-class comparisons with the largest class to avoid repeating the same singleton query.
+            if (queryResponse.hasErrors() && classesForCustomFilter.size() > 1) {
                 comparedClasses = Collections.unmodifiableList(existingClasses.subList(0, 1));
                 queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_PRINCIPAL_TARGET.name()), CHECK_PRINCIPAL_TARGET)
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_TARGET_FULL, newTargetClass.getClassName(), newTargetClass.getIsLiteral())
@@ -3973,11 +3985,12 @@ public class SchemaExtractor {
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CUSTOM_FILTER, buildCustomFilterToCheckPrincipalClass(comparedClasses, classes));
             QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
 
-            // if the query fails, check additionally only the first biggest class from the list
             if (queryResponse.hasErrors()) {
                 addExtractionMessage(schema, NOTE, SchemaExtractorMessage.FunctionalityType.IMPORTANCE_INDEX,
                         propertyName, null, queryBuilder);
-
+            }
+            // Retry only failed multi-class comparisons with the largest class to avoid repeating the same singleton query.
+            if (queryResponse.hasErrors() && classesForCustomFilter.size() > 1) {
                 comparedClasses = Collections.unmodifiableList(existingClasses.subList(0, 1));
                 queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_PRINCIPAL_TARGET_FOR_SOURCE.name()), CHECK_PRINCIPAL_TARGET_FOR_SOURCE)
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL, sourceClass.getClassName(), sourceClass.getIsLiteral())
@@ -4025,11 +4038,12 @@ public class SchemaExtractor {
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CUSTOM_FILTER, buildCustomFilterToCheckPrincipalClass(comparedClasses, classes));
             QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
 
-            // if the query fails, check additionally only the first biggest class from the list
             if (queryResponse.hasErrors()) {
                 addExtractionMessage(schema, NOTE, SchemaExtractorMessage.FunctionalityType.IMPORTANCE_INDEX,
                         propertyName, null, queryBuilder);
-
+            }
+            // Retry only failed multi-class comparisons with the largest class to avoid repeating the same singleton query.
+            if (queryResponse.hasErrors() && classesForCustomFilter.size() > 1) {
                 comparedClasses = Collections.unmodifiableList(existingClasses.subList(0, 1));
                 queryBuilder = new SparqlQueryBuilder(request.getQueries().get(CHECK_PRINCIPAL_SOURCE_FOR_TARGET.name()), CHECK_PRINCIPAL_SOURCE_FOR_TARGET)
                         .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL, newSourceClass.getClassName(), newSourceClass.getIsLiteral())
@@ -4055,6 +4069,7 @@ public class SchemaExtractor {
         return isPrincipalSource;
     }
 
+    // Separate only appended class predicates so missing class entries cannot create a leading disjunction.
     protected String buildCustomFilterToCheckPrincipalClass(@Nonnull List<String> existingClasses, @Nonnull List<SchemaClass> classes) {
         StringBuilder customFilter = new StringBuilder(StringUtils.EMPTY);
         for (int i = 0; i < existingClasses.size(); i++) {
@@ -4062,9 +4077,8 @@ public class SchemaExtractor {
             if (clazz == null) {
                 continue;
             }
-            if (i > 0) {
+            if (customFilter.length() > 0) {
                 customFilter.append(" || ");
-
             }
             if (clazz.getIsLiteral()) {
                 customFilter.append("str(?cc)=\"").append(clazz.getLocalName()).append("\"");
