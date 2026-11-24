@@ -25,20 +25,53 @@
         <encoder>
             <pattern>${defaultPattern}</pattern>
         </encoder>
+        <!-- Route extraction events to the run-specific file instead of the server log. -->
+        <filter class="lv.lumii.obis.schema.services.logging.ExtractionLogFilter">
+            <insideExtraction>false</insideExtraction>
+        </filter>
+    </appender>
+
+    <appender name="EXTRACTION_LOG" class="ch.qos.logback.classic.sift.SiftingAppender">
+        <filter class="lv.lumii.obis.schema.services.logging.ExtractionLogFilter">
+            <insideExtraction>true</insideExtraction>
+        </filter>
+        <discriminator>
+            <key>extractionLog</key>
+            <defaultValue>schema-extraction</defaultValue>
+        </discriminator>
+        <!-- Normal requests close their file at completion. The timeout covers abandoned runs. -->
+        <timeout>24 hours</timeout>
+        <sift>
+            <appender name="EXTRACTION_LOG-${extractionLog}" class="ch.qos.logback.core.rolling.RollingFileAppender">
+                <rollingPolicy class="lv.lumii.obis.schema.services.logging.ExtractionLogRollingPolicy">
+                    <fileBaseName>logs/${extractionLog}</fileBaseName>
+                </rollingPolicy>
+                <triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
+                    <maxFileSize>10000KB</maxFileSize>
+                    <checkIncrement>1 second</checkIncrement>
+                </triggeringPolicy>
+                <encoder>
+                    <pattern>${defaultPattern}</pattern>
+                </encoder>
+            </appender>
+        </sift>
     </appender>
 
     <logger name="lv.lumii.obis.schema.services.common.SparqlEndpointProcessor" level="INFO" additivity="false">
         <appender-ref ref="LOGFILE"/>
+        <appender-ref ref="EXTRACTION_LOG"/>
     </logger>
 
-    <!-- Keep per-entity extraction procedure starts in the server log without changing existing console logging. -->
+    <!-- Keep per-entity extraction procedure starts in file logs without changing existing console logging. -->
     <logger name="lv.lumii.obis.schema.services.extractor.v2.SchemaExtractor.detail" level="INFO" additivity="false">
         <appender-ref ref="LOGFILE"/>
+        <appender-ref ref="EXTRACTION_LOG"/>
     </logger>
 
     <root level="INFO">
         <appender-ref ref="CONSOLE"/>
         <appender-ref ref="LOGFILE"/>
+        <appender-ref ref="EXTRACTION_LOG"/>
     </root>
 
 </configuration>
