@@ -1,9 +1,11 @@
 package lv.lumii.obis.schema.services.extractor.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 import lombok.Setter;
 
 import javax.annotation.Nonnull;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -23,6 +25,11 @@ public class SchemaExtractorPropertyNodeInfo {
     private Long distinctTriples;
     private Long dataTripleCount;
     private Long objectTripleCount;
+    private BigDecimal objectTripleRatio;
+    @JsonIgnore
+    private Boolean literalObjectsExistence;
+    @JsonIgnore
+    private Boolean nonLiteralObjectsExistence;
     private Long blankNodeObjects;
     private Long blankNodeSubjects;
     private Long distinctSubjectsCount;

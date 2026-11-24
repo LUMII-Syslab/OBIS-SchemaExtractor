@@ -6,6 +6,7 @@ import lombok.Setter;
 import lv.lumii.obis.schema.services.extractor.dto.SchemaExtractorDataTypeInfo;
 import org.springframework.util.CollectionUtils;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -22,6 +23,7 @@ public class SchemaPropertyLinkedClassDetails {
     private Long dataTripleCount;
 
     private Long objectTripleCount;
+    private BigDecimal objectTripleRatio;
     private Long distinctSubjectsCount;
     private Long distinctObjectsCount;
 

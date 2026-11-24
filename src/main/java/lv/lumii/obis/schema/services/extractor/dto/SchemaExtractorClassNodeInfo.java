@@ -7,6 +7,7 @@ import lombok.Setter;
 import lv.lumii.obis.schema.services.extractor.v2.dto.SchemaExtractorIntersectionClassDto;
 
 import javax.annotation.Nonnull;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -21,6 +22,11 @@ public class SchemaExtractorClassNodeInfo {
 	@JsonIgnore
 	private boolean literalObjectsKnown;
 	private Long objectTripleCount;
+	private BigDecimal objectTripleRatio;
+	@JsonIgnore
+	private Boolean literalObjectsExistence;
+	@JsonIgnore
+	private Boolean nonLiteralObjectsExistence;
 	private Long distinctSubjectsCount;
 	private Long distinctObjectsCount;
 	private Boolean isClosedSource;

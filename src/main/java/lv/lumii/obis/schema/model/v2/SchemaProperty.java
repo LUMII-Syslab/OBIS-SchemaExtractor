@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import javax.annotation.Nonnull;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -22,6 +23,7 @@ public class SchemaProperty extends SchemaElement {
     private Long distinctTriples;
     private Long dataTripleCount;
     private Long objectTripleCount;
+    private BigDecimal objectTripleRatio;
     private Long blankNodeObjects;
     private Long blankNodeSubjects;
     private Long distinctSubjectsCount;

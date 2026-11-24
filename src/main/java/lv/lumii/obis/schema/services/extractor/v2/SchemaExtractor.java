@@ -25,6 +25,8 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -823,7 +825,7 @@ public class SchemaExtractor {
                     property.setBlankNodeSubjects(blankNodeSubjects.get(property.getPropertyName()));
                 }
             }
-            if (calculateBlankNodeObjects && (property.getObjectTripleCount() == null || property.getObjectTripleCount() != 0)) {
+            if (calculateBlankNodeObjects && isNotFalse(nonLiteralObjectsExistence(property))) {
                 if (blankNodeObjects.isEmpty()) {
                     determinePropertyBlankNodeObjects(schema, property, request);
                 } else {
@@ -889,7 +891,7 @@ public class SchemaExtractor {
             switch (request.getCalculateCardinalities()) {
                 case propertyLevelOnly:
                     determinePropertyMaxCardinality(schema, property, request, totalCountOfProperties);
-                    if (property.getObjectTripleCount() != null && property.getObjectTripleCount() != 0) {
+                    if (isTrue(nonLiteralObjectsExistence(property))) {
                         determinePropertyInverseMaxCardinality(schema, property, request, totalCountOfProperties);
                     }
                     break;
@@ -897,7 +899,7 @@ public class SchemaExtractor {
                     determinePropertyMaxCardinality(schema, property, request, totalCountOfProperties);
                     determinePropertySourceMaxCardinality(schema, property, request, totalCountOfProperties);
                     determinePropertySourceMinCardinality(schema, property, request, totalCountOfProperties);
-                    if (property.getObjectTripleCount() != null && property.getObjectTripleCount() != 0) {
+                    if (isTrue(nonLiteralObjectsExistence(property))) {
                         determinePropertyInverseMaxCardinality(schema, property, request, totalCountOfProperties);
                         determinePropertyTargetsInverseMinCardinality(schema, property, request, totalCountOfProperties);
                         determinePropertyTargetsInverseMaxCardinality(schema, property, request, totalCountOfProperties);
@@ -915,6 +917,7 @@ public class SchemaExtractor {
     protected void determinePropertyValueTripleCounts(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties) {
         log.info(request.getCorrelationId() + " - determinePropertyValueTripleCounts [" + property.getPropertyName() + "]");
         determinePropertyValueCounts(schema, property, null, request, true, true);
+        determinePropertyObjectTripleRatio(schema, property, null, request);
     }
 
     // Keep the single-side entry point on the shared numeric-count and existence-fallback path.
@@ -930,10 +933,9 @@ public class SchemaExtractor {
     // Share paired count resolution between whole-property and source scopes, excluding based totals from subtraction.
     private void determinePropertyValueCounts(Schema schema, SchemaExtractorPropertyNodeInfo property, SchemaExtractorClassNodeInfo sourceClass,
                                                SchemaExtractorRequestDto request, boolean readObjects, boolean readLiterals) {
-        Long objectCount = nonNegativeCount(sourceClass == null ? property.getObjectTripleCount() : sourceClass.getObjectTripleCount());
-        Long literalCount = nonNegativeCount(sourceClass == null ? property.getDataTripleCount() : sourceClass.getDataTripleCount());
         SparqlQueryBuilder objectFailure = null, literalFailure = null;
         if (readObjects) {
+            Long objectCount;
             if (sourceClass != null && Long.valueOf(0).equals(property.getObjectTripleCount())) objectCount = 0L;
             else {
                 SparqlQueryBuilder query = propertyValueQuery(request, property, sourceClass,
@@ -945,6 +947,7 @@ public class SchemaExtractor {
             if (objectCount != null) storePropertyValueCount(property, sourceClass, false, objectCount);
         }
         if (readLiterals) {
+            Long literalCount;
             if (sourceClass != null && Long.valueOf(0).equals(property.getDataTripleCount())) literalCount = 0L;
             else {
                 SparqlQueryBuilder query = propertyValueQuery(request, property, sourceClass,
@@ -956,30 +959,48 @@ public class SchemaExtractor {
             if (literalCount != null) storePropertyValueCount(property, sourceClass, true, literalCount);
         }
 
+        // When both counts fail, a confirmed zero from either check can still make subtraction possible.
+        boolean bothFailed = objectFailure != null && literalFailure != null;
+        if (bothFailed) {
+            checkPropertyValueCount(schema, property, sourceClass, request, false);
+            checkPropertyValueCount(schema, property, sourceClass, request, true);
+        }
+        if (objectFailure != null) finishFailedPropertyValueCount(schema, property, sourceClass, request, false, bothFailed, objectFailure);
+        if (literalFailure != null) finishFailedPropertyValueCount(schema, property, sourceClass, request, true, bothFailed, literalFailure);
+    }
+
+    private void finishFailedPropertyValueCount(Schema schema, SchemaExtractorPropertyNodeInfo property, SchemaExtractorClassNodeInfo sourceClass,
+                                               SchemaExtractorRequestDto request, boolean literal, boolean checked, SparqlQueryBuilder failedQuery) {
         Long total = sourceClass == null ? nonNegativeCount(property.getTripleCount())
                 : sourceClass.getTripleCountBase() == null ? nonNegativeCount(sourceClass.getTripleCount()) : null;
-        if (objectFailure != null && literalFailure == null) {
-            Long estimate = estimatePropertyValueCount(schema, property, sourceClass, total, literalCount, objectFailure);
-            if (estimate != null) {
-                storePropertyValueCount(property, sourceClass, false, estimate);
-                objectFailure = null;
-            }
-        }
-        if (literalFailure != null && objectFailure == null) {
-            Long estimate = estimatePropertyValueCount(schema, property, sourceClass, total, objectCount, literalFailure);
-            if (estimate != null) {
-                storePropertyValueCount(property, sourceClass, true, estimate);
-                literalFailure = null;
-            }
-        }
+        Long otherCount = nonNegativeCount(propertyValueCount(property, sourceClass, !literal));
         String relatedEntity = sourceClass == null ? null : sourceClass.getClassName();
-        if (objectFailure != null) addExtractionMessage(schema, NOTE, SchemaExtractorMessage.FunctionalityType.COUNT,
-                property.getPropertyName(), relatedEntity, objectFailure);
-        if (literalFailure != null) addExtractionMessage(schema, sourceClass == null ? NOTE : INFO,
-                sourceClass == null ? SchemaExtractorMessage.FunctionalityType.COUNT : SchemaExtractorMessage.FunctionalityType.STRUCT_URL_LITERAL,
-                property.getPropertyName(), relatedEntity, literalFailure);
-        if (objectFailure != null) checkPropertyValueCount(schema, property, sourceClass, request, false);
-        if (literalFailure != null) checkPropertyValueCount(schema, property, sourceClass, request, true);
+        if (nonNegativeCount(propertyValueCount(property, sourceClass, literal)) == null && total != null && otherCount != null && otherCount <= total) {
+            long count = total - otherCount;
+            if (count > 0 || !hasExplicitPropertyValue(property, sourceClass, literal)) {
+                storePropertyValueCount(property, sourceClass, literal, count);
+                addExtractionMessage(schema, INFO, sourceClass == null ? SchemaExtractorMessage.FunctionalityType.URL_LITERAL
+                                : SchemaExtractorMessage.FunctionalityType.COUNT,
+                        property.getPropertyName(), relatedEntity, failedQuery,
+                        "Direct URL/LITERAL value count failed; the count estimated from the total and the other triple count");
+                return;
+            }
+        }
+        addExtractionMessage(schema, sourceClass != null && literal ? INFO : NOTE,
+                sourceClass == null || literal ? SchemaExtractorMessage.FunctionalityType.URL_LITERAL : SchemaExtractorMessage.FunctionalityType.COUNT,
+                property.getPropertyName(), relatedEntity, failedQuery);
+        if (!checked) checkPropertyValueCount(schema, property, sourceClass, request, literal);
+    }
+
+    private Long propertyValueCount(SchemaExtractorPropertyNodeInfo property, SchemaExtractorClassNodeInfo sourceClass, boolean literal) {
+        if (sourceClass == null) return literal ? property.getDataTripleCount() : property.getObjectTripleCount();
+        return literal ? sourceClass.getDataTripleCount() : sourceClass.getObjectTripleCount();
+    }
+
+    private boolean hasExplicitPropertyValue(SchemaExtractorPropertyNodeInfo property, SchemaExtractorClassNodeInfo sourceClass, boolean literal) {
+        Long count = propertyValueCount(property, sourceClass, literal);
+        if (count != null) return count != 0;
+        return sourceClass != null && (literal ? sourceClass.isLiteralObjectsKnown() : isTrue(sourceClass.getNonLiteralObjectsExistence()));
     }
 
     // Reuse query selection and source bindings for both count and existence queries.
@@ -1001,16 +1022,6 @@ public class SchemaExtractor {
                 ? readNonNegativeCount(response.getResults().get(0).getValue(SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT)) : null;
     }
 
-    // Replace a failed direct count with the nonnegative complement and retain its query in the INFO diagnostic.
-    private Long estimatePropertyValueCount(Schema schema, SchemaExtractorPropertyNodeInfo property, SchemaExtractorClassNodeInfo sourceClass,
-                                            Long total, Long otherCount, SparqlQueryBuilder failedQuery) {
-        if (total == null || otherCount == null || otherCount > total) return null;
-        addExtractionMessage(schema, INFO, SchemaExtractorMessage.FunctionalityType.COUNT,
-                property.getPropertyName(), sourceClass == null ? null : sourceClass.getClassName(), failedQuery,
-                "Direct URL/LITERAL value count failed; the count estimated from the total and the other triple count");
-        return total - otherCount;
-    }
-
     // Store direct and inferred numeric counts identically while clearing source fallback-only literal evidence.
     private void storePropertyValueCount(SchemaExtractorPropertyNodeInfo property, SchemaExtractorClassNodeInfo sourceClass, boolean literal, long count) {
         if (sourceClass == null) {
@@ -1019,10 +1030,13 @@ public class SchemaExtractor {
         } else if (literal) {
             sourceClass.setDataTripleCount(count);
             sourceClass.setLiteralObjectsKnown(false);
-        } else sourceClass.setObjectTripleCount(count);
+        } else {
+            sourceClass.setObjectTripleCount(count);
+            sourceClass.setNonLiteralObjectsExistence(null);
+        }
     }
 
-    // Preserve the existing scope-specific existence markers and terminal failure messages after count recovery fails.
+    // Keep exact zero and positive existence evidence separate from unavailable counts.
     private void checkPropertyValueCount(Schema schema, SchemaExtractorPropertyNodeInfo property, SchemaExtractorClassNodeInfo sourceClass,
                                          SchemaExtractorRequestDto request, boolean literal) {
         String relatedEntity = sourceClass == null ? null : sourceClass.getClassName();
@@ -1035,12 +1049,83 @@ public class SchemaExtractor {
             if (response.getResults().isEmpty()) storePropertyValueCount(property, sourceClass, literal, 0L);
             else if (sourceClass == null) storePropertyValueCount(property, null, literal, -1L);
             else if (literal) sourceClass.setLiteralObjectsKnown(true);
+            else sourceClass.setNonLiteralObjectsExistence(true);
         } else {
-            addExtractionMessage(schema, MESSAGE, SchemaExtractorMessage.FunctionalityType.STRUCT_URL_LITERAL,
+            addExtractionMessage(schema, NOTE, SchemaExtractorMessage.FunctionalityType.URL_LITERAL,
                     property.getPropertyName(), relatedEntity, query, sourceClass == null
-                            ? (literal ? "Existence for literal objects for a property remains unknown."
-                            : "Existence for non-literal objects for a property remains unknown.") : null);
+                            ? (literal ? "Existence check for literal objects of the property failed."
+                            : "Existence check for non-literal objects of the property failed.") : null);
         }
+    }
+
+    // Sample triples only when the full value counts remain incomplete.
+    private void determinePropertyObjectTripleRatio(Schema schema, SchemaExtractorPropertyNodeInfo property, SchemaExtractorClassNodeInfo sourceClass,
+                                                    SchemaExtractorRequestDto request) {
+        if (nonNegativeCount(propertyValueCount(property, sourceClass, false)) != null
+                && nonNegativeCount(propertyValueCount(property, sourceClass, true)) != null) return;
+
+        SchemaExtractorQueries name = sourceClass == null ? COUNT_PROPERTY_URL_VALUES_LIMITS : COUNT_PROPERTY_URL_VALUES_FOR_SOURCE_LIMITS;
+        String relatedEntity = sourceClass == null ? null : sourceClass.getClassName();
+        Long smallestLimit = sampleLimits.get(sampleLimits.size() - 1);
+        for (Long limit : sampleLimits) {
+            SparqlQueryBuilder query = propertyValueQuery(request, property, sourceClass, name, name)
+                    .withContextParam(SPARQL_QUERY_BINDING_NAME_LIMIT, limit.toString());
+            QueryResponse response = sparqlEndpointProcessor.read(request, query);
+            if (!response.hasErrors() && response.getResults().size() == 1 && response.getResults().get(0) != null) {
+                QueryResult row = response.getResults().get(0);
+                Long size = readNonNegativeCount(row.getValue("sampleSize"));
+                Long objects = readNonNegativeCount(row.getValue(SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
+                if (size != null && (size == 0 || (objects != null && objects <= size))) {
+                    if (size > 0) storePropertyValueSample(property, sourceClass, size, objects);
+                    return;
+                }
+            }
+            if (limit.equals(smallestLimit)) {
+                addExtractionMessage(schema, NOTE, SchemaExtractorMessage.FunctionalityType.URL_LITERAL,
+                        property.getPropertyName(), relatedEntity, query);
+            }
+        }
+
+        name = sourceClass == null ? FIND_PROPERTY_VALUE_TRIPLES_WITH_LIMIT : FIND_PROPERTY_VALUE_TRIPLES_FOR_SOURCE_WITH_LIMIT;
+        SparqlQueryBuilder query = propertyValueQuery(request, property, sourceClass, name, name)
+                .withContextParam(SPARQL_QUERY_BINDING_NAME_LIMIT, smallestLimit.toString());
+        QueryResponse response = sparqlEndpointProcessor.read(request, query);
+        if (response.hasErrors()) return;
+
+        long size = 0, objects = 0;
+        for (QueryResult row : response.getResults()) {
+            QueryResultObject object = row == null ? null : row.getResultObject("y");
+            if (object == null || object.getIsLiteral() == null) continue;
+            size++;
+            if (!object.getIsLiteral()) objects++;
+        }
+        if (size > 0) storePropertyValueSample(property, sourceClass, size, objects);
+    }
+
+    // Apply sampled presence and absence only where counts and explicit checks have supplied no evidence.
+    private void storePropertyValueSample(SchemaExtractorPropertyNodeInfo property, SchemaExtractorClassNodeInfo sourceClass,
+                                          long size, long objects) {
+        BigDecimal ratio = BigDecimal.valueOf(objects).divide(BigDecimal.valueOf(size), 2, RoundingMode.HALF_UP);
+        boolean hasLiterals = objects < size;
+        boolean hasObjects = objects > 0;
+        if (sourceClass == null) {
+            property.setObjectTripleRatio(ratio);
+            if (property.getDataTripleCount() == null) property.setLiteralObjectsExistence(hasLiterals);
+            if (property.getObjectTripleCount() == null) property.setNonLiteralObjectsExistence(hasObjects);
+        } else {
+            sourceClass.setObjectTripleRatio(ratio);
+            if (sourceClass.getDataTripleCount() == null && !sourceClass.isLiteralObjectsKnown()) {
+                sourceClass.setLiteralObjectsExistence(hasLiterals);
+            }
+            if (sourceClass.getObjectTripleCount() == null && isNotTrue(sourceClass.getNonLiteralObjectsExistence())) {
+                sourceClass.setNonLiteralObjectsExistence(hasObjects);
+            }
+        }
+    }
+
+    private Boolean nonLiteralObjectsExistence(SchemaExtractorPropertyNodeInfo property) {
+        Long count = property.getObjectTripleCount();
+        return count != null ? Boolean.valueOf(count != 0) : property.getNonLiteralObjectsExistence();
     }
 
     protected void determinePropertyType(@Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request) {
@@ -1889,7 +1974,7 @@ public class SchemaExtractor {
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false);
             QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
             if (queryResponse.hasErrors()) {
-                addExtractionMessage(schema, INFO, SchemaExtractorMessage.FunctionalityType.STRUCT_URL_LITERAL,
+                addExtractionMessage(schema, INFO, SchemaExtractorMessage.FunctionalityType.URL_LITERAL,
                         property.getPropertyName(), null, queryBuilder);
                 continue;
             }
@@ -1927,7 +2012,7 @@ public class SchemaExtractor {
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false);
             QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
             if (queryResponse.hasErrors()) {
-                addExtractionMessage(schema, INFO, SchemaExtractorMessage.FunctionalityType.STRUCT_URL_LITERAL,
+                addExtractionMessage(schema, INFO, SchemaExtractorMessage.FunctionalityType.URL_LITERAL,
                         property.getPropertyName(), null, queryBuilder);
                 continue;
             }
@@ -1949,14 +2034,20 @@ public class SchemaExtractor {
         return found;
     }
 
-    // Preserve grouped source counts and resolve both missing components before source existence fallbacks.
+    // Preserve grouped counts and resolve each source class independently when its results are incomplete.
     protected void determinePropertySourceValueTripleCounts(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties) {
         log.info(request.getCorrelationId() + " - determinePropertySourceValueTripleCounts [" + property.getPropertyName() + "]");
         property.getSourceClasses().forEach(sourceClass -> sourceClass.setLiteralObjectsKnown(false));
-        boolean objectsFound = determineObjectTripleCountForAllPropertySources(schema, property, request, totalCountOfProperties);
-        boolean literalsFound = determineDataTripleCountForAllPropertySources(schema, property, request, totalCountOfProperties);
-        if (!objectsFound || !literalsFound) property.getSourceClasses().forEach(sourceClass ->
-                determinePropertyValueCounts(schema, property, sourceClass, request, !objectsFound, !literalsFound));
+        determineObjectTripleCountForAllPropertySources(schema, property, request, totalCountOfProperties);
+        determineDataTripleCountForAllPropertySources(schema, property, request, totalCountOfProperties);
+        property.getSourceClasses().forEach(sourceClass -> {
+            boolean readObjects = nonNegativeCount(sourceClass.getObjectTripleCount()) == null;
+            boolean readLiterals = nonNegativeCount(sourceClass.getDataTripleCount()) == null;
+            if (readObjects || readLiterals) {
+                determinePropertyValueCounts(schema, property, sourceClass, request, readObjects, readLiterals);
+                determinePropertyObjectTripleRatio(schema, property, sourceClass, request);
+            }
+        });
     }
 
     // Retain the literal-only entry point and clear fallback-only evidence before reading fresh source counts.
@@ -2500,7 +2591,7 @@ public class SchemaExtractor {
         property.setClosedTargetAssertedSize(null);
         // Check for a non-literal property object without a bound class.
         if (property.getTargetClasses().isEmpty()) {
-            property.setIsClosedTarget((property.getObjectTripleCount() != null && property.getObjectTripleCount() != 0) ? Boolean.FALSE : null);
+            property.setIsClosedTarget(isTrue(nonLiteralObjectsExistence(property)) ? Boolean.FALSE : null);
         } else {
             property.setIsClosedTarget(Boolean.TRUE);
             boolean canEstimate = request.getEstimateClosedSourceTarget();
@@ -3520,7 +3611,8 @@ public class SchemaExtractor {
                 : linkedClassType == LinkedClassType.PAIR_TARGET ? targetClass : null;
         SchemaExtractorMessage failureMessage = schema.getMessages().size() > messageStart ? schema.getMessages().get(messageStart) : null;
         boolean knownLiteralObjects = !domain && (context == null
-                ? hasKnownLiteralObjects(property.getDataTripleCount()) || property.getSourceClasses().stream().anyMatch(this::hasKnownLiteralObjects)
+                ? hasKnownLiteralObjects(property.getDataTripleCount(), property.getLiteralObjectsExistence())
+                        || property.getSourceClasses().stream().anyMatch(this::hasKnownLiteralObjects)
                 : hasKnownLiteralObjects(context));
         if (knownLiteralObjects && Integer.valueOf(-1).equals(currentClass.getTargetPrincipalAssertedSize())) {
             currentClass.setTargetPrincipalAssertedSize(null);
@@ -3561,14 +3653,14 @@ public class SchemaExtractor {
         return true;
     }
 
-    // Treat the existence-check sentinel -1 as known literal presence even when the count itself is unavailable.
-    private boolean hasKnownLiteralObjects(Long count) {
-        return count != null && count != 0;
+    // Treat the existence-check sentinel -1 and positive sample evidence as known literal presence.
+    private boolean hasKnownLiteralObjects(Long count, Boolean sampledExistence) {
+        return count != null ? count != 0 : isTrue(sampledExistence);
     }
 
     // Include successful source-scoped existence checks whose positive result has no numeric count.
     private boolean hasKnownLiteralObjects(SchemaExtractorClassNodeInfo clazz) {
-        return clazz.isLiteralObjectsKnown() || hasKnownLiteralObjects(clazz.getDataTripleCount());
+        return clazz.isLiteralObjectsKnown() || hasKnownLiteralObjects(clazz.getDataTripleCount(), clazz.getLiteralObjectsExistence());
     }
 
     // Copy the candidate marker to the class or pair that is actually serialized, retaining only eligible inference references.
@@ -4137,6 +4229,7 @@ public class SchemaExtractor {
             if (propertyData.getObjectTripleCount() != null && propertyData.getObjectTripleCount() != -1) {
                 property.setObjectTripleCount(propertyData.getObjectTripleCount());
             }
+            property.setObjectTripleRatio(propertyData.getObjectTripleRatio());
             property.setBlankNodeObjects(propertyData.getBlankNodeObjects());
             property.setBlankNodeSubjects(propertyData.getBlankNodeSubjects());
             property.setDistinctSubjectsCount(propertyData.getDistinctSubjectsCount());
@@ -4175,7 +4268,8 @@ public class SchemaExtractor {
     protected List<SchemaPropertyLinkedClassDetails> convertInternalDtoToApiDto(@Nonnull List<SchemaExtractorClassNodeInfo> internalDtos) {
         return sortPropertyLinkedClassesByImportanceIndexAndTripleCount(
                 internalDtos.stream()
-                        .map(internalDto -> new SchemaPropertyLinkedClassDetails(
+                        .map(internalDto -> {
+                            SchemaPropertyLinkedClassDetails details = new SchemaPropertyLinkedClassDetails(
                                 internalDto.getClassName(),
                                 internalDto.getTripleCount(), internalDto.getTripleCountBase(), internalDto.getDataTripleCount(), internalDto.getObjectTripleCount(),
                                 internalDto.getDistinctSubjectsCount(), internalDto.getDistinctObjectsCount(),
@@ -4183,8 +4277,11 @@ public class SchemaExtractor {
                                 internalDto.getIsPrincipal(), internalDto.getPrincipalAssertedSize(),
                                 internalDto.getMinCardinality(), internalDto.getMinCardinalityAssertionSize(), internalDto.getMaxCardinality(), internalDto.getMaxCardinalityAssertionSize(),
                                 internalDto.getMinInverseCardinality(), internalDto.getMinInverseCardinalityAssertionSize(), internalDto.getMaxInverseCardinality(), internalDto.getMaxInverseCardinalityAssertionSize(),
-                                internalDto.getImportanceIndex(), internalDto.getDataTypes())).
-                        collect(Collectors.toList()));
+                                internalDto.getImportanceIndex(), internalDto.getDataTypes());
+                            details.setObjectTripleRatio(internalDto.getObjectTripleRatio());
+                            return details;
+                        })
+                        .collect(Collectors.toList()));
     }
 
     protected List<DataType> convertInternalDataTypesToApiDto(@Nonnull List<SchemaExtractorDataTypeInfo> internalDtos) {
@@ -5108,13 +5205,11 @@ public class SchemaExtractor {
     }
 
     private boolean calculateTargetClasses(@Nonnull SchemaExtractorRequestDto request, @Nonnull SchemaExtractorPropertyNodeInfo property) {
-        if (property.getObjectTripleCount() != null && property.getObjectTripleCount() != 0)
-            return true;
-        if (property.getTripleCount() != null && property.getTripleCount().equals(property.getDataTripleCount()))
-            return false;
-        if (property.getObjectTripleCount() == null && request.getCrossCheckTargetClassesOnNonLiteralPropertyObjectCheckFailure())
-            return true;
-        return false;
+        Long objectCount = property.getObjectTripleCount();
+        if (objectCount != null) return objectCount != 0;
+        if (property.getTripleCount() != null && property.getTripleCount().equals(property.getDataTripleCount())) return false;
+        Boolean sampledExistence = property.getNonLiteralObjectsExistence();
+        return sampledExistence != null ? sampledExistence : request.getCrossCheckTargetClassesOnNonLiteralPropertyObjectCheckFailure();
     }
 
 }

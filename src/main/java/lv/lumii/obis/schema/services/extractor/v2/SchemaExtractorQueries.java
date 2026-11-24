@@ -337,6 +337,12 @@ public enum SchemaExtractorQueries {
     CHECK_PROPERTY_URL_VALUES(
             "SELECT ?y where {?x <property> ?y. FILTER(!isLiteral(?y)) } LIMIT 1", QueryType.LARGE
     ),
+    COUNT_PROPERTY_URL_VALUES_LIMITS(
+            "SELECT (COUNT(?y) AS ?sampleSize) (SUM(IF(isLiteral(?y), 0, 1)) AS ?instances) WHERE { { SELECT ?y WHERE { ?x <property> ?y } LIMIT <limit> } }", QueryType.LARGE
+    ),
+    FIND_PROPERTY_VALUE_TRIPLES_WITH_LIMIT(
+            "SELECT ?x ?y WHERE { ?x <property> ?y } LIMIT <limit>", QueryType.SMALL
+    ),
     FIND_PROPERTY_URL_VALUES_FOR_SOURCES(
             "SELECT ?class (COUNT(?x) as ?instances) WHERE {?x <property> ?y. ?x <classificationProperty> ?class. FILTER(!isLiteral(?y))} GROUP BY ?class", QueryType.LARGE
     ),
@@ -351,6 +357,12 @@ public enum SchemaExtractorQueries {
     ),
     CHECK_PROPERTY_URL_VALUES_FOR_SOURCE(
             "SELECT ?y WHERE {?x <classificationProperty> <sourceClass>. ?x <property> ?y. FILTER(!isLiteral(?y)) } LIMIT 1", QueryType.SMALL
+    ),
+    COUNT_PROPERTY_URL_VALUES_FOR_SOURCE_LIMITS(
+            "SELECT (COUNT(?y) AS ?sampleSize) (SUM(IF(isLiteral(?y), 0, 1)) AS ?instances) WHERE { { SELECT ?y WHERE { ?x <classificationProperty> <sourceClass>. ?x <property> ?y } LIMIT <limit> } }", QueryType.LARGE
+    ),
+    FIND_PROPERTY_VALUE_TRIPLES_FOR_SOURCE_WITH_LIMIT(
+            "SELECT ?x ?y WHERE { ?x <classificationProperty> <sourceClass>. ?x <property> ?y } LIMIT <limit>", QueryType.SMALL
     ),
     COUNT_PROPERTY_LITERAL_VALUES(
             "SELECT (COUNT(?x) as ?instances) WHERE {?x <property> ?y. FILTER(isLiteral(?y)) }", QueryType.LARGE
