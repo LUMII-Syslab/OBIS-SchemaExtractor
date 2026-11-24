@@ -252,7 +252,7 @@ public class SchemaExtractor {
             if (queryResponse.hasErrors() && queryResponse.getResults().isEmpty()) {
                 addExtractionMessage(schema, query == FIND_CLASSES_WITH_INSTANCE_COUNT_DISTINCT ? NOTE : WARNING, query == FIND_CLASSES_WITH_INSTANCE_COUNT_DISTINCT ? SchemaExtractorMessage.FunctionalityType.DISTINCT : SchemaExtractorMessage.FunctionalityType.STRUCT,
                         null, null, queryBuilder,
-                        query == FIND_CLASSES_WITH_INSTANCE_COUNT_DISTINCT ? "Error reading all classes with instance counts" : "Reading classes with instance counts not successful");
+                        query == FIND_CLASSES_WITH_INSTANCE_COUNT_DISTINCT ? "Reading classes with distinct instance counts not successful" : "Reading classes with instance counts not successful");
                 foundClassWithInstanceCounts = false;
             } else {
                 List<SchemaClass> resultClasses = processClassesWithEndpointData(queryResponse.getResults(), request, classificationProperty, schema);
@@ -348,7 +348,7 @@ public class SchemaExtractor {
         if (queryResponse.hasErrors() && queryResponse.getResults().isEmpty()) {
             addExtractionMessage(schema, INFO, SchemaExtractorMessage.FunctionalityType.STRUCT,
                     null, null, queryBuilder,
-                    "Cross-check reading classes without instance count not successful");
+                    "Reading classes without instance count (as a cross-check) not successful");
             log.info(request.getCorrelationId() + String.format(" - found total %d classes with classification property %s", classesCountFromStatisticsQuery, classificationProperty));
         } else {
             // combine results of both queries
@@ -979,16 +979,15 @@ public class SchemaExtractor {
             long count = total - otherCount;
             if (count > 0 || !hasExplicitPropertyValue(property, sourceClass, literal)) {
                 storePropertyValueCount(property, sourceClass, literal, count);
-                addExtractionMessage(schema, INFO, sourceClass == null ? SchemaExtractorMessage.FunctionalityType.URL_LITERAL
-                                : SchemaExtractorMessage.FunctionalityType.COUNT,
+                addExtractionMessage(schema, INFO, sourceClass != null && literal ? SchemaExtractorMessage.FunctionalityType.COUNT
+                                : SchemaExtractorMessage.FunctionalityType.URL_LITERAL,
                         property.getPropertyName(), relatedEntity, failedQuery,
                         "Direct URL/LITERAL value count failed; the count estimated from the total and the other triple count");
                 return;
             }
         }
         addExtractionMessage(schema, sourceClass != null && literal ? INFO : NOTE,
-                sourceClass == null || literal ? SchemaExtractorMessage.FunctionalityType.URL_LITERAL : SchemaExtractorMessage.FunctionalityType.COUNT,
-                property.getPropertyName(), relatedEntity, failedQuery);
+                SchemaExtractorMessage.FunctionalityType.URL_LITERAL, property.getPropertyName(), relatedEntity, failedQuery);
         if (!checked) checkPropertyValueCount(schema, property, sourceClass, request, literal);
     }
 
@@ -1053,8 +1052,8 @@ public class SchemaExtractor {
         } else {
             addExtractionMessage(schema, NOTE, SchemaExtractorMessage.FunctionalityType.URL_LITERAL,
                     property.getPropertyName(), relatedEntity, query, sourceClass == null
-                            ? (literal ? "Existence check for literal objects of the property failed."
-                            : "Existence check for non-literal objects of the property failed.") : null);
+                            ? (literal ? "Existence of literal objects for a property has not been established by a direct query"
+                            : "Existence of non-literal objects for a property has not been established by a direct query") : null);
         }
     }
 
@@ -1356,7 +1355,7 @@ public class SchemaExtractor {
                 failed.add(predicate);
                 String side = context.target ? "object" : "subject";
                 String text = withCounts
-                        ? "Direct " + side + " class retrieval for a property failed. Other methods to establish " + side + " classes for a property shall be tried."
+                        ? (context.target ? "Object" : "Subject") + " class retrieval for a property failed. Other methods attempted."
                         : "Backup method for establishing " + side + " classes for a property without triple counts was not successful. Retrieval of " + side + " classes by other methods is in progress.";
                 addExtractionMessage(context.schema, withCounts ? NOTE : INFO, SchemaExtractorMessage.FunctionalityType.STRUCT, property.getPropertyName(), null, query, text);
             } else {
@@ -1816,7 +1815,7 @@ public class SchemaExtractor {
         // Report only a terminal enumeration failure and leave successful empty or oversized enumerations unchanged.
         if (instances == null) {
             String text = property != null
-                    ? "Property " + (context.target ? "objects" : "subjects") + " enumeration not successful. The instance-based fallback can not be used."
+                    ? "Property " + (context.target ? "object" : "subject") + " enumeration not successful. The instance-based fallback can not be used."
                     : limit == 0 ? "Small class enumeration not successful. The instance-based fallback can not be used."
                     : "Class sample enumeration not successful. The instance-based fallback can not be used.";
             addExtractionMessage(context.schema, NOTE, SchemaExtractorMessage.FunctionalityType.STRUCT_INSTANCE,
@@ -3114,7 +3113,12 @@ public class SchemaExtractor {
         boolean nonLiteral = forwardQuery.getQueryName().endsWith("_NONLITERAL");
         String estimateMessage = "Query for exact property " + relation + " triple count" + (nonLiteral ? " (with non-literal filter)" : "")
                 + " not successful. Using an estimate instead (from the reverse direction).";
-        String unavailableMessage = "Property " + relation + " triple count unavailable" + (nonLiteral ? " (via a query with non-literal filter)" : "");
+        String unavailableRelation = switch (type) {
+            case outgoing -> "common subject";
+            case incoming -> "common object";
+            case follower -> "follower";
+        };
+        String unavailableMessage = "Property " + unavailableRelation + " triple count unavailable" + (nonLiteral ? " (via a query with non-literal filter)" : "");
         if (forwardCount != null) {
             forward.setTripleCount(forwardCount);
             forward.setTripleCountBase(null);
@@ -3210,13 +3214,18 @@ public class SchemaExtractor {
         SchemaExtractorQueries name = type == SchemaExtractorPropertyRelatedPropertyInfo.LinkType.incoming
                 ? selectQuery(request.getExactCountCalculations(), FIND_INSTANCE_INCOMING_PROPERTIES, FIND_INSTANCE_INCOMING_PROPERTIES_DISTINCT)
                 : selectQuery(request.getExactCountCalculations(), FIND_INSTANCE_OUTGOING_PROPERTIES, FIND_INSTANCE_OUTGOING_PROPERTIES_DISTINCT);
+        String message = switch (type) {
+            case outgoing -> "Context: common subjects for properties";
+            case incoming -> "Context: common objects for properties";
+            case follower -> "Context: property followers";
+        };
         InstanceBatchResult<String> result = new InstanceBatchResult<>();
         executeInstanceBatches(schema, request, instances, 0, instances.size(), "property", () -> {
             SparqlQueryBuilder query = propertyRelationQuery(request, property, type, name);
             updateValueClause(query, request.getIncludedProperties().isEmpty() ? null : properties.keySet(), "<propertyValuesClause>", "property");
             return query;
         }, row -> properties.containsKey(row.getValue("property")) && isNotExcludedResource(row.getValue("property"), request.getExcludedNamespaces())
-                ? row.getValue("property") : null, result, state, property.getPropertyName(), "Property relation instance check: " + type);
+                ? row.getValue("property") : null, result, state, property.getPropertyName(), message);
         return result;
     }
 
