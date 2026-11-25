@@ -2743,135 +2743,115 @@ public class SchemaExtractor {
 
     protected void determinePropertyDataTypes(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties) {
         log.info(request.getCorrelationId() + " - determinePropertyDataTypes [" + property.getPropertyName() + "]");
-        Long tripleCountBase = null;
-        if (request.getSampleLimitForDataTypeCalculation() != null && request.getSampleLimitForDataTypeCalculation() > 0
-                && (property.getDataTripleCount() == null || property.getDataTripleCount() < 0 || property.getDataTripleCount() > request.getSampleLimitForDataTypeCalculation())) {
-            tripleCountBase = request.getSampleLimitForDataTypeCalculation();
+        determineDataTypes(schema, property, null, request, nonNegativeCount(property.getTripleCount()));
+    }
+
+    protected void determinePropertySourceDataTypes(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties) {
+        log.info(request.getCorrelationId() + " - determinePropertySourceDataTypes [" + property.getPropertyName() + "]");
+        property.getSourceClasses().forEach(sourceClass ->
+                determineDataTypes(schema, property, sourceClass, request, sourceDataTypeLimitCap(schema, property, sourceClass)));
+    }
+
+    // Extrapolate sampled source counts for the limit cap, using available population counts when extrapolation is unavailable.
+    private Long sourceDataTypeLimitCap(Schema schema, SchemaExtractorPropertyNodeInfo property, SchemaExtractorClassNodeInfo sourceClass) {
+        Long propertyTotal = nonNegativeCount(property.getTripleCount());
+        Long sourceCount = nonNegativeCount(sourceClass.getTripleCount());
+        Long base = sourceClass.getTripleCountBase();
+        if (propertyTotal != null && sourceCount != null && base != null && base > 0) {
+            BigDecimal total = BigDecimal.valueOf(propertyTotal);
+            return total.multiply(BigDecimal.valueOf(sourceCount))
+                    .divideToIntegralValue(BigDecimal.valueOf(base)).min(total).longValueExact();
         }
-        // find data types
-        SparqlQueryBuilder queryBuilder;
-        SchemaExtractorQueries query = selectQuery(request.getExactCountCalculations(), FIND_PROPERTY_DATA_TYPE_WITH_TRIPLE_COUNT, FIND_PROPERTY_DATA_TYPE_WITH_TRIPLE_COUNT_DISTINCT);
-        if (tripleCountBase == null) {
-            queryBuilder = new SparqlQueryBuilder(request.getQueries().get(query.name()), query)
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false);
-        } else {
-            query = selectQuery(request.getExactCountCalculations(), FIND_PROPERTY_DATA_TYPE_WITH_TRIPLE_COUNT_WITH_LIMITS, FIND_PROPERTY_DATA_TYPE_WITH_TRIPLE_COUNT_WITH_LIMITS_DISTINCT);
-            queryBuilder = new SparqlQueryBuilder(request.getQueries().get(query.name()), query)
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false)
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_LIMIT, tripleCountBase.toString());
-        }
-        QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
-        if (queryResponse.hasErrors()) {
+        Long classSize = schema.getClasses().stream()
+                .filter(clazz -> Objects.equals(clazz.getFullName(), sourceClass.getClassName())
+                        && Objects.equals(clazz.getClassificationProperty(), sourceClass.getClassificationProperty()))
+                .map(clazz -> nonNegativeCount(clazz.getInstanceCount()))
+                .filter(Objects::nonNull)
+                .findFirst().orElse(null);
+        if (propertyTotal == null) return classSize;
+        return classSize == null ? propertyTotal : Long.valueOf(Math.min(propertyTotal, classSize));
+    }
+
+    // Keep the smallest failed attempt for one diagnostic and publish only the successful attempt's counts and limit.
+    private void determineDataTypes(Schema schema, SchemaExtractorPropertyNodeInfo property, SchemaExtractorClassNodeInfo sourceClass,
+                                    SchemaExtractorRequestDto request, Long limitCap) {
+        Long limit = request.getSampleLimitForDataTypeCalculation();
+        Long literalCount = nonNegativeCount(property.getDataTripleCount());
+        if (limit == null || limit <= 0 || (literalCount != null && literalCount <= limit)
+                || (limitCap != null && limit > limitCap)) limit = null;
+
+        String relatedEntity = sourceClass == null ? null : sourceClass.getClassName();
+        SparqlQueryBuilder query = dataTypeQuery(request, property, sourceClass, limit);
+        QueryResponse response = sparqlEndpointProcessor.read(request, query);
+        if (response.hasErrors()) {
+            for (Long fallbackLimit : sampleLimits) {
+                if ((limitCap != null && fallbackLimit > limitCap) || (limit != null && fallbackLimit >= limit)) continue;
+                SparqlQueryBuilder fallback = dataTypeQuery(request, property, sourceClass, fallbackLimit);
+                response = sparqlEndpointProcessor.read(request, fallback);
+                if (!response.hasErrors()) {
+                    limit = fallbackLimit;
+                    break;
+                }
+                query = fallback;
+            }
+            if (response.hasErrors()) {
+                addExtractionMessage(schema, MESSAGE, SchemaExtractorMessage.FunctionalityType.DATATYPE,
+                        property.getPropertyName(), relatedEntity, query, "Data types for property objects not found");
+                return;
+            }
             addExtractionMessage(schema, NOTE, SchemaExtractorMessage.FunctionalityType.DATATYPE,
-                    property.getPropertyName(), null, queryBuilder);
+                    property.getPropertyName(), relatedEntity, query);
         }
+
+        List<SchemaExtractorDataTypeInfo> dataTypes = sourceClass == null ? property.getDataTypes() : sourceClass.getDataTypes();
         boolean hasEmptyDataType = false;
-        for (QueryResult queryResult : queryResponse.getResults()) {
-            String resultDataType = queryResult.getValue(SPARQL_QUERY_BINDING_NAME_DATA_TYPE);
-            Long tripleCount = SchemaUtil.getLongValueFromString(queryResult.getValue(SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
-            if (StringUtils.isNotEmpty(resultDataType)) {
-                property.getDataTypes().add(new SchemaExtractorDataTypeInfo(SchemaUtil.parseDataType(resultDataType), tripleCount, tripleCountBase));
+        for (QueryResult row : response.getResults()) {
+            String dataType = row.getValue(SPARQL_QUERY_BINDING_NAME_DATA_TYPE);
+            if (StringUtils.isNotEmpty(dataType)) {
+                Long count = SchemaUtil.getLongValueFromString(row.getValue(SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
+                dataTypes.add(new SchemaExtractorDataTypeInfo(SchemaUtil.parseDataType(dataType), count, limit));
             } else {
                 hasEmptyDataType = true;
             }
         }
 
-        // find language tag
         if (hasEmptyDataType) {
-            query = selectQuery(request.getExactCountCalculations(), FIND_PROPERTY_DATA_TYPE_LANG_STRING, FIND_PROPERTY_DATA_TYPE_LANG_STRING_DISTINCT);
-            if (tripleCountBase == null) {
-                queryBuilder = new SparqlQueryBuilder(request.getQueries().get(query.name()), query)
-                        .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false);
-            } else {
-                query = selectQuery(request.getExactCountCalculations(), FIND_PROPERTY_DATA_TYPE_LANG_STRING_WITH_LIMITS, FIND_PROPERTY_DATA_TYPE_LANG_STRING_WITH_LIMITS_DISTINCT);
-                queryBuilder = new SparqlQueryBuilder(request.getQueries().get(query.name()), query)
-                        .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false)
-                        .withContextParam(SPARQL_QUERY_BINDING_NAME_LIMIT, tripleCountBase.toString());
-            }
-            queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
-            if (queryResponse.hasErrors()) {
+            query = languageTagQuery(request, property, sourceClass, limit);
+            response = sparqlEndpointProcessor.read(request, query);
+            if (response.hasErrors()) {
                 addExtractionMessage(schema, NOTE, SchemaExtractorMessage.FunctionalityType.DATATYPE,
-                        property.getPropertyName(), null, queryBuilder);
-            }
-            if (!queryResponse.getResults().isEmpty()) {
-                Long tripleCount = SchemaUtil.getLongValueFromString(queryResponse.getResults().get(0).getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
-                if (tripleCount > 0L) {
-                    property.getDataTypes().add(new SchemaExtractorDataTypeInfo(DATA_TYPE_RDF_LANG_STRING, tripleCount, tripleCountBase));
-                }
+                        property.getPropertyName(), relatedEntity, query);
+            } else if (!response.getResults().isEmpty()) {
+                Long count = SchemaUtil.getLongValueFromString(response.getResults().get(0).getValue(SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
+                if (count > 0) dataTypes.add(new SchemaExtractorDataTypeInfo(DATA_TYPE_RDF_LANG_STRING, count, limit));
             }
         }
     }
 
-    protected void determinePropertySourceDataTypes(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request, int totalCountOfProperties) {
-        log.info(request.getCorrelationId() + " - determinePropertySourceDataTypes [" + property.getPropertyName() + "]");
-
-        Long tripleCountBase = null;
-        if (request.getSampleLimitForDataTypeCalculation() != null && request.getSampleLimitForDataTypeCalculation() > 0
-                && (property.getDataTripleCount() == null || property.getDataTripleCount() < 0 || property.getDataTripleCount() > request.getSampleLimitForDataTypeCalculation())) {
-            tripleCountBase = request.getSampleLimitForDataTypeCalculation();
+    private SparqlQueryBuilder dataTypeQuery(SchemaExtractorRequestDto request, SchemaExtractorPropertyNodeInfo property,
+                                             SchemaExtractorClassNodeInfo sourceClass, Long limit) {
+        if (limit == null) {
+            return propertyValueQuery(request, property, sourceClass,
+                    sourceClass == null ? FIND_PROPERTY_DATA_TYPE_WITH_TRIPLE_COUNT : FIND_PROPERTY_DATA_TYPE_WITH_TRIPLE_COUNT_FOR_SOURCE,
+                    sourceClass == null ? FIND_PROPERTY_DATA_TYPE_WITH_TRIPLE_COUNT_DISTINCT : FIND_PROPERTY_DATA_TYPE_WITH_TRIPLE_COUNT_FOR_SOURCE_DISTINCT);
         }
+        return propertyValueQuery(request, property, sourceClass,
+                sourceClass == null ? FIND_PROPERTY_DATA_TYPE_WITH_TRIPLE_COUNT_WITH_LIMITS : FIND_PROPERTY_DATA_TYPE_WITH_TRIPLE_COUNT_FOR_SOURCE_WITH_LIMITS,
+                sourceClass == null ? FIND_PROPERTY_DATA_TYPE_WITH_TRIPLE_COUNT_WITH_LIMITS_DISTINCT : FIND_PROPERTY_DATA_TYPE_WITH_TRIPLE_COUNT_FOR_SOURCE_WITH_LIMITS_DISTINCT)
+                .withContextParam(SPARQL_QUERY_BINDING_NAME_LIMIT, limit.toString());
+    }
 
-        Long finalTripleCountBase = tripleCountBase;
-        property.getSourceClasses().forEach(sourceClass -> {
-            // find data types
-            SparqlQueryBuilder queryBuilder;
-            SchemaExtractorQueries query = selectQuery(request.getExactCountCalculations(), FIND_PROPERTY_DATA_TYPE_WITH_TRIPLE_COUNT_FOR_SOURCE, FIND_PROPERTY_DATA_TYPE_WITH_TRIPLE_COUNT_FOR_SOURCE_DISTINCT);
-            if (finalTripleCountBase == null) {
-                queryBuilder = new SparqlQueryBuilder(request.getQueries().get(query.name()), query)
-                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL, sourceClass.getClassName(), sourceClass.getIsLiteral())
-                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, sourceClass.getClassificationProperty())
-                        .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false);
-            } else {
-                query = selectQuery(request.getExactCountCalculations(), FIND_PROPERTY_DATA_TYPE_WITH_TRIPLE_COUNT_FOR_SOURCE_WITH_LIMITS, FIND_PROPERTY_DATA_TYPE_WITH_TRIPLE_COUNT_FOR_SOURCE_WITH_LIMITS_DISTINCT);
-                queryBuilder = new SparqlQueryBuilder(request.getQueries().get(query.name()), query)
-                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL, sourceClass.getClassName(), sourceClass.getIsLiteral())
-                        .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, sourceClass.getClassificationProperty())
-                        .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false)
-                        .withContextParam(SPARQL_QUERY_BINDING_NAME_LIMIT, finalTripleCountBase.toString());
-            }
-            QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
-            if (queryResponse.hasErrors()) {
-                addExtractionMessage(schema, NOTE, SchemaExtractorMessage.FunctionalityType.DATATYPE,
-                        property.getPropertyName(), null, queryBuilder);
-            }
-            boolean hasEmptyDataType = false;
-            for (QueryResult queryResult : queryResponse.getResults()) {
-                String resultDataType = queryResult.getValue(SPARQL_QUERY_BINDING_NAME_DATA_TYPE);
-                Long tripleCount = SchemaUtil.getLongValueFromString(queryResult.getValue(SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
-                if (StringUtils.isNotEmpty(resultDataType)) {
-                    sourceClass.getDataTypes().add(new SchemaExtractorDataTypeInfo(SchemaUtil.parseDataType(resultDataType), tripleCount, finalTripleCountBase));
-                } else {
-                    hasEmptyDataType = true;
-                }
-            }
-            // find language tag
-            if (hasEmptyDataType) {
-                query = selectQuery(request.getExactCountCalculations(), FIND_PROPERTY_DATA_TYPE_LANG_STRING_FOR_SOURCE, FIND_PROPERTY_DATA_TYPE_LANG_STRING_FOR_SOURCE_DISTINCT);
-                if (finalTripleCountBase == null) {
-                    queryBuilder = new SparqlQueryBuilder(request.getQueries().get(query.name()), query)
-                            .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL, sourceClass.getClassName(), sourceClass.getIsLiteral())
-                            .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, sourceClass.getClassificationProperty())
-                            .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false);
-                } else {
-                    query = selectQuery(request.getExactCountCalculations(), FIND_PROPERTY_DATA_TYPE_LANG_STRING_FOR_SOURCE_WITH_LIMITS, FIND_PROPERTY_DATA_TYPE_LANG_STRING_FOR_SOURCE_WITH_LIMITS_DISTINCT);
-                    queryBuilder = new SparqlQueryBuilder(request.getQueries().get(query.name()), query)
-                            .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL, sourceClass.getClassName(), sourceClass.getIsLiteral())
-                            .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, sourceClass.getClassificationProperty())
-                            .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false)
-                            .withContextParam(SPARQL_QUERY_BINDING_NAME_LIMIT, finalTripleCountBase.toString());
-                }
-                queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
-                if (!queryResponse.getResults().isEmpty()) {
-                    Long tripleCount = SchemaUtil.getLongValueFromString(queryResponse.getResults().get(0).getValue(SchemaConstants.SPARQL_QUERY_BINDING_NAME_INSTANCES_COUNT));
-                    if (tripleCount > 0L) {
-                        sourceClass.getDataTypes().add(new SchemaExtractorDataTypeInfo(DATA_TYPE_RDF_LANG_STRING, tripleCount, finalTripleCountBase));
-                    }
-                } else if (queryResponse.hasErrors()) {
-                    addExtractionMessage(schema, NOTE, SchemaExtractorMessage.FunctionalityType.DATATYPE,
-                            property.getPropertyName(), null, queryBuilder);
-                }
-            }
-        });
+    private SparqlQueryBuilder languageTagQuery(SchemaExtractorRequestDto request, SchemaExtractorPropertyNodeInfo property,
+                                                SchemaExtractorClassNodeInfo sourceClass, Long limit) {
+        if (limit == null) {
+            return propertyValueQuery(request, property, sourceClass,
+                    sourceClass == null ? FIND_PROPERTY_DATA_TYPE_LANG_STRING : FIND_PROPERTY_DATA_TYPE_LANG_STRING_FOR_SOURCE,
+                    sourceClass == null ? FIND_PROPERTY_DATA_TYPE_LANG_STRING_DISTINCT : FIND_PROPERTY_DATA_TYPE_LANG_STRING_FOR_SOURCE_DISTINCT);
+        }
+        return propertyValueQuery(request, property, sourceClass,
+                sourceClass == null ? FIND_PROPERTY_DATA_TYPE_LANG_STRING_WITH_LIMITS : FIND_PROPERTY_DATA_TYPE_LANG_STRING_FOR_SOURCE_WITH_LIMITS,
+                sourceClass == null ? FIND_PROPERTY_DATA_TYPE_LANG_STRING_WITH_LIMITS_DISTINCT : FIND_PROPERTY_DATA_TYPE_LANG_STRING_FOR_SOURCE_WITH_LIMITS_DISTINCT)
+                .withContextParam(SPARQL_QUERY_BINDING_NAME_LIMIT, limit.toString());
     }
 
     // Discover directional followers here and complete unresolved pairs in the ordered PP phase.
