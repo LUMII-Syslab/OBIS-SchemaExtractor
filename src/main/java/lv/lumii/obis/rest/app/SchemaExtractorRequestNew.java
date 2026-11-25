@@ -131,7 +131,7 @@ public class SchemaExtractorRequestNew {
     @Schema(hidden = true, description = "Total instance count limit for exact count calculations", defaultValue = "10000000", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     private Long maxInstanceLimitForExactCount;
 
-    @Schema(hidden = true, description = "Cross check target classes on non-literal property object check failure", defaultValue = "false", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+    @Schema(hidden = true, description = "Check unresolved target-class pairs individually when a sample found only literal objects", defaultValue = "false", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     private Boolean crossCheckTargetClassesOnNonLiteralPropertyObjectCheckFailure;
 
     @Schema(description = "List of excluded namespaces (e.g., http://www.openlinksw.com/schemas/virtrdf#)")

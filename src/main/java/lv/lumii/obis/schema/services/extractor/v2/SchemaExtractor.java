@@ -837,11 +837,7 @@ public class SchemaExtractor {
         // Initialize existing statistics before the ordered mapping passes and keep later enrichment on its usual DTO lists.
         Map<SchemaClass, Boolean> classBlankChecks = new IdentityHashMap<>();
         determinePropertySources(schema, properties, request, classBlankChecks);
-        Map<String, SchemaExtractorPropertyNodeInfo> targetProperties = new LinkedHashMap<>();
-        properties.forEach((name, property) -> {
-            if (calculateTargetClasses(request, property)) targetProperties.put(name, property);
-        });
-        determinePropertyTargets(schema, targetProperties, request, classBlankChecks);
+        determinePropertyTargets(schema, properties, request, classBlankChecks);
         // Run PP after the existing basic-statistics and CP passes, before further property enrichment consumes the mappings.
         if (isTrue(request.getCalculatePropertyPropertyRelations())) determinePropertyPropertyRelations(schema, properties, request);
         // enrich property with detailed information
@@ -853,7 +849,8 @@ public class SchemaExtractor {
             log.info(request.getCorrelationId() + String.format(PROPERTY_PROCESSING, currentPropertyInd++, totalCountOfProperties, property.getPropertyName()));
 
             determinePropertySourceValueTripleCounts(schema, property, request, totalCountOfProperties);
-            if (calculateTargetClasses(request, property) && isTrue(request.getCalculateSourceAndTargetPairs())) {
+            if (isTrue(request.getCalculateSourceAndTargetPairs()) && !hasConfirmedNoNonLiteralObjects(property)
+                    && isNotFalse(nonLiteralObjectsExistence(property))) {
                 determinePropertySourceTargetPairs(schema, property, request, totalCountOfProperties);
             }
             if (isTrue(SchemaExtractorRequestDto.DistinctSubjectsAndObjectsMode.yes.equals(request.getIncludeDistinctSubjectsAndObjects()))) {
@@ -1151,6 +1148,7 @@ public class SchemaExtractor {
     private static final class ClassPropertyState extends InstanceQueryState {
         boolean complete;
         int failures;
+        int skippedPairChecks;
         SchemaExtractorMessage initialLimitFailure;
         SchemaExtractorQueries emptyClassQuery;
         // Use the same internal count-work marker for source and target contexts without exporting it.
@@ -1182,10 +1180,38 @@ public class SchemaExtractor {
         determineClassPropertyMappings(schema, properties, request, false, blankChecks);
     }
 
-    // Apply the same execution and count policies to the target direction without duplicating the extraction algorithm.
+    // Complete confirmed empty mappings directly and let target discovery improve sample-based estimates.
     protected void determinePropertyTargets(Schema schema, Map<String, SchemaExtractorPropertyNodeInfo> properties,
-                                            SchemaExtractorRequestDto request, Map<SchemaClass, Boolean> blankChecks) {
-        determineClassPropertyMappings(schema, properties, request, true, blankChecks);
+                                             SchemaExtractorRequestDto request, Map<SchemaClass, Boolean> blankChecks) {
+        Map<String, SchemaExtractorPropertyNodeInfo> targetProperties = new LinkedHashMap<>();
+        properties.forEach((name, property) -> {
+            if (hasConfirmedNoNonLiteralObjects(property)) {
+                property.setTargetClassesOK(7);
+            } else {
+                if (isFalse(nonLiteralObjectsExistence(property))) property.setTargetClassesOK(3);
+                targetProperties.put(name, property);
+            }
+        });
+        determineClassPropertyMappings(schema, targetProperties, request, true, blankChecks);
+        targetProperties.values().forEach(property -> {
+            if (isFalse(nonLiteralObjectsExistence(property)) && !property.getTargetClasses().isEmpty()) {
+                correctSampledObjectTripleRatio(property);
+            }
+        });
+    }
+
+    // Revise the sampled absence using published target relations without filling in missing triple counts.
+    private void correctSampledObjectTripleRatio(SchemaExtractorPropertyNodeInfo property) {
+        long literalBase = 1000;
+        long objectCount = 0;
+        for (SchemaExtractorClassNodeInfo targetClass : property.getTargetClasses()) {
+            Long count = nonNegativeCount(targetClass.getTripleCount());
+            if (count != null) objectCount += Math.min(count, literalBase - objectCount);
+        }
+        BigDecimal ratio = BigDecimal.valueOf(objectCount)
+                .divide(BigDecimal.valueOf(literalBase + objectCount), 2, RoundingMode.HALF_UP);
+        property.setObjectTripleRatio(ratio.max(BigDecimal.valueOf(1, 2)));
+        property.setNonLiteralObjectsExistence(true);
     }
 
     // Keep mapping state request-local and store only correspondences that have actually been discovered.
@@ -1542,21 +1568,30 @@ public class SchemaExtractor {
         checkIndividualClassPropertyPairs(context);
     }
 
-    // Reuse positive evidence and complete positive sets before querying unknown pairs, without storing negative-pair tables.
+    // Skip unresolved target existence probes only for sampled absence when cross-checking is disabled.
     private void checkIndividualClassPropertyPairs(ClassPropertyContext context) {
+        boolean skipEstimatedTargets = context.target
+                && isNotTrue(context.request.getCrossCheckTargetClassesOnNonLiteralPropertyObjectCheckFailure());
         for (SchemaClass clazz : context.classes.keySet()) {
-            if (context.classes.get(clazz).complete) continue;
+            ClassPropertyState classState = context.classes.get(clazz);
+            if (classState.complete) continue;
             for (SchemaExtractorPropertyNodeInfo property : context.properties.values()) {
                 if (classPropertyHandled(context, property)) continue;
                 TripleCount relation = classPropertyLinks(context, clazz).get(property.getPropertyName());
                 if (relation == null) {
-                    if (context.propertyStates.get(property).complete) continue;
+                    ClassPropertyState propertyState = context.propertyStates.get(property);
+                    if (propertyState.complete) continue;
+                    if (skipEstimatedTargets && isFalse(nonLiteralObjectsExistence(property))) {
+                        classState.skippedPairChecks++;
+                        propertyState.skippedPairChecks++;
+                        continue;
+                    }
                     SparqlQueryBuilder query = classPropertyPairQuery(context, clazz, property,
                             context.target ? CHECK_CLASS_AS_PROPERTY_TARGET : CHECK_CLASS_AS_PROPERTY_SOURCE);
                     QueryResponse response = sparqlEndpointProcessor.read(context.request, query);
                     if (response.hasErrors()) {
-                        context.classes.get(clazz).failures++;
-                        context.propertyStates.get(property).failures++;
+                        classState.failures++;
+                        propertyState.failures++;
                         addExtractionMessage(context.schema, WARNING, SchemaExtractorMessage.FunctionalityType.STRUCT, property.getPropertyName(), clazz.getFullName(), query);
                         continue;
                     }
@@ -1719,14 +1754,20 @@ public class SchemaExtractor {
                 ? (state.sourceClassCountsOK >= 2 ? 2 : 0) : 3);
     }
 
-    // Apply the agreed structural failure scale without downgrading quality five to limit-based quality four.
+    // Treat skipped target checks as unresolved coverage and retain the best quality already established.
     protected void setClassPropertyQualityMarks(ClassPropertyContext context) {
         context.classes.forEach((clazz, state) -> {
-            if (state.failures == 0) { state.complete = true; classPropertyClassQuality(context, clazz, 7); }
-            else if (classPropertyClassQuality(context, clazz) < 3) classPropertyClassQuality(context, clazz, classPropertyFailureQuality(state.failures, context.properties.size()));
+            int unresolved = state.failures + state.skippedPairChecks;
+            if (unresolved == 0) {
+                state.complete = true;
+                classPropertyClassQuality(context, clazz, 7);
+            } else if (classPropertyClassQuality(context, clazz) < 3) {
+                classPropertyClassQuality(context, clazz, classPropertyFailureQuality(unresolved, context.properties.size()));
+            }
         });
         boolean allSampled = context.classes.keySet().stream().allMatch(clazz -> classPropertyClassQuality(context, clazz) >= 4);
         context.propertyStates.forEach((property, state) -> {
+            if (state.skippedPairChecks > 0) return;
             int quality = state.failures == 0 ? 7 : allSampled ? 4 : classPropertyFailureQuality(state.failures, context.classes.size());
             if (state.failures == 0) state.complete = true;
             classPropertyPropertyQuality(context, property, Math.max(classPropertyPropertyQuality(context, property), quality));
@@ -1925,9 +1966,13 @@ public class SchemaExtractor {
         return quality == null ? 0 : quality;
     }
 
-    // Update the appropriate source or target quality through the same shared workflow.
+    // Keep target quality at least 3 when the property-side sample estimated absence.
     private void classPropertyPropertyQuality(ClassPropertyContext context, SchemaExtractorPropertyNodeInfo property, int quality) {
-        if (context.target) property.setTargetClassesOK(quality); else property.setSourceClassesOK(quality);
+        if (context.target) {
+            property.setTargetClassesOK(isFalse(nonLiteralObjectsExistence(property)) ? Math.max(3, quality) : quality);
+        } else {
+            property.setSourceClassesOK(quality);
+        }
     }
 
     // Read the direction-specific class marker independently of its stored pair counts.
@@ -5213,12 +5258,11 @@ public class SchemaExtractor {
         return regularQuery;
     }
 
-    private boolean calculateTargetClasses(@Nonnull SchemaExtractorRequestDto request, @Nonnull SchemaExtractorPropertyNodeInfo property) {
+    private boolean hasConfirmedNoNonLiteralObjects(SchemaExtractorPropertyNodeInfo property) {
         Long objectCount = property.getObjectTripleCount();
-        if (objectCount != null) return objectCount != 0;
-        if (property.getTripleCount() != null && property.getTripleCount().equals(property.getDataTripleCount())) return false;
-        Boolean sampledExistence = property.getNonLiteralObjectsExistence();
-        return sampledExistence != null ? sampledExistence : request.getCrossCheckTargetClassesOnNonLiteralPropertyObjectCheckFailure();
+        if (objectCount != null) return objectCount == 0;
+        Long total = nonNegativeCount(property.getTripleCount());
+        return total != null && (total == 0 || total.equals(property.getDataTripleCount()));
     }
 
 }
