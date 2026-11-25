@@ -867,12 +867,20 @@ public class SchemaExtractor {
             }
 
         }
-        // Initialize existing statistics before the ordered mapping passes and keep later enrichment on its usual DTO lists.
         Map<SchemaClass, Boolean> classBlankChecks = new IdentityHashMap<>();
-        determinePropertySources(schema, properties, request, classBlankChecks);
-        determinePropertyTargets(schema, properties, request, classBlankChecks);
-        // Run PP after the existing basic-statistics and CP passes, before further property enrichment consumes the mappings.
-        if (isTrue(request.getCalculatePropertyPropertyRelations())) determinePropertyPropertyRelations(schema, properties, request);
+        Set<String> propertiesWithoutClassChecks = Collections.emptySet();
+        if (request.getIncludedProperties().isEmpty()) {
+            Map<String, Long> cachedSubjects = subjectsMap, cachedObjects = objectsMap;
+            Map<String, Long> cachedBlankSubjects = blankNodeSubjects, cachedBlankObjects = blankNodeObjects;
+            propertiesWithoutClassChecks = expandAutomaticPropertyMappings(schema, properties, request, classBlankChecks,
+                    property -> initializeDiscoveredProperty(request, schema, property, properties,
+                            cachedSubjects, cachedObjects, cachedBlankSubjects, cachedBlankObjects));
+        } else {
+            determinePropertySources(schema, properties, request, classBlankChecks);
+            determinePropertyTargets(schema, properties, request, classBlankChecks);
+            if (isTrue(request.getCalculatePropertyPropertyRelations())) determinePropertyPropertyRelations(schema, properties, request);
+        }
+        totalCountOfProperties = properties.size();
         // enrich property with detailed information
         currentPropertyInd = 1;
         for (Map.Entry<String, SchemaExtractorPropertyNodeInfo> entry : properties.entrySet()) {
@@ -881,21 +889,23 @@ public class SchemaExtractor {
 
             log.info(request.getCorrelationId() + String.format(PROPERTY_PROCESSING, currentPropertyInd++, totalCountOfProperties, property.getPropertyName()));
 
-            determinePropertySourceValueTripleCounts(schema, property, request, totalCountOfProperties);
-            if (isTrue(request.getCalculateSourceAndTargetPairs()) && !hasConfirmedNoNonLiteralObjects(property)
-                    && isNotFalse(nonLiteralObjectsExistence(property))) {
-                determinePropertySourceTargetPairs(schema, property, request, totalCountOfProperties);
-            }
-            if (isTrue(SchemaExtractorRequestDto.DistinctSubjectsAndObjectsMode.yes.equals(request.getIncludeDistinctSubjectsAndObjects()))) {
-                determineDistinctPropertySubjectsOnSourceClassLevel(schema, property, request);
-                determineDistinctPropertyObjectsOnTargetClassLevel(schema, property, request);
-            }
-
-            if (isTrue(request.getCalculateClosedClassSets())) {
-                determinePropertyClosedSources(schema, property, request, totalCountOfProperties);
-                determinePropertyClosedTargets(schema, property, request, totalCountOfProperties);
-                determinePropertyClosedTargetsOnSourceClassLevel(schema, property, request, totalCountOfProperties);
-                determinePropertyClosedSourcesOnTargetClassLevel(schema, property, request, totalCountOfProperties);
+            boolean includeClassContext = !propertiesWithoutClassChecks.contains(entry.getKey());
+            if (includeClassContext) {
+                determinePropertySourceValueTripleCounts(schema, property, request, totalCountOfProperties);
+                if (isTrue(request.getCalculateSourceAndTargetPairs()) && !hasConfirmedNoNonLiteralObjects(property)
+                        && isNotFalse(nonLiteralObjectsExistence(property))) {
+                    determinePropertySourceTargetPairs(schema, property, request, totalCountOfProperties);
+                }
+                if (SchemaExtractorRequestDto.DistinctSubjectsAndObjectsMode.yes.equals(request.getIncludeDistinctSubjectsAndObjects())) {
+                    determineDistinctPropertySubjectsOnSourceClassLevel(schema, property, request);
+                    determineDistinctPropertyObjectsOnTargetClassLevel(schema, property, request);
+                }
+                if (isTrue(request.getCalculateClosedClassSets())) {
+                    determinePropertyClosedSources(schema, property, request, totalCountOfProperties);
+                    determinePropertyClosedTargets(schema, property, request, totalCountOfProperties);
+                    determinePropertyClosedTargetsOnSourceClassLevel(schema, property, request, totalCountOfProperties);
+                    determinePropertyClosedSourcesOnTargetClassLevel(schema, property, request, totalCountOfProperties);
+                }
             }
 
             if (isNotTrue(property.getIsObjectProperty())) {
@@ -905,7 +915,7 @@ public class SchemaExtractor {
                         break;
                     case propertyLevelAndClassContext:
                         determinePropertyDataTypes(schema, property, request, totalCountOfProperties);
-                        determinePropertySourceDataTypes(schema, property, request, totalCountOfProperties);
+                        if (includeClassContext) determinePropertySourceDataTypes(schema, property, request, totalCountOfProperties);
                         break;
                     case none:
                         // do not calculate data types
@@ -916,7 +926,9 @@ public class SchemaExtractor {
             }
 
             // Share property-local inference evidence between the existing domain/range and importance passes.
-            determineDomainsRangesAndImportanceIndexes(schema, property, schema.getClasses(), graphOfClasses, request, totalCountOfProperties);
+            if (includeClassContext) {
+                determineDomainsRangesAndImportanceIndexes(schema, property, schema.getClasses(), graphOfClasses, request, totalCountOfProperties);
+            }
 
             switch (request.getCalculateCardinalities()) {
                 case propertyLevelOnly:
@@ -927,12 +939,16 @@ public class SchemaExtractor {
                     break;
                 case propertyLevelAndClassContext:
                     determinePropertyMaxCardinality(schema, property, request, totalCountOfProperties);
-                    determinePropertySourceMaxCardinality(schema, property, request, totalCountOfProperties);
-                    determinePropertySourceMinCardinality(schema, property, request, totalCountOfProperties);
+                    if (includeClassContext) {
+                        determinePropertySourceMaxCardinality(schema, property, request, totalCountOfProperties);
+                        determinePropertySourceMinCardinality(schema, property, request, totalCountOfProperties);
+                    }
                     if (isTrue(nonLiteralObjectsExistence(property))) {
                         determinePropertyInverseMaxCardinality(schema, property, request, totalCountOfProperties);
-                        determinePropertyTargetsInverseMinCardinality(schema, property, request, totalCountOfProperties);
-                        determinePropertyTargetsInverseMaxCardinality(schema, property, request, totalCountOfProperties);
+                        if (includeClassContext) {
+                            determinePropertyTargetsInverseMinCardinality(schema, property, request, totalCountOfProperties);
+                            determinePropertyTargetsInverseMaxCardinality(schema, property, request, totalCountOfProperties);
+                        }
                     }
                     break;
                 case none:
@@ -940,6 +956,106 @@ public class SchemaExtractor {
                 default:
                     break;
             }
+        }
+    }
+
+    // Fix the CP input scope while discovering new predicates, then complete PP over the expanded list.
+    private Set<String> expandAutomaticPropertyMappings(Schema schema, Map<String, SchemaExtractorPropertyNodeInfo> properties,
+                                                         SchemaExtractorRequestDto request, Map<SchemaClass, Boolean> blankChecks,
+                                                         java.util.function.Consumer<SchemaExtractorPropertyNodeInfo> initializeProperty) {
+        Map<String, SchemaExtractorPropertyNodeInfo> originalProperties = new LinkedHashMap<>(properties);
+        ClassPropertyDiscovery discovery = new ClassPropertyDiscovery(originalProperties.keySet(), new LinkedHashSet<>());
+        ClassPropertyContext firstSources = determineClassPropertyMappings(schema, originalProperties, request, false, blankChecks, discovery, null);
+        ClassPropertyContext firstTargets = determinePropertyTargets(schema, originalProperties, request, blankChecks, discovery, null);
+
+        Map<String, SchemaExtractorPropertyNodeInfo> additions = new LinkedHashMap<>();
+        java.util.function.Consumer<SchemaExtractorPropertyNodeInfo> initializeAddition = property -> {
+            additions.put(property.getPropertyName(), property);
+            initializeProperty.accept(property);
+        };
+        for (String name : discovery.newNames()) {
+            SchemaExtractorPropertyNodeInfo property = new SchemaExtractorPropertyNodeInfo();
+            property.setPropertyName(name);
+            properties.put(name, property);
+            initializeAddition.accept(property);
+        }
+
+        boolean checkPp = isTrue(request.getCalculatePropertyPropertyRelations());
+        if (checkPp) discoverPropertyPropertyRelations(schema, properties, request, initializeAddition);
+
+        Set<String> withoutClassChecks = Collections.emptySet();
+        if (!additions.isEmpty()) {
+            if (isTrue(request.getCheckClassPropertyRelationsForNewProperties())) {
+                determineClassPropertyMappings(schema, additions, request, false, blankChecks, null, firstSources);
+                determinePropertyTargets(schema, additions, request, blankChecks, null, firstTargets);
+            } else {
+                retainObservedClassLinks(firstSources, additions);
+                retainObservedClassLinks(firstTargets, additions);
+                withoutClassChecks = additions.keySet();
+            }
+        }
+        if (checkPp) completePropertyPropertyRelations(schema, properties, request);
+        return withoutClassChecks;
+    }
+
+    // Preserve verified links without claiming full coverage for predicates outside the first pass.
+    private void retainObservedClassLinks(ClassPropertyContext firstPass, Map<String, SchemaExtractorPropertyNodeInfo> additions) {
+        boolean scopeGrew = !firstPass.target || additions.values().stream().anyMatch(property -> !hasConfirmedNoNonLiteralObjects(property));
+        firstPass.classes.forEach((clazz, state) -> {
+            if (scopeGrew && state.unrestrictedClassCoverage != 7) {
+                if (firstPass.target) {
+                    clazz.setIncomingPropertiesFullList(false);
+                    if (Integer.valueOf(7).equals(clazz.getIncomingPropertiesOK())) clazz.setIncomingPropertiesOK(null);
+                } else {
+                    clazz.setOutgoingPropertiesFullList(false);
+                    if (Integer.valueOf(7).equals(clazz.getOutgoingPropertiesOK())) clazz.setOutgoingPropertiesOK(null);
+                }
+            }
+            classPropertyLinks(firstPass, clazz).forEach((name, count) -> {
+                SchemaExtractorPropertyNodeInfo property = additions.get(name);
+                if (property != null && (!firstPass.target || !hasConfirmedNoNonLiteralObjects(property))) {
+                    publishClassPropertyLink(firstPass, clazz, property, count);
+                }
+            });
+        });
+        if (firstPass.target) additions.values().forEach(this::correctSampledTargetAbsence);
+    }
+
+    // Initialize only the new predicate and use statistics from successful discovery-wide queries where available.
+    private void initializeDiscoveredProperty(SchemaExtractorRequestDto request, Schema schema,
+                                              SchemaExtractorPropertyNodeInfo property, Map<String, SchemaExtractorPropertyNodeInfo> properties,
+                                              Map<String, Long> subjectsMap, Map<String, Long> objectsMap,
+                                              Map<String, Long> blankNodeSubjects, Map<String, Long> blankNodeObjects) {
+        String name = property.getPropertyName();
+        if (property.getTripleCount() == null) readTripleCountForProperty(request, schema, name, properties);
+        if (SchemaExtractorRequestDto.DistinctQueryMode.no.equals(request.getExactCountCalculations())
+                && isTrue(request.getCalculateDistinctTriples()) && property.getDistinctTriples() == null) {
+            readDistinctTripleCountForProperty(request, schema, property);
+        }
+        determinePropertyValueTripleCounts(schema, property, request, properties.size());
+        determinePropertyType(property, request);
+
+        if (SchemaExtractorRequestDto.DistinctSubjectsAndObjectsMode.yes.equals(request.getIncludeDistinctSubjectsAndObjects())
+                || SchemaExtractorRequestDto.DistinctSubjectsAndObjectsMode.propertyLevel.equals(request.getIncludeDistinctSubjectsAndObjects())) {
+            Long subjects = subjectsMap == null ? null : subjectsMap.get(name);
+            Long objects = objectsMap == null ? null : objectsMap.get(name);
+            if (subjects == null) determineDistinctPropertySubjects(schema, property, request);
+            else property.setDistinctSubjectsCount(subjects);
+            if (objects == null) determineDistinctPropertyObjects(schema, property, request);
+            else property.setDistinctObjectsCount(objects);
+        }
+
+        // A successful aggregate seeds zero for the original properties, so a nonempty map confirms coverage.
+        if (request.getComputeBlankNodeStatistics() == SchemaExtractorRequestDto.BlankNodeMode.full
+                && isNotFalse(schema.getHasBlankNodeSubjects())) {
+            if (blankNodeSubjects == null || blankNodeSubjects.isEmpty()) determinePropertyBlankNodeSubjects(schema, property, request);
+            else property.setBlankNodeSubjects(blankNodeSubjects.getOrDefault(name, 0L));
+        }
+        if ((SchemaExtractorRequestDto.BlankNodeMode.targetsOnly.equals(request.getComputeBlankNodeStatistics())
+                || SchemaExtractorRequestDto.BlankNodeMode.full.equals(request.getComputeBlankNodeStatistics()))
+                && isNotFalse(schema.getHasBlankNodeObjects()) && isNotFalse(nonLiteralObjectsExistence(property))) {
+            if (blankNodeObjects == null || blankNodeObjects.isEmpty()) determinePropertyBlankNodeObjects(schema, property, request);
+            else property.setBlankNodeObjects(blankNodeObjects.getOrDefault(name, 0L));
         }
     }
 
@@ -1194,6 +1310,8 @@ public class SchemaExtractor {
         boolean complete;
         int failures;
         int skippedPairChecks;
+        // Class queries can establish coverage for predicates admitted after this pass.
+        int unrestrictedClassCoverage;
         SchemaExtractorMessage initialLimitFailure;
         SchemaExtractorQueries emptyClassQuery;
         // Use the same internal count-work marker for source and target contexts without exporting it.
@@ -1201,6 +1319,8 @@ public class SchemaExtractor {
         int missingCounts;
         int pendingRefinements;
     }
+
+    private record ClassPropertyDiscovery(Set<String> originalNames, Set<String> newNames) {}
 
     private static final class ClassPropertyContext {
         Schema schema;
@@ -1212,6 +1332,8 @@ public class SchemaExtractor {
         final Map<String, Map<String, SchemaClass>> classIndex = new LinkedHashMap<>();
         final Map<SchemaExtractorPropertyNodeInfo, ClassPropertyState> propertyStates = new IdentityHashMap<>();
         Map<SchemaClass, Boolean> blankChecks;
+        ClassPropertyDiscovery discovery;
+        ClassPropertyContext firstPass;
     }
 
     private static final class InstanceBatchResult<K> {
@@ -1222,12 +1344,18 @@ public class SchemaExtractor {
     // Run the revised source passes in this extractor while sharing blank-presence observations with target extraction.
     protected void determinePropertySources(Schema schema, Map<String, SchemaExtractorPropertyNodeInfo> properties,
                                             SchemaExtractorRequestDto request, Map<SchemaClass, Boolean> blankChecks) {
-        determineClassPropertyMappings(schema, properties, request, false, blankChecks);
+        determineClassPropertyMappings(schema, properties, request, false, blankChecks, null, null);
     }
 
     // Complete confirmed empty mappings directly and let target discovery improve sample-based estimates.
     protected void determinePropertyTargets(Schema schema, Map<String, SchemaExtractorPropertyNodeInfo> properties,
                                              SchemaExtractorRequestDto request, Map<SchemaClass, Boolean> blankChecks) {
+        determinePropertyTargets(schema, properties, request, blankChecks, null, null);
+    }
+
+    private ClassPropertyContext determinePropertyTargets(Schema schema, Map<String, SchemaExtractorPropertyNodeInfo> properties,
+                                                          SchemaExtractorRequestDto request, Map<SchemaClass, Boolean> blankChecks,
+                                                          ClassPropertyDiscovery discovery, ClassPropertyContext firstPass) {
         Map<String, SchemaExtractorPropertyNodeInfo> targetProperties = new LinkedHashMap<>();
         properties.forEach((name, property) -> {
             if (hasConfirmedNoNonLiteralObjects(property)) {
@@ -1237,12 +1365,15 @@ public class SchemaExtractor {
                 targetProperties.put(name, property);
             }
         });
-        determineClassPropertyMappings(schema, targetProperties, request, true, blankChecks);
-        targetProperties.values().forEach(property -> {
-            if (isFalse(nonLiteralObjectsExistence(property)) && !property.getTargetClasses().isEmpty()) {
-                correctSampledObjectTripleRatio(property);
-            }
-        });
+        ClassPropertyContext context = determineClassPropertyMappings(schema, targetProperties, request, true, blankChecks, discovery, firstPass);
+        targetProperties.values().forEach(this::correctSampledTargetAbsence);
+        return context;
+    }
+
+    private void correctSampledTargetAbsence(SchemaExtractorPropertyNodeInfo property) {
+        if (isFalse(nonLiteralObjectsExistence(property)) && !property.getTargetClasses().isEmpty()) {
+            correctSampledObjectTripleRatio(property);
+        }
     }
 
     // Revise the sampled absence using published target relations without filling in missing triple counts.
@@ -1260,14 +1391,17 @@ public class SchemaExtractor {
     }
 
     // Keep mapping state request-local and store only correspondences that have actually been discovered.
-    private void determineClassPropertyMappings(Schema schema, Map<String, SchemaExtractorPropertyNodeInfo> properties,
-                                               SchemaExtractorRequestDto request, boolean target, Map<SchemaClass, Boolean> blankChecks) {
+    private ClassPropertyContext determineClassPropertyMappings(Schema schema, Map<String, SchemaExtractorPropertyNodeInfo> properties,
+                                                                SchemaExtractorRequestDto request, boolean target, Map<SchemaClass, Boolean> blankChecks,
+                                                                ClassPropertyDiscovery discovery, ClassPropertyContext firstPass) {
         ClassPropertyContext context = new ClassPropertyContext();
         context.schema = schema;
         context.request = request;
         context.properties = properties;
         context.target = target;
         context.blankChecks = blankChecks;
+        context.discovery = discovery;
+        context.firstPass = firstPass;
         properties.values().forEach(property -> context.propertyStates.put(property, new ClassPropertyState()));
         for (SchemaClass clazz : schema.getClasses()) {
             if (isNotFalse(clazz.getPropertiesInSchema()) && request.getMainClassificationProperties().contains(clazz.getClassificationProperty())) {
@@ -1285,10 +1419,15 @@ public class SchemaExtractor {
         }
         if (target) directTargetClassCheckForProperties(context);
         else directSourceClassCheckForProperties(context);
+        if (firstPass != null) {
+            reuseClassSideCoverage(context);
+            finishClassPropertyChecks(context);
+            return context;
+        }
         if (properties.values().stream().allMatch(property -> classPropertyHandled(context, property))) {
             context.classes.forEach((clazz, state) -> { state.complete = true; classPropertyClassQuality(context, clazz, 7); });
             publishClassPropertyMappings(context);
-            return;
+            return context;
         }
         Map<String, SchemaExtractorPropertyNodeInfo> remaining = new LinkedHashMap<>();
         properties.forEach((name, property) -> { if (!classPropertyHandled(context, property)) remaining.put(name, property); });
@@ -1302,7 +1441,7 @@ public class SchemaExtractor {
                 classPropertyPropertyQuality(context, property, 7);
             });
             publishClassPropertyMappings(context);
-            return;
+            return context;
         }
         boolean needsSampling = properties.values().stream().anyMatch(property -> classPropertyPropertyQuality(context, property) < 7
                 || context.propertyStates.get(property).sourceClassCountsOK < 2);
@@ -1310,10 +1449,32 @@ public class SchemaExtractor {
             if (target) checkIncomingPropertiesByClassWithLimits(context);
             else checkOutgoingPropertiesByClassWithLimits(context);
         }
-        if (target) checkIndividualPropertyToClassPairs(context);
+        finishClassPropertyChecks(context);
+        return context;
+    }
+
+    private void finishClassPropertyChecks(ClassPropertyContext context) {
+        if (context.target) checkIndividualPropertyToClassPairs(context);
         else checkIndividualClassToPropertyPairs(context);
         setClassPropertyQualityMarks(context);
         publishClassPropertyMappings(context);
+    }
+
+    // Reuse only queries that covered all predicates, including any name added after the first pass.
+    private void reuseClassSideCoverage(ClassPropertyContext context) {
+        context.classes.forEach((clazz, state) -> {
+            state.unrestrictedClassCoverage = context.firstPass.classes.get(clazz).unrestrictedClassCoverage;
+            state.complete = state.unrestrictedClassCoverage == 7;
+        });
+        boolean complete = context.classes.values().stream().allMatch(state -> state.complete);
+        boolean sampled = context.classes.values().stream().allMatch(state -> state.unrestrictedClassCoverage >= 4);
+        if (complete || sampled) {
+            context.propertyStates.forEach((property, state) -> {
+                if (complete) state.complete = true;
+                classPropertyPropertyQuality(context, property, Math.max(classPropertyPropertyQuality(context, property), complete ? 7 : 4));
+            });
+            refreshClassPropertyCountMarks(context);
+        }
     }
 
     // Complete the direct source pass for every property before starting class-centered recovery.
@@ -1466,7 +1627,8 @@ public class SchemaExtractor {
         Map<String, TripleCount> counts = context.target ? determineClassIncomingProperties(context, clazz, null)
                 : determineClassOutgoingProperties(context, clazz, null);
         if (counts != null) {
-            counts.forEach((name, count) -> recordClassPropertyRelation(context, clazz, context.properties.get(name), count.getTripleCount(), null, true, false));
+            counts.forEach((name, count) -> recordClassSideRelation(context, clazz, name, count.getTripleCount(), null, true, false));
+            recordClassSideCoverage(context, clazz, 7);
             context.classes.get(clazz).complete = true;
             classPropertyClassQuality(context, clazz, 7);
             refreshClassPropertyCountMarks(context);
@@ -1475,16 +1637,18 @@ public class SchemaExtractor {
         if (!smallClassPropertyEntity(classPropertyClassSize(clazz)) || !noClassBlankNodes(context, clazz)) return;
         List<String> instances = readClassPropertyInstances(context, null, clazz, 0);
         if (instances == null || instances.size() > CLASS_PROPERTY_INSTANCE_LIMIT) return;
-        InstanceBatchResult<SchemaExtractorPropertyNodeInfo> result = executeClassInstanceBatches(context, clazz, instances, context.target
+        InstanceBatchResult<String> result = executeClassInstanceBatches(context, clazz, instances, context.target
                 ? "Retrieval of instance incoming properties not successful. Instance-based options for determining the properties of an instance collection may be limited."
                 : "Retrieval of instance (outgoing) properties not successful. Instance-based options for determining the properties of an instance collection may be limited.");
         boolean complete = result.covered.cardinality() == instances.size();
-        result.counts.forEach((property, count) -> recordClassPropertyRelation(context, clazz, property, count,
+        result.counts.forEach((name, count) -> recordClassSideRelation(context, clazz, name, count,
                 complete ? null : (long) result.covered.cardinality(), complete, !complete));
         if (complete) {
+            recordClassSideCoverage(context, clazz, 7);
             context.classes.get(clazz).complete = true;
             classPropertyClassQuality(context, clazz, 7);
         } else if (!result.covered.isEmpty()) {
+            recordClassSideCoverage(context, clazz, 5);
             classPropertyClassQuality(context, clazz, 5);
         }
         refreshClassPropertyCountMarks(context);
@@ -1531,11 +1695,10 @@ public class SchemaExtractor {
 
     // Resolve only considered properties and distinguish a valid empty group list from a malformed response.
     private Map<String, TripleCount> getClassProperties(ClassPropertyContext context, QueryResponse response, Long base) {
-        Map<SchemaExtractorPropertyNodeInfo, Long> counts = readGroupedCounts(response, "property",
-                row -> context.activeProperties.get(row.getValue("property")), true);
+        Map<String, Long> counts = readGroupedCounts(response, "property", row -> classSidePropertyName(context, row), true);
         if (counts == null) return null;
         Map<String, TripleCount> result = new LinkedHashMap<>();
-        counts.forEach((property, count) -> result.put(property.getPropertyName(), new TripleCount(count, base)));
+        counts.forEach((name, count) -> result.put(name, new TripleCount(count, base)));
         return result;
     }
 
@@ -1578,19 +1741,21 @@ public class SchemaExtractor {
             bestLimit = limit;
         }
         if (best != null) {
-            best.forEach((name, count) -> recordClassPropertyRelation(context, clazz, context.properties.get(name), count.getTripleCount(), count.getTripleCountBase(), false, true));
+            best.forEach((name, count) -> recordClassSideRelation(context, clazz, name, count.getTripleCount(), count.getTripleCountBase(), false, true));
+            recordClassSideCoverage(context, clazz, 4);
             setClassPropertyLimit(context, clazz, bestLimit);
             if (classPropertyClassQuality(context, clazz) < 4) classPropertyClassQuality(context, clazz, 4);
         } else {
             List<String> instances = readClassPropertyInstances(context, null, clazz, CLASS_PROPERTY_INSTANCE_LIMIT);
             if (instances == null || instances.isEmpty()) return;
-            InstanceBatchResult<SchemaExtractorPropertyNodeInfo> result = executeClassInstanceBatches(context, clazz, instances);
+            InstanceBatchResult<String> result = executeClassInstanceBatches(context, clazz, instances);
             int successful = result.covered.cardinality();
             boolean enoughRetrieved = instances.size() >= 500 || size != null && size >= 0 && (long) instances.size() * 2 >= size;
             boolean usableCounts = enoughRetrieved && (long) successful * 2 >= instances.size();
-            result.counts.forEach((property, count) -> recordClassPropertyRelation(context, clazz, property,
+            result.counts.forEach((name, count) -> recordClassSideRelation(context, clazz, name,
                     usableCounts ? count : null, usableCounts ? (long) successful : null, false, usableCounts));
             if (usableCounts) {
+                recordClassSideCoverage(context, clazz, 4);
                 // Downgrade only when this instance backup meets the existing sample coverage criteria, including empty successful results.
                 SchemaExtractorMessage failure = context.classes.get(clazz).initialLimitFailure;
                 if (failure != null) failure.setMessageLevel(NOTE);
@@ -1619,13 +1784,13 @@ public class SchemaExtractor {
                 && isNotTrue(context.request.getCrossCheckTargetClassesOnNonLiteralPropertyObjectCheckFailure());
         for (SchemaClass clazz : context.classes.keySet()) {
             ClassPropertyState classState = context.classes.get(clazz);
-            if (classState.complete) continue;
+            if (classState.complete && context.firstPass == null) continue;
             for (SchemaExtractorPropertyNodeInfo property : context.properties.values()) {
                 if (classPropertyHandled(context, property)) continue;
                 TripleCount relation = classPropertyLinks(context, clazz).get(property.getPropertyName());
                 if (relation == null) {
                     ClassPropertyState propertyState = context.propertyStates.get(property);
-                    if (propertyState.complete) continue;
+                    if (classState.complete || propertyState.complete) continue;
                     if (skipEstimatedTargets && isFalse(nonLiteralObjectsExistence(property))) {
                         classState.skippedPairChecks++;
                         propertyState.skippedPairChecks++;
@@ -1730,19 +1895,46 @@ public class SchemaExtractor {
     }
 
     // Build class-instance batches with the same active property scope used by the aggregate and LIMIT queries.
-    private InstanceBatchResult<SchemaExtractorPropertyNodeInfo> executeClassInstanceBatches(ClassPropertyContext context, SchemaClass clazz, List<String> instances) {
+    private InstanceBatchResult<String> executeClassInstanceBatches(ClassPropertyContext context, SchemaClass clazz, List<String> instances) {
         return executeClassInstanceBatches(context, clazz, instances, null);
     }
 
     // Supply the small-class diagnostic text without applying it to the sample path that retains an empty message.
-    private InstanceBatchResult<SchemaExtractorPropertyNodeInfo> executeClassInstanceBatches(ClassPropertyContext context, SchemaClass clazz, List<String> instances, String text) {
+    private InstanceBatchResult<String> executeClassInstanceBatches(ClassPropertyContext context, SchemaClass clazz, List<String> instances, String text) {
         SchemaExtractorQueries name = context.target
                 ? selectQuery(context.request.getExactCountCalculations(), FIND_INSTANCE_INCOMING_PROPERTIES, FIND_INSTANCE_INCOMING_PROPERTIES_DISTINCT)
                 : selectQuery(context.request.getExactCountCalculations(), FIND_INSTANCE_OUTGOING_PROPERTIES, FIND_INSTANCE_OUTGOING_PROPERTIES_DISTINCT);
-        InstanceBatchResult<SchemaExtractorPropertyNodeInfo> result = new InstanceBatchResult<>();
+        InstanceBatchResult<String> result = new InstanceBatchResult<>();
         executeInstanceBatches(context.schema, context.request, instances, 0, instances.size(), "property", () -> classPropertiesQuery(context, clazz, name),
-                row -> context.activeProperties.get(row.getValue("property")), result, context.classes.get(clazz), clazz.getFullName(), text);
+                row -> classSidePropertyName(context, row), result, context.classes.get(clazz), clazz.getFullName(), text);
         return result;
+    }
+
+    private String classSidePropertyName(ClassPropertyContext context, QueryResult row) {
+        String name = row.getValue("property");
+        if (context.activeProperties.containsKey(name)) return name;
+        return context.discovery != null && classSidePropertyScope(context) == null
+                && !context.discovery.originalNames().contains(name)
+                && isNotExcludedResource(name, context.request.getExcludedNamespaces())
+                && SchemaUtil.isValidURI(name) ? name : null;
+    }
+
+    private void recordClassSideCoverage(ClassPropertyContext context, SchemaClass clazz, int quality) {
+        if (context.discovery != null && classSidePropertyScope(context) == null) {
+            ClassPropertyState state = context.classes.get(clazz);
+            state.unrestrictedClassCoverage = Math.max(state.unrestrictedClassCoverage, quality);
+        }
+    }
+
+    private void recordClassSideRelation(ClassPropertyContext context, SchemaClass clazz, String name,
+                                         Long count, Long base, boolean replace, boolean refine) {
+        SchemaExtractorPropertyNodeInfo property = context.properties.get(name);
+        if (property != null) {
+            recordClassPropertyRelation(context, clazz, property, count, base, replace, refine);
+        } else {
+            context.discovery.newNames().add(name);
+            recordClassPropertyRelation(context, clazz, name, null, count, base, replace, refine);
+        }
     }
 
     // Parse grouped rows atomically so malformed counts never masquerade as zero or successful instance coverage.
@@ -1773,22 +1965,30 @@ public class SchemaExtractor {
     // Keep pair counts canonical in the existing sparse class maps and track pending count work with scalar property counters.
     private TripleCount recordClassPropertyRelation(ClassPropertyContext context, SchemaClass clazz, SchemaExtractorPropertyNodeInfo property,
                                                     Long count, Long base, boolean replace, boolean refine) {
-        ClassPropertyState state = context.propertyStates.get(property);
-        TripleCount relation = classPropertyLinks(context, clazz).get(property.getPropertyName());
+        return recordClassPropertyRelation(context, clazz, property.getPropertyName(), context.propertyStates.get(property), count, base, replace, refine);
+    }
+
+    // Keep discoveries in the canonical links until the added property has its own count-work state.
+    private TripleCount recordClassPropertyRelation(ClassPropertyContext context, SchemaClass clazz, String name,
+                                                    ClassPropertyState state, Long count, Long base, boolean replace, boolean refine) {
+        TripleCount relation = classPropertyLinks(context, clazz).get(name);
         if (relation == null) {
             relation = new TripleCount(null, null);
-            classPropertyLinks(context, clazz).put(property.getPropertyName(), relation);
-            state.missingCounts++;
+            classPropertyLinks(context, clazz).put(name, relation);
+            if (state != null) state.missingCounts++;
         }
         if (count != null && (replace || relation.getTripleCount() == null)) {
-            if (relation.getTripleCount() == null) state.missingCounts--;
+            if (state != null && relation.getTripleCount() == null) state.missingCounts--;
             relation.setTripleCount(count);
             relation.setTripleCountBase(base);
-            if (replace && relation.isCountNeedsRefinement()) { relation.setCountNeedsRefinement(false); state.pendingRefinements--; }
+            if (replace && relation.isCountNeedsRefinement()) {
+                relation.setCountNeedsRefinement(false);
+                if (state != null) state.pendingRefinements--;
+            }
         }
         if (refine && fineTuneClassPropertyCounts(context) && relation.getTripleCount() != null && !relation.isCountNeedsRefinement()) {
             relation.setCountNeedsRefinement(true);
-            state.pendingRefinements++;
+            if (state != null) state.pendingRefinements++;
         }
         return relation;
     }
@@ -1803,14 +2003,26 @@ public class SchemaExtractor {
     protected void setClassPropertyQualityMarks(ClassPropertyContext context) {
         context.classes.forEach((clazz, state) -> {
             int unresolved = state.failures + state.skippedPairChecks;
-            if (unresolved == 0) {
+            if (context.firstPass != null) {
+                ClassPropertyState earlier = context.firstPass.classes.get(clazz);
+                unresolved += earlier.failures + earlier.skippedPairChecks;
+                state.complete = earlier.complete && unresolved == 0;
+                int scopeSize = context.firstPass.properties.size() + context.properties.size();
+                int quality = state.complete ? 7 : classPropertyFailureQuality(unresolved, scopeSize);
+                if (!state.complete && state.unrestrictedClassCoverage >= 4 && state.unrestrictedClassCoverage < 7) {
+                    quality = Math.max(quality, state.unrestrictedClassCoverage);
+                }
+                classPropertyClassQuality(context, clazz, quality);
+            } else if (unresolved == 0) {
                 state.complete = true;
                 classPropertyClassQuality(context, clazz, 7);
             } else if (classPropertyClassQuality(context, clazz) < 3) {
                 classPropertyClassQuality(context, clazz, classPropertyFailureQuality(unresolved, context.properties.size()));
             }
         });
-        boolean allSampled = context.classes.keySet().stream().allMatch(clazz -> classPropertyClassQuality(context, clazz) >= 4);
+        boolean allSampled = context.firstPass == null
+                ? context.classes.keySet().stream().allMatch(clazz -> classPropertyClassQuality(context, clazz) >= 4)
+                : context.classes.values().stream().allMatch(state -> state.unrestrictedClassCoverage >= 4);
         context.propertyStates.forEach((property, state) -> {
             if (state.skippedPairChecks > 0) return;
             int quality = state.failures == 0 ? 7 : allSampled ? 4 : classPropertyFailureQuality(state.failures, context.classes.size());
@@ -1833,9 +2045,7 @@ public class SchemaExtractor {
             classPropertyLinks(context, clazz).forEach((name, count) -> {
                 SchemaExtractorPropertyNodeInfo property = context.properties.get(name);
                 if (property == null) return;
-                SchemaExtractorClassNodeInfo info = new SchemaExtractorClassNodeInfo(clazz.getFullName(), count.getTripleCount(), clazz.getClassificationProperty(), clazz.getIsLiteral());
-                info.setTripleCountBase(count.getTripleCountBase());
-                if (context.target) property.getTargetClasses().add(info); else property.getSourceClasses().add(info);
+                publishClassPropertyLink(context, clazz, property, count);
             });
         });
         context.properties.values().forEach(property -> {
@@ -1849,6 +2059,13 @@ public class SchemaExtractor {
                 context.schema.getMessages().add(message);
             }
         });
+    }
+
+    private void publishClassPropertyLink(ClassPropertyContext context, SchemaClass clazz, SchemaExtractorPropertyNodeInfo property, TripleCount count) {
+        SchemaExtractorClassNodeInfo info = new SchemaExtractorClassNodeInfo(clazz.getFullName(), count.getTripleCount(),
+                clazz.getClassificationProperty(), clazz.getIsLiteral());
+        info.setTripleCountBase(count.getTripleCountBase());
+        if (context.target) property.getTargetClasses().add(info); else property.getSourceClasses().add(info);
     }
 
     // Reuse recorded blank-node statistics and issue a property existence probe only when presence is unknown.
@@ -1948,10 +2165,15 @@ public class SchemaExtractor {
                 .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, clazz.getClassificationProperty())
                 .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL, clazz.getFullName(), clazz.getIsLiteral())
                 .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_TARGET_FULL, clazz.getFullName(), clazz.getIsLiteral());
-        Set<String> scope = context.activeProperties != context.properties || !context.request.getIncludedProperties().isEmpty() ? context.activeProperties.keySet() : null;
+        Set<String> scope = classSidePropertyScope(context);
         updateValueClause(query, scope, "<propertyValuesClause>", SPARQL_QUERY_BINDING_NAME_PROPERTY);
         updateValueClause(query, scope, SPARQL_QUERY_BINDING_NAME_VALUES, SPARQL_QUERY_BINDING_NAME_PROPERTY);
         return query;
+    }
+
+    private Set<String> classSidePropertyScope(ClassPropertyContext context) {
+        return context.activeProperties != context.properties || !context.request.getIncludedProperties().isEmpty()
+                ? context.activeProperties.keySet() : null;
     }
 
     // Bind an individual property without reintroducing a residual VALUES clause into pair queries.
@@ -2902,34 +3124,44 @@ public class SchemaExtractor {
     // Discover directional followers here and complete unresolved pairs in the ordered PP phase.
     protected void determineFollowers(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request,
                                       @Nonnull Map<String, SchemaExtractorPropertyNodeInfo> properties) {
-        log.info(request.getCorrelationId() + " - determinePropertyFollowers [" + property.getPropertyName() + "]");
-        SchemaExtractorQueries mainQuery = selectQuery(request.getExactCountCalculations(), FIND_PROPERTY_FOLLOWERS, FIND_PROPERTY_FOLLOWERS_DISTINCT);
-        SchemaExtractorQueries mainQueryLimits = selectQuery(request.getExactCountCalculations(), FIND_PROPERTY_FOLLOWERS_WITH_LIMITS, FIND_PROPERTY_FOLLOWERS_WITH_LIMITS_DISTINCT);
-        Integer hasFollowersOK = executePropertyRelationsQueries(request, schema, properties, property, property.getFollowers(), SchemaExtractorPropertyRelatedPropertyInfo.LinkType.follower,
-                mainQuery, mainQueryLimits);
-        property.setHasFollowersOK(hasFollowersOK);
+        discoverPropertyRelation(schema, properties, request, property, SchemaExtractorPropertyRelatedPropertyInfo.LinkType.follower, false);
     }
 
-    // Discover common-subject links here before the shared symmetric pair pass.
     protected void determineOutgoingProperties(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request,
                                                @Nonnull Map<String, SchemaExtractorPropertyNodeInfo> properties) {
-        log.info(request.getCorrelationId() + " - determinePropertyOutgoingProperties [" + property.getPropertyName() + "]");
-        SchemaExtractorQueries mainQuery = selectQuery(request.getExactCountCalculations(), FIND_PROPERTY_OUTGOING_PROPERTIES, FIND_PROPERTY_OUTGOING_PROPERTIES_DISTINCT);
-        SchemaExtractorQueries mainQueryLimits = selectQuery(request.getExactCountCalculations(), FIND_PROPERTY_OUTGOING_PROPERTIES_WITH_LIMITS, FIND_PROPERTY_OUTGOING_PROPERTIES_WITH_LIMITS_DISTINCT);
-        Integer hasOutgoingPropertiesOK = executePropertyRelationsQueries(request, schema, properties, property, property.getOutgoingProperties(), SchemaExtractorPropertyRelatedPropertyInfo.LinkType.outgoing,
-                mainQuery, mainQueryLimits);
-        property.setHasOutgoingPropertiesOK(hasOutgoingPropertiesOK);
+        discoverPropertyRelation(schema, properties, request, property, SchemaExtractorPropertyRelatedPropertyInfo.LinkType.outgoing, false);
     }
 
-    // Discover common-object links here before the shared symmetric pair pass.
     protected void determineIncomingProperties(@Nonnull Schema schema, @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull SchemaExtractorRequestDto request,
                                                @Nonnull Map<String, SchemaExtractorPropertyNodeInfo> properties) {
-        log.info(request.getCorrelationId() + " - determinePropertyIncomingProperties [" + property.getPropertyName() + "]");
-        SchemaExtractorQueries mainQuery = selectQuery(request.getExactCountCalculations(), FIND_PROPERTY_INCOMING_PROPERTIES, FIND_PROPERTY_INCOMING_PROPERTIES_DISTINCT);
-        SchemaExtractorQueries mainQueryLimits = selectQuery(request.getExactCountCalculations(), FIND_PROPERTY_INCOMING_PROPERTIES_WITH_LIMITS, FIND_PROPERTY_INCOMING_PROPERTIES_WITH_LIMITS_DISTINCT);
-        Integer hasIncomingPropertiesOK = executePropertyRelationsQueries(request, schema, properties, property, property.getIncomingProperties(), SchemaExtractorPropertyRelatedPropertyInfo.LinkType.incoming,
-                mainQuery, mainQueryLimits);
-        property.setHasIncomingPropertiesOK(hasIncomingPropertiesOK);
+        discoverPropertyRelation(schema, properties, request, property, SchemaExtractorPropertyRelatedPropertyInfo.LinkType.incoming, false);
+    }
+
+    // Share the same templates and fallbacks between fixed-scope extraction and property discovery.
+    private void discoverPropertyRelation(Schema schema, Map<String, SchemaExtractorPropertyNodeInfo> properties,
+                                          SchemaExtractorRequestDto request, SchemaExtractorPropertyNodeInfo property,
+                                          SchemaExtractorPropertyRelatedPropertyInfo.LinkType type, boolean discoverNewProperties) {
+        String procedure = switch (type) {
+            case outgoing -> "OutgoingProperties";
+            case incoming -> "IncomingProperties";
+            case follower -> "Followers";
+        };
+        log.info(request.getCorrelationId() + " - determineProperty" + procedure + " [" + property.getPropertyName() + "]");
+        SchemaExtractorQueries full = switch (type) {
+            case outgoing -> selectQuery(request.getExactCountCalculations(), FIND_PROPERTY_OUTGOING_PROPERTIES, FIND_PROPERTY_OUTGOING_PROPERTIES_DISTINCT);
+            case incoming -> selectQuery(request.getExactCountCalculations(), FIND_PROPERTY_INCOMING_PROPERTIES, FIND_PROPERTY_INCOMING_PROPERTIES_DISTINCT);
+            case follower -> selectQuery(request.getExactCountCalculations(), FIND_PROPERTY_FOLLOWERS, FIND_PROPERTY_FOLLOWERS_DISTINCT);
+        };
+        SchemaExtractorQueries limited = switch (type) {
+            case outgoing -> selectQuery(request.getExactCountCalculations(), FIND_PROPERTY_OUTGOING_PROPERTIES_WITH_LIMITS, FIND_PROPERTY_OUTGOING_PROPERTIES_WITH_LIMITS_DISTINCT);
+            case incoming -> selectQuery(request.getExactCountCalculations(), FIND_PROPERTY_INCOMING_PROPERTIES_WITH_LIMITS, FIND_PROPERTY_INCOMING_PROPERTIES_WITH_LIMITS_DISTINCT);
+            case follower -> selectQuery(request.getExactCountCalculations(), FIND_PROPERTY_FOLLOWERS_WITH_LIMITS, FIND_PROPERTY_FOLLOWERS_WITH_LIMITS_DISTINCT);
+        };
+        List<SchemaExtractorPropertyRelatedPropertyInfo> links = propertyRelationLinks(property, type);
+        Integer quality = discoverNewProperties
+                ? executePropertyRelationsQueries(request, schema, properties, property, links, type, full, limited, true)
+                : executePropertyRelationsQueries(request, schema, properties, property, links, type, full, limited);
+        setPropertyRelationQuality(property, type, quality);
     }
 
     // Keep PP recovery state per reference property and store only discovered positive links.
@@ -2954,9 +3186,15 @@ public class SchemaExtractor {
         determinePropertyRelations(schema, properties, request, SchemaExtractorPropertyRelatedPropertyInfo.LinkType.follower);
     }
 
-    // Retain the existing per-property entry points and defer pair completion until all references have been discovered.
+    // Keep fixed-scope callers on the same per-direction query and completion order.
     protected void determinePropertyRelations(Schema schema, Map<String, SchemaExtractorPropertyNodeInfo> properties,
                                               SchemaExtractorRequestDto request, SchemaExtractorPropertyRelatedPropertyInfo.LinkType type) {
+        discoverFixedPropertyRelations(schema, properties, request, type);
+        executeDetailsQueriesOption2(request, schema, properties, type);
+    }
+
+    private void discoverFixedPropertyRelations(Schema schema, Map<String, SchemaExtractorPropertyNodeInfo> properties,
+                                                 SchemaExtractorRequestDto request, SchemaExtractorPropertyRelatedPropertyInfo.LinkType type) {
         for (SchemaExtractorPropertyNodeInfo property : properties.values()) {
             switch (type) {
                 case outgoing -> determineOutgoingProperties(schema, property, request, properties);
@@ -2964,7 +3202,42 @@ public class SchemaExtractor {
                 case follower -> determineFollowers(schema, property, request, properties);
             }
         }
-        executeDetailsQueriesOption2(request, schema, properties, type);
+    }
+
+    // Initialize a newly discovered predicate once, before using it as a reference in any direction.
+    protected void discoverPropertyPropertyRelations(Schema schema, Map<String, SchemaExtractorPropertyNodeInfo> properties,
+                                                      SchemaExtractorRequestDto request,
+                                                      java.util.function.Consumer<SchemaExtractorPropertyNodeInfo> initializeNewProperty) {
+        var directions = List.of(SchemaExtractorPropertyRelatedPropertyInfo.LinkType.outgoing,
+                SchemaExtractorPropertyRelatedPropertyInfo.LinkType.incoming, SchemaExtractorPropertyRelatedPropertyInfo.LinkType.follower);
+        if (!request.getIncludedProperties().isEmpty()) {
+            directions.forEach(type -> discoverFixedPropertyRelations(schema, properties, request, type));
+            return;
+        }
+
+        Deque<SchemaExtractorPropertyNodeInfo> pending = new ArrayDeque<>(properties.values());
+        while (!pending.isEmpty()) {
+            SchemaExtractorPropertyNodeInfo property = pending.removeFirst();
+            for (var type : directions) {
+                discoverPropertyRelation(schema, properties, request, property, type, true);
+                for (SchemaExtractorPropertyRelatedPropertyInfo link : propertyRelationLinks(property, type)) {
+                    String name = link.getPropertyName();
+                    if (properties.containsKey(name)) continue;
+                    addProperty(name, null, properties, request);
+                    SchemaExtractorPropertyNodeInfo added = properties.get(name);
+                    initializeNewProperty.accept(added);
+                    pending.addLast(added);
+                }
+            }
+        }
+    }
+
+    // Complete PP pairs only after the discovery queue and the second CP pass have finished.
+    protected void completePropertyPropertyRelations(Schema schema, Map<String, SchemaExtractorPropertyNodeInfo> properties,
+                                                        SchemaExtractorRequestDto request) {
+        executeDetailsQueriesOption2(request, schema, properties, SchemaExtractorPropertyRelatedPropertyInfo.LinkType.outgoing);
+        executeDetailsQueriesOption2(request, schema, properties, SchemaExtractorPropertyRelatedPropertyInfo.LinkType.incoming);
+        executeDetailsQueriesOption2(request, schema, properties, SchemaExtractorPropertyRelatedPropertyInfo.LinkType.follower);
     }
 
     // Apply PP discovery diagnostics and downgrade only the first failed LIMIT when the existing instance backup is usable.
@@ -2972,13 +3245,21 @@ public class SchemaExtractor {
                                                       @Nonnull Map<String, SchemaExtractorPropertyNodeInfo> properties,
                                                       @Nonnull SchemaExtractorPropertyNodeInfo property, @Nonnull List<SchemaExtractorPropertyRelatedPropertyInfo> relatedProperties,
                                                       @Nonnull SchemaExtractorPropertyRelatedPropertyInfo.LinkType linkType,
-                                                      @Nonnull SchemaExtractorQueries queryWithoutLimit, @Nonnull SchemaExtractorQueries queryWithLimit) {
+                                                       @Nonnull SchemaExtractorQueries queryWithoutLimit, @Nonnull SchemaExtractorQueries queryWithLimit) {
+        return executePropertyRelationsQueries(request, schema, properties, property, relatedProperties, linkType, queryWithoutLimit, queryWithLimit, false);
+    }
+
+    private Integer executePropertyRelationsQueries(SchemaExtractorRequestDto request, Schema schema,
+                                                      Map<String, SchemaExtractorPropertyNodeInfo> properties,
+                                                      SchemaExtractorPropertyNodeInfo property, List<SchemaExtractorPropertyRelatedPropertyInfo> relatedProperties,
+                                                      SchemaExtractorPropertyRelatedPropertyInfo.LinkType linkType, SchemaExtractorQueries queryWithoutLimit,
+                                                      SchemaExtractorQueries queryWithLimit, boolean discoverNewProperties) {
         PropertyRelationState state = new PropertyRelationState(relatedProperties, 0);
         Long size = propertyRelationSize(property, linkType);
         if (Long.valueOf(0).equals(size)) return 7;
         SparqlQueryBuilder query = propertyRelationQuery(request, property, linkType, queryWithoutLimit);
         updateValueClause(request, properties, query);
-        Map<String, Long> counts = readPropertyRelationCounts(request, properties, query);
+        Map<String, Long> counts = readPropertyRelationCounts(request, properties, query, discoverNewProperties);
         if (counts != null) {
             updatedRelatedProperties(state, counts, linkType, null, true);
             relatedProperties.clear();
@@ -2991,7 +3272,7 @@ public class SchemaExtractor {
         if (smallClassPropertyEntity(size) && noBlank) {
             List<String> instances = readPropertyRelationInstances(schema, request, property, linkType, size, true, false);
             if (instances != null) {
-                InstanceBatchResult<String> result = executePropertyRelationBatches(schema, request, properties, property, linkType, instances, state);
+                InstanceBatchResult<String> result = executePropertyRelationBatches(schema, request, properties, property, linkType, instances, state, discoverNewProperties);
                 int covered = result.covered.cardinality();
                 boolean complete = covered == instances.size();
                 boolean counted = complete || (long) covered * 10 >= (long) instances.size() * 3;
@@ -3000,11 +3281,11 @@ public class SchemaExtractor {
             }
         }
         if (state.quality != 7) {
-            SchemaExtractorMessage limitFailure = executeLimitQueries(schema, request, properties, property, linkType, queryWithLimit, size, state);
+            SchemaExtractorMessage limitFailure = executeLimitQueries(schema, request, properties, property, linkType, queryWithLimit, size, state, discoverNewProperties);
             if (state.limit == null) {
                 List<String> instances = readPropertyRelationInstances(schema, request, property, linkType, size, noBlank, true);
                 if (instances != null && !instances.isEmpty()) {
-                    InstanceBatchResult<String> result = executePropertyRelationBatches(schema, request, properties, property, linkType, instances, state);
+                    InstanceBatchResult<String> result = executePropertyRelationBatches(schema, request, properties, property, linkType, instances, state, discoverNewProperties);
                     int covered = result.covered.cardinality();
                     boolean enough = instances.size() >= 500 || size != null && (long) instances.size() * 2 >= size;
                     boolean usable = enough && (long) covered * 2 >= instances.size();
@@ -3058,7 +3339,7 @@ public class SchemaExtractor {
     // Report only a failed first issued LIMIT, returning its diagnostic so usable instance recovery can downgrade it.
     private SchemaExtractorMessage executeLimitQueries(Schema schema, SchemaExtractorRequestDto request, Map<String, SchemaExtractorPropertyNodeInfo> properties,
                                      SchemaExtractorPropertyNodeInfo property, SchemaExtractorPropertyRelatedPropertyInfo.LinkType type,
-                                     SchemaExtractorQueries name, Long size, PropertyRelationState state) {
+                                      SchemaExtractorQueries name, Long size, PropertyRelationState state, boolean discoverNewProperties) {
         Map<String, TripleCount> best = new LinkedHashMap<>();
         SchemaExtractorMessage failure = null;
         for (long limit : CLASS_PROPERTY_LIMITS) {
@@ -3066,7 +3347,7 @@ public class SchemaExtractor {
             SparqlQueryBuilder query = propertyRelationQuery(request, property, type, name)
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_LIMIT, Long.toString(limit));
             updateValueClause(request, properties, query);
-            Map<String, Long> counts = readPropertyRelationCounts(request, properties, query);
+            Map<String, Long> counts = readPropertyRelationCounts(request, properties, query, discoverNewProperties);
             if (counts == null) {
                 if (state.limit == null) failure = addExtractionMessage(schema, MESSAGE, SchemaExtractorMessage.FunctionalityType.STRUCT_PP,
                         property.getPropertyName(), null, query);
@@ -3158,11 +3439,7 @@ public class SchemaExtractor {
                 quality = outsideChecked ? 4 : 3;
             } else quality = classPropertyFailureQuality(state.unresolved, properties.size());
             quality = Math.max(state.quality, quality);
-            switch (type) {
-                case outgoing -> property.setHasOutgoingPropertiesOK(quality);
-                case incoming -> property.setHasIncomingPropertiesOK(quality);
-                case follower -> property.setHasFollowersOK(quality);
-            }
+            setPropertyRelationQuality(property, type, quality);
             List<SchemaExtractorPropertyRelatedPropertyInfo> links = propertyRelationLinks(property, type);
             links.clear();
             links.addAll(state.links.values());
@@ -3208,10 +3485,17 @@ public class SchemaExtractor {
         return !response.hasErrors() && response.getResults().size() == 1 ? readNonNegativeCount(response.getResults().get(0).getValue("instances")) : null;
     }
 
-    private Map<String, Long> readPropertyRelationCounts(SchemaExtractorRequestDto request,
-                                                        Map<String, SchemaExtractorPropertyNodeInfo> properties, SparqlQueryBuilder query) {
+    private Map<String, Long> readPropertyRelationCounts(SchemaExtractorRequestDto request, Map<String, SchemaExtractorPropertyNodeInfo> properties,
+                                                         SparqlQueryBuilder query, boolean discoverNewProperties) {
         return readGroupedCounts(sparqlEndpointProcessor.read(request, query), "p2",
-                row -> properties.containsKey(row.getValue("p2")) && isNotExcludedResource(row.getValue("p2"), request.getExcludedNamespaces()) ? row.getValue("p2") : null, true);
+                row -> propertyRelationCandidate(request, properties, row.getValue("p2"), discoverNewProperties), true);
+    }
+
+    // Accept a valid out-of-list predicate only in automatic mode and defer registration until the results have been validated.
+    private String propertyRelationCandidate(SchemaExtractorRequestDto request, Map<String, SchemaExtractorPropertyNodeInfo> properties,
+                                               String name, boolean discoverNewProperties) {
+        return isNotExcludedResource(name, request.getExcludedNamespaces())
+                && (properties.containsKey(name) || discoverNewProperties && SchemaUtil.isValidURI(name)) ? name : null;
     }
 
     // Reuse the tightest valid reference-side population bound; distinct object counts include literals unless their absence is known.
@@ -3280,7 +3564,8 @@ public class SchemaExtractor {
     // Pass PP relation text to the shared first-singleton diagnostic without overwriting any emitted message.
     private InstanceBatchResult<String> executePropertyRelationBatches(Schema schema, SchemaExtractorRequestDto request,
                                                                        Map<String, SchemaExtractorPropertyNodeInfo> properties, SchemaExtractorPropertyNodeInfo property,
-                                                                       SchemaExtractorPropertyRelatedPropertyInfo.LinkType type, List<String> instances, PropertyRelationState state) {
+                                                                        SchemaExtractorPropertyRelatedPropertyInfo.LinkType type, List<String> instances,
+                                                                        PropertyRelationState state, boolean discoverNewProperties) {
         SchemaExtractorQueries name = type == SchemaExtractorPropertyRelatedPropertyInfo.LinkType.incoming
                 ? selectQuery(request.getExactCountCalculations(), FIND_INSTANCE_INCOMING_PROPERTIES, FIND_INSTANCE_INCOMING_PROPERTIES_DISTINCT)
                 : selectQuery(request.getExactCountCalculations(), FIND_INSTANCE_OUTGOING_PROPERTIES, FIND_INSTANCE_OUTGOING_PROPERTIES_DISTINCT);
@@ -3294,8 +3579,8 @@ public class SchemaExtractor {
             SparqlQueryBuilder query = propertyRelationQuery(request, property, type, name);
             updateValueClause(query, request.getIncludedProperties().isEmpty() ? null : properties.keySet(), "<propertyValuesClause>", "property");
             return query;
-        }, row -> properties.containsKey(row.getValue("property")) && isNotExcludedResource(row.getValue("property"), request.getExcludedNamespaces())
-                ? row.getValue("property") : null, result, state, property.getPropertyName(), message);
+        }, row -> propertyRelationCandidate(request, properties, row.getValue("property"), discoverNewProperties),
+                result, state, property.getPropertyName(), message);
         return result;
     }
 
@@ -3331,6 +3616,15 @@ public class SchemaExtractor {
             case incoming -> property.getIncomingProperties();
             case follower -> property.getFollowers();
         };
+    }
+
+    private void setPropertyRelationQuality(SchemaExtractorPropertyNodeInfo property, SchemaExtractorPropertyRelatedPropertyInfo.LinkType type,
+                                            Integer quality) {
+        switch (type) {
+            case outgoing -> property.setHasOutgoingPropertiesOK(quality);
+            case incoming -> property.setHasIncomingPropertiesOK(quality);
+            case follower -> property.setHasFollowersOK(quality);
+        }
     }
 
     private int propertyRelationQuality(SchemaExtractorPropertyNodeInfo property, SchemaExtractorPropertyRelatedPropertyInfo.LinkType type) {

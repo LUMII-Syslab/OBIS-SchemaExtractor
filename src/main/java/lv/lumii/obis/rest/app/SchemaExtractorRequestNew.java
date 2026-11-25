@@ -62,6 +62,9 @@ public class SchemaExtractorRequestNew {
             "Can be time-consuming for larger schemas, consider appropriate propertyPropertyLinkCheckBackupMode", defaultValue = "true", requiredMode = Schema.RequiredMode.REQUIRED)
     private Boolean calculatePropertyPropertyRelations;
 
+    @Schema(description = "Check class relations for predicates added during automatic property discovery", defaultValue = "false")
+    private Boolean checkClassPropertyRelationsForNewProperties;
+
     @Schema(description = "Recover property-property relations using small-property instances, increasing LIMITs and samples, including singleton instance fallbacks. " +
             "limits skips individual property-pair checks; limitsPlusSimple checks unresolved pairs for existence without extra counts; " +
             "limitsPlus also counts newly confirmed individual pairs immediately, in both directions for common subjects or objects. " +
@@ -172,6 +175,11 @@ public class SchemaExtractorRequestNew {
             calculatePropertyPropertyRelations = Boolean.TRUE;
         }
         return calculatePropertyPropertyRelations;
+    }
+
+    @Nonnull
+    public Boolean getCheckClassPropertyRelationsForNewProperties() {
+        return Boolean.TRUE.equals(checkClassPropertyRelationsForNewProperties);
     }
 
     public Boolean getCalculateSourceAndTargetPairs() {

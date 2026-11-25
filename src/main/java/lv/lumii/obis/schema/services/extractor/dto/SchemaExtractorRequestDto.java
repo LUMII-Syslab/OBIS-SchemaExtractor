@@ -65,6 +65,7 @@ public class SchemaExtractorRequestDto {
     private Boolean validateClassesList;
     private Boolean validatePropertiesList;
     private Boolean calculatePropertyPropertyRelations;
+    private Boolean checkClassPropertyRelationsForNewProperties;
     private PropertyRelationsCheckMode propertyPropertyLinkCheckBackupMode;
     private Boolean calculateSourceAndTargetPairs;
     private Boolean calculateDomainsAndRanges;
@@ -237,6 +238,11 @@ public class SchemaExtractorRequestDto {
             return Boolean.TRUE;
         }
         return calculatePropertyPropertyRelations;
+    }
+
+    @Nonnull
+    public Boolean getCheckClassPropertyRelationsForNewProperties() {
+        return Boolean.TRUE.equals(checkClassPropertyRelationsForNewProperties);
     }
 
     @Nonnull
