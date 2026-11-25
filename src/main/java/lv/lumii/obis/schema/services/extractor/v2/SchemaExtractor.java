@@ -1054,11 +1054,23 @@ public class SchemaExtractor {
         }
     }
 
-    // Sample triples only when the full value counts remain incomplete.
+    // Sample incomplete counts unless an exact zero already settles the source relation's object kind.
     private void determinePropertyObjectTripleRatio(Schema schema, SchemaExtractorPropertyNodeInfo property, SchemaExtractorClassNodeInfo sourceClass,
                                                     SchemaExtractorRequestDto request) {
-        if (nonNegativeCount(propertyValueCount(property, sourceClass, false)) != null
-                && nonNegativeCount(propertyValueCount(property, sourceClass, true)) != null) return;
+        Long objectCount = nonNegativeCount(propertyValueCount(property, sourceClass, false));
+        Long literalCount = nonNegativeCount(propertyValueCount(property, sourceClass, true));
+        if (objectCount != null && literalCount != null) return;
+
+        boolean noObjects = Long.valueOf(0).equals(objectCount);
+        boolean noLiterals = Long.valueOf(0).equals(literalCount);
+        if (sourceClass != null && (noObjects || noLiterals)) {
+            // An established source relation is evidence of presence even when its count is unavailable.
+            if (!Long.valueOf(0).equals(sourceClass.getTripleCount())) {
+                if (noObjects) sourceClass.setLiteralObjectsExistence(true);
+                else sourceClass.setNonLiteralObjectsExistence(true);
+            }
+            return;
+        }
 
         SchemaExtractorQueries name = sourceClass == null ? COUNT_PROPERTY_URL_VALUES_LIMITS : COUNT_PROPERTY_URL_VALUES_FOR_SOURCE_LIMITS;
         String relatedEntity = sourceClass == null ? null : sourceClass.getClassName();
