@@ -241,6 +241,13 @@ public enum SchemaExtractorQueries {
             "SELECT DISTINCT ?property WHERE { { SELECT ?x WHERE { ?x <classificationProperty> <sourceClass> } LIMIT <limit> } ?x ?property ?y }", QueryType.LARGE
     ),
 
+    FIND_INCOMING_PROPERTIES_FOR_CLASS(
+            "SELECT DISTINCT ?property WHERE { ?y <classificationProperty> <targetClass> . ?x ?property ?y . }", QueryType.LARGE
+    ),
+    FIND_INCOMING_PROPERTIES_FOR_CLASS_WITH_LIMIT(
+            "SELECT DISTINCT ?property WHERE { { SELECT ?y WHERE { ?y <classificationProperty> <targetClass> } LIMIT <limit> } ?x ?property ?y }", QueryType.LARGE
+    ),
+
     FIND_PROPERTY_SOURCES_WITH_TRIPLE_COUNT(
             "SELECT ?class (COUNT(?x) as ?instances) WHERE {<classValuesClause> ?x <property> ?y. ?x <classificationProperty> ?class. } GROUP BY ?class", QueryType.LARGE
     ),

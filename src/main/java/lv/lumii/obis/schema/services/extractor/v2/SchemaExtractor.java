@@ -670,15 +670,48 @@ public class SchemaExtractor {
                                 "Backup check for properties via classes failed at a slice for class.");
                         continue;
                     }
-                    properties = addPropertyNames(queryResponse.getResults(), schema);
+                    properties.addAll(addPropertyNames(queryResponse.getResults(), schema));
                     break;
                 }
             } else {
                 properties.addAll(addPropertyNames(queryResponse.getResults(), schema));
             }
+            properties.addAll(readIncomingPropertiesForClass(request, schema, clazz));
         }
 
         return properties;
+    }
+
+    // Report at most one recovery or failure diagnostic for incoming predicate discovery in each class.
+    private Set<String> readIncomingPropertiesForClass(SchemaExtractorRequestDto request, Schema schema, SchemaClass clazz) {
+        SparqlQueryBuilder lastFailure = incomingPropertyDiscoveryQuery(request, clazz, null);
+        QueryResponse response = sparqlEndpointProcessor.read(request, lastFailure);
+        if (!response.hasErrors()) return addPropertyNames(response.getResults(), schema);
+
+        for (Long limit : sampleLimits) {
+            SparqlQueryBuilder query = incomingPropertyDiscoveryQuery(request, clazz, limit);
+            response = sparqlEndpointProcessor.read(request, query);
+            if (!response.hasErrors()) {
+                addExtractionMessage(schema, NOTE, SchemaExtractorMessage.FunctionalityType.STRUCT,
+                        clazz.getFullName(), null, lastFailure,
+                        "Incoming properties for the class were checked using a limited sample (LIMIT " + limit + ").");
+                return addPropertyNames(response.getResults(), schema);
+            }
+            lastFailure = query;
+        }
+
+        addExtractionMessage(schema, MESSAGE, SchemaExtractorMessage.FunctionalityType.STRUCT,
+                clazz.getFullName(), null, lastFailure, "Incoming properties for the class could not be determined.");
+        return Collections.emptySet();
+    }
+
+    private SparqlQueryBuilder incomingPropertyDiscoveryQuery(SchemaExtractorRequestDto request, SchemaClass clazz, Long limit) {
+        SchemaExtractorQueries name = limit == null ? FIND_INCOMING_PROPERTIES_FOR_CLASS : FIND_INCOMING_PROPERTIES_FOR_CLASS_WITH_LIMIT;
+        SparqlQueryBuilder query = new SparqlQueryBuilder(request.getQueries().get(name.name()), name)
+                .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_TARGET_FULL, clazz.getFullName(), clazz.getIsLiteral())
+                .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, clazz.getClassificationProperty());
+        if (limit != null) query.withContextParam(SPARQL_QUERY_BINDING_NAME_LIMIT, limit.toString());
+        return query;
     }
 
     // Apply the common invalid-URI diagnostic while preserving empty-name skipping and property-name validation.
