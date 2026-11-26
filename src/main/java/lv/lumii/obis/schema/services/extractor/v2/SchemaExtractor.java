@@ -657,48 +657,75 @@ public class SchemaExtractor {
         return properties;
     }
 
-    // Report one outcome per direction and continue with smaller limits only after a query failure.
+    // Try counted discovery first at each scope and base diagnostics on the name-only attempts or an empty success.
     private Set<String> readPropertiesForClass(SchemaExtractorRequestDto request, Schema schema, SchemaClass clazz, boolean incoming) {
-        SparqlQueryBuilder query = classPropertyDiscoveryQuery(request, clazz, incoming, null);
-        QueryResponse response = sparqlEndpointProcessor.read(request, query);
+        Iterator<Long> retryLimits = CLASS_PROPERTY_DISCOVERY_LIMITS.iterator();
+        String direction = incoming ? "Incoming" : "Outgoing";
         SparqlQueryBuilder lastFailure = null;
         Long limit = null;
-        for (Long nextLimit : CLASS_PROPERTY_DISCOVERY_LIMITS) {
-            if (!response.hasErrors()) break;
-            lastFailure = query;
-            limit = nextLimit;
-            query = classPropertyDiscoveryQuery(request, clazz, incoming, limit);
-            response = sparqlEndpointProcessor.read(request, query);
+
+        while (true) {
+            SparqlQueryBuilder query = classPropertyDiscoveryQuery(request, clazz, incoming, limit, true);
+            QueryResponse response = sparqlEndpointProcessor.read(request, query);
+            Map<String, Long> counts = readGroupedCounts(response, "property", row -> row.getValue("property"), true);
+            if (counts == null) {
+                query = classPropertyDiscoveryQuery(request, clazz, incoming, limit, false);
+                response = sparqlEndpointProcessor.read(request, query);
+            }
+
+            if (response.hasErrors()) {
+                lastFailure = query;
+                if (!retryLimits.hasNext()) break;
+                limit = retryLimits.next();
+                continue;
+            }
+            if (counts != null) retainClassPropertyDiscoveryCounts(request, clazz, incoming, limit, counts);
+            if (response.getResults().isEmpty()) {
+                addExtractionMessage(schema, incoming ? NOTE : MESSAGE, SchemaExtractorMessage.FunctionalityType.STRUCT,
+                        clazz.getFullName(), null, query, "Empty results found. Context: property retrieval via classes");
+                return Collections.emptySet();
+            }
+            if (counts != null) return counts.keySet();
+            if (lastFailure != null) {
+                addExtractionMessage(schema, MESSAGE, SchemaExtractorMessage.FunctionalityType.STRUCT,
+                        clazz.getFullName(), null, lastFailure,
+                        direction + " properties for the class were checked using a limited sample (LIMIT " + limit + ").");
+            }
+            return addPropertyNames(response.getResults(), schema);
         }
 
-        String direction = incoming ? "Incoming" : "Outgoing";
-        if (response.hasErrors()) {
-            addExtractionMessage(schema, incoming ? MESSAGE : WARNING, SchemaExtractorMessage.FunctionalityType.STRUCT,
-                    clazz.getFullName(), null, query, direction + " properties for the class could not be determined.");
-            return Collections.emptySet();
-        }
-        if (response.getResults().isEmpty()) {
-            addExtractionMessage(schema, incoming ? NOTE : MESSAGE, SchemaExtractorMessage.FunctionalityType.STRUCT,
-                    clazz.getFullName(), null, query, "Empty results found. Context: property retrieval via classes");
-            return Collections.emptySet();
-        }
-        if (lastFailure != null) {
-            addExtractionMessage(schema, MESSAGE, SchemaExtractorMessage.FunctionalityType.STRUCT,
-                    clazz.getFullName(), null, lastFailure,
-                    direction + " properties for the class were checked using a limited sample (LIMIT " + limit + ").");
-        }
-        return addPropertyNames(response.getResults(), schema);
+        addExtractionMessage(schema, incoming ? MESSAGE : WARNING, SchemaExtractorMessage.FunctionalityType.STRUCT,
+                clazz.getFullName(), null, lastFailure, direction + " properties for the class could not be determined.");
+        return Collections.emptySet();
+    }
+
+    // Keep discovery counts and successful empty results separate from the live CP relations.
+    private void retainClassPropertyDiscoveryCounts(SchemaExtractorRequestDto request, SchemaClass clazz, boolean incoming,
+                                                     Long limit, Map<String, Long> counts) {
+        counts.keySet().removeIf(name -> !isNotExcludedResource(name, request.getExcludedNamespaces()) || !SchemaUtil.isValidURI(name));
+        SchemaClass.PropertyDiscoveryCounts discoveryCounts = new SchemaClass.PropertyDiscoveryCounts(counts, limit);
+        if (incoming) clazz.setIncomingPropertyDiscoveryCounts(discoveryCounts);
+        else clazz.setOutgoingPropertyDiscoveryCounts(discoveryCounts);
     }
 
     private SparqlQueryBuilder classPropertyDiscoveryQuery(SchemaExtractorRequestDto request, SchemaClass clazz,
-                                                           boolean incoming, Long limit) {
-        SchemaExtractorQueries name = incoming
-                ? (limit == null ? FIND_INCOMING_PROPERTIES_FOR_CLASS : FIND_INCOMING_PROPERTIES_FOR_CLASS_WITH_LIMIT)
-                : (limit == null ? FIND_PROPERTIES_FOR_CLASS : FIND_PROPERTIES_FOR_CLASS_WITH_LIMIT);
+                                                           boolean incoming, Long limit, boolean counted) {
+        SchemaExtractorQueries name;
+        if (counted) {
+            name = countedClassPropertyQueryName(request, incoming, limit);
+        } else if (incoming) {
+            name = limit == null ? FIND_INCOMING_PROPERTIES_FOR_CLASS : FIND_INCOMING_PROPERTIES_FOR_CLASS_WITH_LIMIT;
+        } else {
+            name = limit == null ? FIND_PROPERTIES_FOR_CLASS : FIND_PROPERTIES_FOR_CLASS_WITH_LIMIT;
+        }
         String classBinding = incoming ? SPARQL_QUERY_BINDING_NAME_CLASS_TARGET_FULL : SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL;
         SparqlQueryBuilder query = new SparqlQueryBuilder(request.getQueries().get(name.name()), name)
                 .withContextParam(classBinding, clazz.getFullName(), clazz.getIsLiteral())
                 .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, clazz.getClassificationProperty());
+        if (counted) {
+            query.withContextParam(SPARQL_QUERY_BINDING_NAME_VALUES, StringUtils.EMPTY)
+                    .withContextParam("<propertyValuesClause>", StringUtils.EMPTY);
+        }
         if (limit != null) query.withContextParam(SPARQL_QUERY_BINDING_NAME_LIMIT, limit.toString());
         return query;
     }
@@ -1652,13 +1679,23 @@ public class SchemaExtractor {
         return determineClassProperties(context, clazz, limit);
     }
 
-    // Keep full-class failures informative and retain first-LIMIT failures for adjustment after the instance backup.
+    private SchemaExtractorQueries countedClassPropertyQueryName(SchemaExtractorRequestDto request, boolean incoming, Long limit) {
+        if (incoming) {
+            return limit == null
+                    ? selectQuery(request.getExactCountCalculations(), FIND_INCOMING_PROPERTY_TRIPLE_COUNTS_FOR_CLASS, FIND_INCOMING_PROPERTY_TRIPLE_COUNTS_FOR_CLASS_DISTINCT)
+                    : selectQuery(request.getExactCountCalculations(), FIND_INCOMING_PROPERTY_TRIPLE_COUNTS_FOR_CLASS_WITH_LIMITS, FIND_INCOMING_PROPERTY_TRIPLE_COUNTS_FOR_CLASS_WITH_LIMITS_DISTINCT);
+        }
+        return limit == null
+                ? selectQuery(request.getExactCountCalculations(), FIND_OUTGOING_PROPERTY_TRIPLE_COUNTS_FOR_CLASS, FIND_OUTGOING_PROPERTY_TRIPLE_COUNTS_FOR_CLASS_DISTINCT)
+                : selectQuery(request.getExactCountCalculations(), FIND_OUTGOING_PROPERTY_TRIPLE_COUNTS_FOR_CLASS_WITH_LIMITS, FIND_OUTGOING_PROPERTY_TRIPLE_COUNTS_FOR_CLASS_WITH_LIMITS_DISTINCT);
+    }
+
+    // Reuse discovery only at the matching class-side scope and retain live query failures for the existing diagnostics.
     private Map<String, TripleCount> determineClassProperties(ClassPropertyContext context, SchemaClass clazz, Long limit) {
-        SchemaExtractorQueries name = context.target
-                ? (limit == null ? selectQuery(context.request.getExactCountCalculations(), FIND_INCOMING_PROPERTY_TRIPLE_COUNTS_FOR_CLASS, FIND_INCOMING_PROPERTY_TRIPLE_COUNTS_FOR_CLASS_DISTINCT)
-                : selectQuery(context.request.getExactCountCalculations(), FIND_INCOMING_PROPERTY_TRIPLE_COUNTS_FOR_CLASS_WITH_LIMITS, FIND_INCOMING_PROPERTY_TRIPLE_COUNTS_FOR_CLASS_WITH_LIMITS_DISTINCT))
-                : (limit == null ? selectQuery(context.request.getExactCountCalculations(), FIND_OUTGOING_PROPERTY_TRIPLE_COUNTS_FOR_CLASS, FIND_OUTGOING_PROPERTY_TRIPLE_COUNTS_FOR_CLASS_DISTINCT)
-                : selectQuery(context.request.getExactCountCalculations(), FIND_OUTGOING_PROPERTY_TRIPLE_COUNTS_FOR_CLASS_WITH_LIMITS, FIND_OUTGOING_PROPERTY_TRIPLE_COUNTS_FOR_CLASS_WITH_LIMITS_DISTINCT));
+        Map<String, TripleCount> discoveryCounts = reuseClassPropertyDiscoveryCounts(context, clazz, limit);
+        if (discoveryCounts != null) return discoveryCounts;
+
+        SchemaExtractorQueries name = countedClassPropertyQueryName(context.request, context.target, limit);
         SparqlQueryBuilder query = classPropertiesQuery(context, clazz, name);
         if (limit != null) query.withContextParam(SPARQL_QUERY_BINDING_NAME_LIMIT, limit.toString());
         QueryResponse response = sparqlEndpointProcessor.read(context.request, query);
@@ -1668,6 +1705,32 @@ public class SchemaExtractor {
             else if (limit == CLASS_PROPERTY_LIMITS[0]) context.classes.get(clazz).initialLimitFailure =
                     addExtractionMessage(context.schema, MESSAGE, SchemaExtractorMessage.FunctionalityType.STRUCT, clazz.getFullName(), null, query);
         }
+        return counts;
+    }
+
+    // Reuse only in-scope counts while honoring the relation and count evidence already obtained by CP.
+    private Map<String, TripleCount> reuseClassPropertyDiscoveryCounts(ClassPropertyContext context, SchemaClass clazz, Long limit) {
+        SchemaClass.PropertyDiscoveryCounts discoveryCounts = context.target
+                ? clazz.getIncomingPropertyDiscoveryCounts() : clazz.getOutgoingPropertyDiscoveryCounts();
+        if (discoveryCounts == null || !Objects.equals(discoveryCounts.limit(), limit)) return null;
+
+        Map<String, TripleCount> links = classPropertyLinks(context, clazz);
+        if (limit == null && links.entrySet().stream().anyMatch(entry -> context.activeProperties.containsKey(entry.getKey())
+                && (entry.getValue().getTripleCount() == null || entry.getValue().isCountNeedsRefinement())
+                && !discoveryCounts.counts().containsKey(entry.getKey()))) {
+            return null;
+        }
+
+        Map<String, TripleCount> counts = new LinkedHashMap<>();
+        discoveryCounts.counts().forEach((name, count) -> {
+            if (classSidePropertyName(context, name) == null) return;
+            TripleCount existing = links.get(name);
+            SchemaExtractorPropertyNodeInfo property = context.properties.get(name);
+            if (existing == null && property != null && context.propertyStates.get(property).complete) return;
+            if (existing != null && existing.getTripleCount() != null
+                    && (limit != null || existing.getTripleCountBase() == null)) return;
+            counts.put(name, new TripleCount(count, limit));
+        });
         return counts;
     }
 
@@ -1683,7 +1746,7 @@ public class SchemaExtractor {
 
     // Resolve only considered properties and distinguish a valid empty group list from a malformed response.
     private Map<String, TripleCount> getClassProperties(ClassPropertyContext context, QueryResponse response, Long base) {
-        Map<String, Long> counts = readGroupedCounts(response, "property", row -> classSidePropertyName(context, row), true);
+        Map<String, Long> counts = readGroupedCounts(response, "property", row -> classSidePropertyName(context, row.getValue("property")), true);
         if (counts == null) return null;
         Map<String, TripleCount> result = new LinkedHashMap<>();
         counts.forEach((name, count) -> result.put(name, new TripleCount(count, base)));
@@ -1894,12 +1957,11 @@ public class SchemaExtractor {
                 : selectQuery(context.request.getExactCountCalculations(), FIND_INSTANCE_OUTGOING_PROPERTIES, FIND_INSTANCE_OUTGOING_PROPERTIES_DISTINCT);
         InstanceBatchResult<String> result = new InstanceBatchResult<>();
         executeInstanceBatches(context.schema, context.request, instances, 0, instances.size(), "property", () -> classPropertiesQuery(context, clazz, name),
-                row -> classSidePropertyName(context, row), result, context.classes.get(clazz), clazz.getFullName(), text);
+                row -> classSidePropertyName(context, row.getValue("property")), result, context.classes.get(clazz), clazz.getFullName(), text);
         return result;
     }
 
-    private String classSidePropertyName(ClassPropertyContext context, QueryResult row) {
-        String name = row.getValue("property");
+    private String classSidePropertyName(ClassPropertyContext context, String name) {
         if (context.activeProperties.containsKey(name)) return name;
         return context.discovery != null && classSidePropertyScope(context) == null
                 && !context.discovery.originalNames().contains(name)
@@ -2025,8 +2087,14 @@ public class SchemaExtractor {
         return (long) failures * 10 < (long) total * 3 ? 1 : 0;
     }
 
-    // Publish canonical mappings once before existing source/target-dependent enrichment consumes its usual DTO lists.
+    // Publish canonical mappings for enrichment and release the discovery counts after their direction has been processed.
     private void publishClassPropertyMappings(ClassPropertyContext context) {
+        if (context.firstPass == null) {
+            for (SchemaClass clazz : context.schema.getClasses()) {
+                if (context.target) clazz.setIncomingPropertyDiscoveryCounts(null);
+                else clazz.setOutgoingPropertyDiscoveryCounts(null);
+            }
+        }
         context.properties.values().forEach(property -> { if (context.target) property.getTargetClasses().clear(); else property.getSourceClasses().clear(); });
         context.classes.forEach((clazz, state) -> {
             if (context.target) clazz.setIncomingPropertiesFullList(state.complete); else clazz.setOutgoingPropertiesFullList(state.complete);

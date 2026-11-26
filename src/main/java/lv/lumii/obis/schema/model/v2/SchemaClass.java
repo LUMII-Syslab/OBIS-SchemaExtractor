@@ -51,6 +51,12 @@ public class SchemaClass extends SchemaElement {
     private Map<String, TripleCount> incomingProperties;
     @JsonIgnore
     private Boolean incomingPropertiesFullList;
+    @JsonIgnore
+    private PropertyDiscoveryCounts outgoingPropertyDiscoveryCounts;
+    @JsonIgnore
+    private PropertyDiscoveryCounts incomingPropertyDiscoveryCounts;
+
+    public record PropertyDiscoveryCounts(Map<String, Long> counts, Long limit) {}
 
     @JsonProperty("InstanceNamespaces")
     private List<InstanceNamespace> instanceNamespaces;
