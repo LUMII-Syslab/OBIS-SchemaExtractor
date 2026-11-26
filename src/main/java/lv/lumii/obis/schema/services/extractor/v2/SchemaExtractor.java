@@ -52,6 +52,7 @@ public class SchemaExtractor {
                                        SchemaExtractorMessage message, Runnable clearMarker) {}
 
     private static final List<Long> sampleLimits = List.of(1000000L, 100000L, 10000L, 1000L);
+    private static final List<Long> CLASS_PROPERTY_DISCOVERY_LIMITS = List.of(1000000L, 100000L, 10000L, 3000L, 1000L);
 
     private static final String PROPERTY_TYPE_PROCESSING = " - calculating property type %d/%d [%s]";
     private static final String PROPERTY_PROCESSING = " - processing property %d/%d [%s]";
@@ -649,66 +650,54 @@ public class SchemaExtractor {
         Set<String> properties = new HashSet<>();
 
         for (SchemaClass clazz : schema.getClasses()) {
-            SparqlQueryBuilder queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_PROPERTIES_FOR_CLASS.name()), FIND_PROPERTIES_FOR_CLASS)
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL, clazz.getFullName(), clazz.getIsLiteral())
-                    .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, clazz.getClassificationProperty());
-            QueryResponse queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
-
-            if (queryResponse.hasErrors() || queryResponse.getResults().isEmpty()) {
-                addExtractionMessage(schema, WARNING, SchemaExtractorMessage.FunctionalityType.STRUCT,
-                        clazz.getFullName(), null, queryBuilder,
-                        "Backup check for properties via classes failed at a class.");
-                for (Long limit : sampleLimits) {
-                    queryBuilder = new SparqlQueryBuilder(request.getQueries().get(FIND_PROPERTIES_FOR_CLASS_WITH_LIMIT.name()), FIND_PROPERTIES_FOR_CLASS_WITH_LIMIT)
-                            .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL, clazz.getFullName(), clazz.getIsLiteral())
-                            .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, clazz.getClassificationProperty())
-                            .withContextParam(SPARQL_QUERY_BINDING_NAME_LIMIT, limit.toString());
-                    queryResponse = sparqlEndpointProcessor.read(request, queryBuilder);
-                    if (queryResponse.hasErrors() || queryResponse.getResults().isEmpty()) {
-                        addExtractionMessage(schema, WARNING, SchemaExtractorMessage.FunctionalityType.STRUCT,
-                                clazz.getFullName(), null, queryBuilder,
-                                "Backup check for properties via classes failed at a slice for class.");
-                        continue;
-                    }
-                    properties.addAll(addPropertyNames(queryResponse.getResults(), schema));
-                    break;
-                }
-            } else {
-                properties.addAll(addPropertyNames(queryResponse.getResults(), schema));
-            }
-            properties.addAll(readIncomingPropertiesForClass(request, schema, clazz));
+            properties.addAll(readPropertiesForClass(request, schema, clazz, false));
+            properties.addAll(readPropertiesForClass(request, schema, clazz, true));
         }
 
         return properties;
     }
 
-    // Report at most one recovery or failure diagnostic for incoming predicate discovery in each class.
-    private Set<String> readIncomingPropertiesForClass(SchemaExtractorRequestDto request, Schema schema, SchemaClass clazz) {
-        SparqlQueryBuilder lastFailure = incomingPropertyDiscoveryQuery(request, clazz, null);
-        QueryResponse response = sparqlEndpointProcessor.read(request, lastFailure);
-        if (!response.hasErrors()) return addPropertyNames(response.getResults(), schema);
-
-        for (Long limit : sampleLimits) {
-            SparqlQueryBuilder query = incomingPropertyDiscoveryQuery(request, clazz, limit);
-            response = sparqlEndpointProcessor.read(request, query);
-            if (!response.hasErrors()) {
-                addExtractionMessage(schema, NOTE, SchemaExtractorMessage.FunctionalityType.STRUCT,
-                        clazz.getFullName(), null, lastFailure,
-                        "Incoming properties for the class were checked using a limited sample (LIMIT " + limit + ").");
-                return addPropertyNames(response.getResults(), schema);
-            }
+    // Report one outcome per direction and continue with smaller limits only after a query failure.
+    private Set<String> readPropertiesForClass(SchemaExtractorRequestDto request, Schema schema, SchemaClass clazz, boolean incoming) {
+        SparqlQueryBuilder query = classPropertyDiscoveryQuery(request, clazz, incoming, null);
+        QueryResponse response = sparqlEndpointProcessor.read(request, query);
+        SparqlQueryBuilder lastFailure = null;
+        Long limit = null;
+        for (Long nextLimit : CLASS_PROPERTY_DISCOVERY_LIMITS) {
+            if (!response.hasErrors()) break;
             lastFailure = query;
+            limit = nextLimit;
+            query = classPropertyDiscoveryQuery(request, clazz, incoming, limit);
+            response = sparqlEndpointProcessor.read(request, query);
         }
 
-        addExtractionMessage(schema, MESSAGE, SchemaExtractorMessage.FunctionalityType.STRUCT,
-                clazz.getFullName(), null, lastFailure, "Incoming properties for the class could not be determined.");
-        return Collections.emptySet();
+        String direction = incoming ? "Incoming" : "Outgoing";
+        if (response.hasErrors()) {
+            addExtractionMessage(schema, incoming ? MESSAGE : WARNING, SchemaExtractorMessage.FunctionalityType.STRUCT,
+                    clazz.getFullName(), null, query, direction + " properties for the class could not be determined.");
+            return Collections.emptySet();
+        }
+        if (response.getResults().isEmpty()) {
+            addExtractionMessage(schema, incoming ? NOTE : MESSAGE, SchemaExtractorMessage.FunctionalityType.STRUCT,
+                    clazz.getFullName(), null, query, "Empty results found. Context: property retrieval via classes");
+            return Collections.emptySet();
+        }
+        if (lastFailure != null) {
+            addExtractionMessage(schema, MESSAGE, SchemaExtractorMessage.FunctionalityType.STRUCT,
+                    clazz.getFullName(), null, lastFailure,
+                    direction + " properties for the class were checked using a limited sample (LIMIT " + limit + ").");
+        }
+        return addPropertyNames(response.getResults(), schema);
     }
 
-    private SparqlQueryBuilder incomingPropertyDiscoveryQuery(SchemaExtractorRequestDto request, SchemaClass clazz, Long limit) {
-        SchemaExtractorQueries name = limit == null ? FIND_INCOMING_PROPERTIES_FOR_CLASS : FIND_INCOMING_PROPERTIES_FOR_CLASS_WITH_LIMIT;
+    private SparqlQueryBuilder classPropertyDiscoveryQuery(SchemaExtractorRequestDto request, SchemaClass clazz,
+                                                           boolean incoming, Long limit) {
+        SchemaExtractorQueries name = incoming
+                ? (limit == null ? FIND_INCOMING_PROPERTIES_FOR_CLASS : FIND_INCOMING_PROPERTIES_FOR_CLASS_WITH_LIMIT)
+                : (limit == null ? FIND_PROPERTIES_FOR_CLASS : FIND_PROPERTIES_FOR_CLASS_WITH_LIMIT);
+        String classBinding = incoming ? SPARQL_QUERY_BINDING_NAME_CLASS_TARGET_FULL : SPARQL_QUERY_BINDING_NAME_CLASS_SOURCE_FULL;
         SparqlQueryBuilder query = new SparqlQueryBuilder(request.getQueries().get(name.name()), name)
-                .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASS_TARGET_FULL, clazz.getFullName(), clazz.getIsLiteral())
+                .withContextParam(classBinding, clazz.getFullName(), clazz.getIsLiteral())
                 .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, clazz.getClassificationProperty());
         if (limit != null) query.withContextParam(SPARQL_QUERY_BINDING_NAME_LIMIT, limit.toString());
         return query;
