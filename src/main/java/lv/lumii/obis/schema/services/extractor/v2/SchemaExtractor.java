@@ -1125,8 +1125,7 @@ public class SchemaExtractor {
             long count = total - otherCount;
             if (count > 0 || !hasExplicitPropertyValue(property, sourceClass, literal)) {
                 storePropertyValueCount(property, sourceClass, literal, count);
-                addExtractionMessage(schema, INFO, sourceClass != null && literal ? SchemaExtractorMessage.FunctionalityType.COUNT
-                                : SchemaExtractorMessage.FunctionalityType.URL_LITERAL,
+                addExtractionMessage(schema, INFO, SchemaExtractorMessage.FunctionalityType.URL_LITERAL,
                         property.getPropertyName(), relatedEntity, failedQuery,
                         "Direct URL/LITERAL value count failed; the count estimated from the total and the other triple count");
                 return;
