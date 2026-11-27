@@ -1906,13 +1906,14 @@ public class SchemaExtractor {
         }
     }
 
-    // Keep the existing count queries and failure policy for class-driven CP and PP batches.
-    private <K> void executeInstanceBatches(Schema schema, SchemaExtractorRequestDto request, List<String> instances, int start, int end, String binding,
-                                            java.util.function.Supplier<SparqlQueryBuilder> factory, java.util.function.Function<QueryResult, K> key,
+    // Apply each caller's result validation while sharing retries and the singleton failure diagnostic.
+    private <K> void executeInstanceBatches(Schema schema, SchemaExtractorRequestDto request, List<String> instances, int start, int end,
+                                            java.util.function.Supplier<SparqlQueryBuilder> factory,
+                                            java.util.function.Function<QueryResponse, Map<K, Long>> readCounts,
                                             InstanceBatchResult<K> result, InstanceQueryState state, String entity, String text) {
         executeInstanceBatches(start, end, (from, to) -> {
             SparqlQueryBuilder query = withInstanceBindings(request, factory.get(), instances.subList(from, to));
-            Map<K, Long> counts = readGroupedCounts(sparqlEndpointProcessor.read(request, query), binding, key, true);
+            Map<K, Long> counts = readCounts.apply(sparqlEndpointProcessor.read(request, query));
             if (counts == null && to - from == 1) reportSingletonFailure(schema, state, entity, query, text);
             return counts;
         }, result);
@@ -2057,8 +2058,9 @@ public class SchemaExtractor {
                 ? selectQuery(context.request.getExactCountCalculations(), FIND_INSTANCE_INCOMING_PROPERTIES, FIND_INSTANCE_INCOMING_PROPERTIES_DISTINCT)
                 : selectQuery(context.request.getExactCountCalculations(), FIND_INSTANCE_OUTGOING_PROPERTIES, FIND_INSTANCE_OUTGOING_PROPERTIES_DISTINCT);
         InstanceBatchResult<String> result = new InstanceBatchResult<>();
-        executeInstanceBatches(context.schema, context.request, instances, 0, instances.size(), "property", () -> classPropertiesQuery(context, clazz, name),
-                row -> classSidePropertyName(context, row.getValue("property")), result, context.classes.get(clazz), clazz.getFullName(), text);
+        executeInstanceBatches(context.schema, context.request, instances, 0, instances.size(), () -> classPropertiesQuery(context, clazz, name),
+                response -> readGroupedCounts(response, "property", row -> classSidePropertyName(context, row.getValue("property")), true),
+                result, context.classes.get(clazz), clazz.getFullName(), text);
         return result;
     }
 
@@ -3696,8 +3698,20 @@ public class SchemaExtractor {
 
     private Map<String, Long> readPropertyRelationCounts(SchemaExtractorRequestDto request, Map<String, SchemaExtractorPropertyNodeInfo> properties,
                                                          SparqlQueryBuilder query, boolean discoverNewProperties) {
-        return readGroupedCounts(sparqlEndpointProcessor.read(request, query), "p2",
-                row -> propertyRelationCandidate(request, properties, row.getValue("p2"), discoverNewProperties), true);
+        return readPropertyRelationCounts(request, properties, sparqlEndpointProcessor.read(request, query), "p2", discoverNewProperties);
+    }
+
+    // Some endpoints represent empty grouped PP results with one zero-count row and an unbound predicate.
+    private Map<String, Long> readPropertyRelationCounts(SchemaExtractorRequestDto request, Map<String, SchemaExtractorPropertyNodeInfo> properties,
+                                                         QueryResponse response, String binding, boolean discoverNewProperties) {
+        if (!response.hasErrors() && response.getResults().size() == 1) {
+            QueryResult row = response.getResults().get(0);
+            if (row.getResultObject(binding) == null && Long.valueOf(0).equals(readNonNegativeCount(row.getValue("instances")))) {
+                return Collections.emptyMap();
+            }
+        }
+        return readGroupedCounts(response, binding,
+                row -> propertyRelationCandidate(request, properties, row.getValue(binding), discoverNewProperties), true);
     }
 
     // Accept a valid out-of-list predicate only in automatic mode and defer registration until the results have been validated.
@@ -3784,11 +3798,11 @@ public class SchemaExtractor {
             case follower -> "Context: property followers";
         };
         InstanceBatchResult<String> result = new InstanceBatchResult<>();
-        executeInstanceBatches(schema, request, instances, 0, instances.size(), "property", () -> {
+        executeInstanceBatches(schema, request, instances, 0, instances.size(), () -> {
             SparqlQueryBuilder query = propertyRelationQuery(request, property, type, name);
             updateValueClause(query, request.getIncludedProperties().isEmpty() ? null : properties.keySet(), "<propertyValuesClause>", "property");
             return query;
-        }, row -> propertyRelationCandidate(request, properties, row.getValue("property"), discoverNewProperties),
+        }, response -> readPropertyRelationCounts(request, properties, response, "property", discoverNewProperties),
                 result, state, property.getPropertyName(), message);
         return result;
     }
