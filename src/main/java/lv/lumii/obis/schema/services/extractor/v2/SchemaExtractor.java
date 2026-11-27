@@ -1134,7 +1134,8 @@ public class SchemaExtractor {
     private void finishFailedPropertyValueCount(Schema schema, SchemaExtractorPropertyNodeInfo property, SchemaExtractorClassNodeInfo sourceClass,
                                                SchemaExtractorRequestDto request, boolean literal, boolean checked, SparqlQueryBuilder failedQuery) {
         Long total = sourceClass == null ? nonNegativeCount(property.getTripleCount())
-                : sourceClass.getTripleCountBase() == null ? nonNegativeCount(sourceClass.getTripleCount()) : null;
+                : sourceClass.getTripleCountBase() == null && !isTrue(sourceClass.getTripleCountEstimated())
+                    ? nonNegativeCount(sourceClass.getTripleCount()) : null;
         Long otherCount = nonNegativeCount(propertyValueCount(property, sourceClass, !literal));
         String relatedEntity = sourceClass == null ? null : sourceClass.getClassName();
         if (nonNegativeCount(propertyValueCount(property, sourceClass, literal)) == null && total != null && otherCount != null && otherCount <= total) {
@@ -1356,6 +1357,17 @@ public class SchemaExtractor {
         final BitSet covered = new BitSet();
     }
 
+    private static final class PropertyInstance {
+        final String term;
+        Long tripleCount;
+        boolean countLookupFailed;
+
+        PropertyInstance(String term, Long tripleCount) {
+            this.term = term;
+            this.tripleCount = tripleCount;
+        }
+    }
+
     // Run the revised source passes in this extractor while sharing blank-presence observations with target extraction.
     protected void determinePropertySources(Schema schema, Map<String, SchemaExtractorPropertyNodeInfo> properties,
                                             SchemaExtractorRequestDto request, Map<SchemaClass, Boolean> blankChecks) {
@@ -1534,30 +1546,28 @@ public class SchemaExtractor {
             classPropertyPropertyQuality(context, property, 7);
         }
         if (!smallClassPropertyEntity(classPropertySize(property, context.target)) || !noPropertyBlankNodes(context, property)) return;
-        List<String> instances = readClassPropertyInstances(context, property, null, 0);
+        List<PropertyInstance> instances = readPropertyInstances(context, property);
         if (instances == null || instances.size() > CLASS_PROPERTY_INSTANCE_LIMIT) return;
         BitSet covered = new BitSet(instances.size());
         covered.set(0, instances.size());
         Map<SchemaClass, Long> counts = new LinkedHashMap<>();
+        Set<SchemaClass> estimatedClasses = new HashSet<>();
         for (String predicate : failedCounts) {
             InstanceBatchResult<SchemaClass> result = new InstanceBatchResult<>();
-            SchemaExtractorQueries query = context.target
-                    ? selectQuery(context.request.getExactCountCalculations(), FIND_PROPERTY_TARGETS_WITH_TRIPLE_COUNT_FOR_INSTANCES, FIND_PROPERTY_TARGETS_WITH_TRIPLE_COUNT_FOR_INSTANCES_DISTINCT)
-                    : selectQuery(context.request.getExactCountCalculations(), FIND_PROPERTY_SOURCES_WITH_TRIPLE_COUNT_FOR_INSTANCES, FIND_PROPERTY_SOURCES_WITH_TRIPLE_COUNT_FOR_INSTANCES_DISTINCT);
-            executeInstanceBatches(context.schema, context.request, instances, 0, instances.size(), "class",
-                    () -> propertyClassQuery(context, property, predicate, query),
-                    row -> context.classIndex.get(predicate).get(row.getValueFullName("class")), result, state, property.getPropertyName());
+            executeInstanceBatches(0, instances.size(), (start, end) ->
+                    readPropertyClassInstanceBatch(context, property, predicate, instances.subList(start, end), estimatedClasses), result);
             covered.and(result.covered);
             result.counts.forEach((clazz, count) -> counts.merge(clazz, count, Math::addExact));
         }
         int successful = covered.cardinality();
         boolean complete = successful == instances.size();
         boolean usableCounts = complete || (long) successful * 10 >= (long) instances.size() * 3;
-        counts.forEach((clazz, count) -> recordClassPropertyRelation(context, clazz, property,
-                usableCounts ? count : null, !complete && usableCounts ? (long) successful : null, complete, !complete && usableCounts));
+        Long base = !complete && usableCounts ? (long) successful : null;
+        counts.forEach((clazz, count) -> recordClassPropertyRelation(context, clazz, property.getPropertyName(), state,
+                usableCounts ? count : null, base, complete, base != null, usableCounts && estimatedClasses.contains(clazz)));
         if (complete) {
             state.complete = true;
-            state.sourceClassCountsOK = state.missingCounts == 0 ? 3 : 2;
+            state.sourceClassCountsOK = state.missingCounts == 0 && state.pendingRefinements == 0 ? 3 : 2;
             classPropertyPropertyQuality(context, property, 7);
         } else if (successful > 0) {
             if (!state.complete) classPropertyPropertyQuality(context, property, usableCounts ? 5 : 1);
@@ -1650,7 +1660,7 @@ public class SchemaExtractor {
             return;
         }
         if (!smallClassPropertyEntity(classPropertyClassSize(clazz)) || !noClassBlankNodes(context, clazz)) return;
-        List<String> instances = readClassPropertyInstances(context, null, clazz, 0);
+        List<String> instances = readClassInstances(context, clazz, 0);
         if (instances == null || instances.size() > CLASS_PROPERTY_INSTANCE_LIMIT) return;
         InstanceBatchResult<String> result = executeClassInstanceBatches(context, clazz, instances, context.target
                 ? "Retrieval of instance incoming properties not successful. Instance-based options for determining the properties of an instance collection may be limited."
@@ -1728,7 +1738,7 @@ public class SchemaExtractor {
             SchemaExtractorPropertyNodeInfo property = context.properties.get(name);
             if (existing == null && property != null && context.propertyStates.get(property).complete) return;
             if (existing != null && existing.getTripleCount() != null
-                    && (limit != null || existing.getTripleCountBase() == null)) return;
+                    && (limit != null || existing.getTripleCountBase() == null && !isTrue(existing.getTripleCountEstimated()))) return;
             counts.put(name, new TripleCount(count, limit));
         });
         return counts;
@@ -1797,7 +1807,7 @@ public class SchemaExtractor {
             setClassPropertyLimit(context, clazz, bestLimit);
             if (classPropertyClassQuality(context, clazz) < 4) classPropertyClassQuality(context, clazz, 4);
         } else {
-            List<String> instances = readClassPropertyInstances(context, null, clazz, CLASS_PROPERTY_INSTANCE_LIMIT);
+            List<String> instances = readClassInstances(context, clazz, CLASS_PROPERTY_INSTANCE_LIMIT);
             if (instances == null || instances.isEmpty()) return;
             InstanceBatchResult<String> result = executeClassInstanceBatches(context, clazz, instances);
             int successful = result.covered.cardinality();
@@ -1896,35 +1906,130 @@ public class SchemaExtractor {
         }
     }
 
-    // Share request-local coverage tracking while leaving completion thresholds and quality assignment with the caller.
-    private <K> void executeInstanceBatches(Schema schema, SchemaExtractorRequestDto request, List<String> instances, int start, int end, String binding,
-                                            java.util.function.Supplier<SparqlQueryBuilder> factory, java.util.function.Function<QueryResult, K> key,
-                                            InstanceBatchResult<K> result, InstanceQueryState state, String entity) {
-        executeInstanceBatches(schema, request, instances, start, end, binding, factory, key, result, state, entity, null);
-    }
-
-    // Select direct-URI singleton templates while preserving coverage, retries and the first-failing-singleton diagnostic.
+    // Keep the existing count queries and failure policy for class-driven CP and PP batches.
     private <K> void executeInstanceBatches(Schema schema, SchemaExtractorRequestDto request, List<String> instances, int start, int end, String binding,
                                             java.util.function.Supplier<SparqlQueryBuilder> factory, java.util.function.Function<QueryResult, K> key,
                                             InstanceBatchResult<K> result, InstanceQueryState state, String entity, String text) {
+        executeInstanceBatches(start, end, (from, to) -> {
+            SparqlQueryBuilder query = withInstanceBindings(request, factory.get(), instances.subList(from, to));
+            Map<K, Long> counts = readGroupedCounts(sparqlEndpointProcessor.read(request, query), binding, key, true);
+            if (counts == null && to - from == 1) reportSingletonFailure(schema, state, entity, query, text);
+            return counts;
+        }, result);
+    }
+
+    // Share batch splitting and coverage tracking between the original and weighted query paths.
+    private <K> void executeInstanceBatches(int start, int end, java.util.function.BiFunction<Integer, Integer, Map<K, Long>> readBatch,
+                                            InstanceBatchResult<K> result) {
         if (start == end) return;
-        SparqlQueryBuilder query = withInstanceBindings(request, factory.get(), instances.subList(start, end));
-        Map<K, Long> counts = readGroupedCounts(sparqlEndpointProcessor.read(request, query), binding, key, true);
+        Map<K, Long> counts = readBatch.apply(start, end);
         if (counts != null) {
             counts.forEach((value, count) -> result.counts.merge(value, count, Math::addExact));
             result.covered.set(start, end);
             return;
         }
         int size = end - start;
-        if (size == 1) {
-            if (!state.singletonReported) {
-                addExtractionMessage(schema, NOTE, SchemaExtractorMessage.FunctionalityType.STRUCT_INSTANCE, entity, null, query, text);
-                state.singletonReported = true;
-            }
-            return;
-        }
+        if (size == 1) return;
         int batchSize = size > 100 ? 100 : size > 10 ? 10 : 1;
-        for (int offset = start; offset < end; offset += batchSize) executeInstanceBatches(schema, request, instances, offset, Math.min(offset + batchSize, end), binding, factory, key, result, state, entity, text);
+        for (int offset = start; offset < end; offset += batchSize) {
+            executeInstanceBatches(offset, Math.min(offset + batchSize, end), readBatch, result);
+        }
+    }
+
+    // Limit each instance-based context to its first failing singleton query, including a separate count lookup.
+    private void reportSingletonFailure(Schema schema, InstanceQueryState state, String entity, SparqlQueryBuilder query, String text) {
+        if (!state.singletonReported) {
+            addExtractionMessage(schema, NOTE, SchemaExtractorMessage.FunctionalityType.STRUCT_INSTANCE, entity, null, query, text);
+            state.singletonReported = true;
+        }
+    }
+
+    // A uniform known degree lets a class-membership count stand in for the joined triple count.
+    private Map<SchemaClass, Long> readPropertyClassInstanceBatch(ClassPropertyContext context, SchemaExtractorPropertyNodeInfo property,
+                                                                  String predicate, List<PropertyInstance> instances, Set<SchemaClass> estimatedClasses) {
+        if (instances.size() == 1) return readPropertyClassSingleton(context, property, predicate, instances.get(0), estimatedClasses);
+
+        List<String> terms = instances.stream().map(instance -> instance.term).toList();
+        Map<String, SchemaClass> classes = context.classIndex.get(predicate);
+        Long count = instances.get(0).tripleCount;
+        if (count != null && count > 0 && instances.stream().allMatch(instance -> count.equals(instance.tripleCount))) {
+            SchemaExtractorQueries name = selectQuery(context.request.getExactCountCalculations(),
+                    FIND_CLASS_MEMBERSHIP_COUNTS_FOR_INSTANCES, FIND_CLASS_MEMBERSHIP_COUNTS_FOR_INSTANCES_DISTINCT);
+            SparqlQueryBuilder query = propertyClassQuery(context, property, predicate, name).withInstanceValues(terms);
+            Map<SchemaClass, Long> memberships = readGroupedCounts(sparqlEndpointProcessor.read(context.request, query), "class",
+                    row -> classes.get(row.getValueFullName("class")), true);
+            if (memberships != null) {
+                Map<SchemaClass, Long> weighted = weightClassMemberships(memberships, count);
+                if (weighted != null) return weighted;
+            }
+        }
+
+        SchemaExtractorQueries name = context.target
+                ? selectQuery(context.request.getExactCountCalculations(), FIND_PROPERTY_TARGETS_WITH_TRIPLE_COUNT_FOR_INSTANCES, FIND_PROPERTY_TARGETS_WITH_TRIPLE_COUNT_FOR_INSTANCES_DISTINCT)
+                : selectQuery(context.request.getExactCountCalculations(), FIND_PROPERTY_SOURCES_WITH_TRIPLE_COUNT_FOR_INSTANCES, FIND_PROPERTY_SOURCES_WITH_TRIPLE_COUNT_FOR_INSTANCES_DISTINCT);
+        SparqlQueryBuilder query = propertyClassQuery(context, property, predicate, name).withInstanceValues(terms);
+        return readGroupedCounts(sparqlEndpointProcessor.read(context.request, query), "class",
+                row -> classes.get(row.getValueFullName("class")), true);
+    }
+
+    // A successful class lookup establishes coverage even when its property count needs a lower-bound estimate.
+    private Map<SchemaClass, Long> readPropertyClassSingleton(ClassPropertyContext context, SchemaExtractorPropertyNodeInfo property,
+                                                               String predicate, PropertyInstance instance, Set<SchemaClass> estimatedClasses) {
+        SchemaExtractorQueries name = selectQuery(context.request.getExactCountCalculations(),
+                FIND_CLASSES_FOR_SINGLE_INSTANCE, FIND_CLASSES_FOR_SINGLE_INSTANCE_DISTINCT);
+        SparqlQueryBuilder query = propertyClassQuery(context, property, predicate, name).withContextParam("<instance>", instance.term);
+        QueryResponse response = sparqlEndpointProcessor.read(context.request, query);
+        Map<SchemaClass, Long> memberships = new LinkedHashMap<>();
+        Map<String, SchemaClass> classes = context.classIndex.get(predicate);
+        ClassPropertyState state = context.propertyStates.get(property);
+        if (response.hasErrors()) {
+            reportSingletonFailure(context.schema, state, property.getPropertyName(), query, null);
+            return null;
+        }
+        for (QueryResult row : response.getResults()) {
+            if (row.getValue("class") == null) {
+                reportSingletonFailure(context.schema, state, property.getPropertyName(), query, null);
+                return null;
+            }
+            SchemaClass clazz = classes.get(row.getValueFullName("class"));
+            if (clazz != null) memberships.merge(clazz, 1L, Long::sum);
+        }
+        if (memberships.isEmpty()) return memberships;
+
+        if (instance.tripleCount == null && !instance.countLookupFailed) {
+            SchemaExtractorQueries countName = context.target
+                    ? selectQuery(context.request.getExactCountCalculations(), FIND_PROPERTY_TRIPLE_COUNT_FOR_OBJECT_INSTANCE, FIND_PROPERTY_TRIPLE_COUNT_FOR_OBJECT_INSTANCE_DISTINCT)
+                    : selectQuery(context.request.getExactCountCalculations(), FIND_PROPERTY_TRIPLE_COUNT_FOR_SUBJECT_INSTANCE, FIND_PROPERTY_TRIPLE_COUNT_FOR_SUBJECT_INSTANCE_DISTINCT);
+            SparqlQueryBuilder countQuery = classPropertyQuery(context, countName)
+                    .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false)
+                    .withContextParam("<instance>", instance.term);
+            QueryResponse countResponse = sparqlEndpointProcessor.read(context.request, countQuery);
+            if (!countResponse.hasErrors() && countResponse.getResults().size() == 1) {
+                instance.tripleCount = readNonNegativeCount(countResponse.getResults().get(0).getValue("instances"));
+            }
+            if (instance.tripleCount == null) {
+                instance.countLookupFailed = true;
+                reportSingletonFailure(context.schema, state, property.getPropertyName(), countQuery, null);
+            }
+        }
+
+        if (instance.tripleCount == null) {
+            estimatedClasses.addAll(memberships.keySet());
+            return memberships;
+        }
+        if (instance.tripleCount == 0L) return Collections.emptyMap();
+        Map<SchemaClass, Long> weighted = weightClassMemberships(memberships, instance.tripleCount);
+        if (weighted == null) reportSingletonFailure(context.schema, state, property.getPropertyName(), query, null);
+        return weighted;
+    }
+
+    private Map<SchemaClass, Long> weightClassMemberships(Map<SchemaClass, Long> memberships, long count) {
+        try {
+            memberships.replaceAll((clazz, size) -> Math.multiplyExact(size, count));
+            return memberships;
+        } catch (ArithmeticException overflow) {
+            return null;
+        }
     }
 
     // Keep VALUES for batches and select the corresponding direct-URI query for a single instance.
@@ -1935,10 +2040,6 @@ public class SchemaExtractor {
             case FIND_INSTANCE_OUTGOING_PROPERTIES_DISTINCT -> FIND_SINGLE_INSTANCE_OUTGOING_PROPERTIES_DISTINCT;
             case FIND_INSTANCE_INCOMING_PROPERTIES -> FIND_SINGLE_INSTANCE_INCOMING_PROPERTIES;
             case FIND_INSTANCE_INCOMING_PROPERTIES_DISTINCT -> FIND_SINGLE_INSTANCE_INCOMING_PROPERTIES_DISTINCT;
-            case FIND_PROPERTY_SOURCES_WITH_TRIPLE_COUNT_FOR_INSTANCES -> FIND_PROPERTY_SOURCES_WITH_TRIPLE_COUNT_FOR_SINGLE_INSTANCE;
-            case FIND_PROPERTY_SOURCES_WITH_TRIPLE_COUNT_FOR_INSTANCES_DISTINCT -> FIND_PROPERTY_SOURCES_WITH_TRIPLE_COUNT_FOR_SINGLE_INSTANCE_DISTINCT;
-            case FIND_PROPERTY_TARGETS_WITH_TRIPLE_COUNT_FOR_INSTANCES -> FIND_PROPERTY_TARGETS_WITH_TRIPLE_COUNT_FOR_SINGLE_INSTANCE;
-            case FIND_PROPERTY_TARGETS_WITH_TRIPLE_COUNT_FOR_INSTANCES_DISTINCT -> FIND_PROPERTY_TARGETS_WITH_TRIPLE_COUNT_FOR_SINGLE_INSTANCE_DISTINCT;
             default -> null;
         };
         return singleton == null ? query.withInstanceValues(instances)
@@ -2020,23 +2121,33 @@ public class SchemaExtractor {
 
     // Keep discoveries in the canonical links until the added property has its own count-work state.
     private TripleCount recordClassPropertyRelation(ClassPropertyContext context, SchemaClass clazz, String name,
-                                                    ClassPropertyState state, Long count, Long base, boolean replace, boolean refine) {
+                                                     ClassPropertyState state, Long count, Long base, boolean replace, boolean refine) {
+        return recordClassPropertyRelation(context, clazz, name, state, count, base, replace, refine, false);
+    }
+
+    // Carry imputed contributions separately from sampling and keep any exact count over an estimate.
+    private TripleCount recordClassPropertyRelation(ClassPropertyContext context, SchemaClass clazz, String name,
+                                                     ClassPropertyState state, Long count, Long base, boolean replace, boolean refine,
+                                                     boolean estimated) {
         TripleCount relation = classPropertyLinks(context, clazz).get(name);
         if (relation == null) {
             relation = new TripleCount(null, null);
             classPropertyLinks(context, clazz).put(name, relation);
             if (state != null) state.missingCounts++;
         }
-        if (count != null && (replace || relation.getTripleCount() == null)) {
+        boolean replaceCount = replace && (!estimated || relation.getTripleCountBase() != null || isTrue(relation.getTripleCountEstimated()));
+        if (count != null && (replaceCount || relation.getTripleCount() == null)) {
             if (state != null && relation.getTripleCount() == null) state.missingCounts--;
             relation.setTripleCount(count);
             relation.setTripleCountBase(base);
+            relation.setTripleCountEstimated(estimated ? Boolean.TRUE : null);
             if (replace && relation.isCountNeedsRefinement()) {
                 relation.setCountNeedsRefinement(false);
                 if (state != null) state.pendingRefinements--;
             }
         }
-        if (refine && fineTuneClassPropertyCounts(context) && relation.getTripleCount() != null && !relation.isCountNeedsRefinement()) {
+        boolean refineCount = (refine && !estimated) || isTrue(relation.getTripleCountEstimated());
+        if (refineCount && fineTuneClassPropertyCounts(context) && relation.getTripleCount() != null && !relation.isCountNeedsRefinement()) {
             relation.setCountNeedsRefinement(true);
             if (state != null) state.pendingRefinements++;
         }
@@ -2121,6 +2232,7 @@ public class SchemaExtractor {
         SchemaExtractorClassNodeInfo info = new SchemaExtractorClassNodeInfo(clazz.getFullName(), count.getTripleCount(),
                 clazz.getClassificationProperty(), clazz.getIsLiteral());
         info.setTripleCountBase(count.getTripleCountBase());
+        info.setTripleCountEstimated(count.getTripleCountEstimated());
         if (context.target) property.getTargetClasses().add(info); else property.getSourceClasses().add(info);
     }
 
@@ -2149,36 +2261,70 @@ public class SchemaExtractor {
         return !response.hasErrors() && response.getResults().isEmpty();
     }
 
-    // Read small blank-free entities without filters or limits and recover failed filtered samples by selecting nonblank terms locally.
-    private List<String> readClassPropertyInstances(ClassPropertyContext context, SchemaExtractorPropertyNodeInfo property, SchemaClass clazz, int limit) {
-        SchemaExtractorQueries name = clazz != null ? FIND_CLASS_INSTANCES : context.target ? FIND_PROPERTY_OBJECTS_INSTANCES : FIND_PROPERTY_SUBJECTS_INSTANCES;
-        boolean noBlankNodes = property != null || Boolean.FALSE.equals(context.schema.getHasBlankNodeSubjects())
+    // Enumerate each property instance with its degree before trying the name-only backup.
+    private List<PropertyInstance> readPropertyInstances(ClassPropertyContext context, SchemaExtractorPropertyNodeInfo property) {
+        SchemaExtractorQueries countedName = context.target
+                ? selectQuery(context.request.getExactCountCalculations(), FIND_PROPERTY_OBJECTS_INSTANCES_WITH_TRIPLE_COUNT, FIND_PROPERTY_OBJECTS_INSTANCES_WITH_TRIPLE_COUNT_DISTINCT)
+                : selectQuery(context.request.getExactCountCalculations(), FIND_PROPERTY_SUBJECTS_INSTANCES_WITH_TRIPLE_COUNT, FIND_PROPERTY_SUBJECTS_INSTANCES_WITH_TRIPLE_COUNT_DISTINCT);
+        SparqlQueryBuilder countedQuery = classPropertyQuery(context, countedName)
+                .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false);
+        List<PropertyInstance> counted = readCountedPropertyInstances(sparqlEndpointProcessor.read(context.request, countedQuery));
+        if (counted != null) return counted;
+
+        SchemaExtractorQueries backupName = context.target ? FIND_PROPERTY_OBJECTS_INSTANCES : FIND_PROPERTY_SUBJECTS_INSTANCES;
+        SparqlQueryBuilder backup = classPropertyQuery(context, backupName)
+                .withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false)
+                .withContextParam("<instanceFilter>", "")
+                .withContextParam("<limitClause>", "");
+        List<String> terms = readInstanceTerms(context.request, backup, 0);
+        if (terms != null) return terms.stream().map(term -> new PropertyInstance(term, null)).toList();
+
+        String side = context.target ? "object" : "subject";
+        SchemaExtractorMessage message = addExtractionMessage(context.schema, NOTE, SchemaExtractorMessage.FunctionalityType.STRUCT_INSTANCE,
+                property.getPropertyName(), null, countedQuery,
+                "Property " + side + " enumeration not successful. The instance-based fallback can not be used.");
+        message.setNote("Query " + backupName.name() + " failing, as well");
+        return null;
+    }
+
+    private List<PropertyInstance> readCountedPropertyInstances(QueryResponse response) {
+        if (response.hasErrors()) return null;
+        Map<String, PropertyInstance> instances = new LinkedHashMap<>();
+        for (QueryResult row : response.getResults()) {
+            if (row.getResultObject("x") == null) return null;
+            String term = instanceIri(row);
+            if (term == null) continue;
+            Long count = readNonNegativeCount(row.getValue("instances"));
+            if (count == null || count == 0L || instances.putIfAbsent(term, new PropertyInstance(term, count)) != null) return null;
+        }
+        return new ArrayList<>(instances.values());
+    }
+
+    // Preserve blank-free class enumeration and recover a failed filtered sample with local IRI selection.
+    private List<String> readClassInstances(ClassPropertyContext context, SchemaClass clazz, int limit) {
+        boolean noBlankNodes = Boolean.FALSE.equals(context.schema.getHasBlankNodeSubjects())
                 || Long.valueOf(0).equals(clazz.getBlankNodeCount()) || Boolean.FALSE.equals(context.blankChecks.get(clazz));
-        int queryLimit = noBlankNodes && (property != null || smallClassPropertyEntity(classPropertyClassSize(clazz))) ? 0 : limit;
-        SparqlQueryBuilder query = classPropertyQuery(context, name)
+        int queryLimit = noBlankNodes && smallClassPropertyEntity(classPropertyClassSize(clazz)) ? 0 : limit;
+        SparqlQueryBuilder query = classPropertyQuery(context, FIND_CLASS_INSTANCES)
+                .withContextParam("<class>", clazz.getFullName(), clazz.getIsLiteral())
+                .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, clazz.getClassificationProperty())
                 .withContextParam("<instanceFilter>", noBlankNodes ? "" : "FILTER(isIRI(?x))")
                 .withContextParam("<limitClause>", queryLimit > 0 ? "LIMIT " + queryLimit : "");
-        if (property != null) query.withContextParam(SPARQL_QUERY_BINDING_NAME_PROPERTY_FULL, property.getPropertyName(), false);
-        if (clazz != null) query.withContextParam("<class>", clazz.getFullName(), clazz.getIsLiteral())
-                .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, clazz.getClassificationProperty());
         List<String> instances = readInstanceTerms(context.request, query, limit);
         if (instances == null && !noBlankNodes) {
             Long size = classPropertyClassSize(clazz);
-            query = classPropertyQuery(context, name)
+            query = classPropertyQuery(context, FIND_CLASS_INSTANCES)
                     .withContextParam("<class>", clazz.getFullName(), clazz.getIsLiteral())
                     .withContextParam(SPARQL_QUERY_BINDING_NAME_CLASSIFICATION_PROPERTY, clazz.getClassificationProperty())
                     .withContextParam("<instanceFilter>", "")
                     .withContextParam("<limitClause>", size != null && size >= 0 && size < 2000 ? "" : "LIMIT 2000");
             instances = readInstanceTerms(context.request, query, limit);
         }
-        // Report only a terminal enumeration failure and leave successful empty or oversized enumerations unchanged.
         if (instances == null) {
-            String text = property != null
-                    ? "Property " + (context.target ? "object" : "subject") + " enumeration not successful. The instance-based fallback can not be used."
-                    : limit == 0 ? "Small class enumeration not successful. The instance-based fallback can not be used."
+            String text = limit == 0 ? "Small class enumeration not successful. The instance-based fallback can not be used."
                     : "Class sample enumeration not successful. The instance-based fallback can not be used.";
             addExtractionMessage(context.schema, NOTE, SchemaExtractorMessage.FunctionalityType.STRUCT_INSTANCE,
-                    property != null ? property.getPropertyName() : clazz.getFullName(), null, query, text);
+                    clazz.getFullName(), null, query, text);
         }
         return instances;
     }
@@ -2190,12 +2336,19 @@ public class SchemaExtractor {
         Set<String> instances = new LinkedHashSet<>();
         for (QueryResult row : response.getResults()) {
             if (row.getResultObject("x") == null) return null;
-            String value = row.getValueFullName("x");
-            if (value == null || Boolean.TRUE.equals(row.getResultObject("x").getIsLiteral()) || value.startsWith("_:")) continue;
-            instances.add(SchemaUtil.addAngleBracketsToString(value));
+            String term = instanceIri(row);
+            if (term == null) continue;
+            instances.add(term);
             if (instances.size() == limit) break;
         }
         return new ArrayList<>(instances);
+    }
+
+    // Apply the same IRI eligibility to counted and name-only enumeration.
+    private String instanceIri(QueryResult row) {
+        String value = row.getValueFullName("x");
+        return value == null || isTrue(row.getResultObject("x").getIsLiteral()) || value.startsWith("_:")
+                ? null : SchemaUtil.addAngleBracketsToString(value);
     }
 
     // Reuse existing template fallback and context binding for every class-property query.
@@ -3080,7 +3233,7 @@ public class SchemaExtractor {
         Long propertyTotal = nonNegativeCount(property.getTripleCount());
         Long sourceCount = nonNegativeCount(sourceClass.getTripleCount());
         Long base = sourceClass.getTripleCountBase();
-        if (propertyTotal != null && sourceCount != null && base != null && base > 0) {
+        if (propertyTotal != null && sourceCount != null && base != null && base > 0 && !isTrue(sourceClass.getTripleCountEstimated())) {
             BigDecimal total = BigDecimal.valueOf(propertyTotal);
             return total.multiply(BigDecimal.valueOf(sourceCount))
                     .divideToIntegralValue(BigDecimal.valueOf(base)).min(total).longValueExact();
@@ -4708,6 +4861,7 @@ public class SchemaExtractor {
                                 internalDto.getMinInverseCardinality(), internalDto.getMinInverseCardinalityAssertionSize(), internalDto.getMaxInverseCardinality(), internalDto.getMaxInverseCardinalityAssertionSize(),
                                 internalDto.getImportanceIndex(), internalDto.getDataTypes());
                             details.setObjectTripleRatio(internalDto.getObjectTripleRatio());
+                            details.setTripleCountEstimated(internalDto.getTripleCountEstimated());
                             return details;
                         })
                         .collect(Collectors.toList()));

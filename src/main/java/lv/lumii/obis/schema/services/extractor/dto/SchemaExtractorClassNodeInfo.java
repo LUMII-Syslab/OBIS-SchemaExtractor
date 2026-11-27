@@ -17,6 +17,7 @@ public class SchemaExtractorClassNodeInfo {
 	private String className;
 	private Long tripleCount;
 	private Long tripleCountBase;
+	private Boolean tripleCountEstimated;
 	private Long dataTripleCount;
 	// Preserve positive literal-existence evidence without publishing an unavailable count.
 	@JsonIgnore

@@ -517,6 +517,22 @@ public enum SchemaExtractorQueries {
             "SELECT ?nspace (COUNT(?object) AS ?nsCount) WHERE { { SELECT ?object WHERE { ?subject <property> ?object . FILTER (isIRI(?object)) } LIMIT <limit> } BIND(REPLACE(STR(?object), \"(.*[/#]).*\", \"$1\") AS ?nspace)} GROUP BY ?nspace ORDER BY DESC(?nsCount)", QueryType.LARGE
     ),
 
+    FIND_PROPERTY_SUBJECTS_INSTANCES_WITH_TRIPLE_COUNT(
+            "SELECT ?x (COUNT(*) AS ?instances) WHERE { ?x <property> ?y . } GROUP BY ?x", QueryType.LARGE
+    ),
+
+    FIND_PROPERTY_SUBJECTS_INSTANCES_WITH_TRIPLE_COUNT_DISTINCT(
+            "SELECT ?x (COUNT(DISTINCT ?y) AS ?instances) WHERE { ?x <property> ?y . } GROUP BY ?x", QueryType.LARGE
+    ),
+
+    FIND_PROPERTY_OBJECTS_INSTANCES_WITH_TRIPLE_COUNT(
+            "SELECT ?x (COUNT(*) AS ?instances) WHERE { ?y <property> ?x . } GROUP BY ?x", QueryType.LARGE
+    ),
+
+    FIND_PROPERTY_OBJECTS_INSTANCES_WITH_TRIPLE_COUNT_DISTINCT(
+            "SELECT ?x (COUNT(DISTINCT ?y) AS ?instances) WHERE { ?y <property> ?x . } GROUP BY ?x", QueryType.LARGE
+    ),
+
     FIND_PROPERTY_SUBJECTS_INSTANCES(
             "SELECT DISTINCT ?x WHERE { ?x <property> ?y . }", QueryType.LARGE
     ),
@@ -545,20 +561,36 @@ public enum SchemaExtractorQueries {
             "SELECT ?class (COUNT(*) AS ?instances) WHERE { { SELECT DISTINCT ?x ?y ?class WHERE { <instanceValuesClause> <classValuesClause> ?y <property> ?x . ?x <classificationProperty> ?class . } } } GROUP BY ?class", QueryType.SMALL
     ),
 
-    FIND_PROPERTY_SOURCES_WITH_TRIPLE_COUNT_FOR_SINGLE_INSTANCE(
-            "SELECT ?class (COUNT(*) AS ?instances) WHERE { <classValuesClause> <instance> <property> ?y . <instance> <classificationProperty> ?class . } GROUP BY ?class", QueryType.SMALL
+    FIND_CLASSES_FOR_SINGLE_INSTANCE(
+            "SELECT ?class WHERE { <classValuesClause> <instance> <classificationProperty> ?class . }", QueryType.SMALL
     ),
 
-    FIND_PROPERTY_SOURCES_WITH_TRIPLE_COUNT_FOR_SINGLE_INSTANCE_DISTINCT(
-            "SELECT ?class (COUNT(*) AS ?instances) WHERE { { SELECT DISTINCT ?y ?class WHERE { <classValuesClause> <instance> <property> ?y . <instance> <classificationProperty> ?class . } } } GROUP BY ?class", QueryType.SMALL
+    FIND_CLASSES_FOR_SINGLE_INSTANCE_DISTINCT(
+            "SELECT DISTINCT ?class WHERE { <classValuesClause> <instance> <classificationProperty> ?class . }", QueryType.SMALL
     ),
 
-    FIND_PROPERTY_TARGETS_WITH_TRIPLE_COUNT_FOR_SINGLE_INSTANCE(
-            "SELECT ?class (COUNT(*) AS ?instances) WHERE { <classValuesClause> ?y <property> <instance> . <instance> <classificationProperty> ?class . } GROUP BY ?class", QueryType.SMALL
+    FIND_PROPERTY_TRIPLE_COUNT_FOR_SUBJECT_INSTANCE(
+            "SELECT (COUNT(*) AS ?instances) WHERE { <instance> <property> ?y . }", QueryType.SMALL
     ),
 
-    FIND_PROPERTY_TARGETS_WITH_TRIPLE_COUNT_FOR_SINGLE_INSTANCE_DISTINCT(
-            "SELECT ?class (COUNT(*) AS ?instances) WHERE { { SELECT DISTINCT ?y ?class WHERE { <classValuesClause> ?y <property> <instance> . <instance> <classificationProperty> ?class . } } } GROUP BY ?class", QueryType.SMALL
+    FIND_PROPERTY_TRIPLE_COUNT_FOR_SUBJECT_INSTANCE_DISTINCT(
+            "SELECT (COUNT(DISTINCT ?y) AS ?instances) WHERE { <instance> <property> ?y . }", QueryType.SMALL
+    ),
+
+    FIND_PROPERTY_TRIPLE_COUNT_FOR_OBJECT_INSTANCE(
+            "SELECT (COUNT(*) AS ?instances) WHERE { ?y <property> <instance> . }", QueryType.SMALL
+    ),
+
+    FIND_PROPERTY_TRIPLE_COUNT_FOR_OBJECT_INSTANCE_DISTINCT(
+            "SELECT (COUNT(DISTINCT ?y) AS ?instances) WHERE { ?y <property> <instance> . }", QueryType.SMALL
+    ),
+
+    FIND_CLASS_MEMBERSHIP_COUNTS_FOR_INSTANCES(
+            "SELECT ?class (COUNT(*) AS ?instances) WHERE { <instanceValuesClause> <classValuesClause> ?x <classificationProperty> ?class . } GROUP BY ?class", QueryType.SMALL
+    ),
+
+    FIND_CLASS_MEMBERSHIP_COUNTS_FOR_INSTANCES_DISTINCT(
+            "SELECT ?class (COUNT(DISTINCT ?x) AS ?instances) WHERE { <instanceValuesClause> <classValuesClause> ?x <classificationProperty> ?class . } GROUP BY ?class", QueryType.SMALL
     ),
 
     FIND_OUTGOING_PROPERTY_TRIPLE_COUNTS_FOR_CLASS_DISTINCT(

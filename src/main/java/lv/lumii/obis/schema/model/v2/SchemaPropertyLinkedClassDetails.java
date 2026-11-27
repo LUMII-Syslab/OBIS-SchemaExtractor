@@ -19,6 +19,7 @@ public class SchemaPropertyLinkedClassDetails {
     private Long tripleCount;
 
     private Long tripleCountBase;
+    private Boolean tripleCountEstimated;
 
     private Long dataTripleCount;
 

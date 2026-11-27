@@ -19,6 +19,7 @@ public class SchemaExtractorMessage {
     private MessageLevel messageLevel;
     private FunctionalityType functionalityType;
     private String message;
+    private String note;
     private String entity;
     private String relatedEntity;
     private String relatedEntity2;

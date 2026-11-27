@@ -10,6 +10,7 @@ public class TripleCount {
 
     private Long tripleCount;
     private Long tripleCountBase;
+    private Boolean tripleCountEstimated;
 
     // Track requested recount work only for discovered pairs without exposing execution state in schema JSON.
     @JsonIgnore
